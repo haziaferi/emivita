@@ -86,8 +86,18 @@ android {
                 "proguard-rules.pro"
             )
             isDebuggable = false
-            // signingConfig is added once you generate a release keystore --
-            // see the handoff notes for the keytool command.
+            // Signed with the SHARED DEBUG identity on purpose, not with a
+            // separate secret release key. This app is sideloaded onto the
+            // owner's own devices and never goes to a store, and an unsigned
+            // release APK cannot be installed at all -- which blocks both
+            // on-device verification of the minified build and keeping an
+            // archived APK to upgrade FROM when testing a Room migration
+            // in place. The trade this accepts: the signing password is the
+            // published Android default, so this identity is not secret and
+            // anyone could build an APK that installs over this one. Swap in
+            // a real keystore (read from a gitignored keystore.properties)
+            // the moment this app is distributed to anyone else.
+            signingConfig = signingConfigs.getByName("debug")
         }
         debug {
             isDebuggable = true
