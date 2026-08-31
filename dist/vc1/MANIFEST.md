@@ -1,0 +1,56 @@
+# Emivita v0.1.0 (versionCode 1) — archived release baseline
+
+**Why this exists:** an installed predecessor to upgrade *from*. Room
+migration tests (`MigrationFrom1To2Test` and friends) build their "before"
+state from hand-written fixtures, which proves the SQL is correct but never
+exercises a real in-place upgrade of a database written by a real previous
+build. `docs/SPEC.md` §9 #1 / §7 R11 record that gap as unclosable because
+no v1 APK was ever kept. This is that APK. Keep it.
+
+**Do not rebuild and overwrite this file.** Its value is entirely that it is
+the artifact a real database was created by. A regenerated APK from a later
+tree is a different thing wearing the same name.
+
+## Provenance
+
+| | |
+|---|---|
+| Built from commit | `72010105ada188a7a9e51518a665e835b4b30c48` |
+| Built on | 2026-09-01 |
+| applicationId | `com.hazia.emivita` (no suffix — release, not the `.debug` variant) |
+| versionName / versionCode | 0.1.0 / 1 |
+| Room schema version | 4 (`app/schemas/4.json`) |
+| minSdk / targetSdk / compileSdk | 30 / 36 / 36 |
+| Build type | release — R8 minify + resource shrinking on, `isDebuggable = false` |
+| ABIs | arm64-v8a, armeabi-v7a |
+| Size | 10,665,093 bytes |
+| SHA-256 | `5e4ed549bc1445c720cfad35f2344e982a1b411af9867c0ee08ce9ae223e9a15` |
+| Signer (V2) SHA-1 | `d746d7497112959fbf944816e74b091aba06997b` |
+| Signing identity | shared debug keystore, `keystores/my-shared-debug.keystore` |
+
+The signer matters as much as the APK: an upgrade install only succeeds if the
+new APK is signed by this same identity. If that keystore is ever replaced with
+a real release key, this baseline stops being upgradable-from and a fresh
+baseline has to be cut under the new identity.
+
+## mapping-vc1.txt.gz
+
+R8's obfuscation map for this exact APK (62MB uncompressed). Without it a stack
+trace from this build is unreadable. Regenerating it is impossible once the
+build directory is cleaned — R8 output is not reproducible across AGP versions.
+
+    gunzip -c mapping-vc1.txt.gz > mapping.txt
+
+## Using it as a migration baseline
+
+1. `adb install dist/vc1/emivita-0.1.0-vc1-release.apk`
+2. Create real data — a medicine, a reminder, a few logged doses. The point is
+   a database written by this build's own code paths, not an empty one.
+3. Build the new version with a bumped `versionCode` and `adb install -r` it.
+4. A `SQLiteException` or a wiped database means the migration is wrong. An
+   in-place upgrade that keeps the data means it is right — which is the thing
+   fixture-based tests cannot tell you.
+
+Note the release build installs alongside any `com.hazia.emivita.debug` build
+(separate applicationId, separate database). Step 2's data must be created in
+*this* app, not the debug one.
