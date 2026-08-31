@@ -32,6 +32,15 @@ android {
         targetSdk = 36
         versionCode = 1
         versionName = "0.1.0"
+
+        // Only the two ABIs a real phone can load. The x86/x86_64 variants of
+        // libsqlcipher.so are ~4.4MB of the release APK and are reachable only
+        // from an emulator, which this app is never developed against (device
+        // testing happens on physical hardware). Drop this block, do not add
+        // an x86 filter back, if emulator testing ever becomes part of the loop.
+        ndk {
+            abiFilters += listOf("arm64-v8a", "armeabi-v7a")
+        }
     }
 
     compileOptions {
@@ -51,6 +60,22 @@ android {
         arg("room.schemaLocation", "$projectDir/schemas")
     }
 
+
+    // Shared DEBUG signing identity, checked in deliberately. Without this,
+    // every machine (and every fresh ~/.android) generates its own throwaway
+    // debug key, so a debug build from a second machine cannot install over
+    // one from the first -- Android rejects the upgrade as a signature
+    // mismatch and forces an uninstall, taking the app database with it.
+    // The password below is the published Android debug default, not a secret.
+    // A genuine RELEASE keystore is a separate, uncommitted thing (.gitignore).
+    signingConfigs {
+        getByName("debug") {
+            storeFile = rootProject.file("keystores/my-shared-debug.keystore")
+            storePassword = "android"
+            keyAlias = "androiddebugkey"
+            keyPassword = "android"
+        }
+    }
 
     buildTypes {
         release {
