@@ -1,0 +1,44 @@
+package com.hazia.emivita.core.scheduling
+
+import android.content.BroadcastReceiver
+import android.content.Context
+import android.content.Intent
+import android.util.Log
+import com.hazia.emivita.EmivitaApplication
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
+
+private const val TAG = "BootRescheduleReceiver"
+
+/**
+ * AlarmManager forgets every exact alarm across a reboot, and app updates on
+ * some OEM skins can have similar effects -- this receiver recomputes and
+ * re-arms every enabled reminder's next alarm from scratch in both cases.
+ */
+class BootRescheduleReceiver : BroadcastReceiver() {
+    override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action != Intent.ACTION_BOOT_COMPLETED &&
+            intent.action != Intent.ACTION_MY_PACKAGE_REPLACED
+        ) {
+            return
+        }
+
+        val container = (context.applicationContext as? EmivitaApplication)?.container
+        if (container == null) {
+            Log.e(TAG, "applicationContext is not an EmivitaApplication -- cannot reschedule after ${intent.action}.")
+            return
+        }
+        val pendingResult = goAsync()
+        CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
+            try {
+                container.schedulingCoordinator.rescheduleAll()
+            } catch (t: Throwable) {
+                Log.e(TAG, "Failed to reschedule reminders after ${intent.action}", t)
+            } finally {
+                pendingResult.finish()
+            }
+        }
+    }
+}

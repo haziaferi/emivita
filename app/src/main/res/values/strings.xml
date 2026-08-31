@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Referenced by AndroidManifest.xml (android:label). Only string
+         resource the manifest or any Kotlin source currently pulls from
+         R.string; every other user-facing string in this codebase is a
+         Compose literal, not an XML resource. -->
+    <string name="app_name">Emivita</string>
+    <!-- Widget picker labels (android:label on each appwidget-provider). -->
+    <string name="widget_next_reminders_label">Next Doses</string>
+    <string name="widget_stock_levels_label">Stock Levels</string>
+</resources>

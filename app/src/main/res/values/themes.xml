@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+
+    <!-- Splash theme, used by MainActivity only (the only Activity that
+         calls installSplashScreen()). On minSdk 30 this is still below the
+         real platform SplashScreen API (API 31+), so core-splashscreen's
+         compat path is what reads these attributes at cold start; it hands
+         control to postSplashScreenTheme once installSplashScreen() runs.
+         Do not point AlarmActivity or any other Activity at this style;
+         it exists only to carry splash attributes, not as a general app
+         theme. Anything that never calls installSplashScreen() should use
+         Theme.Emivita.Main directly, below. -->
+    <style name="Theme.Emivita" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="postSplashScreenTheme">@style/Theme.Emivita.Main</item>
+    </style>
+
+    <!-- The app's real theme. EmivitaTheme (ui/theme/Theme.kt) supplies
+         every actual color through Material3's ColorScheme at runtime, so
+         this native theme only needs to cover what Compose can't reach:
+         the window chrome visible before Compose measures its first
+         frame, and the action bar Compose never uses. -->
+    <style name="Theme.Emivita.Main" parent="android:Theme.Material.Light.NoActionBar">
+        <item name="android:windowBackground">@color/splash_background</item>
+        <item name="android:statusBarColor">@android:color/transparent</item>
+        <item name="android:navigationBarColor">@android:color/transparent</item>
+    </style>
+
+</resources>

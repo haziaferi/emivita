@@ -1,0 +1,27 @@
+# Gradle / Android build output
+build/
+.gradle/
+.kotlin/
+app/build/
+
+# Machine-local SDK path (Studio regenerates this; contains an absolute path)
+local.properties
+
+# Android Studio / IntelliJ
+.idea/
+*.iml
+captures/
+.externalNativeBuild/
+.cxx/
+
+# Real signing material. The shared DEBUG keystore under keystores/ is
+# deliberately NOT ignored -- its password is the published Android default
+# and the whole point of it is that every machine signs debug builds
+# identically. A genuine release keystore must never be committed.
+*.jks
+keystores/*release*
+keystore.properties
+
+# OS noise
+.DS_Store
+Thumbs.db

@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- The manifest declares no android.permission.INTERNET (by design,
+         see AndroidManifest.xml), so this config has nothing to actually
+         restrict today. It exists so the manifest's reference resolves,
+         and as a defensive default: if any dependency (or a future
+         feature) ever adds INTERNET, cleartext traffic is blocked from
+         that point on rather than silently allowed. -->
+    <base-config cleartextTrafficPermitted="false" />
+</network-security-config>
