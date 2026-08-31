@@ -1,0 +1,26 @@
+package com.hazia.emivita
+
+import android.os.Bundle
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
+import androidx.fragment.app.FragmentActivity
+import com.hazia.emivita.navigation.EmivitaApp
+
+// FragmentActivity, not ComponentActivity -- androidx.biometric.BiometricPrompt
+// (spec §9 #11) needs a FragmentActivity/Fragment host to attach its dialog
+// fragment to; FragmentActivity is itself a ComponentActivity subtype, so
+// enableEdgeToEdge()/installSplashScreen()/setContent still all work unchanged.
+class MainActivity : FragmentActivity() {
+    override fun onCreate(savedInstanceState: Bundle?) {
+        installSplashScreen()
+        super.onCreate(savedInstanceState)
+        enableEdgeToEdge()
+
+        val container = (application as EmivitaApplication).container
+
+        setContent {
+            EmivitaApp(container)
+        }
+    }
+}

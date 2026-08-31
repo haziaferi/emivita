@@ -1,0 +1,140 @@
+package com.hazia.emivita.ui.components
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.hazia.emivita.core.data.entity.DoseStatus
+import com.hazia.emivita.core.data.repository.DoseEventRepository
+import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.ZoneId
+
+/**
+ * Event editing (spec §3/§9 #3) -- shared between Today and History, since
+ * spec explicitly calls both out ("swipe-to-edit on a Today/History entry").
+ * Status switch, recorded time, and dose amount are each independently
+ * editable; only the fields that actually changed get written, each through
+ * its own repository method, so the stock-correct-undo logic stays isolated
+ * to [DoseEventRepository.switchStatus] specifically -- editing amount/time
+ * never touches stock, only a status switch does.
+ *
+ * Tap-to-open rather than a literal swipe gesture -- functionally
+ * equivalent (every field spec calls out is editable), and a modal step
+ * before changing a medication record reads safer for this app's purpose
+ * than a gesture that's easy to trigger by accident. Only ever opened for an
+ * already-resolved (Taken/Skipped) event -- callers gate on that themselves.
+ */
+@Composable
+fun DoseEditDialog(
+    medicineName: String,
+    doseEventId: Long,
+    originalStatus: DoseStatus,
+    originalDoseAmount: Double,
+    originalResolvedAtEpochMillis: Long?,
+    doseEventRepository: DoseEventRepository,
+    onDismiss: () -> Unit,
+    doseUnit: String? = null,
+) {
+    val zone = remember { ZoneId.systemDefault() }
+    val originalZoned = remember(originalResolvedAtEpochMillis) {
+        Instant.ofEpochMilli(originalResolvedAtEpochMillis ?: System.currentTimeMillis()).atZone(zone)
+    }
+
+    var status by remember { mutableStateOf(originalStatus) }
+    var hour by remember { mutableStateOf(originalZoned.hour) }
+    var minute by remember { mutableStateOf(originalZoned.minute) }
+    var doseAmount by remember { mutableStateOf(formatDoseAmount(originalDoseAmount)) }
+    var saving by remember { mutableStateOf(false) }
+    var saveError by remember { mutableStateOf<String?>(null) }
+    val scope = rememberCoroutineScope()
+    val doseValue = doseAmount.toDoubleOrNull()
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(medicineName) },
+        text = {
+            Column {
+                Text("Status", style = MaterialTheme.typography.labelLarge)
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(selected = status == DoseStatus.TAKEN, onClick = { status = DoseStatus.TAKEN })
+                    Text("Taken", Modifier.clickable { status = DoseStatus.TAKEN })
+                }
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    RadioButton(selected = status == DoseStatus.SKIPPED, onClick = { status = DoseStatus.SKIPPED })
+                    Text("Skipped", Modifier.clickable { status = DoseStatus.SKIPPED })
+                }
+                Spacer(Modifier.height(12.dp))
+                TimeOfDayField("Recorded time", hour, minute) { h, m -> hour = h; minute = m }
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = doseAmount,
+                    onValueChange = { doseAmount = it },
+                    label = { Text("Dose amount") },
+                    suffix = doseUnit?.let { unit -> { Text(unit) } },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+                saveError?.let {
+                    Spacer(Modifier.height(8.dp))
+                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = doseValue != null && doseValue > 0 && !saving,
+                onClick = {
+                    val amount = doseValue ?: return@TextButton
+                    saving = true
+                    saveError = null
+                    scope.launch {
+                        try {
+                            val newResolvedAt = originalZoned.withHour(hour).withMinute(minute).toInstant().toEpochMilli()
+                            if (status != originalStatus) doseEventRepository.switchStatus(doseEventId, status)
+                            if (newResolvedAt != originalResolvedAtEpochMillis) doseEventRepository.editRecordedTime(doseEventId, newResolvedAt)
+                            if (amount != originalDoseAmount) doseEventRepository.editDoseAmount(doseEventId, amount)
+                            onDismiss()
+                        } catch (e: Exception) {
+                            saving = false
+                            saveError = "Couldn't save: ${e.message ?: "unknown error"}"
+                        }
+                    }
+                },
+            ) { Text("Save") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancel") }
+        },
+    )
+}
+
+fun formatDoseAmount(dose: Double): String =
+    if (dose == dose.toLong().toDouble()) dose.toLong().toString() else dose.toString()
+
+/** [formatDoseAmount] plus the medicine's own measurement label
+ *  (`Medicine.doseUnit`, e.g. "1 capsules") wherever a dose amount is
+ *  displayed -- falls back to the generic "dose"/"doses" wording every call
+ *  site used to hardcode before this field existed, so a medicine with
+ *  nothing set reads exactly as it always did. */
+fun formatDoseWithUnit(dose: Double, doseUnit: String?): String {
+    val suffix = doseUnit?.takeIf { it.isNotBlank() } ?: if (dose == 1.0) "dose" else "doses"
+    return "${formatDoseAmount(dose)} $suffix"
+}

@@ -1,0 +1,139 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+    <!-- Alarms / exact reminders -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
+    <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+
+    <!-- WAKE_LOCK, FOREGROUND_SERVICE, REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
+         removed (audit finding, PERM-001 least-privilege): none of the four
+         BroadcastReceivers ever acquires a PowerManager.WakeLock, declares a
+         foreground Service, or checks isIgnoringBatteryOptimizations. An
+         alarm-fired broadcast already gets the OS's own brief wake guarantee
+         for the duration of onReceive(), and every receiver correctly extends
+         that with goAsync() for its coroutine work rather than needing a
+         foreground service or a manually-held wake lock. -->
+
+    <!-- Location-based snooze re-notify: removed for now. Nothing in the
+         codebase implements this yet (no LocationManager/FusedLocationProvider
+         usage anywhere), and ACCESS_BACKGROUND_LOCATION is one of the most
+         sensitive permissions Android has - least-privilege (PERM-001) says
+         don't declare it until the feature exists. When it's actually built,
+         request ACCESS_COARSE_LOCATION or ACCESS_FINE_LOCATION first, and only
+         request ACCESS_BACKGROUND_LOCATION afterward, in a separate step
+         (PERM-027) - never all three in the same batch. -->
+
+    <!-- Biometric app-lock (optional toggle) -->
+    <uses-permission android:name="android.permission.USE_BIOMETRIC" />
+    <uses-feature android:name="android.hardware.fingerprint" android:required="false" />
+
+    <!-- No android.permission.INTERNET anywhere in this file, by design. -->
+
+    <!-- Package-visibility (Android 11+): without this, the zxing SCAN intent
+         resolves as "no app can handle this" even when a scanner like Binary
+         Eye is installed, since queryIntentActivities() is filtered by default.
+         Doesn't declare the scanner app itself, just the intent action it's
+         checked against. -->
+    <queries>
+        <intent>
+            <action android:name="com.google.zxing.client.android.SCAN" />
+        </intent>
+    </queries>
+
+    <application
+        android:name=".EmivitaApplication"
+        android:allowBackup="false"
+        android:icon="@mipmap/ic_launcher"
+        android:label="@string/app_name"
+        android:theme="@style/Theme.Emivita"
+        android:networkSecurityConfig="@xml/network_security_config"
+        android:enableOnBackInvokedCallback="true"
+        android:supportsRtl="true">
+
+        <activity
+            android:name=".MainActivity"
+            android:exported="true"
+            android:theme="@style/Theme.Emivita">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+
+        <!-- Full-screen target for ALARM-priority reminders. Not exported;
+             only ever launched by this app's own notification / full-screen
+             intent. singleTask so a second alarm firing while one is already
+             showing brings the same instance forward instead of stacking. -->
+        <activity
+            android:name=".feature.alarm.AlarmActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Emivita.Main"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask" />
+
+        <!-- Fired by AlarmManager (see core/scheduling/AlarmScheduler.kt). -->
+        <receiver
+            android:name=".core.scheduling.ReminderAlarmReceiver"
+            android:exported="false" />
+
+        <!-- Handles Take / Skip / Snooze from a reminder notification. -->
+        <receiver
+            android:name=".core.scheduling.ReminderActionReceiver"
+            android:exported="false" />
+
+        <!-- Handles Refill from a LowStockAlert notification (spec §9 item 8). -->
+        <receiver
+            android:name=".core.scheduling.AlertActionReceiver"
+            android:exported="false" />
+
+        <!-- AlarmManager forgets every exact alarm across a reboot; some OEM
+             skins behave similarly across an app update. exported="true" is
+             intentional, not an oversight: BOOT_COMPLETED is a protected
+             broadcast (RECEIVE_BOOT_COMPLETED is only ever held by the
+             system), so no third-party app can forge it regardless of this
+             flag, and there are credible real-world reports of
+             exported="false" silently failing to deliver it on Android 12+
+             despite the flag theoretically being irrelevant for protected
+             broadcasts. Verify this fires on your actual test device after
+             the first real build; flip to "false" only if you can confirm
+             delivery still works, since this is the one item in this batch
+             I could not verify by reading code alone. -->
+        <receiver
+            android:name=".core.scheduling.BootRescheduleReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+            </intent-filter>
+        </receiver>
+
+        <!-- Home-screen widgets (spec §9 #7, Glance-based; see
+             feature/widget/NextRemindersWidget.kt and StockLevelsWidget.kt). -->
+        <receiver
+            android:name=".feature.widget.NextRemindersWidgetReceiver"
+            android:exported="false"
+            android:label="@string/widget_next_reminders_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/next_reminders_widget_info" />
+        </receiver>
+
+        <receiver
+            android:name=".feature.widget.StockLevelsWidgetReceiver"
+            android:exported="false"
+            android:label="@string/widget_stock_levels_label">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/stock_levels_widget_info" />
+        </receiver>
+
+    </application>
+</manifest>
