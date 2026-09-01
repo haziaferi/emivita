@@ -4,6 +4,7 @@ import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
 import android.util.Base64
+import androidx.core.content.edit
 import java.security.KeyStore
 import java.security.SecureRandom
 import javax.crypto.Cipher
@@ -79,10 +80,10 @@ object PassphraseProvider {
 
         val newRawKey = ByteArray(RAW_KEY_BYTES).also { SecureRandom().nextBytes(it) }
         val (ciphertext, iv) = encrypt(newRawKey)
-        prefs.edit()
-            .putString(KEY_CIPHERTEXT, Base64.encodeToString(ciphertext, Base64.NO_WRAP))
-            .putString(KEY_IV, Base64.encodeToString(iv, Base64.NO_WRAP))
-            .apply()
+        prefs.edit {
+            putString(KEY_CIPHERTEXT, Base64.encodeToString(ciphertext, Base64.NO_WRAP))
+            putString(KEY_IV, Base64.encodeToString(iv, Base64.NO_WRAP))
+        }
         return newRawKey
     }
 

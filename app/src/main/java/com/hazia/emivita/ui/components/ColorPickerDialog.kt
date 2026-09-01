@@ -37,6 +37,7 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import com.hazia.emivita.ui.theme.NeutralMedicineAccent
 import androidx.compose.ui.unit.dp
+import androidx.core.graphics.toColorInt
 import kotlin.math.max
 
 /** Parses a `#RRGGBB` string, or null if blank/invalid -- lenient about a
@@ -44,7 +45,7 @@ import kotlin.math.max
 fun parseHexColor(hex: String): Color? {
     val cleaned = hex.trim().removePrefix("#")
     if (cleaned.length != 6) return null
-    return runCatching { Color(AndroidColor.parseColor("#$cleaned")) }.getOrNull()
+    return runCatching { Color("#$cleaned".toColorInt()) }.getOrNull()
 }
 
 fun Color.toHexString(): String {
