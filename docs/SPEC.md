@@ -21,7 +21,21 @@ by name. Every one of them is now folded in here.
 | `emivita-frontend-theme-review.md` | The colour/type/layout analysis §7's T1–T6 came from | **Appendix C**. Lived outside the repo, uncommitted, cited 7× by name |
 | `emivita-palette-candidates.md` | The 8 palettes with tokens and contrast checks | **Appendix A**, absorbed before this pass — verified equivalent entry by entry, nothing outstanding |
 | `Emivita-audit.md` | The original audit findings | **§7's ledger**, absorbed long ago. The file no longer exists anywhere |
-| `emivita_spec.md`, `emivita_spec (1).md` | Earlier copies of this same file | Retired. Verified strict ancestors — every line unique to them is superseded wording of a passage this file already carries |
+| `emivita_spec.md`, `emivita_spec (1).md` | Earlier copies of this same file | Retired. Verified strict ancestors — every line unique to them is superseded wording, or a roadmap item still marked 🚧 that is now ✅ |
+
+All four originals lived in `Downloads/Builds/`, outside any repository, and
+have been deleted from there. They are not lost: commit `467b760` holds them
+under `docs/retired/`, and the commit immediately after removes that folder
+again — so they stay recoverable from history without a second copy sitting
+in the tree to drift from this one.
+
+    git show 467b760:docs/retired/emivita-frontend-theme-review.md
+
+Before deleting, each was checked rather than assumed superseded: the theme
+review differs from Appendix C only in heading depth, the palette candidates
+contribute zero hex values and zero contrast ratios this file does not
+already carry, and the two old spec copies differ only in wording and in
+roadmap items whose status has since advanced.
 
 Two files cited in these pages are **not** Emivita documents and are not
 absorbed: medTimer's own `docs/UseCases.md` (the upstream reference app's
