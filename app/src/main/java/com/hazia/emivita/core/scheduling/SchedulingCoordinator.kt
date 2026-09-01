@@ -6,11 +6,10 @@ package com.hazia.emivita.core.scheduling
  * [SchedulingEngine] directly -- everything goes through here, so there's
  * one place that decides "does this change require touching an alarm".
  *
- * Widened from the original single-method placeholder now that the real
- * engine (this batch) exists: dose resolution isn't the only thing that
- * can change a reminder's next alarm -- creating, editing, enabling/
- * disabling, and deleting a reminder all can too, and a device reboot
- * clears every exact alarm AlarmManager was holding.
+ * Five methods rather than one because dose resolution isn't the only thing
+ * that can move a reminder's next alarm -- creating, editing, enabling and
+ * deleting a reminder all can too, and a device reboot clears every exact
+ * alarm AlarmManager was holding.
  */
 interface SchedulingCoordinator {
     /** Called by DoseEventRepository after a dose event's status changes. */

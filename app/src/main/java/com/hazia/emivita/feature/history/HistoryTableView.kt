@@ -42,8 +42,8 @@ import java.time.format.DateTimeFormatter
 private val NEUTRAL_ACCENT = Color(0xFFB8ABA9)
 
 /** Sortable columns for [HistoryTableView] -- hand-rolled per spec §5's
- *  ADR-0001 shopping list ("hand-rolled `SortableTable`"), §9 #6, previously
- *  unbuilt. Dense/scannable by design, distinct from the List view's cards:
+ *  ADR-0001 shopping list ("hand-rolled `SortableTable`"), §9 #6.
+ *  Dense/scannable by design, distinct from the List view's cards:
  *  a table earns its place specifically when someone wants to sort by
  *  medicine or status across the whole window rather than read
  *  chronologically. */

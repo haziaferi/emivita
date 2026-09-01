@@ -17,9 +17,9 @@ const val EXTRA_TRIGGER_AT_EPOCH_MILLIS = "com.hazia.emivita.extra.TRIGGER_AT_EP
 // doc comment for why those two paths can't share the same handling).
 const val EXTRA_IS_NAG = "com.hazia.emivita.extra.IS_NAG"
 
-// Fixed for this batch -- a per-reminder or user-configurable snooze length
-// is Settings-screen work, out of scope here. Shared so the notification
-// action path and the full-screen alarm screen agree on the same value.
+// The fresh-install default only. SettingsRepository.snoozeDurationMinutes
+// persists the user's own choice (Settings > Alarms & Snooze); every caller
+// reads that and falls back to this, so it isn't a second magic number.
 const val DEFAULT_SNOOZE_MINUTES = 10L
 
 private const val TAG = "AlarmScheduler"

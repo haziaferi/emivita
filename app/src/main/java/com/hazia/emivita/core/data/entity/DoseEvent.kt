@@ -36,8 +36,7 @@ enum class DoseStatus { PENDING, TAKEN, SKIPPED, REFILLED }
 data class DoseEvent(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     // Nullable -- null marks a manually-logged (PRN) dose not tied to any scheduled
-    // occurrence. See DoseEventRepository.logAdhocDose (spec §3, deferred to §9 #2,
-    // schema landed now so the Add/Edit Reminder UI doesn't need a retrofit later).
+    // occurrence. See DoseEventRepository.logAdhocDose (spec §3/§9 #2).
     val reminderId: Long? = null,
     // Denormalized. Scheduled events keep this in sync with reminder.medicineId at
     // materialization time; PRN events have no reminder to derive it from, so it's
@@ -54,12 +53,13 @@ data class DoseEvent(
     // Room AutoMigration handles non-null defaulted columns more predictably than
     // nullable Double, and "was stock tracked for this event" collapses to one
     // check (stockBefore != stockAfter) that also correctly covers old migrated
-    // rows and un-tracked medicines. Written by resolve()/logRefill() -- not yet
-    // (§9 #3), just the columns landing now.
+    // rows and un-tracked medicines. Written by resolve()/logAdhocDose()/
+    // logRefill(), and read back by switchStatus() to restore or reapply the
+    // exact recorded quantity rather than doing relative math (§9 #3).
     val stockBefore: Double = -1.0,
     val stockAfter: Double = -1.0,
     // Incremented per "nag" fire, capped at Reminder.repeatOnUnanswered.maxRepeats
-    // (spec §3, §9 #-adjacent -- engine behavior not built this batch either).
+    // (spec §3/§4). See ReminderAlarmReceiver.handleNagFire.
     val repeatCount: Int = 0,
     val createdAtEpochMillis: Long,
 )

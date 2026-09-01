@@ -44,10 +44,10 @@ data class Medicine(
     // behavior on for a medicine that never asked for it.
     val doseUnit: String? = null,
     // Boolean? not Boolean -- null = inherit the global
-    // lockRemindersUntilTakenByDefault preference, non-null = explicit per-medicine
-    // override. Was a plain Boolean (spec §3, "bug found in already-shipped code");
-    // fixed here even though nothing reads the resolved value yet this batch either
-    // (that's core/scheduling wiring, not in §9 item 1's scope).
+    // lockRemindersUntilTakenByDefault preference, non-null = explicit
+    // per-medicine override (spec §3). SettingsRepository.isLockedUntilTaken()
+    // is the one place that resolution happens; the notification builder, the
+    // action receiver and the alarm screen all go through it.
     val remindersLockedUntilTaken: Boolean? = null,
     val notes: String? = null,
     @Embedded val stockInfo: StockInfo = StockInfo(),

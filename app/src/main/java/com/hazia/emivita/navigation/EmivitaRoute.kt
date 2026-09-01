@@ -24,11 +24,9 @@ sealed interface EmivitaRoute {
     @Serializable data class MedicineDetail(val medicineId: Long) : EmivitaRoute
     @Serializable data class AddReminder(val medicineId: Long) : EmivitaRoute
 
-    // Edit is the "immediate follow-up" to add+list called out in spec §9
-    // item 1 -- same forms as Add, reached from MedicineDetail rather than
-    // the bottom-nav shell. Delete is not here yet (see EditMedicineScreen's
-    // doc comment): the deleted-medicine cascade-vs-archive question is still
-    // open in the spec.
+    // Same forms as Add (spec §9 item 1), reached from MedicineDetail rather
+    // than the bottom-nav shell. Delete needs no route of its own -- it's a
+    // confirm dialog on MedicineDetail, not a screen.
     @Serializable data class EditMedicine(val medicineId: Long) : EmivitaRoute
     @Serializable data class EditReminder(val reminderId: Long) : EmivitaRoute
 

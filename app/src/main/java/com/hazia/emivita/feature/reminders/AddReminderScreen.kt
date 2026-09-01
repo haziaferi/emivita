@@ -87,14 +87,13 @@ private val reminderTypeOptions = listOf(
 )
 
 /**
- * Type picker + the 6 buildable sub-forms (spec §6/§9 items 1, 8, and 14).
+ * Type picker + the 6 sub-forms (spec §6/§9 items 1, 8, and 14).
  * LowStockAlert/ExpirationAlert don't get an AlarmManager occurrence the way
  * the others do (SchedulingEngine.supportedTypes excludes them on purpose)
  * -- they're evaluated by LowStockExpirationAlertEvaluator as part of
- * OccurrenceProjectionCache's own recompute pass instead. LinkedFollowing is
- * the one actual new top-level ReminderConfig variant §9 #14 adds (R8, §7:
- * CyclicActivePause is a 4th RepeatPattern case inside Fixed Time's own
- * form, not a new top-level type/card).
+ * OccurrenceProjectionCache's own recompute pass instead. CyclicActivePause
+ * is a 4th RepeatPattern case inside Fixed Time's own form, not a top-level
+ * type with a card of its own (R8, §7).
  */
 @Composable
 fun AddReminderScreen(
@@ -886,9 +885,9 @@ private fun ExpirationAlertFormBody(
     }
 }
 
-/** Chained "following dose" reminders (spec §3/§9 #14) -- the one actual new
- *  top-level ReminderConfig variant. No RepeatPattern selector like Fixed
- *  Time's -- there's nothing to repeat here, the schedule is entirely
+/** Chained "following dose" reminders (spec §3/§9 #14). No RepeatPattern
+ *  selector like Fixed Time's -- there's nothing to repeat here, the
+ *  schedule is entirely
  *  derived from whichever sibling reminder is picked as the parent. The
  *  parent picker is scoped to the same medicine's own reminders (including
  *  other LinkedFollowing ones -- chains of arbitrary length compose for

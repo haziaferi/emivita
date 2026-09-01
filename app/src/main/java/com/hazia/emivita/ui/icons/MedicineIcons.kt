@@ -15,9 +15,9 @@ import androidx.compose.material.icons.filled.WaterDrop
 import androidx.compose.ui.graphics.vector.ImageVector
 
 /**
- * Placeholder icon set (spec §3/§6 "icon-per-type grid" -- no fixed set existed
- * anywhere before this batch). Stock Material Symbols, chosen per the user's own
- * call to keep this batch unblocked rather than wait on a custom line-art set.
+ * Placeholder icon set (spec §3/§6 "icon-per-type grid"). Stock Material
+ * Symbols rather than a custom line-art set, deliberately: see below for why
+ * swapping in one later is a rendering-layer change only.
  *
  * `Medicine.iconKey` only ever stores [MedicineIconOption.key] (a stable string,
  * never the ImageVector itself), so swapping this file's contents for a custom

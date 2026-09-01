@@ -28,10 +28,9 @@ import com.hazia.emivita.core.security.BiometricAvailability
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
-/** Destinations reachable from the Settings home list. String-keyed for now;
- *  becomes a proper EmivitaRoute.Settings* sealed hierarchy once each
- *  detail screen is built (Notifications, AlarmsSnooze, Weekend, Appearance,
- *  Privacy, Backup). */
+/** Destinations reachable from the Settings home list. How each one responds
+ *  to a tap is [RowKind]'s concern, not this enum's -- only the NAVIGATE rows
+ *  correspond to an actual EmivitaRoute. */
 enum class SettingsDestination {
     NotificationsAlerts, AlarmsSnooze, WeekendMode, Appearance, PrivacySecurity, DataBackup,
 }
@@ -125,16 +124,16 @@ private val settingsGroups = listOf(
 /**
  * Settings home list -- three response modes per row (see [RowKind]) instead
  * of one uniform "push a new screen" for everything:
- *  - NAVIGATE: DataBackup and the not-yet-built Notifications/Appearance
- *    destinations still route through [onOpenDetail] (a real EmivitaRoute
- *    push), since DataBackup genuinely has multiple flows (export, restore,
- *    auto-sync setup) that don't fit a sheet cleanly.
+ *  - NAVIGATE: Notifications, Appearance and DataBackup route through
+ *    [onOpenDetail] (a real EmivitaRoute push) -- DataBackup genuinely has
+ *    multiple flows (export, restore, auto-sync setup) that don't fit a
+ *    sheet cleanly.
  *  - SHEET: Alarms & Snooze and Weekend Mode open in a [ModalBottomSheet]
  *    right over this list -- one dismiss gesture back to Settings instead of
  *    a full screen transition + back-stack entry, for content that's really
  *    just a handful of fields.
  *  - TOGGLE: Biometric lock doesn't navigate anywhere at all -- the whole
- *    "screen" was previously one Switch, so it's inline on the row itself.
+ *    "screen" would be a single Switch, so it's inline on the row itself.
  *    Reads live [SettingsRepository.biometricLockEnabled] plus device
  *    availability (fails closed to disabled+unchecked, matching
  *    [com.hazia.emivita.feature.lock.AppLockGate]'s own fail-open design at
