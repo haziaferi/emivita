@@ -51,8 +51,10 @@ import com.hazia.emivita.ui.components.DoseEditDialog
 import com.hazia.emivita.ui.components.formatDoseWithUnit
 import com.hazia.emivita.ui.components.parseHexColor
 import com.hazia.emivita.ui.icons.MedicineIcons
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
@@ -115,16 +117,26 @@ fun HistoryScreen(
     var showExportMenu by remember { mutableStateOf(false) }
     val exportRows = events ?: emptyList()
 
+    // Both exports run on Dispatchers.IO: formatting the rows and writing
+    // through the SAF stream are real work over the whole visible window, and
+    // rememberCoroutineScope() dispatches on Main, so without this they block
+    // the frame that's drawing the file picker's dismissal.
     val exportCsvLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
         if (uri == null) return@rememberLauncherForActivityResult
-        val csv = HistoryExporter.buildCsv(exportRows, zone)
-        context.contentResolver.openOutputStream(uri)?.use { it.write(csv.toByteArray(Charsets.UTF_8)) }
+        scope.launch {
+            withContext(Dispatchers.IO) {
+                val csv = HistoryExporter.buildCsv(exportRows, zone)
+                context.contentResolver.openOutputStream(uri)?.use { it.write(csv.toByteArray(Charsets.UTF_8)) }
+            }
+        }
     }
     val exportPdfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri: Uri? ->
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
-            val document = HistoryExporter.buildPdf(exportRows, adherenceSubtitle(exportRows), zone)
-            context.contentResolver.openOutputStream(uri)?.use { HistoryExporter.writePdf(document, it) }
+            withContext(Dispatchers.IO) {
+                val document = HistoryExporter.buildPdf(exportRows, adherenceSubtitle(exportRows), zone)
+                context.contentResolver.openOutputStream(uri)?.use { HistoryExporter.writePdf(document, it) }
+            }
         }
     }
 

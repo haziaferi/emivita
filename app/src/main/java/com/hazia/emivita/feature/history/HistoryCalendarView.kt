@@ -28,6 +28,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -51,7 +52,6 @@ import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
-import java.util.Locale
 
 /**
  * Calendar view for History (spec §5 ADR-0001 shopping list, §9 #6 --
@@ -173,12 +173,16 @@ private fun CalendarSelectedDayPanel(
 
 @Composable
 private fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
+    // LocalConfiguration, not Locale.getDefault(): the latter isn't observable
+    // Compose state, so these headers would keep rendering the old language
+    // after a system locale change until something else forced recomposition.
+    val locale = LocalConfiguration.current.locales[0]
     Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 4.dp)) {
         for (dayOfWeek in daysOfWeek) {
             Text(
                 modifier = Modifier.weight(1f),
                 textAlign = TextAlign.Center,
-                text = dayOfWeek.getDisplayName(TextStyle.SHORT, Locale.getDefault()),
+                text = dayOfWeek.getDisplayName(TextStyle.SHORT, locale),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
             )

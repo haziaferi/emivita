@@ -49,10 +49,12 @@ class AlarmScheduler(private val context: Context) {
     private val alarmManager: AlarmManager =
         context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
-    /** Whether exact alarms can be scheduled right now. The Settings screen
-     *  (a later batch) is responsible for prompting the user to grant this
-     *  via `ACTION_REQUEST_SCHEDULE_EXACT_ALARM` on API 33+ -- this class
-     *  only reads the current state and degrades gracefully if it's off. */
+    /** Whether exact alarms can be scheduled right now. The manifest declares
+     *  `USE_EXACT_ALARM`, which is granted at install and makes this return
+     *  true without any user interaction -- see AndroidManifest.xml for why
+     *  that permission rather than a Settings prompt. This stays a real check
+     *  rather than an assumed `true`: the [setAlarm] fallback below is what
+     *  keeps reminders firing (late, but firing) if that ever stops holding. */
     fun canScheduleExact(): Boolean =
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) alarmManager.canScheduleExactAlarms() else true
 

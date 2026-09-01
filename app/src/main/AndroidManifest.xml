@@ -1,20 +1,59 @@
 <?xml version="1.0" encoding="utf-8"?>
-<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+    xmlns:tools="http://schemas.android.com/tools">
 
-    <!-- Alarms / exact reminders -->
-    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM" />
+    <!-- Alarms / exact reminders.
+
+         USE_EXACT_ALARM, not a runtime grant flow: from Android 14 (API 34)
+         SCHEDULE_EXACT_ALARM is no longer granted at install to an app
+         targeting 34+, and nothing in this app ever asked for it, so every
+         reminder silently fell through to AlarmScheduler's inexact,
+         Doze-batched branch on a fresh install. USE_EXACT_ALARM is the
+         platform's own answer for an app whose core function *is* reminders;
+         it is granted at install with no user interaction, and
+         canScheduleExactAlarms() reports true while it is held, so
+         AlarmScheduler needs no change. The Play policy that normally makes
+         this permission awkward to justify does not apply to an app that is
+         sideloaded and never reaches a store. SCHEDULE_EXACT_ALARM is kept
+         capped at API 32, where it is still the install-time permission that
+         covers this. -->
+    <uses-permission android:name="android.permission.SCHEDULE_EXACT_ALARM"
+        android:maxSdkVersion="32" />
+    <uses-permission android:name="android.permission.USE_EXACT_ALARM" />
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
 
-    <!-- WAKE_LOCK, FOREGROUND_SERVICE, REQUEST_IGNORE_BATTERY_OPTIMIZATIONS
-         removed (audit finding, PERM-001 least-privilege): none of the four
-         BroadcastReceivers ever acquires a PowerManager.WakeLock, declares a
-         foreground Service, or checks isIgnoringBatteryOptimizations. An
-         alarm-fired broadcast already gets the OS's own brief wake guarantee
-         for the duration of onReceive(), and every receiver correctly extends
-         that with goAsync() for its coroutine work rather than needing a
-         foreground service or a manually-held wake lock. -->
+    <!-- REQUEST_IGNORE_BATTERY_OPTIMIZATIONS removed (least-privilege):
+         nothing checks isIgnoringBatteryOptimizations.
+
+         WAKE_LOCK and FOREGROUND_SERVICE were previously described here as
+         removed too. Deleting their <uses-permission> lines only removed
+         them from THIS file - the manifest merger put both straight back
+         from androidx.work, which arrives transitively via
+         androidx.glance:glance-appwidget. They are now genuinely removed,
+         below, via tools:node="remove". None of this app's own code wants
+         any of them: no receiver acquires a PowerManager.WakeLock or
+         declares a foreground Service, an alarm-fired broadcast already gets
+         the OS's own brief wake guarantee for onReceive(), and every
+         receiver extends that with goAsync() for its coroutine work.
+
+         ACCESS_NETWORK_STATE arrives the same way, into an app that
+         deliberately declares no INTERNET permission at all.
+         USE_FINGERPRINT arrives from androidx.biometric:1.1.0 and has been
+         deprecated since API 28 - dead at this app's minSdk 30, which uses
+         BIOMETRIC_STRONG via USE_BIOMETRIC instead.
+
+         If a home-screen widget ever stops updating, this block is the first
+         place to look: Glance's session manager is the real WorkManager
+         consumer here. Restore whichever line it turns out to need and
+         correct this comment rather than reverting the whole block.
+         Re-check with :app:processReleaseMainManifest and read
+         app/build/intermediates/merged_manifest/release/. -->
+    <uses-permission android:name="android.permission.WAKE_LOCK" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
+    <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
+    <uses-permission android:name="android.permission.USE_FINGERPRINT" tools:node="remove" />
 
     <!-- Location-based snooze re-notify: removed for now. Nothing in the
          codebase implements this yet (no LocationManager/FusedLocationProvider
