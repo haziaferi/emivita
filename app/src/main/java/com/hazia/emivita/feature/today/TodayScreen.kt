@@ -60,6 +60,7 @@ import com.hazia.emivita.core.scheduling.OccurrenceProjectionCache
 import com.hazia.emivita.core.scheduling.ProjectedOccurrence
 import com.hazia.emivita.core.scheduling.ProjectionState
 import com.hazia.emivita.ui.components.DoseEditDialog
+import com.hazia.emivita.ui.components.rememberCurrentDate
 import com.hazia.emivita.core.format.formatDoseWithUnit
 import com.hazia.emivita.ui.components.parseHexColor
 import com.hazia.emivita.ui.icons.MedicineIcons
@@ -133,10 +134,15 @@ fun TodayScreen(
     }.value
 
     val zone = remember { ZoneId.systemDefault() }
-    val startOfToday = remember { LocalDate.now(zone).atStartOfDay(zone).toInstant().toEpochMilli() }
-    val startOfTomorrow = remember { LocalDate.now(zone).plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() }
+    // rememberCurrentDate, not remember { LocalDate.now() } -- otherwise the
+    // window below is frozen at whatever day this screen first composed on,
+    // and Today keeps showing yesterday after midnight. Every derived value
+    // and query key downstream is keyed on it so they all move together.
+    val today = rememberCurrentDate(zone)
+    val startOfToday = remember(today, zone) { today.atStartOfDay(zone).toInstant().toEpochMilli() }
+    val startOfTomorrow = remember(today, zone) { today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() }
 
-    val materializedToday = produceState<List<DoseEventWithMedicine>?>(initialValue = null, profileId) {
+    val materializedToday = produceState<List<DoseEventWithMedicine>?>(initialValue = null, profileId, startOfToday, startOfTomorrow) {
         doseEventRepository.observeInRange(profileId, startOfToday, startOfTomorrow).collectLatest { value = it }
     }.value
 
@@ -144,7 +150,7 @@ fun TodayScreen(
         occurrenceProjectionCache.state.collectLatest { value = it }
     }
 
-    val nodes = remember(medicinesById, materializedToday, projectionState) {
+    val nodes = remember(medicinesById, materializedToday, projectionState, startOfToday, startOfTomorrow) {
         buildTimeline(medicinesById, materializedToday, projectionState, startOfToday, startOfTomorrow)
     }
 

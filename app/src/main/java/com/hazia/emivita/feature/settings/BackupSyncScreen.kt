@@ -50,6 +50,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.util.Arrays
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
@@ -102,6 +103,11 @@ fun BackupSyncScreen(
             } catch (e: Exception) {
                 exportStatus = "Export failed: ${e.message ?: "unknown error"}"
             } finally {
+                // Same wipe-after-use discipline AutoSyncPassphraseStore asks
+                // for: this array was built from the text field only to hand to
+                // zip4j, so don't leave the plaintext sitting in Compose state.
+                password?.let { Arrays.fill(it, ' ') }
+                pendingExportPassword = null
                 withContext(Dispatchers.IO) { tempFile.delete() }
             }
         }
@@ -328,7 +334,13 @@ fun BackupSyncScreen(
                     onClick = {
                         val uri = pendingRestoreUri ?: return@TextButton
                         val password = restorePasswordInput.toCharArray()
-                        scope.launch { attemptRestore(uri, password) }
+                        scope.launch {
+                            try {
+                                attemptRestore(uri, password)
+                            } finally {
+                                Arrays.fill(password, ' ')
+                            }
+                        }
                     },
                 ) { Text("Unlock") }
             },
@@ -364,7 +376,12 @@ fun BackupSyncScreen(
                     enabled = syncPassphraseInput.isNotBlank(),
                     onClick = {
                         val folderUri = pendingSyncFolderUri ?: return@TextButton
-                        AutoSyncPassphraseStore.save(context, syncPassphraseInput.toCharArray())
+                        val passphrase = syncPassphraseInput.toCharArray()
+                        try {
+                            AutoSyncPassphraseStore.save(context, passphrase)
+                        } finally {
+                            Arrays.fill(passphrase, ' ')
+                        }
                         scope.launch {
                             settingsRepository.setAutoSyncFolderUri(folderUri)
                             syncFolderUri = folderUri

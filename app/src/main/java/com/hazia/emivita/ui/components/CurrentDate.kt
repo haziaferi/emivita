@@ -1,0 +1,39 @@
+package com.hazia.emivita.ui.components
+
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.produceState
+import kotlinx.coroutines.delay
+import java.time.Duration
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.ZonedDateTime
+
+/** A second past midnight, so the re-read can't land on the boundary itself
+ *  and compute the day it just left. */
+private const val MIDNIGHT_OVERSHOOT_MILLIS = 1_000L
+
+/**
+ * Today's date, recomputed when it actually changes.
+ *
+ * `remember { LocalDate.now() }` captures the date the composable first ran
+ * and then never updates, so a screen left open across midnight keeps
+ * rendering the previous day: Today would go on showing yesterday's doses
+ * and offering to resolve them, and History's rolling window would stop
+ * moving. Nothing else in either screen forces recomposition on its own,
+ * because the data those screens observe is queried *for* the stale range.
+ *
+ * Sleeps until just after the next local midnight rather than ticking on a
+ * fixed 24-hour interval, so a timezone change or a DST shift lands on the
+ * real boundary instead of drifting away from it.
+ */
+@Composable
+fun rememberCurrentDate(zone: ZoneId): LocalDate =
+    produceState(initialValue = LocalDate.now(zone), zone) {
+        while (true) {
+            val now = ZonedDateTime.now(zone)
+            val nextMidnight = now.toLocalDate().plusDays(1).atStartOfDay(zone)
+            val untilMidnight = Duration.between(now, nextMidnight).toMillis()
+            delay(untilMidnight.coerceAtLeast(0L) + MIDNIGHT_OVERSHOOT_MILLIS)
+            value = LocalDate.now(zone)
+        }
+    }.value
