@@ -8,6 +8,37 @@ this file until this file is edited.
 Status key used throughout: 🔒 locked (don't revisit without a real reason) ·
 ✅ built · 🚧 designed but not built · ❓ open, needs a decision.
 
+### Where everything went 🔒
+
+This file is the only place Emivita decisions live. It did not use to be:
+the reasoning was spread across five documents, two of them outside the
+project directory and one of them already deleted while still being cited
+by name. Every one of them is now folded in here.
+
+| Was | Held | Now |
+|---|---|---|
+| `docs/ux-audit.md` | The reference-app UX audit §6's decisions came from | **Appendix B**, verbatim. File deleted — its history is in git |
+| `emivita-frontend-theme-review.md` | The colour/type/layout analysis §7's T1–T6 came from | **Appendix C**. Lived outside the repo, uncommitted, cited 7× by name |
+| `emivita-palette-candidates.md` | The 8 palettes with tokens and contrast checks | **Appendix A**, absorbed before this pass — verified equivalent entry by entry, nothing outstanding |
+| `Emivita-audit.md` | The original audit findings | **§7's ledger**, absorbed long ago. The file no longer exists anywhere |
+| `emivita_spec.md`, `emivita_spec (1).md` | Earlier copies of this same file | Retired. Verified strict ancestors — every line unique to them is superseded wording of a passage this file already carries |
+
+Two files cited in these pages are **not** Emivita documents and are not
+absorbed: medTimer's own `docs/UseCases.md` (the upstream reference app's
+file, §3/§5) and `visual-craft`'s `design-lexicon.md` (a skill's file, §6).
+Both are external inputs this spec was reasoned against, not rival records
+of what Emivita is.
+
+`README.md` is not a source of truth either — it is setup and orientation,
+and it loses to this file wherever the two disagree. Same for
+`dist/vc1/MANIFEST.md`, which describes one archived binary, not the design.
+
+**The rule this pass establishes:** a new finding, audit, or review does not
+get its own file. It lands in §7's ledger with its reasoning in an appendix
+if the reasoning is worth keeping. Two files describing one project's state
+is how §8 came to claim three built screens were placeholders (§7 R19), and
+how three of the five documents above ended up cited but unreadable.
+
 ---
 
 ## 1. Purpose & constraints 🔒
@@ -443,7 +474,7 @@ Still genuinely open:
 
 ---
 
-## 6. UX decisions — confirmed 🔒 (from `docs/ux-audit.md`, carried forward)
+## 6. UX decisions — confirmed 🔒 (from the UX audit, now Appendix B)
 
 - **Today screen:** linked/timeline pattern with aggregate grouped-dose
   nodes (not yet built — waiting on the Add flow, §9).
@@ -529,7 +560,7 @@ Still genuinely open:
 - **Text hierarchy:** heading (bold, full-contrast) / value (medium
   weight, full-contrast) / helper text (regular weight, muted) —
   consistent across every screen, not just some. **❓ Open, from
-  `emivita-frontend-theme-review.md`:** dose amounts, times, and schedule
+  the frontend/theme review (Appendix C):** dose amounts, times, and schedule
   text should probably never render at `labelSmall` (11sp, the system's
   smallest size) regardless of which screen reuses that style for
   chip/badge labels elsewhere — flagged given the app's own
@@ -618,8 +649,10 @@ Still genuinely open:
 
 ## 7. Audit findings ledger
 
-From `Emivita-audit.md`. Kept here so status doesn't have to be
-re-derived by reading old chat every time.
+Originally from a separate `Emivita-audit.md`, absorbed into this table
+long ago; that file no longer exists anywhere and nothing is missing from
+what follows. Kept here so status doesn't have to be re-derived by reading
+old chat every time.
 
 | # | Finding | Status |
 |---|---|---|
@@ -640,12 +673,12 @@ re-derived by reading old chat every time.
 | R7 | `Medicine.colorArgb: Int?` (shipped) vs. `Medicine.color: String?` (hex, spec'd) never reconciled; `Profile.colorArgb` undocumented entirely | ✅ Resolved — `color: String?` (hex) replaces `colorArgb` on both `Medicine` and `Profile` (§3), same picker component reused for both |
 | R8 | §9 item 14's UI-scope wording treated `CyclicActivePause` as needing its own top-level Add-Reminder-picker card ("a 6th card"), contradicting §3/§6's locked decision that it's a 4th `RepeatPattern` case inside the existing "Fixed Time" card, not a new top-level type — found reviewing this batch's docs regeneration | ✅ Resolved — reworded in §9 item 14 (this batch); only `LinkedFollowing` is an actual new top-level `ReminderConfig` needing a new picker card. **Not yet reflected in whatever copy of this spec lives outside this repo** — same fix needs applying there too |
 | R9 | `app/build.gradle.kts` pinned `androidx.security:security-crypto:1.1.0` — no such stable artifact has been published; §2's own text already correctly describes the dependency as `1.1.0-alpha07` (the release where `EncryptedSharedPreferences`/`MasterKey` were deprecated), so the plain `1.1.0` string in the build file wouldn't resolve at all — found in spec-vs-code review | ✅ Resolved — build file now pins `1.1.0-alpha07`, matching §2 (this batch, §9 item 0) |
-| T1 | `LightOutline` fails 3:1 against `LightSurface` in all 4 outgoing palettes (1.48–1.68:1, checked against pure-white surface rather than the tint it was actually tuned against) — found in `emivita-frontend-theme-review.md`, this session | ✅ Resolved — moot, all 4 replaced (§6); every one of the 8 new palettes has its `outline` solved to clear 3:1 against **both** background and surface by construction, not patched per-hex after shipping |
-| T2 | Row-description helper text (`onSurface.copy(alpha = 0.6f)`) fails AA normal-text contrast (3.38–3.97:1) in all 4 outgoing palettes — the same gap `docs/ux-audit.md` finding #8 already named ("helper text... secondary/muted tone") but the opacity shortcut didn't actually deliver; found in `emivita-frontend-theme-review.md`, this session | ✅ Resolved — moot, all 4 replaced (§6); every one of the 8 new palettes ships a real audited `mutedText` hex at ~4.6:1 against surface, not `.copy(alpha=)` |
-| T3 | `colorSchemeFor()` only overrides `background/surface/primary/primaryContainer/secondaryContainer/tertiaryContainer/outline` — `secondary`/`tertiary`/`error`/`onError`/`errorContainer` are unset and silently fall back to Material3 stock red/etc.; found in `emivita-frontend-theme-review.md`, this session | ✅ Resolved — shipped in §9 item 0b for all 8 palettes; `onSurfaceVariant` (T2's mutedText token) wired in the same pass, not originally in scope for T3 but the natural M3 slot for it |
-| T4 | The Error state-token rule (§6 above, "Accent hue +150–165°") has no hue to rotate from against Neutral's fully-desaturated Accent — found in `emivita-frontend-theme-review.md`, this session | ✅ Resolved — moot, Neutral dropped entirely (§6); all 8 replacement palettes carry a real accent hue |
-| T5 | Stock & Expiration and History share no explicit `app-register-layout` register distinction, though their actual data (threshold/countdown vs. trend-over-time) calls for different ones — found in `emivita-frontend-theme-review.md`, this session | ✅ Resolved — Stock & Expiration shipped with distinct tonal-container zoning per section (§6); audited against History's plain-list treatment and found no conflict — the two screens now read differently by construction |
-| T6 | `labelSmall` (11sp) has no rule against rendering dose/schedule-critical text at that size, given the app's own safety-critical-adherence purpose (§1) — found in `emivita-frontend-theme-review.md`, this session | ❓ Still open — logged in §6, not yet made a hard rule |
+| T1 | `LightOutline` fails 3:1 against `LightSurface` in all 4 outgoing palettes (1.48–1.68:1, checked against pure-white surface rather than the tint it was actually tuned against) — found in the frontend/theme review (Appendix C), this session | ✅ Resolved — moot, all 4 replaced (§6); every one of the 8 new palettes has its `outline` solved to clear 3:1 against **both** background and surface by construction, not patched per-hex after shipping |
+| T2 | Row-description helper text (`onSurface.copy(alpha = 0.6f)`) fails AA normal-text contrast (3.38–3.97:1) in all 4 outgoing palettes — the same gap Appendix B's finding #8 already named ("helper text... secondary/muted tone") but the opacity shortcut didn't actually deliver; found in the frontend/theme review (Appendix C), this session | ✅ Resolved — moot, all 4 replaced (§6); every one of the 8 new palettes ships a real audited `mutedText` hex at ~4.6:1 against surface, not `.copy(alpha=)` |
+| T3 | `colorSchemeFor()` only overrides `background/surface/primary/primaryContainer/secondaryContainer/tertiaryContainer/outline` — `secondary`/`tertiary`/`error`/`onError`/`errorContainer` are unset and silently fall back to Material3 stock red/etc.; found in the frontend/theme review (Appendix C), this session | ✅ Resolved — shipped in §9 item 0b for all 8 palettes; `onSurfaceVariant` (T2's mutedText token) wired in the same pass, not originally in scope for T3 but the natural M3 slot for it |
+| T4 | The Error state-token rule (§6 above, "Accent hue +150–165°") has no hue to rotate from against Neutral's fully-desaturated Accent — found in the frontend/theme review (Appendix C), this session | ✅ Resolved — moot, Neutral dropped entirely (§6); all 8 replacement palettes carry a real accent hue |
+| T5 | Stock & Expiration and History share no explicit `app-register-layout` register distinction, though their actual data (threshold/countdown vs. trend-over-time) calls for different ones — found in the frontend/theme review (Appendix C), this session | ✅ Resolved — Stock & Expiration shipped with distinct tonal-container zoning per section (§6); audited against History's plain-list treatment and found no conflict — the two screens now read differently by construction |
+| T6 | `labelSmall` (11sp) has no rule against rendering dose/schedule-critical text at that size, given the app's own safety-critical-adherence purpose (§1) — found in the frontend/theme review (Appendix C), this session | ❓ Still open — logged in §6, not yet made a hard rule |
 | R10 | Reconciliation across five separately-exported zips found a genuine fork: `Emivita_edit_medicine_reminder_batch` and `Emivita_rename_and_palette_batch (3)` both unpack to the same folder name but diverged in 17 shared files (schema v1→v2, `sortOrder`/`barcodeValue`/`indication`/`storageNote`, `RepeatConfig`, nullable `DoseEvent.reminderId`, the `addTag()` transaction fix (R1), the 4 new screens, etc.) | ✅ Resolved — confirmed the edit-medicine-reminder branch is a strict forward evolution of the rename/palette branch (nothing in the older branch's versions of those 17 files was missing from the newer branch), so it was taken as the base. The older branch, `MedKeeper_scheduling_engine_batch` (pre-rename ancestor), and `Emivita_missing_resources_patch` were all fully superseded — nothing in any of them was absent from the base — and are retired from the working tree as of this pass. Only `Emivita_launcher_icon_patch`'s hdpi/mdpi foreground PNGs (§7 row above) contributed anything the base didn't already have. |
 | R11 | `EmivitaDatabase` declares `exportSchema = true` (needed for Room migration testing) but no `app/schemas/` directory exists in any of the reconciled zips, and `app/build.gradle.kts` has no `room { schemaDirectory(...) }` block pointing Room's annotation processor anywhere | ✅ Resolved — the `ksp { arg("room.schemaLocation", ...) }` wiring turned out to already be in place (this row's premise was stale by the time it was actually checked); running a build with it confirmed `app/schemas/com.hazia.emivita.core.data.db.EmivitaDatabase/{2,3}.json` now export for real (no `1.json` — this source tree never compiled `EmivitaDatabase` at version 1, so there was never a schema for Room to have captured at that version). The part that was actually missing — real test coverage exercising the `Migration` objects, not just a baseline sitting unused — is closed by `MigrationFrom1To2Test`/`MigrationFrom2To3Test` (`app/src/test/java/.../core/data/db/`): both build the "before" table shape from raw SQL and run the real `Migrations.MIGRATION_1_2`/`MIGRATION_2_3` objects against it, asserting on the transformed data (colorArgb→hex incl. the negative-Int bitmask case, sortOrder backfill, denormalized `dose_events.medicineId`, the new nullable column). `MigrationTestHelper` (schema-JSON-diff-based, the more rigorous option for MIGRATION_2_3 specifically, since both its endpoints' schemas exist) was tried first and dropped — it hit a Room 2.8.4/Robolectric driver bug (`IllegalArgumentException: This driver is configured to open a database named 'X' but '<path>/X' was requested`, thrown before any migration logic runs) unrelated to this app's schema; the direct-fixture technique used instead is a real regression test either way, just not diffed against the exported JSON. Both tests run and pass under `./gradlew testDebugUnitTest`. The one thing this row's coverage structurally cannot address — an in-place upgrade of a database written by a real previous build — is tracked in §9 #1, and is no longer blocked: a signed versionCode 1 APK is archived at `dist/vc1/`. |
 | R12 | `README.md` still described the pre-#1 (data-layer-only) batch — "not built yet: PRN, projection cache, History, low-stock/expiration alerts, backup/restore, biometric lock UI" — directly contradicting §9's ✅ marks on items 2/4/6/8/9/11, the exact stale-docs pattern R6 already named once (found during a routine "what's next by dependency" pass, not a code review) | ✅ Resolved — before rewriting, verified against the actual source rather than trusting either doc: every claimed-✅ §9 item (1–16) really is implemented with working logic, not a stub, and #13 (Health Connect) is genuinely absent. `README.md` regenerated to match. Same pass also removed a harmless but stale leftover: `app/proguard-rules.pro` still `-keep`/`-dontwarn`'d `androidx.health.connect.client.**`, a class no longer on the classpath since #13 was dropped |
@@ -1295,6 +1328,11 @@ non-events, nothing left to discuss.)
   legitimate `<!--`/`-->` delimiters) — single hyphens, `=`, or commas for
   separators instead. Kotlin comments are unaffected by this rule.
 - Every batch gets checked against §1's constraint table before it ships.
+- **One file.** Findings, audits, reviews and design rationale go in this
+  file — §7's ledger for the finding, an appendix for the reasoning. No new
+  standalone Emivita `.md` alongside it, and nothing that matters left
+  outside the repo where it cannot be committed (see "Where everything
+  went" at the top for what that habit cost).
 
 ---
 
@@ -1524,3 +1562,363 @@ Checks — Light: text/surface 9.7:1, muted/surface 4.6:1, outline/surface
 3.3:1, primary/surface 4.4:1.
 Dark: text/surface 12.6:1, muted/surface 4.6:1, outline/surface 3.3:1,
 bg lightness 5.1%.
+
+---
+
+## Appendix B — UX audit of the reference app (source findings)
+
+Absorbed verbatim from what used to be `docs/ux-audit.md`, which no longer
+exists as a separate file (its history is in git). This is the *source* the
+§6 decisions were derived from — kept because the reasoning behind a
+confirmed decision is what makes it safe to revisit later, and §6 records
+only the outcome. Where the two disagree, §6 wins: it is the decision, this
+is the argument that produced it.
+
+Finding #8 here (flat dark-mode text hierarchy) is also the origin of §7's
+T2 row.
+
+Based on all screenshots sent. Organized as: what's genuinely good and should carry over as-is, what's confusing and why, and a proposed fix for each. This becomes the spec for the Settings and Add-medicine rebuild.
+
+---
+
+### Keep, unchanged in spirit
+
+- **Linked/timeline Overview** — already agreed, becomes Today's core pattern.
+- **Full-card per-medicine color** — already agreed.
+- **Icon-per-medicine-type** (Rx bottle, shield-check, gender symbols, radiation, etc.) — genuinely useful at-a-glance differentiation, keep the icon set.
+- **Tags as colored chips** on the medicine card — clear, keep.
+- **The 5 reminder types themselves** (time-based, continuous-interval, interval-with-daily-window, stock-threshold, expiration) — the *underlying* flexibility is real power, the problem is entirely in how they're presented (see below).
+- **Contextual inline hints** — e.g. "color change only affects future events" shown right where the color is set. Good pattern, underused elsewhere.
+- **Existing privacy controls** — screenshot capture block, hide-name-in-notification, app-lock, disable-widgets-on-lockscreen. These already exist in the source app; we're not inventing them, just making them easier to find (see Settings restructure below).
+
+---
+
+### What's confusing, and why
+
+**1. Icon-only reminder-type picker.** Adding a reminder means choosing between five icons (calendar, repeat-arrows, a bed/window glyph, a box, a no-entry sign) with zero labels in the picker itself — the explanation text ("Promemoria basato sull'orario", etc.) lives in a *separate* help screen a new user has to go find. Nothing in the picker itself teaches you what you're choosing.
+
+**2. Three same-named "Settings" scopes.** Global *Impostazioni*, per-medicine *Impostazioni farmaco*, per-reminder *Impostazioni avanzate* — three different scopes, nearly identical naming and visual treatment. Nothing signals which scope you're in beyond the screen title.
+
+**3. Nine-item overflow menu on the medicine screen.** *Impostazioni farmaco, Note, Etichette, Impostazioni scorte medicinali, Calendario, Attiva/Disattiva tutti i promemoria, Duplica ×2, Elimina* — all in one kebab menu. Tags and Notes in particular are core, frequently-used features hidden behind a menu that also contains destructive actions (Elimina) right below them.
+
+**4. Stock settings mix three concerns with no visual grouping at the top.** Current quantity/unit, low-stock reminder threshold, refill quantity, and expiration tracking all live in one flat list. The first two fields aren't even under a header — only the lower two sections ("Rifornimento scorte", "Impostazioni di scadenza") are.
+
+**5. Redundant entry points to the same setting.** Stock quantity/threshold is editable from the overflow menu *and* from inside a reminder's own Advanced Settings *and* implied again inside the stock-reminder's own advanced screen. Three doors to the same room.
+
+**6. Flat, undifferentiated global Settings list.** Six destinations (Notifications, Alarms, Snooze, Display, Privacy, Weekend mode) with no section grouping, inconsistent one-line descriptions (some rows get a description under them, most don't), and fairly technical labels with no plain-language gloss.
+
+**7. Truncated toggle label.** "Il farmaco non può essere.." — the actual setting name is cut off in the list; you only learn what it does by tapping in.
+
+**8. Dark-mode text hierarchy is flat.** Headings, values, and helper text all sit at very similar color/weight, especially on the Settings screens — nothing anchors the eye to what's a heading vs. a description vs. a live value.
+
+**9. Add-medicine is a cold start.** The initial dialog asks only for a name, then drops you on a mostly-empty detail screen with a tiny FAB as the only next step — no guided "let's add your first reminder" nudge.
+
+---
+
+### Proposed fixes
+
+#### Settings: collapse three scopes into one mental model
+
+- **App Settings** (global): grouped into visible sections with icons and one-line plain-language descriptions on *every* row, not just some — Notifications & Alerts, Alarm Behavior, Snooze, Weekend Mode, Display & Theme, Privacy & Security. Six destinations, but presented as 6 cards under 2–3 section headers instead of one flat list.
+- **Medicine Settings** (per-medicine): renamed in-app to just live inline on the medicine's own screen — color, icon, notification priority, tags, notes — no separate "Impostazioni farmaco" screen at all. If it's about *this medicine*, it's on *this medicine's* screen, full stop.
+- **Reminder Settings** (per-reminder): the advanced fields that are genuinely reminder-specific (threshold, interval unit, start-behavior) stay attached to that reminder, but inline/expandable on the same card rather than a second modal on top of a first.
+
+#### Add-medicine: labeled cards, not icon soup
+
+Reminder-type picker becomes 5 cards, each with icon **+ name + one-line description already visible** (no separate help screen needed) — "Fixed times", "Repeating interval", "Daily window", "Low-stock alert", "Expiration alert". Tapping one goes straight to its config, not a second disambiguation step.
+
+#### Medicine screen: kill the 9-item overflow
+
+Notes and Tags become visible inline sections on the medicine screen itself (like Color already is), not overflow items. Overflow menu keeps only what's genuinely rare: Duplicate, Duplicate-with-reminders, Delete — 3 items instead of 9.
+
+#### Stock & expiration: one screen, clearly zoned
+
+Three visually separated zones with icons and headers from the start: **Current stock** (quantity, unit, "runs out ~date" computed inline), **Low-stock alert** (threshold, reminder frequency), **Expiration** (dates, reminder lead time) — one entry point, no duplication.
+
+#### Text hierarchy fix
+
+This falls out of the theme audit we already did — real weight/color separation between heading (bold, full-contrast text), value (medium weight, full-contrast), and helper text (regular weight, secondary/muted tone) — applied consistently across every settings screen, not just some.
+
+---
+
+### One thing I'd flag, not fix silently
+
+The per-medicine "reminders can only be dismissed by marking taken" override and the notification-priority levels (Standard / High / Alarm) are genuinely good power-user features worth keeping *exactly as capable* — the fix here is discoverability and labeling, not removing capability. Personal-use app for real medication adherence shouldn't lose power in the name of simplicity.
+
+---
+
+## Appendix C — Frontend layout & theme palette review (source findings)
+
+Absorbed from the frontend/theme review (Appendix C), which lived outside the
+project directory entirely — one folder cleanup away from taking the
+reasoning behind §7's T1–T6 with it while those rows went on citing it by
+name. The findings themselves are tracked as T1–T6 in §7 and in §6's text
+hierarchy bullet; this is the analysis they were extracted from, including
+the parts that produced no finding.
+
+Read it as a snapshot of its own session, not as live status: it reviews the
+four *outgoing* palettes (Clinical/Cozy/Neutral/Playful) that §6 has since
+replaced with the eight in Appendix A, and its prioritized action list is
+superseded by §9's roadmap. Its method — the harmony analysis, the
+script-verified contrast checks, the register reasoning — is what remains
+live, and what a future palette or type change should be re-run against.
+
+Reviewed against: `color-optimization-core`, `accessibility-color-auditor`,
+`typography-spacing-core`, `layout-architecture-core` / `app-register-layout`,
+and `visual-craft` (design-lexicon).
+
+**What's actually reviewable right now:** only `ui/theme/{Color,Theme,Type}.kt`
+and `SettingsScreen.kt` are built. Today/Medicines/History are placeholder
+screens per the spec's own §7/§8 status — so those are reviewed against
+§6's *described* layout, not shipped code.
+
+---
+
+### 1. Palette provenance — better-grounded than it looks
+
+All four palettes trace exactly to `visual-craft`'s `design-lexicon.md`, not
+ad hoc choices:
+
+| Emivita palette | Lexicon entry | Match |
+|---|---|---|
+| Clinical | *Clinical Blue* (monochromatic, 197–215°) | Exact hex matches: `#d5e5f1`, `#295276`, `#93acc0`, `#304050`, `#ccdbe1` |
+| Cozy | *Cozy Cocoa* (monochromatic, ~20–30°) | Exact hex matches: `#956138`, `#f7ead5`, `#442510`, `#cc9159`, `#78502c`, `#f0d3a6` |
+| Neutral | *Pure neutral* (achromatic utility fallback) | Exact hex matches: `#f1f1f1`, `#302b26`, `#dbd2cb`, and the original pre-audit accent `#848484` (the code comment even shows this exact hex being corrected away) |
+| Playful | *Carnival Pop* (split-complementary + a deliberately off-template magenta accent) | Exact hex matches: `#f57952`, `#dc0582`, `#f0e7db`, `#1c4650`, `#fb4b08`, `#f973a9` |
+
+This matters practically: the lexicon entries already ship their own AAA
+contrast credentials (Clinical Blue 7.5:1, Cozy Cocoa 12.4:1, Carnival Pop
+8.41:1, Pure Neutral 12:1+), which is why the **primary/background/text**
+triad in every palette independently re-checks out strong (below). The
+palette selection did its homework. The problems below live specifically in
+the roles the lexicon *doesn't* define — outline/border and muted/helper
+text — which Emivita had to invent itself.
+
+---
+
+### 2. Harmony analysis (`color-optimization-core`)
+
+Computed actual HSL for every role color and scored angular relationships
+against Matsuda's 8 templates:
+
+| Palette | Hue relationship | Template | Harmony score | Note |
+|---|---|---|---|---|
+| Clinical | Primary/background/tertiary all cluster 197–213° | Monochromatic | ~1.0 | Textbook restrained clinical-blue |
+| Cozy | Primary/background/tertiary all cluster 21–37° | Monochromatic | ~1.0 | Textbook warm monochrome |
+| Neutral | S≈0% across every role (by design) | n/a — achromatic | n/a | Correctly built as a hue-free utility fallback, not a failed monochrome |
+| Playful | Primary 14.5° vs. OnBackground 191.5° ≈ 177° apart (~3° off true complementary); Tertiary magenta at 325° sits ~49° from Primary and ~134° from OnBackground — neither classical offset | Loose split-complementary + off-template accent | ~0.6–0.7 | The lexicon entry says this outright: magenta was "picked as the single boldest accent for maximum pop," not derived from the template. Intentional, not a defect — but it is the loosest-harmony palette of the four, worth knowing if a fifth palette is ever added and needs to sit *between* Playful and the others. |
+
+No changes recommended here — Playful's looseness is a legible design choice
+matching its mood, not an error.
+
+---
+
+### 3. Accessibility audit (`accessibility-color-auditor`, script-verified)
+
+Ran `scripts/audit_colors.py` against the two Settings-screen color usages
+that are actually shipped in `SettingsScreen.kt` today.
+
+#### 3a. Card border / divider (`MaterialTheme.colorScheme.outline` on white `surface`)
+
+| Palette | Ratio | AA (need 3:1, UI component) | Suggested fix |
+|---|---|---|---|
+| Clinical | 1.51:1 | ❌ FAIL | `#4b7a9c` (4.6:1) |
+| Cozy | 1.68:1 | ❌ FAIL | `#966e39` (4.6:1) |
+| Neutral | 1.48:1 | ❌ FAIL | `#767676` (4.5:1) |
+| Playful | 1.59:1 | ❌ FAIL | `#9f6b45` (4.5:1) |
+
+**All four fail WCAG 1.4.11 non-text contrast by more than 2×.** Every
+`LightOutline` value is a pale tint sitting at 75–90% lightness, checked
+against a pure-white (`#FFFFFF`) `LightSurface` in every palette — the
+Settings card border and row dividers (`SettingsScreen.kt` lines 125, 132)
+will read as functionally invisible in light mode across all four themes,
+not just one. This is a systemic pattern (every `LightOutline` was tuned
+for legibility *as a background tint*, e.g. against `LightBackground`, not
+for 3:1 separation against solid white `LightSurface`) rather than a
+one-off miss — worth fixing as a rule (e.g. "Outline must clear 3:1 against
+both Background and Surface") rather than four individual hex edits.
+
+#### 3b. Row description text (`onSurface.copy(alpha = 0.6f)` on white)
+
+| Palette | Effective color | Ratio | AA normal text (need 4.5:1) | Suggested fix |
+|---|---|---|---|---|
+| Clinical | `#838C96` | 3.41:1 | ❌ FAIL | `#6e7782` (4.5:1) |
+| Cozy | `#8F7C70` | 3.97:1 | ❌ FAIL | `#847368` (4.5:1) |
+| Neutral | `#83807D` | 3.93:1 | ❌ FAIL | `#787573` (4.6:1) |
+| Playful | `#779096` | 3.38:1 | ❌ FAIL | `#62797f` (4.6:1) |
+
+**All four fail AA for normal text** (they scrape past the 3:1 large-text
+floor, nowhere near 4.5:1). This is the description line under every
+Settings row (`"Sound, priority, how reminders behave"` etc.) — real,
+shipped, currently-rendering text, not a future concern.
+
+Notably, this is the *exact* problem the UX audit (Appendix B) already flagged
+under finding #8 ("dark-mode text hierarchy is flat... nothing anchors the
+eye to what's a heading vs. a description vs. a live value") and the fix
+that finding called for — "helper text (regular weight, **secondary/muted
+tone**)" — was a real muted *color token*, not an opacity multiply. Flat
+alpha on a light background is a well-known way to reintroduce exactly the
+contrast problem a "muted tone" fix is supposed to solve, and the numbers
+confirm it did. Recommend a real `mutedText` role per palette (baked hex,
+audited once, like every other role) rather than `.copy(alpha=)` at the
+call site — the same pattern the palettes already use correctly for
+`onSurface`/`onBackground` everywhere else.
+
+Colorblind simulation (deuteranopia/protanopia/tritanopia) fails uniformly
+across all three deficiency types for both issues above — expected, since
+these are lightness-contrast failures, not hue-confusion failures; fixing
+the base ratio fixes all three simulations at once.
+
+---
+
+### 4. Semantic state-token system (§6) — designed further than it's wired
+
+The spec's state-token table is genuinely well-reasoned color theory —
+worth confirming, then flagging where implementation hasn't caught up.
+
+| State | Spec rule | Check |
+|---|---|---|
+| Error | Accent hue +150–165° (compound/near-complementary), S60/L45 | Correctly named — this is Matsuda template #8, and it's the right choice specifically *because* it guarantees Error never collides with Accent, which a fixed "error red" would risk in Playful (Primary sits at 14.5°, close to conventional error-red) |
+| Unselected | Surface −8% L, 1px border at Accent 40% opacity | Sound relative-lightness approach |
+| Focus ring | Accent hue, S+10, L−5, 2px outline | Sound |
+| Disabled | Surface desaturated to S8–12% | Sound, reuses existing "coming soon" treatment |
+
+Running the Error rule's actual numbers against each palette's real Accent hue:
+
+| Palette | Accent hue | Error hue range (S60/L45) |
+|---|---|---|
+| Clinical | 208.3° | 358.3°–13.3° (red) |
+| Cozy | 26.4° | 176.4°–191.4° (teal) |
+| Playful | 14.5° | 164.5°–179.5° (teal) |
+| **Neutral** | **undefined (S=0%, fully achromatic)** | **no hue to rotate — the rule cannot execute** |
+
+**Neutral breaks this rule outright.** Its Primary is intentionally
+desaturated gray — there's no hue for "+150–165°" to rotate *from*. This
+isn't a hypothetical edge case; it's the palette the spec itself ships.
+Needs an explicit decision (most consuming apps solve this by giving the
+achromatic palette one deliberate fixed hue reserved only for
+error/destructive states — the lexicon's own "Pure neutral" entry doesn't
+address this either, since it's framed as a two-role utility fallback, not
+a full semantic system).
+
+Two implementation gaps, same root cause — **none of this is wired into
+`Theme.kt` yet**:
+
+1. `colorSchemeFor()` only overrides `background/surface/primary/
+   primaryContainer/secondaryContainer/tertiaryContainer/outline`. It never
+   sets `secondary`, `tertiary`, `error`, `onError`, or `errorContainer` —
+   so any future component that reaches for
+   `MaterialTheme.colorScheme.error` gets Material3's stock default red,
+   not a palette-derived hue, silently. Nothing in the shipped code calls
+   these yet (confirmed by grep), so it's not visibly broken today — but
+   it will be the first time a validation error or a real "error" state
+   is built, unless this is closed first.
+2. `Color.asOnSurfaceSafe()` is a documented no-op (`return this`) —
+   still open per the audit ledger (§7, item §4.4). This is the other half
+   of the same promise: §6's Medicine color picker section explicitly
+   describes dynamic per-hex text-contrast resolution ("whichever of
+   near-black/near-white clears AA... fall back to a subtle scrim").
+   That's this function's job, and it doesn't do it yet. Worth sequencing
+   before the color-picker UI actually ships (roadmap item likely under
+   §9 #1), since an arbitrary user-picked hex is exactly the case with no
+   safety net right now.
+
+---
+
+### 5. Typography (`typography-spacing-core`)
+
+| Step | sp values | Ratio |
+|---|---|---|
+| labelSmall→labelMedium | 11→12 | 1.09 |
+| labelMedium→bodyMedium/labelLarge | 12→14 | 1.17 |
+| bodyMedium→bodyLarge/titleMedium | 14→16 | 1.14 |
+| bodyLarge/titleMedium→titleLarge | 16→19 | 1.19 |
+| titleLarge→headlineSmall | 19→22 | 1.16 |
+
+Not a fixed modular scale (all canonical ratios in `type-scales.md` start
+at 1.125; several of these steps sit below that). That's not a defect —
+it matches Material3's own convention of a hand-tuned, non-geometric type
+scale rather than a strict ratio, which is the right call on a compact
+mobile screen where a real modular ratio (1.25+) burns vertical space fast.
+Line-height ratios are healthy and consistent (1.27–1.43 across every
+style, body copy sitting comfortably at 1.38–1.43).
+
+One flag worth naming explicitly: `labelSmall` is 11sp, the smallest size
+in the system. `app-register-layout`'s own reference material uses a
+medication-adherence "grandfather... complex multi-drug regimen, real harm
+if missed" persona as a worked example for exactly this kind of app — and
+notes that persona's real need ("larger text, simpler navigation") is an
+accessibility concern for `typography-spacing-core`, not a tone concern.
+Given that, recommend a hard rule rather than a style preference: dose
+amounts, times, and schedule text should never render at `labelSmall`,
+regardless of which screen reuses it for chip/badge labels elsewhere.
+
+---
+
+### 6. Layout & motivational register (`app-register-layout`)
+
+`layout-architecture-core` explicitly routes recurring-use, tone-sensitive
+app screens here rather than handling them itself — correct fit for a
+personal medication reminder app opened daily, not a one-shot document.
+
+**Purpose (Step 1a):** safety-relevant personal medication adherence —
+closer to `app-register-layout`'s own "grandfather / safety-critical
+adherence, real harm if missed" persona anchor than to its low-stakes
+meditation/habit-streak anchor. That distinction matters: a naive
+"it's basically a habit tracker" read would default Today's tone toward
+~0.15 (meditation-streak territory) and undersell the real-harm stakes
+Emivita's own notification-priority system (Standard/High/**Alarm**,
+full-screen intent, lock-until-taken) is clearly built for.
+
+| Screen | Tone | Referent | Pattern | Why |
+|---|---|---|---|---|
+| Today (baseline) | ~0.5 | self-history leaning fixed-target | habit-loop | Continuity-framed daily list (§6's "linked/timeline... aggregate grouped-dose nodes"), but real-harm-if-missed keeps it mid-band, not ambient |
+| Today (triggered — full-screen alarm) | ~0.95 | — | status-board | This is exactly what `AlarmActivity` already is architecturally — a separate full-screen Activity for the firing-reminder case. The two-state split the framework recommends is already the shape of the code, even though nobody designed it against this model. Worth keeping that separation explicit as the UI gets built, rather than collapsing it back into Today's own composable. |
+| Medicines | ~0.25–0.3 | self-history | reference/card-grid (inherited pattern, not one of the new three) | Inventory/reference screen; low-stock badges are a **per-item**, not per-screen, escalation |
+| History | ~0.2–0.25 | self-history | ambient-reflection | Trend-over-time review; no red states, no comparison-to-target |
+| Stock & Expiration | ~0.55–0.6 | fixed-target | leans status-board | Threshold/countdown data (run-out date, expiration lead time) is genuinely actionable, not ambient — **§6 doesn't currently draw a register distinction between this screen and History**, and it should: History is a calm trend view, Stock & Expiration is closer to a status board. Worth an explicit design note before both get built, so Stock & Expiration doesn't inherit History's calmer visual treatment by default. |
+| Settings | exempt | — | — | Registerless — a preferences list, no ambient/urgent quality |
+| Add/Edit Medicine, Reminder sub-forms | exempt | — | single-column (already specified) | Task-completion flows, not recurring-check screens |
+
+One structural note on the forms (`layout-architecture-core`'s
+`emphasis_coherence` lens, applied to §6's described field order): putting
+Appearance (icon + color) ahead of and heavier than the Name field is a
+well-justified `emphasis_primary` choice — it's explicitly tied to the
+Medicine-card scan-anchor use case elsewhere in the same section, not an
+arbitrary ordering. Coherent as written.
+
+---
+
+### 7. Prioritized action list
+
+1. 🔴 **Outline/border contrast** — every palette's `LightOutline` fails
+   3:1 against `LightSurface` (1.48–1.68:1). Affects the shipped
+   `SettingsScreen.kt` card borders and dividers today. Fix as a rule
+   ("outline must clear 3:1 against Surface, not just Background"), not
+   four one-off hex edits.
+2. 🔴 **Row description text contrast** — the `onSurface.copy(alpha=0.6f)`
+   technique fails AA normal text on all four palettes (3.38–3.97:1).
+   Replace with a real audited `mutedText` token per palette — this is
+   the fix Appendix B's finding #8 already called for; the opacity
+   shortcut didn't deliver it.
+3. 🟠 **Wire the semantic-state-token roles into `Theme.kt`** —
+   `secondary`/`tertiary`/`error`/`onError`/`errorContainer` are currently
+   unset and fall back to Material3 stock colors. Resolve before anything
+   reaches for `.error` (form validation, is the obvious first caller).
+4. 🟠 **Decide Neutral's Error hue explicitly** — the spec's own
+   Accent-relative Error formula is undefined for a fully desaturated
+   palette. Needs one fixed reserved hue, by decision, not derivation.
+5. 🟠 **Implement `asOnSurfaceSafe()`** — still a documented no-op;
+   blocks the AA-safe dynamic text-on-arbitrary-hex behavior §6 already
+   promises for the Medicine color picker.
+6. 🟡 **Separate Stock & Expiration's register from History's** — the
+   former is threshold/countdown-driven (actionable) and the latter is
+   trend-driven (ambient); §6 doesn't yet draw this line and both are
+   still unbuilt, so it's cheap to decide now.
+7. 🟡 **Never render dose/schedule-critical text at `labelSmall` (11sp)** —
+   codify as a rule given the app's own safety-critical-adherence persona.
+8. 🟢 **No changes needed** to the core Primary/Background/Text triad in
+   any of the four palettes — independently re-verified at 7.03–8.26:1
+   (AAA) and traceable to vetted `design-lexicon.md` entries. Playful's
+   looser harmony score (~0.6–0.7) is a deliberate, documented trade-off
+   in the lexicon itself, not a defect.
