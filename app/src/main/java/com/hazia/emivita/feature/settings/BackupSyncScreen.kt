@@ -106,7 +106,7 @@ fun BackupSyncScreen(
                 // Same wipe-after-use discipline AutoSyncPassphraseStore asks
                 // for: this array was built from the text field only to hand to
                 // zip4j, so don't leave the plaintext sitting in Compose state.
-                password?.let { Arrays.fill(it, ' ') }
+                password?.let { Arrays.fill(it, '\u0000') }
                 pendingExportPassword = null
                 withContext(Dispatchers.IO) { tempFile.delete() }
             }
@@ -338,7 +338,7 @@ fun BackupSyncScreen(
                             try {
                                 attemptRestore(uri, password)
                             } finally {
-                                Arrays.fill(password, ' ')
+                                Arrays.fill(password, '\u0000')
                             }
                         }
                     },
@@ -380,7 +380,7 @@ fun BackupSyncScreen(
                         try {
                             AutoSyncPassphraseStore.save(context, passphrase)
                         } finally {
-                            Arrays.fill(passphrase, ' ')
+                            Arrays.fill(passphrase, '\u0000')
                         }
                         scope.launch {
                             settingsRepository.setAutoSyncFolderUri(folderUri)

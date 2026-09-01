@@ -67,7 +67,7 @@ class AutoSyncManager(
         try {
             writeTo(folderUriString, password)
         } finally {
-            Arrays.fill(password, ' ')
+            Arrays.fill(password, '\u0000')
         }
     }
 
