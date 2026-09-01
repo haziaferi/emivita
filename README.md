@@ -74,115 +74,19 @@ shell from scratch, which is already done here.
 
 ## Project status
 
-The build compiles cleanly and packages cleanly: `./gradlew assembleRelease`
-passes the full R8 minify + resource-shrink pass, and the shrink outputs were
-checked to confirm the reflection-critical surfaces survived it (SQLCipher's
-JNI classes, Room's generated `EmivitaDatabase_Impl`, the Glance receivers,
-kotlinx-serialization's `$$serializer`s, zip4j). That is a build-time result
-only — whether the *minified* app behaves correctly at runtime is still
-unverified on device. Every roadmap
-item in `docs/SPEC.md` §9 (items 1 through 16) is implemented with real,
-working logic — not placeholders — and item #13 (Health Connect) is
-deliberately, fully absent, as intended. Specifically:
+Not tracked here, on purpose. `docs/SPEC.md` is the source of truth: §9's
+checkmarks answer "is X built?", §7 is the audit-findings ledger, and §8
+carries the few notes §9's one-line entries can't.
 
-- **Data layer:** encrypted Room DB (SQLCipher, Keystore-wrapped random
-  256-bit key, no `EncryptedSharedPreferences`/Tink dependency) with the
-  full repository layer, including PRN/ad-hoc dose logging, event
-  editing/undo (status switch, recorded-time/dose-amount edits, all
-  stock-correct), and cascade-delete for a removed medicine.
-- **Scheduling engine:** exact-alarm scheduling with inexact fallback, boot
-  recovery, Take/Skip/Snooze, auto-repeating "nag" alarms, silent
-  auto-resolve tracking, active-date-range clamping, cyclic
-  (active/pause-cycle) and linked "following dose" reminders with
-  cascade-reschedule, and the weekend-mode delay adjustment — all reading
-  live from the persisted user preferences below.
-- **Shared occurrence-projection cache:** a debounced, time-budgeted
-  singleton that projects reminder occurrences forward over a requested
-  window and computes each medicine's stock run-out date as a side effect,
-  consumed by Today, History, the widgets, and low-stock/expiration
-  alerting rather than each screen re-simulating independently.
-- **Screens:** no first-run onboarding — the single profile this app needs
-  is created silently on first launch (see "Known open items" below) —
-  straight to full Add/Edit Medicine and Add/Edit Reminder forms (Fixed
-  Time incl. cyclic, Repeating Interval, Daily Window, Linked Following), a
-  live-computed Today timeline, Medicines list + detail (edit, delete,
-  Stock & Expiration), History (List/Calendar/Table views, swipe-to-edit,
-  CSV/PDF export), Stock & Expiration, Data &
-  Backup (manual SAF export/restore plus a debounced password-protected
-  auto-sync folder), and a Settings home screen with all 6 detail
-  destinations built (some as full routes, some as bottom sheets — see
-  `docs/SPEC.md` §9 #15).
-- **Widgets:** two Glance widgets (Next Doses, Stock Levels), each with a
-  one-tap action, reading the same projection cache as the in-app screens.
-- **History adherence chart:** a Vico stacked-bar chart (`AdherenceChart.kt`)
-  showing taken/skipped/missed per day across the visible window — chosen
-  over a pie because the pinned Vico 2.x release has no pie layer at all
-  (dropped from the 1.x lineup) and a daily trend fits the data better
-  regardless (`docs/SPEC.md` §7 R13).
-- **Dose measurement label:** an optional "Measurement" field on Add/Edit
-  Medicine ("capsules", "drops", "tablet") shows as a suffix hint on every
-  dose-amount entry field and displays next to every formatted dose amount
-  app-wide (Today, History's List/Table/CSV/PDF) — a separate field from
-  the existing stock-tracking `unit` (that one's nullability gates real
-  stock-tracking behavior elsewhere, so it couldn't safely be reused for a
-  display-only label).
-- **History Calendar and Table views:** a `FilterChip` row switches History
-  between List (the summary/chart/day-groups above), Calendar
-  (`HistoryCalendarView.kt`, Kizitonwose `compose` — month grid with a
-  taken/skipped/missed dot per day, tap a day for its detail list, browses
-  any past month by re-querying per visible month) and Table
-  (`HistoryTableView.kt`, hand-rolled, sortable by tapping a Date/Medicine/
-  Status/Dose column header) — closing out §9 #6's full vision.
-- **Preferences:** DataStore-backed snooze duration, weekend-mode
-  window/days, and the global lock-until-taken default, all actually read
-  by the notification/action code paths that are supposed to honor them.
-- **Security:** biometric app-lock (fail-open only for genuinely absent/
-  unenrolled hardware, re-checked every lock cycle rather than cached once),
-  password-protected backup/auto-sync via `zip4j` with the password path
-  kept out of un-scrubbable `String`s end-to-end.
-- **Audited:** a full `android-app-auditor` + `code-reviewer` +
-  `code-verification-core` pass (manifest/permissions/build config plus a
-  source-level security/logic/performance sweep) found and fixed two real
-  CRITICAL bugs — `POST_NOTIFICATIONS` was declared and checked but never
-  actually requested anywhere (silently no reminder notifications on a
-  fresh Android 13+ install), and `AppLockGate` briefly rendered unlocked
-  content on cold start before the persisted lock setting loaded — plus
-  eleven more MEDIUM/HIGH fixes across the scheduling engine, repositories,
-  backup/sync, and a Room migration. Full detail in `docs/SPEC.md` §7 R14.
+This file used to carry a ~110-line status narrative alongside those. It was
+a second copy of state `docs/SPEC.md` already owned, and it drifted the way
+second copies do: it claimed the backup-password path was kept out of
+un-scrubbable `String`s "end-to-end" when §7 R14 had already recorded that
+Compose's String-backed text fields make that unachievable, and it listed
+two Room migration tests after a third existed. §8 hit the same failure
+earlier and removed its own copy for the same reason — the note it left
+behind ("two places to update and only one of them ever updated") applies
+here identically.
 
-**Known open items, not build gaps:**
-
-- History's List/Calendar/Table views (§9 #6, including the hand-rolled
-  sortable table and the Kizitonwose calendar view) are built and
-  **device-verified** (OnePlus 6T) this session, alongside Add Medicine →
-  Add Reminder → PRN dose logging.
-- No first-run onboarding screen anymore (removed this session, see
-  `docs/SPEC.md` §9 #1's "Current-profile resolution" note) — the first
-  `Profile` row is created silently with a fixed name (`"Me"`, never shown
-  in the UI). Device-verified: a fresh install lands directly on Today's
-  empty state.
-- This batch's Room migrations (`Migrations.kt`) are covered by JVM-side
-  migration tests against hand-built fixtures
-  (`MigrationFrom1To2Test`/`MigrationFrom2To3Test`), but an actual
-  in-place upgrade of a real installed database file on-device has still
-  not been *run*. It is no longer blocked, though: the signed v0.1.0 /
-  versionCode 1 build is archived at `dist/vc1/` (with its R8 mapping and
-  provenance) precisely so a future schema bump has a real predecessor to
-  upgrade from. Note it ships **schema version 4**, so it is the baseline
-  for the next migration, not for `MIGRATION_1_2` (`docs/SPEC.md` §9 #1,
-  §7 R11).
-- A handful of design calls are logged as open in `docs/SPEC.md` (§6/§7)
-  without blocking anything already shipped: no *deliberate* default
-  palette has been chosen yet (Golden Hour is currently the default,
-  picked arbitrarily); whether dose/schedule-critical text should ever be
-  allowed to render at `labelSmall` (11sp) isn't yet a hard rule (finding
-  T6); and the color picker doesn't yet warn if a newly chosen color is
-  too close to another medicine's.
-- The parking lot (`docs/SPEC.md` §9, "Not yet scoped") has two ideas not
-  yet promoted to a roadmap item: doctor/pharmacy/allergy/blood-type
-  fields (blocked on a "current active profile" concept that doesn't
-  exist yet) and tapering (step-down dosing) schedules.
-
-Full build order, every closed decision, and the complete open-items list
-live in `docs/SPEC.md` — that file, not this one, is the source of truth
-whenever the two disagree.
+What belongs in this file is everything above it: how to build this, how it
+is signed, and which setup steps bite on a fresh machine.
