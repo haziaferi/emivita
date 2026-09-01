@@ -50,8 +50,10 @@ import com.hazia.emivita.core.data.backup.BackupRepository
 import com.hazia.emivita.core.data.backup.BackupZipReadResult
 import com.hazia.emivita.core.data.backup.BackupZipWriter
 import com.hazia.emivita.core.data.settings.SettingsRepository
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.serialization.json.Json
 import java.io.File
 import java.time.Instant
@@ -104,15 +106,21 @@ fun BackupSyncScreen(
             exportStatus = null
             val tempFile = File.createTempFile("emivita_export", ".zip", context.cacheDir)
             try {
-                val json = Json.encodeToString(BackupData.serializer(), backupRepository.exportSnapshot(System.currentTimeMillis()))
-                BackupZipWriter.write(tempFile, json, password)
-                context.contentResolver.openOutputStream(uri)?.use { out -> tempFile.inputStream().use { it.copyTo(out) } }
+                // Serializing the whole DB, AES-256-encrypting it, and copying
+                // the result through a SAF stream is all real work; `scope` is
+                // rememberCoroutineScope(), which dispatches on Main. Only the
+                // status writes below belong there.
+                withContext(Dispatchers.IO) {
+                    val json = Json.encodeToString(BackupData.serializer(), backupRepository.exportSnapshot(System.currentTimeMillis()))
+                    BackupZipWriter.write(tempFile, json, password)
+                    context.contentResolver.openOutputStream(uri)?.use { out -> tempFile.inputStream().use { it.copyTo(out) } }
+                }
                 exportStatus = "Backup exported."
                 exportPassword = "" // cleared after use, matching restorePasswordInput/syncPassphraseInput below
             } catch (e: Exception) {
                 exportStatus = "Export failed: ${e.message ?: "unknown error"}"
             } finally {
-                tempFile.delete()
+                withContext(Dispatchers.IO) { tempFile.delete() }
             }
         }
     }
@@ -134,11 +142,21 @@ fun BackupSyncScreen(
         restoreStatus = null
         val tempFile = File.createTempFile("emivita_restore", ".zip", context.cacheDir)
         try {
-            context.contentResolver.openInputStream(uri)?.use { input -> tempFile.outputStream().use { input.copyTo(it) } }
-                ?: run { restoreStatus = "Couldn't read the selected file."; return }
-            when (val result = BackupZipWriter.read(tempFile, password)) {
+            // Copying the file in and decrypting/reading the zip are the
+            // expensive halves; same Main-dispatcher reasoning as the export
+            // path above. A null here means the SAF stream couldn't be opened.
+            val readResult = withContext(Dispatchers.IO) {
+                context.contentResolver.openInputStream(uri)?.use { input -> tempFile.outputStream().use { input.copyTo(it) } }
+                    ?: return@withContext null
+                BackupZipWriter.read(tempFile, password)
+            } ?: run { restoreStatus = "Couldn't read the selected file."; return }
+            when (readResult) {
                 is BackupZipReadResult.Success -> {
-                    val data = Json.decodeFromString(BackupData.serializer(), result.json)
+                    // restoreSnapshot goes through Room's withTransaction, which
+                    // dispatches off Main itself; parsing the snapshot JSON does not.
+                    val data = withContext(Dispatchers.IO) {
+                        Json.decodeFromString(BackupData.serializer(), readResult.json)
+                    }
                     backupRepository.restoreSnapshot(data)
                     showRestorePasswordDialog = false
                     restorePasswordInput = ""
@@ -161,7 +179,7 @@ fun BackupSyncScreen(
         } catch (e: Exception) {
             restoreStatus = "Restore failed: ${e.message ?: "unknown error"}"
         } finally {
-            tempFile.delete()
+            withContext(Dispatchers.IO) { tempFile.delete() }
         }
     }
 
