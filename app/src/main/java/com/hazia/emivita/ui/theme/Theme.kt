@@ -1,6 +1,7 @@
 package com.hazia.emivita.ui.theme
 
 import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
@@ -35,390 +36,243 @@ fun MedPalette.displayName(): String = when (this) {
     MedPalette.VELVET_RIBBON -> "Velvet Ribbon"
 }
 
-private fun colorSchemeFor(palette: MedPalette, dark: Boolean) = when (palette) {
-    MedPalette.GOLDEN_HOUR -> if (dark) darkColorScheme(
-        background = GoldenHourPalette.DarkBackground,
-        onBackground = GoldenHourPalette.DarkOnBackground,
-        surface = GoldenHourPalette.DarkSurface,
-        onSurface = GoldenHourPalette.DarkOnBackground,
-        onSurfaceVariant = GoldenHourPalette.DarkOnSurfaceVariant,
-        primary = GoldenHourPalette.DarkPrimary,
-        onPrimary = GoldenHourPalette.DarkOnPrimary,
-        primaryContainer = GoldenHourPalette.DarkPrimary,
-        onPrimaryContainer = GoldenHourPalette.DarkOnPrimary,
-        secondary = GoldenHourPalette.DarkSecondary,
-        onSecondary = GoldenHourPalette.DarkOnSecondary,
-        secondaryContainer = GoldenHourPalette.DarkSecondary,
-        onSecondaryContainer = GoldenHourPalette.DarkOnSecondary,
-        tertiary = GoldenHourPalette.DarkTertiary,
-        onTertiary = GoldenHourPalette.DarkOnTertiary,
-        tertiaryContainer = GoldenHourPalette.DarkTertiary,
-        onTertiaryContainer = GoldenHourPalette.DarkOnTertiary,
-        error = GoldenHourPalette.DarkError,
-        onError = GoldenHourPalette.DarkOnError,
-        errorContainer = GoldenHourPalette.DarkError,
-        onErrorContainer = GoldenHourPalette.DarkOnError,
-        outline = GoldenHourPalette.DarkOutline,
-    ) else lightColorScheme(
-        background = GoldenHourPalette.LightBackground,
-        onBackground = GoldenHourPalette.LightOnBackground,
-        surface = GoldenHourPalette.LightSurface,
-        onSurface = GoldenHourPalette.LightOnBackground,
-        onSurfaceVariant = GoldenHourPalette.LightOnSurfaceVariant,
-        primary = GoldenHourPalette.LightPrimary,
-        onPrimary = GoldenHourPalette.LightOnPrimary,
-        primaryContainer = GoldenHourPalette.LightPrimary,
-        onPrimaryContainer = GoldenHourPalette.LightOnPrimary,
-        secondary = GoldenHourPalette.LightSecondary,
-        onSecondary = GoldenHourPalette.LightOnSecondary,
-        secondaryContainer = GoldenHourPalette.LightSecondary,
-        onSecondaryContainer = GoldenHourPalette.LightOnSecondary,
-        tertiary = GoldenHourPalette.LightTertiary,
-        onTertiary = GoldenHourPalette.LightOnTertiary,
-        tertiaryContainer = GoldenHourPalette.LightTertiary,
-        onTertiaryContainer = GoldenHourPalette.LightOnTertiary,
-        error = GoldenHourPalette.LightError,
-        onError = GoldenHourPalette.LightOnError,
-        errorContainer = GoldenHourPalette.LightError,
-        onErrorContainer = GoldenHourPalette.LightOnError,
-        outline = GoldenHourPalette.LightOutline,
-    )
+/**
+ * The 13 colours one palette actually defines for one theme mode -- the set
+ * spec §6 / Appendix A audits. [colorSchemeFor] expands these into Material3's
+ * 22 ColorScheme slots; the expansion is the same for every palette, so it is
+ * written once here rather than eight times by hand.
+ */
+private data class PaletteTokens(
+    val background: Color,
+    val surface: Color,
+    val outline: Color,
+    val onBackground: Color,
+    val onSurfaceVariant: Color,
+    val primary: Color,
+    val onPrimary: Color,
+    val secondary: Color,
+    val onSecondary: Color,
+    val tertiary: Color,
+    val onTertiary: Color,
+    val error: Color,
+    val onError: Color,
+)
 
-    MedPalette.SUNLIT_FOCUS -> if (dark) darkColorScheme(
-        background = SunlitFocusPalette.DarkBackground,
-        onBackground = SunlitFocusPalette.DarkOnBackground,
-        surface = SunlitFocusPalette.DarkSurface,
-        onSurface = SunlitFocusPalette.DarkOnBackground,
-        onSurfaceVariant = SunlitFocusPalette.DarkOnSurfaceVariant,
-        primary = SunlitFocusPalette.DarkPrimary,
-        onPrimary = SunlitFocusPalette.DarkOnPrimary,
-        primaryContainer = SunlitFocusPalette.DarkPrimary,
-        onPrimaryContainer = SunlitFocusPalette.DarkOnPrimary,
-        secondary = SunlitFocusPalette.DarkSecondary,
-        onSecondary = SunlitFocusPalette.DarkOnSecondary,
-        secondaryContainer = SunlitFocusPalette.DarkSecondary,
-        onSecondaryContainer = SunlitFocusPalette.DarkOnSecondary,
-        tertiary = SunlitFocusPalette.DarkTertiary,
-        onTertiary = SunlitFocusPalette.DarkOnTertiary,
-        tertiaryContainer = SunlitFocusPalette.DarkTertiary,
-        onTertiaryContainer = SunlitFocusPalette.DarkOnTertiary,
-        error = SunlitFocusPalette.DarkError,
-        onError = SunlitFocusPalette.DarkOnError,
-        errorContainer = SunlitFocusPalette.DarkError,
-        onErrorContainer = SunlitFocusPalette.DarkOnError,
-        outline = SunlitFocusPalette.DarkOutline,
-    ) else lightColorScheme(
-        background = SunlitFocusPalette.LightBackground,
-        onBackground = SunlitFocusPalette.LightOnBackground,
-        surface = SunlitFocusPalette.LightSurface,
-        onSurface = SunlitFocusPalette.LightOnBackground,
-        onSurfaceVariant = SunlitFocusPalette.LightOnSurfaceVariant,
-        primary = SunlitFocusPalette.LightPrimary,
-        onPrimary = SunlitFocusPalette.LightOnPrimary,
-        primaryContainer = SunlitFocusPalette.LightPrimary,
-        onPrimaryContainer = SunlitFocusPalette.LightOnPrimary,
-        secondary = SunlitFocusPalette.LightSecondary,
-        onSecondary = SunlitFocusPalette.LightOnSecondary,
-        secondaryContainer = SunlitFocusPalette.LightSecondary,
-        onSecondaryContainer = SunlitFocusPalette.LightOnSecondary,
-        tertiary = SunlitFocusPalette.LightTertiary,
-        onTertiary = SunlitFocusPalette.LightOnTertiary,
-        tertiaryContainer = SunlitFocusPalette.LightTertiary,
-        onTertiaryContainer = SunlitFocusPalette.LightOnTertiary,
-        error = SunlitFocusPalette.LightError,
-        onError = SunlitFocusPalette.LightOnError,
-        errorContainer = SunlitFocusPalette.LightError,
-        onErrorContainer = SunlitFocusPalette.LightOnError,
-        outline = SunlitFocusPalette.LightOutline,
-    )
+private fun tokensFor(palette: MedPalette, dark: Boolean): PaletteTokens = when (palette) {
+    MedPalette.GOLDEN_HOUR -> with(GoldenHourPalette) {
+        if (dark) PaletteTokens(
+            background = DarkBackground, surface = DarkSurface, outline = DarkOutline,
+            onBackground = DarkOnBackground, onSurfaceVariant = DarkOnSurfaceVariant, primary = DarkPrimary,
+            onPrimary = DarkOnPrimary, secondary = DarkSecondary, onSecondary = DarkOnSecondary,
+            tertiary = DarkTertiary, onTertiary = DarkOnTertiary, error = DarkError,
+            onError = DarkOnError,
+        )
+        else PaletteTokens(
+            background = LightBackground, surface = LightSurface, outline = LightOutline,
+            onBackground = LightOnBackground, onSurfaceVariant = LightOnSurfaceVariant, primary = LightPrimary,
+            onPrimary = LightOnPrimary, secondary = LightSecondary, onSecondary = LightOnSecondary,
+            tertiary = LightTertiary, onTertiary = LightOnTertiary, error = LightError,
+            onError = LightOnError,
+        )
+    }
+    MedPalette.SUNLIT_FOCUS -> with(SunlitFocusPalette) {
+        if (dark) PaletteTokens(
+            background = DarkBackground, surface = DarkSurface, outline = DarkOutline,
+            onBackground = DarkOnBackground, onSurfaceVariant = DarkOnSurfaceVariant, primary = DarkPrimary,
+            onPrimary = DarkOnPrimary, secondary = DarkSecondary, onSecondary = DarkOnSecondary,
+            tertiary = DarkTertiary, onTertiary = DarkOnTertiary, error = DarkError,
+            onError = DarkOnError,
+        )
+        else PaletteTokens(
+            background = LightBackground, surface = LightSurface, outline = LightOutline,
+            onBackground = LightOnBackground, onSurfaceVariant = LightOnSurfaceVariant, primary = LightPrimary,
+            onPrimary = LightOnPrimary, secondary = LightSecondary, onSecondary = LightOnSecondary,
+            tertiary = LightTertiary, onTertiary = LightOnTertiary, error = LightError,
+            onError = LightOnError,
+        )
+    }
+    MedPalette.FOREST_FLOOR -> with(ForestFloorPalette) {
+        if (dark) PaletteTokens(
+            background = DarkBackground, surface = DarkSurface, outline = DarkOutline,
+            onBackground = DarkOnBackground, onSurfaceVariant = DarkOnSurfaceVariant, primary = DarkPrimary,
+            onPrimary = DarkOnPrimary, secondary = DarkSecondary, onSecondary = DarkOnSecondary,
+            tertiary = DarkTertiary, onTertiary = DarkOnTertiary, error = DarkError,
+            onError = DarkOnError,
+        )
+        else PaletteTokens(
+            background = LightBackground, surface = LightSurface, outline = LightOutline,
+            onBackground = LightOnBackground, onSurfaceVariant = LightOnSurfaceVariant, primary = LightPrimary,
+            onPrimary = LightOnPrimary, secondary = LightSecondary, onSecondary = LightOnSecondary,
+            tertiary = LightTertiary, onTertiary = LightOnTertiary, error = LightError,
+            onError = LightOnError,
+        )
+    }
+    MedPalette.SAGE_CLINICAL -> with(SageClinicalPalette) {
+        if (dark) PaletteTokens(
+            background = DarkBackground, surface = DarkSurface, outline = DarkOutline,
+            onBackground = DarkOnBackground, onSurfaceVariant = DarkOnSurfaceVariant, primary = DarkPrimary,
+            onPrimary = DarkOnPrimary, secondary = DarkSecondary, onSecondary = DarkOnSecondary,
+            tertiary = DarkTertiary, onTertiary = DarkOnTertiary, error = DarkError,
+            onError = DarkOnError,
+        )
+        else PaletteTokens(
+            background = LightBackground, surface = LightSurface, outline = LightOutline,
+            onBackground = LightOnBackground, onSurfaceVariant = LightOnSurfaceVariant, primary = LightPrimary,
+            onPrimary = LightOnPrimary, secondary = LightSecondary, onSecondary = LightOnSecondary,
+            tertiary = LightTertiary, onTertiary = LightOnTertiary, error = LightError,
+            onError = LightOnError,
+        )
+    }
+    MedPalette.INK_LEDGER -> with(InkLedgerPalette) {
+        if (dark) PaletteTokens(
+            background = DarkBackground, surface = DarkSurface, outline = DarkOutline,
+            onBackground = DarkOnBackground, onSurfaceVariant = DarkOnSurfaceVariant, primary = DarkPrimary,
+            onPrimary = DarkOnPrimary, secondary = DarkSecondary, onSecondary = DarkOnSecondary,
+            tertiary = DarkTertiary, onTertiary = DarkOnTertiary, error = DarkError,
+            onError = DarkOnError,
+        )
+        else PaletteTokens(
+            background = LightBackground, surface = LightSurface, outline = LightOutline,
+            onBackground = LightOnBackground, onSurfaceVariant = LightOnSurfaceVariant, primary = LightPrimary,
+            onPrimary = LightOnPrimary, secondary = LightSecondary, onSecondary = LightOnSecondary,
+            tertiary = LightTertiary, onTertiary = LightOnTertiary, error = LightError,
+            onError = LightOnError,
+        )
+    }
+    MedPalette.COBALT_PORCELAIN -> with(CobaltPorcelainPalette) {
+        if (dark) PaletteTokens(
+            background = DarkBackground, surface = DarkSurface, outline = DarkOutline,
+            onBackground = DarkOnBackground, onSurfaceVariant = DarkOnSurfaceVariant, primary = DarkPrimary,
+            onPrimary = DarkOnPrimary, secondary = DarkSecondary, onSecondary = DarkOnSecondary,
+            tertiary = DarkTertiary, onTertiary = DarkOnTertiary, error = DarkError,
+            onError = DarkOnError,
+        )
+        else PaletteTokens(
+            background = LightBackground, surface = LightSurface, outline = LightOutline,
+            onBackground = LightOnBackground, onSurfaceVariant = LightOnSurfaceVariant, primary = LightPrimary,
+            onPrimary = LightOnPrimary, secondary = LightSecondary, onSecondary = LightOnSecondary,
+            tertiary = LightTertiary, onTertiary = LightOnTertiary, error = LightError,
+            onError = LightOnError,
+        )
+    }
+    MedPalette.ROSE_PETAL -> with(RosePetalPalette) {
+        if (dark) PaletteTokens(
+            background = DarkBackground, surface = DarkSurface, outline = DarkOutline,
+            onBackground = DarkOnBackground, onSurfaceVariant = DarkOnSurfaceVariant, primary = DarkPrimary,
+            onPrimary = DarkOnPrimary, secondary = DarkSecondary, onSecondary = DarkOnSecondary,
+            tertiary = DarkTertiary, onTertiary = DarkOnTertiary, error = DarkError,
+            onError = DarkOnError,
+        )
+        else PaletteTokens(
+            background = LightBackground, surface = LightSurface, outline = LightOutline,
+            onBackground = LightOnBackground, onSurfaceVariant = LightOnSurfaceVariant, primary = LightPrimary,
+            onPrimary = LightOnPrimary, secondary = LightSecondary, onSecondary = LightOnSecondary,
+            tertiary = LightTertiary, onTertiary = LightOnTertiary, error = LightError,
+            onError = LightOnError,
+        )
+    }
+    MedPalette.VELVET_RIBBON -> with(VelvetRibbonPalette) {
+        if (dark) PaletteTokens(
+            background = DarkBackground, surface = DarkSurface, outline = DarkOutline,
+            onBackground = DarkOnBackground, onSurfaceVariant = DarkOnSurfaceVariant, primary = DarkPrimary,
+            onPrimary = DarkOnPrimary, secondary = DarkSecondary, onSecondary = DarkOnSecondary,
+            tertiary = DarkTertiary, onTertiary = DarkOnTertiary, error = DarkError,
+            onError = DarkOnError,
+        )
+        else PaletteTokens(
+            background = LightBackground, surface = LightSurface, outline = LightOutline,
+            onBackground = LightOnBackground, onSurfaceVariant = LightOnSurfaceVariant, primary = LightPrimary,
+            onPrimary = LightOnPrimary, secondary = LightSecondary, onSecondary = LightOnSecondary,
+            tertiary = LightTertiary, onTertiary = LightOnTertiary, error = LightError,
+            onError = LightOnError,
+        )
+    }
+}
 
-    MedPalette.FOREST_FLOOR -> if (dark) darkColorScheme(
-        background = ForestFloorPalette.DarkBackground,
-        onBackground = ForestFloorPalette.DarkOnBackground,
-        surface = ForestFloorPalette.DarkSurface,
-        onSurface = ForestFloorPalette.DarkOnBackground,
-        onSurfaceVariant = ForestFloorPalette.DarkOnSurfaceVariant,
-        primary = ForestFloorPalette.DarkPrimary,
-        onPrimary = ForestFloorPalette.DarkOnPrimary,
-        primaryContainer = ForestFloorPalette.DarkPrimary,
-        onPrimaryContainer = ForestFloorPalette.DarkOnPrimary,
-        secondary = ForestFloorPalette.DarkSecondary,
-        onSecondary = ForestFloorPalette.DarkOnSecondary,
-        secondaryContainer = ForestFloorPalette.DarkSecondary,
-        onSecondaryContainer = ForestFloorPalette.DarkOnSecondary,
-        tertiary = ForestFloorPalette.DarkTertiary,
-        onTertiary = ForestFloorPalette.DarkOnTertiary,
-        tertiaryContainer = ForestFloorPalette.DarkTertiary,
-        onTertiaryContainer = ForestFloorPalette.DarkOnTertiary,
-        error = ForestFloorPalette.DarkError,
-        onError = ForestFloorPalette.DarkOnError,
-        errorContainer = ForestFloorPalette.DarkError,
-        onErrorContainer = ForestFloorPalette.DarkOnError,
-        outline = ForestFloorPalette.DarkOutline,
-    ) else lightColorScheme(
-        background = ForestFloorPalette.LightBackground,
-        onBackground = ForestFloorPalette.LightOnBackground,
-        surface = ForestFloorPalette.LightSurface,
-        onSurface = ForestFloorPalette.LightOnBackground,
-        onSurfaceVariant = ForestFloorPalette.LightOnSurfaceVariant,
-        primary = ForestFloorPalette.LightPrimary,
-        onPrimary = ForestFloorPalette.LightOnPrimary,
-        primaryContainer = ForestFloorPalette.LightPrimary,
-        onPrimaryContainer = ForestFloorPalette.LightOnPrimary,
-        secondary = ForestFloorPalette.LightSecondary,
-        onSecondary = ForestFloorPalette.LightOnSecondary,
-        secondaryContainer = ForestFloorPalette.LightSecondary,
-        onSecondaryContainer = ForestFloorPalette.LightOnSecondary,
-        tertiary = ForestFloorPalette.LightTertiary,
-        onTertiary = ForestFloorPalette.LightOnTertiary,
-        tertiaryContainer = ForestFloorPalette.LightTertiary,
-        onTertiaryContainer = ForestFloorPalette.LightOnTertiary,
-        error = ForestFloorPalette.LightError,
-        onError = ForestFloorPalette.LightOnError,
-        errorContainer = ForestFloorPalette.LightError,
-        onErrorContainer = ForestFloorPalette.LightOnError,
-        outline = ForestFloorPalette.LightOutline,
-    )
-
-    MedPalette.SAGE_CLINICAL -> if (dark) darkColorScheme(
-        background = SageClinicalPalette.DarkBackground,
-        onBackground = SageClinicalPalette.DarkOnBackground,
-        surface = SageClinicalPalette.DarkSurface,
-        onSurface = SageClinicalPalette.DarkOnBackground,
-        onSurfaceVariant = SageClinicalPalette.DarkOnSurfaceVariant,
-        primary = SageClinicalPalette.DarkPrimary,
-        onPrimary = SageClinicalPalette.DarkOnPrimary,
-        primaryContainer = SageClinicalPalette.DarkPrimary,
-        onPrimaryContainer = SageClinicalPalette.DarkOnPrimary,
-        secondary = SageClinicalPalette.DarkSecondary,
-        onSecondary = SageClinicalPalette.DarkOnSecondary,
-        secondaryContainer = SageClinicalPalette.DarkSecondary,
-        onSecondaryContainer = SageClinicalPalette.DarkOnSecondary,
-        tertiary = SageClinicalPalette.DarkTertiary,
-        onTertiary = SageClinicalPalette.DarkOnTertiary,
-        tertiaryContainer = SageClinicalPalette.DarkTertiary,
-        onTertiaryContainer = SageClinicalPalette.DarkOnTertiary,
-        error = SageClinicalPalette.DarkError,
-        onError = SageClinicalPalette.DarkOnError,
-        errorContainer = SageClinicalPalette.DarkError,
-        onErrorContainer = SageClinicalPalette.DarkOnError,
-        outline = SageClinicalPalette.DarkOutline,
-    ) else lightColorScheme(
-        background = SageClinicalPalette.LightBackground,
-        onBackground = SageClinicalPalette.LightOnBackground,
-        surface = SageClinicalPalette.LightSurface,
-        onSurface = SageClinicalPalette.LightOnBackground,
-        onSurfaceVariant = SageClinicalPalette.LightOnSurfaceVariant,
-        primary = SageClinicalPalette.LightPrimary,
-        onPrimary = SageClinicalPalette.LightOnPrimary,
-        primaryContainer = SageClinicalPalette.LightPrimary,
-        onPrimaryContainer = SageClinicalPalette.LightOnPrimary,
-        secondary = SageClinicalPalette.LightSecondary,
-        onSecondary = SageClinicalPalette.LightOnSecondary,
-        secondaryContainer = SageClinicalPalette.LightSecondary,
-        onSecondaryContainer = SageClinicalPalette.LightOnSecondary,
-        tertiary = SageClinicalPalette.LightTertiary,
-        onTertiary = SageClinicalPalette.LightOnTertiary,
-        tertiaryContainer = SageClinicalPalette.LightTertiary,
-        onTertiaryContainer = SageClinicalPalette.LightOnTertiary,
-        error = SageClinicalPalette.LightError,
-        onError = SageClinicalPalette.LightOnError,
-        errorContainer = SageClinicalPalette.LightError,
-        onErrorContainer = SageClinicalPalette.LightOnError,
-        outline = SageClinicalPalette.LightOutline,
-    )
-
-    MedPalette.INK_LEDGER -> if (dark) darkColorScheme(
-        background = InkLedgerPalette.DarkBackground,
-        onBackground = InkLedgerPalette.DarkOnBackground,
-        surface = InkLedgerPalette.DarkSurface,
-        onSurface = InkLedgerPalette.DarkOnBackground,
-        onSurfaceVariant = InkLedgerPalette.DarkOnSurfaceVariant,
-        primary = InkLedgerPalette.DarkPrimary,
-        onPrimary = InkLedgerPalette.DarkOnPrimary,
-        primaryContainer = InkLedgerPalette.DarkPrimary,
-        onPrimaryContainer = InkLedgerPalette.DarkOnPrimary,
-        secondary = InkLedgerPalette.DarkSecondary,
-        onSecondary = InkLedgerPalette.DarkOnSecondary,
-        secondaryContainer = InkLedgerPalette.DarkSecondary,
-        onSecondaryContainer = InkLedgerPalette.DarkOnSecondary,
-        tertiary = InkLedgerPalette.DarkTertiary,
-        onTertiary = InkLedgerPalette.DarkOnTertiary,
-        tertiaryContainer = InkLedgerPalette.DarkTertiary,
-        onTertiaryContainer = InkLedgerPalette.DarkOnTertiary,
-        error = InkLedgerPalette.DarkError,
-        onError = InkLedgerPalette.DarkOnError,
-        errorContainer = InkLedgerPalette.DarkError,
-        onErrorContainer = InkLedgerPalette.DarkOnError,
-        outline = InkLedgerPalette.DarkOutline,
-    ) else lightColorScheme(
-        background = InkLedgerPalette.LightBackground,
-        onBackground = InkLedgerPalette.LightOnBackground,
-        surface = InkLedgerPalette.LightSurface,
-        onSurface = InkLedgerPalette.LightOnBackground,
-        onSurfaceVariant = InkLedgerPalette.LightOnSurfaceVariant,
-        primary = InkLedgerPalette.LightPrimary,
-        onPrimary = InkLedgerPalette.LightOnPrimary,
-        primaryContainer = InkLedgerPalette.LightPrimary,
-        onPrimaryContainer = InkLedgerPalette.LightOnPrimary,
-        secondary = InkLedgerPalette.LightSecondary,
-        onSecondary = InkLedgerPalette.LightOnSecondary,
-        secondaryContainer = InkLedgerPalette.LightSecondary,
-        onSecondaryContainer = InkLedgerPalette.LightOnSecondary,
-        tertiary = InkLedgerPalette.LightTertiary,
-        onTertiary = InkLedgerPalette.LightOnTertiary,
-        tertiaryContainer = InkLedgerPalette.LightTertiary,
-        onTertiaryContainer = InkLedgerPalette.LightOnTertiary,
-        error = InkLedgerPalette.LightError,
-        onError = InkLedgerPalette.LightOnError,
-        errorContainer = InkLedgerPalette.LightError,
-        onErrorContainer = InkLedgerPalette.LightOnError,
-        outline = InkLedgerPalette.LightOutline,
-    )
-
-    MedPalette.COBALT_PORCELAIN -> if (dark) darkColorScheme(
-        background = CobaltPorcelainPalette.DarkBackground,
-        onBackground = CobaltPorcelainPalette.DarkOnBackground,
-        surface = CobaltPorcelainPalette.DarkSurface,
-        onSurface = CobaltPorcelainPalette.DarkOnBackground,
-        onSurfaceVariant = CobaltPorcelainPalette.DarkOnSurfaceVariant,
-        primary = CobaltPorcelainPalette.DarkPrimary,
-        onPrimary = CobaltPorcelainPalette.DarkOnPrimary,
-        primaryContainer = CobaltPorcelainPalette.DarkPrimary,
-        onPrimaryContainer = CobaltPorcelainPalette.DarkOnPrimary,
-        secondary = CobaltPorcelainPalette.DarkSecondary,
-        onSecondary = CobaltPorcelainPalette.DarkOnSecondary,
-        secondaryContainer = CobaltPorcelainPalette.DarkSecondary,
-        onSecondaryContainer = CobaltPorcelainPalette.DarkOnSecondary,
-        tertiary = CobaltPorcelainPalette.DarkTertiary,
-        onTertiary = CobaltPorcelainPalette.DarkOnTertiary,
-        tertiaryContainer = CobaltPorcelainPalette.DarkTertiary,
-        onTertiaryContainer = CobaltPorcelainPalette.DarkOnTertiary,
-        error = CobaltPorcelainPalette.DarkError,
-        onError = CobaltPorcelainPalette.DarkOnError,
-        errorContainer = CobaltPorcelainPalette.DarkError,
-        onErrorContainer = CobaltPorcelainPalette.DarkOnError,
-        outline = CobaltPorcelainPalette.DarkOutline,
-    ) else lightColorScheme(
-        background = CobaltPorcelainPalette.LightBackground,
-        onBackground = CobaltPorcelainPalette.LightOnBackground,
-        surface = CobaltPorcelainPalette.LightSurface,
-        onSurface = CobaltPorcelainPalette.LightOnBackground,
-        onSurfaceVariant = CobaltPorcelainPalette.LightOnSurfaceVariant,
-        primary = CobaltPorcelainPalette.LightPrimary,
-        onPrimary = CobaltPorcelainPalette.LightOnPrimary,
-        primaryContainer = CobaltPorcelainPalette.LightPrimary,
-        onPrimaryContainer = CobaltPorcelainPalette.LightOnPrimary,
-        secondary = CobaltPorcelainPalette.LightSecondary,
-        onSecondary = CobaltPorcelainPalette.LightOnSecondary,
-        secondaryContainer = CobaltPorcelainPalette.LightSecondary,
-        onSecondaryContainer = CobaltPorcelainPalette.LightOnSecondary,
-        tertiary = CobaltPorcelainPalette.LightTertiary,
-        onTertiary = CobaltPorcelainPalette.LightOnTertiary,
-        tertiaryContainer = CobaltPorcelainPalette.LightTertiary,
-        onTertiaryContainer = CobaltPorcelainPalette.LightOnTertiary,
-        error = CobaltPorcelainPalette.LightError,
-        onError = CobaltPorcelainPalette.LightOnError,
-        errorContainer = CobaltPorcelainPalette.LightError,
-        onErrorContainer = CobaltPorcelainPalette.LightOnError,
-        outline = CobaltPorcelainPalette.LightOutline,
-    )
-
-    MedPalette.ROSE_PETAL -> if (dark) darkColorScheme(
-        background = RosePetalPalette.DarkBackground,
-        onBackground = RosePetalPalette.DarkOnBackground,
-        surface = RosePetalPalette.DarkSurface,
-        onSurface = RosePetalPalette.DarkOnBackground,
-        onSurfaceVariant = RosePetalPalette.DarkOnSurfaceVariant,
-        primary = RosePetalPalette.DarkPrimary,
-        onPrimary = RosePetalPalette.DarkOnPrimary,
-        primaryContainer = RosePetalPalette.DarkPrimary,
-        onPrimaryContainer = RosePetalPalette.DarkOnPrimary,
-        secondary = RosePetalPalette.DarkSecondary,
-        onSecondary = RosePetalPalette.DarkOnSecondary,
-        secondaryContainer = RosePetalPalette.DarkSecondary,
-        onSecondaryContainer = RosePetalPalette.DarkOnSecondary,
-        tertiary = RosePetalPalette.DarkTertiary,
-        onTertiary = RosePetalPalette.DarkOnTertiary,
-        tertiaryContainer = RosePetalPalette.DarkTertiary,
-        onTertiaryContainer = RosePetalPalette.DarkOnTertiary,
-        error = RosePetalPalette.DarkError,
-        onError = RosePetalPalette.DarkOnError,
-        errorContainer = RosePetalPalette.DarkError,
-        onErrorContainer = RosePetalPalette.DarkOnError,
-        outline = RosePetalPalette.DarkOutline,
-    ) else lightColorScheme(
-        background = RosePetalPalette.LightBackground,
-        onBackground = RosePetalPalette.LightOnBackground,
-        surface = RosePetalPalette.LightSurface,
-        onSurface = RosePetalPalette.LightOnBackground,
-        onSurfaceVariant = RosePetalPalette.LightOnSurfaceVariant,
-        primary = RosePetalPalette.LightPrimary,
-        onPrimary = RosePetalPalette.LightOnPrimary,
-        primaryContainer = RosePetalPalette.LightPrimary,
-        onPrimaryContainer = RosePetalPalette.LightOnPrimary,
-        secondary = RosePetalPalette.LightSecondary,
-        onSecondary = RosePetalPalette.LightOnSecondary,
-        secondaryContainer = RosePetalPalette.LightSecondary,
-        onSecondaryContainer = RosePetalPalette.LightOnSecondary,
-        tertiary = RosePetalPalette.LightTertiary,
-        onTertiary = RosePetalPalette.LightOnTertiary,
-        tertiaryContainer = RosePetalPalette.LightTertiary,
-        onTertiaryContainer = RosePetalPalette.LightOnTertiary,
-        error = RosePetalPalette.LightError,
-        onError = RosePetalPalette.LightOnError,
-        errorContainer = RosePetalPalette.LightError,
-        onErrorContainer = RosePetalPalette.LightOnError,
-        outline = RosePetalPalette.LightOutline,
-    )
-
-    MedPalette.VELVET_RIBBON -> if (dark) darkColorScheme(
-        background = VelvetRibbonPalette.DarkBackground,
-        onBackground = VelvetRibbonPalette.DarkOnBackground,
-        surface = VelvetRibbonPalette.DarkSurface,
-        onSurface = VelvetRibbonPalette.DarkOnBackground,
-        onSurfaceVariant = VelvetRibbonPalette.DarkOnSurfaceVariant,
-        primary = VelvetRibbonPalette.DarkPrimary,
-        onPrimary = VelvetRibbonPalette.DarkOnPrimary,
-        primaryContainer = VelvetRibbonPalette.DarkPrimary,
-        onPrimaryContainer = VelvetRibbonPalette.DarkOnPrimary,
-        secondary = VelvetRibbonPalette.DarkSecondary,
-        onSecondary = VelvetRibbonPalette.DarkOnSecondary,
-        secondaryContainer = VelvetRibbonPalette.DarkSecondary,
-        onSecondaryContainer = VelvetRibbonPalette.DarkOnSecondary,
-        tertiary = VelvetRibbonPalette.DarkTertiary,
-        onTertiary = VelvetRibbonPalette.DarkOnTertiary,
-        tertiaryContainer = VelvetRibbonPalette.DarkTertiary,
-        onTertiaryContainer = VelvetRibbonPalette.DarkOnTertiary,
-        error = VelvetRibbonPalette.DarkError,
-        onError = VelvetRibbonPalette.DarkOnError,
-        errorContainer = VelvetRibbonPalette.DarkError,
-        onErrorContainer = VelvetRibbonPalette.DarkOnError,
-        outline = VelvetRibbonPalette.DarkOutline,
-    ) else lightColorScheme(
-        background = VelvetRibbonPalette.LightBackground,
-        onBackground = VelvetRibbonPalette.LightOnBackground,
-        surface = VelvetRibbonPalette.LightSurface,
-        onSurface = VelvetRibbonPalette.LightOnBackground,
-        onSurfaceVariant = VelvetRibbonPalette.LightOnSurfaceVariant,
-        primary = VelvetRibbonPalette.LightPrimary,
-        onPrimary = VelvetRibbonPalette.LightOnPrimary,
-        primaryContainer = VelvetRibbonPalette.LightPrimary,
-        onPrimaryContainer = VelvetRibbonPalette.LightOnPrimary,
-        secondary = VelvetRibbonPalette.LightSecondary,
-        onSecondary = VelvetRibbonPalette.LightOnSecondary,
-        secondaryContainer = VelvetRibbonPalette.LightSecondary,
-        onSecondaryContainer = VelvetRibbonPalette.LightOnSecondary,
-        tertiary = VelvetRibbonPalette.LightTertiary,
-        onTertiary = VelvetRibbonPalette.LightOnTertiary,
-        tertiaryContainer = VelvetRibbonPalette.LightTertiary,
-        onTertiaryContainer = VelvetRibbonPalette.LightOnTertiary,
-        error = VelvetRibbonPalette.LightError,
-        onError = VelvetRibbonPalette.LightOnError,
-        errorContainer = VelvetRibbonPalette.LightError,
-        onErrorContainer = VelvetRibbonPalette.LightOnError,
-        outline = VelvetRibbonPalette.LightOutline,
-    )
+/**
+ * Expands one palette's tokens into a Material3 ColorScheme.
+ *
+ * Two mappings here are deliberate and were uniform across all eight
+ * hand-written palettes this replaced, so they are not a simplification:
+ *  - `onSurface` is fed from the palette's OnBackground. Appendix A audits one
+ *    text colour, not a separate on-surface tone, so there is no OnSurface
+ *    token to read.
+ *  - Every `*Container` slot reuses its base role rather than a lighter tone.
+ *    Appendix A audits a single tone per role, framed as large-element use --
+ *    see Color.kt's own note, which flags a second container tier as
+ *    unspecified rather than missing.
+ */
+/**
+ * Expands one palette's tokens into a Material3 ColorScheme.
+ *
+ * Two mappings here are deliberate, and were uniform across all eight
+ * hand-written palettes this replaced -- they are preserved, not simplified:
+ *  - `onSurface` is fed from the palette's OnBackground. Appendix A audits one
+ *    text colour, not a separate on-surface tone, so there is no OnSurface
+ *    token to read.
+ *  - Every `*Container` slot reuses its base role rather than a lighter tone.
+ *    Appendix A audits a single tone per role, framed as large-element use --
+ *    see Color.kt's note, which flags a second container tier as unspecified
+ *    rather than missing.
+ *
+ * The two branches are spelled out rather than sharing one argument list via a
+ * function reference: darkColorScheme and lightColorScheme differ in their
+ * defaults for the slots this app doesn't override (surfaceVariant, scrim,
+ * the inverse* family), so which builder runs is itself load-bearing.
+ */
+private fun colorSchemeFor(palette: MedPalette, dark: Boolean): ColorScheme {
+    val t = tokensFor(palette, dark)
+    return if (dark) {
+        darkColorScheme(
+            background = t.background,
+            error = t.error,
+            errorContainer = t.error,
+            onBackground = t.onBackground,
+            onError = t.onError,
+            onErrorContainer = t.onError,
+            onPrimary = t.onPrimary,
+            onPrimaryContainer = t.onPrimary,
+            onSecondary = t.onSecondary,
+            onSecondaryContainer = t.onSecondary,
+            onSurface = t.onBackground,
+            onSurfaceVariant = t.onSurfaceVariant,
+            onTertiary = t.onTertiary,
+            onTertiaryContainer = t.onTertiary,
+            outline = t.outline,
+            primary = t.primary,
+            primaryContainer = t.primary,
+            secondary = t.secondary,
+            secondaryContainer = t.secondary,
+            surface = t.surface,
+            tertiary = t.tertiary,
+            tertiaryContainer = t.tertiary,
+        )
+    } else {
+        lightColorScheme(
+            background = t.background,
+            error = t.error,
+            errorContainer = t.error,
+            onBackground = t.onBackground,
+            onError = t.onError,
+            onErrorContainer = t.onError,
+            onPrimary = t.onPrimary,
+            onPrimaryContainer = t.onPrimary,
+            onSecondary = t.onSecondary,
+            onSecondaryContainer = t.onSecondary,
+            onSurface = t.onBackground,
+            onSurfaceVariant = t.onSurfaceVariant,
+            onTertiary = t.onTertiary,
+            onTertiaryContainer = t.onTertiary,
+            outline = t.outline,
+            primary = t.primary,
+            primaryContainer = t.primary,
+            secondary = t.secondary,
+            secondaryContainer = t.secondary,
+            surface = t.surface,
+            tertiary = t.tertiary,
+            tertiaryContainer = t.tertiary,
+        )
+    }
 }
 
 /** Public swatch color for a palette picker UI (onboarding, Appearance settings) --

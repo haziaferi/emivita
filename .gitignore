@@ -14,13 +14,26 @@ captures/
 .externalNativeBuild/
 .cxx/
 
-# Real signing material. The shared DEBUG keystore under keystores/ is
-# deliberately NOT ignored -- its password is the published Android default
-# and the whole point of it is that every machine signs debug builds
-# identically. A genuine release keystore must never be committed.
+# Real signing material. Ignore every keystore by extension and re-admit the
+# one deliberate exception by name, rather than trying to guess what a future
+# release key will be called. The previous rules were *.jks + keystores/*release*
+# + keystore.properties, which the committed debug key (.keystore, no "release"
+# in the name) slipped past by design -- but so would keystores/prod.keystore
+# or keystores/emivita-signing.keystore, silently, on the next `git add .`.
+#
+# The shared DEBUG keystore below is tracked on purpose: its password is the
+# published Android default, and the whole point is that every machine signs
+# debug builds identically. See app/build.gradle.kts. A genuine release
+# keystore must never be committed.
 *.jks
-keystores/*release*
+*.keystore
 keystore.properties
+!keystores/my-shared-debug.keystore
+
+# JVM crash dumps. The Gradle daemon writes these into the repo root when it
+# runs out of memory, and a replay log can be tens of megabytes.
+hs_err_pid*.log
+replay_pid*.log
 
 # OS noise
 .DS_Store
