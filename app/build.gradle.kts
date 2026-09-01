@@ -117,7 +117,6 @@ dependencies {
     // Compose
     val composeBom = platform("androidx.compose:compose-bom:2026.06.00")
     implementation(composeBom)
-    androidTestImplementation(composeBom)
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.activity:activity-compose:1.10.1")
@@ -222,8 +221,13 @@ dependencies {
     testImplementation("io.mockk:mockk:1.13.13")
     testImplementation("app.cash.turbine:turbine:1.2.0")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
-    androidTestImplementation("androidx.test.ext:junit:1.2.1")
-    androidTestImplementation("androidx.compose.ui:ui-test-junit4")
+    // No androidTestImplementation entries: there is no androidTest source
+    // set. The only instrumented test was the New-Project wizard's
+    // ExampleInstrumentedTest asserting the package name, and it had never
+    // been run -- its dependencies were not even in the Gradle cache, which
+    // is what made `./gradlew --offline lintDebug` fail. Add these three back
+    // (compose-bom, androidx.test.ext:junit, ui-test-junit4) alongside the
+    // first real instrumented test.
 }
 configurations.all {
     resolutionStrategy {

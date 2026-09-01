@@ -32,9 +32,6 @@ interface ReminderDao {
     @Delete
     suspend fun delete(reminder: Reminder)
 
-    @Query("UPDATE reminders SET enabled = :enabled WHERE medicineId = :medicineId")
-    suspend fun setEnabledForMedicine(medicineId: Long, enabled: Boolean)
-
     /** LowStockAlert/ExpirationAlert trigger-mode bookkeeping (spec §9 #8) --
      *  see LowStockExpirationAlertEvaluator. */
     @Query("UPDATE reminders SET lastAlertNotifiedEpochDay = :epochDay WHERE id = :reminderId")

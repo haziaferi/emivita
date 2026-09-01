@@ -70,7 +70,6 @@ class MedicineRepository(
         autoSyncManager.notifyChanged()
     }
 
-    fun observeAllTags(): Flow<List<Tag>> = tagDao.observeAll()
     fun observeTagsForMedicine(medicineId: Long): Flow<List<Tag>> = tagDao.observeTagsForMedicine(medicineId)
 
     // Was two un-wrapped suspend calls (flagged in review, R1) -- a process death

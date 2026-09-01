@@ -32,7 +32,6 @@ import androidx.glance.text.TextStyle
 import com.hazia.emivita.EmivitaApplication
 import com.hazia.emivita.MainActivity
 import java.time.LocalDate
-import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 
 private const val MAX_ROWS = 4

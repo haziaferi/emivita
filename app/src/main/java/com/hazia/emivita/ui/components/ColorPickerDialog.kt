@@ -37,7 +37,6 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.unit.dp
 import kotlin.math.max
-import kotlin.math.min
 
 /** Parses a `#RRGGBB` string, or null if blank/invalid -- lenient about a
  *  missing leading '#' since users will type either. */
