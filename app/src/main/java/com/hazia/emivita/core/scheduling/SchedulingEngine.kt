@@ -9,6 +9,7 @@ import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.settings.SettingsRepository
 import kotlinx.coroutines.flow.first
 import java.time.Instant
+import java.time.LocalTime
 import java.time.ZoneId
 
 /**
@@ -42,12 +43,38 @@ class SchedulingEngine(
         ReminderType.LINKED_FOLLOWING,
     )
 
+    /** Reads the weekend-mode preferences once, so a projection walk doesn't
+     *  re-read DataStore per occurrence. Each `.first()` on `dataStore.data`
+     *  is a fresh cold-flow collection, not a cached value read, and
+     *  [occurrencesFor] can call [nextOccurrenceFor] up to `maxOccurrences`
+     *  times per reminder per recompute.
+     *
+     *  The three window preferences are only read when the toggle is on --
+     *  same "a disabled feature costs one Flow read" property the inline
+     *  version had. */
+    suspend fun readWeekendMode(): WeekendMode {
+        if (!settingsRepository.weekendModeEnabled.first()) return WeekendMode.Off
+        return WeekendMode.On(
+            days = settingsRepository.weekendDays.first(),
+            start = settingsRepository.weekendStartTime.first(),
+            end = settingsRepository.weekendEndTime.first(),
+        )
+    }
+
     /** Next time [reminder] should fire at/after [notBeforeEpochMillis], or
      *  `null` if it has no more occurrences (disabled, an unsupported type
-     *  for now, or a calculator-level "never matches" result). */
+     *  for now, or a calculator-level "never matches" result).
+     *
+     *  A null [weekendMode] means "read it yourself" -- convenient for a
+     *  one-off caller, and the read still happens only after the clamps
+     *  below, so a reminder that returns early costs nothing. Pass a
+     *  snapshot when calling repeatedly. (Null rather than a default of
+     *  `readWeekendMode()`: Kotlin does not allow a suspend call in a
+     *  default parameter value.) */
     suspend fun nextOccurrenceFor(
         reminder: Reminder,
         notBeforeEpochMillis: Long = nowEpochMillis(),
+        weekendMode: WeekendMode? = null,
     ): NextOccurrence? {
         if (!reminder.enabled) return null
         if (reminder.type !in supportedTypes) return null
@@ -111,16 +138,11 @@ class SchedulingEngine(
 
         // Weekend mode (spec §3) -- the last step, applied uniformly with no
         // per-reminder opt-out. Skipped entirely (not just a no-op inside
-        // applyWeekendMode) when the global toggle is off, so a disabled
-        // feature costs nothing beyond one Flow read.
-        if (!settingsRepository.weekendModeEnabled.first()) return base
-        return applyWeekendMode(
-            base,
-            settingsRepository.weekendDays.first(),
-            settingsRepository.weekendStartTime.first(),
-            settingsRepository.weekendEndTime.first(),
-            zone,
-        )
+        // applyWeekendMode) when the global toggle is off.
+        return when (val mode = weekendMode ?: readWeekendMode()) {
+            is WeekendMode.Off -> base
+            is WeekendMode.On -> applyWeekendMode(base, mode.days, mode.start, mode.end, zone)
+        }
     }
 
     /** Projects every occurrence of [reminder] in `[fromEpochMillis,
@@ -136,11 +158,15 @@ class SchedulingEngine(
         fromEpochMillis: Long,
         toEpochMillis: Long,
         maxOccurrences: Int = 500,
+        weekendMode: WeekendMode? = null,
     ): List<NextOccurrence> {
+        // Resolved once for the whole walk -- this is the call that made the
+        // per-occurrence read expensive in the first place.
+        val mode = weekendMode ?: readWeekendMode()
         val result = mutableListOf<NextOccurrence>()
         var notBefore = fromEpochMillis
         while (result.size < maxOccurrences) {
-            val next = nextOccurrenceFor(reminder, notBefore) ?: break
+            val next = nextOccurrenceFor(reminder, notBefore, mode) ?: break
             if (next.epochMillis > toEpochMillis) break
             result.add(next)
             // LinkedFollowing has no "next after this one" within a single walk
