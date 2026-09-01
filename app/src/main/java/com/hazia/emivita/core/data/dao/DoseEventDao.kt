@@ -59,9 +59,6 @@ interface DoseEventDao {
     @Query("SELECT * FROM dose_events WHERE reminderId = :reminderId AND scheduledEpochMillis = :scheduledEpochMillis LIMIT 1")
     suspend fun findByReminderAndTime(reminderId: Long, scheduledEpochMillis: Long): DoseEvent?
 
-    @Query("SELECT * FROM dose_events WHERE reminderId = :reminderId AND status = 'PENDING' ORDER BY scheduledEpochMillis ASC")
-    suspend fun getPendingForReminder(reminderId: Long): List<DoseEvent>
-
     /** Most recently *resolved* (Taken or Skipped) event for a reminder, used
      *  as the ON_RESOLVED interval/window scheduling anchor -- see
      *  ReminderScheduling.kt's doc comment on why this replaces a persisted

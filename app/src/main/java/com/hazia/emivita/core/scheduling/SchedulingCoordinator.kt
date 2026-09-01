@@ -38,25 +38,3 @@ interface SchedulingCoordinator {
      *  answer, so any pending nag re-fire for its reminder should stop. */
     suspend fun cancelNag(reminderId: Long)
 }
-
-/** No longer wired into AppContainer now that RealSchedulingCoordinator exists
- *  (see AppContainer.kt) -- kept as a deliberately-loud fake for unit tests
- *  that construct a repository directly and don't care about scheduling
- *  side effects, so they don't have to build a full RealSchedulingCoordinator
- *  just to satisfy the constructor. */
-object NoOpSchedulingCoordinator : SchedulingCoordinator {
-    private fun warn(what: String) {
-        android.util.Log.w(
-            "Emivita",
-            "$what called with no real SchedulingCoordinator wired yet -- " +
-                "no alarm was scheduled/cancelled. Expected until the scheduling engine batch lands.",
-        )
-    }
-
-    override suspend fun onDoseResolved(reminderId: Long) = warn("onDoseResolved($reminderId)")
-    override suspend fun onReminderChanged(reminderId: Long, notBeforeEpochMillis: Long) =
-        warn("onReminderChanged($reminderId)")
-    override suspend fun onReminderRemoved(reminderId: Long) = warn("onReminderRemoved($reminderId)")
-    override suspend fun rescheduleAll() = warn("rescheduleAll()")
-    override suspend fun cancelNag(reminderId: Long) = warn("cancelNag($reminderId)")
-}

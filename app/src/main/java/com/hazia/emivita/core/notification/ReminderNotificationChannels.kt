@@ -3,7 +3,6 @@ package com.hazia.emivita.core.notification
 import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
-import android.os.Build
 import com.hazia.emivita.core.data.entity.NotificationPriority
 
 /**
@@ -28,8 +27,6 @@ object ReminderNotificationChannels {
     }
 
     fun createAll(context: Context) {
-        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) return // channels don't exist pre-26; moot at minSdk 30, kept for clarity
-
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 
         val standard = NotificationChannel(

@@ -17,9 +17,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.CalendarViewWeek
-import androidx.compose.material.icons.filled.Inventory2
 import androidx.compose.material.icons.filled.Link
 import androidx.compose.material.icons.filled.Repeat
 import androidx.compose.material.icons.filled.Schedule
@@ -174,20 +172,13 @@ fun AddReminderScreen(
             },
             onCancel = { selectedType = null },
         )
-        ReminderType.LOW_STOCK_ALERT -> LowStockAlertFormBody(
-            title = "Low Stock Alert",
-            saveLabel = "Save",
-            initial = ReminderConfig.LowStockAlert(threshold = 5.0, triggerMode = LowStockTriggerMode.ONCE_WHEN_BELOW),
-            onSave = { config -> reminderRepository.create(medicineId, null, ReminderType.LOW_STOCK_ALERT, config); onDone() },
-            onCancel = { selectedType = null },
-        )
-        ReminderType.EXPIRATION_ALERT -> ExpirationAlertFormBody(
-            title = "Expiration Alert",
-            saveLabel = "Save",
-            initial = ReminderConfig.ExpirationAlert(leadDays = 7, frequency = ExpirationTriggerFrequency.ONCE),
-            onSave = { config -> reminderRepository.create(medicineId, null, ReminderType.EXPIRATION_ALERT, config); onDone() },
-            onCancel = { selectedType = null },
-        )
+        // Unreachable: [reminderTypeOptions] excludes both, and the picker is
+        // the only thing that ever sets selectedType. StockExpirationScreen is
+        // their sole creation path (spec §6/§9 #1: "one entry point, no
+        // duplicated fields elsewhere"). Kept as an explicit case rather than
+        // an `else` so adding a 7th ReminderType still forces this file to be
+        // revisited. EditReminderScreen below routes to their form bodies.
+        ReminderType.LOW_STOCK_ALERT, ReminderType.EXPIRATION_ALERT -> Unit
         ReminderType.LINKED_FOLLOWING -> LinkedFollowingFormBody(
             title = "Linked Following",
             saveLabel = "Save",

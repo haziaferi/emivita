@@ -1,6 +1,5 @@
 package com.hazia.emivita.ui.theme
 
-import android.os.Build
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
@@ -431,49 +430,6 @@ private fun colorSchemeFor(palette: MedPalette, dark: Boolean) = when (palette) 
  *  ever shown as a small representative dot, not the real rendered surface. */
 fun swatchColorFor(palette: MedPalette): Color = colorSchemeFor(palette, dark = false).primary
 
-/** Per-medicine accent color (from the HSV picker) is stored as a raw ARGB int
- *  independent of the active palette -- this just clamps it to a legible
- *  on-surface tone at render time so an arbitrarily-chosen medicine color
- *  never accidentally becomes unreadable text. Used by the alarm screen and
- *  notification buttons (see feature/reminders).
- *
- *  WCAG contrast ratio (relative luminance, spec formula) against
- *  [background], not a hue/lightness heuristic -- the same standard this
- *  app's own curated-palette tables (docs/SPEC.md §6) already check
- *  themselves against. If [this] already clears 4.5:1 (WCAG AA, normal
- *  text) it's returned unchanged; otherwise it's blended toward whichever
- *  of black/white increases contrast more, by the minimum amount needed to
- *  clear the bar -- preserves the original hue as closely as possible
- *  rather than snapping straight to black/white. */
-fun Color.asOnSurfaceSafe(background: Color): Color {
-    val minContrast = 4.5
-    if (contrastRatio(this, background) >= minContrast) return this
-
-    val target = if (contrastRatio(Color.Black, background) > contrastRatio(Color.White, background)) Color.Black else Color.White
-
-    var low = 0f
-    var high = 1f
-    repeat(12) {
-        val mid = (low + high) / 2f
-        if (contrastRatio(androidx.compose.ui.graphics.lerp(this, target, mid), background) >= minContrast) high = mid else low = mid
-    }
-    return androidx.compose.ui.graphics.lerp(this, target, high)
-}
-
-private fun contrastRatio(a: Color, b: Color): Double {
-    val lighter = maxOf(relativeLuminance(a), relativeLuminance(b))
-    val darker = minOf(relativeLuminance(a), relativeLuminance(b))
-    return (lighter + 0.05) / (darker + 0.05)
-}
-
-private fun relativeLuminance(color: Color): Double {
-    fun channel(c: Float): Double {
-        val cs = c.toDouble()
-        return if (cs <= 0.03928) cs / 12.92 else Math.pow((cs + 0.055) / 1.055, 2.4)
-    }
-    return 0.2126 * channel(color.red) + 0.7152 * channel(color.green) + 0.0722 * channel(color.blue)
-}
-
 @Composable
 fun EmivitaTheme(
     palette: MedPalette = MedPalette.GOLDEN_HOUR,
@@ -493,8 +449,3 @@ fun EmivitaTheme(
         content = content,
     )
 }
-
-/** True on API 31+ where per-app dynamic (Material You) color is available --
- *  not used by default (the 8 curated palettes are the point), but kept here
- *  since it's a one-line feature if a future toggle wants it. */
-val supportsDynamicColor: Boolean = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S

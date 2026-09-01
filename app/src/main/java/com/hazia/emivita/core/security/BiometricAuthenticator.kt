@@ -18,25 +18,16 @@ enum class BiometricAvailability { AVAILABLE, NO_HARDWARE, NOT_ENROLLED }
  *  credential/PIN fallback) -- matches spec §9 #11's scope of "biometric
  *  app-lock," not "app lock with a PIN fallback." */
 object BiometricAuthenticator {
-    // Explicit per-code mapping, not a catch-all `else` -- BiometricManager's
-    // other codes (SECURITY_UPDATE_REQUIRED, UNSUPPORTED, STATUS_UNKNOWN) are
-    // not "no hardware," they're "can't tell/can't use it right now," and a
-    // silent else previously folded them into NO_HARDWARE alongside genuine
-    // no-hardware cases without that being a conscious choice. They still
-    // resolve to NO_HARDWARE below -- same fail-open outcome as before -- but
-    // for a reasoned reason: spec §9 #11 scopes this feature to biometric-only
-    // with no PIN/pattern fallback, so treating any of these as "stay locked"
-    // would strand the user with literally no way to reach Settings and turn
-    // the lock back off. Revisit if a fallback unlock path is ever added.
     fun availability(context: Context): BiometricAvailability = when (BiometricManager.from(context).canAuthenticate(BIOMETRIC_STRONG)) {
         BiometricManager.BIOMETRIC_SUCCESS -> BiometricAvailability.AVAILABLE
         BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> BiometricAvailability.NOT_ENROLLED
-        BiometricManager.BIOMETRIC_ERROR_NO_HARDWARE,
-        BiometricManager.BIOMETRIC_ERROR_HW_UNAVAILABLE,
-        BiometricManager.BIOMETRIC_ERROR_SECURITY_UPDATE_REQUIRED,
-        BiometricManager.BIOMETRIC_ERROR_UNSUPPORTED,
-        BiometricManager.BIOMETRIC_STATUS_UNKNOWN,
-        -> BiometricAvailability.NO_HARDWARE
+        // Everything else -- no hardware, hardware busy, security update
+        // required, unsupported, status unknown -- resolves to NO_HARDWARE,
+        // which AppLockGate fails open on. Deliberate: spec §9 #11 scopes this
+        // to biometric-only with no PIN/pattern fallback, so treating a
+        // "can't tell right now" code as "stay locked" would strand the user
+        // with no way to reach Settings and turn the lock back off. Revisit if
+        // a fallback unlock path is ever added.
         else -> BiometricAvailability.NO_HARDWARE
     }
 
