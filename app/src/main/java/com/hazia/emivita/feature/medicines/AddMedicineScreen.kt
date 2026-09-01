@@ -53,6 +53,7 @@ import com.hazia.emivita.ui.components.ColorPickerDialog
 import com.hazia.emivita.ui.components.parseHexColor
 import com.hazia.emivita.ui.components.toHexString
 import com.hazia.emivita.ui.icons.MedicineIcons
+import com.hazia.emivita.ui.theme.NeutralMedicineAccent
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -279,7 +280,7 @@ private fun MedicineFormBody(
                 try {
                     scanLauncher.launch(Intent("com.google.zxing.client.android.SCAN"))
                     scanUnavailable = false
-                } catch (e: ActivityNotFoundException) {
+                } catch (_: ActivityNotFoundException) {
                     scanUnavailable = true
                 }
             }) {
@@ -325,7 +326,7 @@ private fun MedicineFormBody(
                 Modifier
                     .size(36.dp)
                     .clickable { showColorPicker = true }
-                    .background(color ?: Color(0xFFB8ABA9), CircleShape),
+                    .background(color ?: NeutralMedicineAccent, CircleShape),
             )
             Spacer(Modifier.width(10.dp))
             AssistChip(onClick = { showColorPicker = true }, label = { Text(color?.let { "Change color" } ?: "Pick a color") })

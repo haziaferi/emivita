@@ -35,6 +35,7 @@ import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.input.pointer.pointerInput
+import com.hazia.emivita.ui.theme.NeutralMedicineAccent
 import androidx.compose.ui.unit.dp
 import kotlin.math.max
 
@@ -47,7 +48,7 @@ fun parseHexColor(hex: String): Color? {
 }
 
 fun Color.toHexString(): String {
-    val argb = android.graphics.Color.argb(
+    val argb = AndroidColor.argb(
         (alpha * 255).toInt(), (red * 255).toInt(), (green * 255).toInt(), (blue * 255).toInt()
     )
     return String.format("#%06X", argb and 0xFFFFFF)
@@ -68,7 +69,7 @@ fun ColorPickerDialog(
     onConfirm: (Color) -> Unit,
 ) {
     val hsv = remember {
-        val initial = initialColor ?: Color(0xFFB8ABA9) // spec's neutral fallback
+        val initial = initialColor ?: NeutralMedicineAccent
         val out = FloatArray(3)
         AndroidColor.colorToHSV(
             AndroidColor.rgb((initial.red * 255).toInt(), (initial.green * 255).toInt(), (initial.blue * 255).toInt()),

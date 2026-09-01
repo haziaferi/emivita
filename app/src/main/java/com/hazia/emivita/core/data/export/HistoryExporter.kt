@@ -4,8 +4,8 @@ import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
 import com.hazia.emivita.core.data.dao.DoseEventWithMedicine
 import com.hazia.emivita.core.data.entity.DoseStatus
-import com.hazia.emivita.ui.components.formatDoseAmount
-import com.hazia.emivita.ui.components.formatDoseWithUnit
+import com.hazia.emivita.core.format.formatDecimal
+import com.hazia.emivita.core.format.formatDoseWithUnit
 import java.io.OutputStream
 import java.time.Instant
 import java.time.ZoneId
@@ -52,7 +52,7 @@ object HistoryExporter {
             builder.append(time).append(',')
             builder.append(csvEscape(row.medicine.name)).append(',')
             builder.append(statusLabel(row.doseEvent.status)).append(',')
-            builder.append(formatDoseAmount(row.doseEvent.doseAmount)).append(',')
+            builder.append(formatDecimal(row.doseEvent.doseAmount)).append(',')
             builder.append(csvEscape(row.medicine.doseUnit ?: "")).append('\n')
         }
         return builder.toString()

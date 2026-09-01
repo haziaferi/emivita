@@ -1,5 +1,7 @@
 package com.hazia.emivita.feature.settings
 
+import android.content.Intent
+import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -30,6 +32,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -56,8 +59,12 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalTime
 
+/** Shared by every Settings detail screen in this package, including
+ *  BackupSyncScreen's -- `internal`, not `private`, because a file-private
+ *  top-level function can't cross files even inside one package, which is
+ *  how this ended up written twice. */
 @Composable
-private fun DetailHeader(title: String, onBack: () -> Unit) {
+internal fun DetailHeader(title: String, onBack: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = onBack) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
@@ -131,10 +138,10 @@ fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit
     var loaded by remember { mutableStateOf(false) }
     var enabled by remember { mutableStateOf(false) }
     var days by remember { mutableStateOf(setOf<Int>()) }
-    var startHour by remember { mutableStateOf(9) }
-    var startMinute by remember { mutableStateOf(0) }
-    var endHour by remember { mutableStateOf(18) }
-    var endMinute by remember { mutableStateOf(0) }
+    var startHour by remember { mutableIntStateOf(9) }
+    var startMinute by remember { mutableIntStateOf(0) }
+    var endHour by remember { mutableIntStateOf(18) }
+    var endMinute by remember { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
@@ -216,7 +223,7 @@ fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit
  *  sound picker Android would silently ignore. */
 @Composable
 fun NotificationsAlertsScreen(onBack: () -> Unit) {
-    val context = androidx.compose.ui.platform.LocalContext.current
+    val context = LocalContext.current
 
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
         DetailHeader("Notifications & Alerts", onBack)
@@ -234,16 +241,15 @@ fun NotificationsAlertsScreen(onBack: () -> Unit) {
 
         Spacer(Modifier.height(20.dp))
         Text(
-            "Sound and vibration for each channel are controlled by Android itself, not this app -- ".plus(
-                "open the system notification settings to adjust them."
-            ),
+            "Sound and vibration for each channel are controlled by Android itself, " +
+                "not this app -- open the system notification settings to adjust them.",
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
         )
         Spacer(Modifier.height(12.dp))
         Button(onClick = {
-            val intent = android.content.Intent(android.provider.Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                putExtra(android.provider.Settings.EXTRA_APP_PACKAGE, context.packageName)
+            val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
             }
             context.startActivity(intent)
         }) { Text("Open system notification settings") }

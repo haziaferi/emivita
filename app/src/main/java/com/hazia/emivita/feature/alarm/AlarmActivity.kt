@@ -21,6 +21,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -83,7 +84,7 @@ private fun AlarmScreen(reminderId: Long, doseEventId: Long, onFinished: () -> U
     var medicine by remember { mutableStateOf<Medicine?>(null) }
     var loadFailed by remember { mutableStateOf(false) }
     var locked by remember { mutableStateOf(false) }
-    var snoozeMinutes by remember { mutableStateOf(DEFAULT_SNOOZE_MINUTES.toInt()) }
+    var snoozeMinutes by remember { mutableIntStateOf(DEFAULT_SNOOZE_MINUTES.toInt()) }
 
     LaunchedEffect(reminderId, doseEventId) {
         snoozeMinutes = container.settingsRepository.snoozeDurationMinutes.first()

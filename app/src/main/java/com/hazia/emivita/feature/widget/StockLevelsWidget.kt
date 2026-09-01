@@ -30,6 +30,7 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.hazia.emivita.EmivitaApplication
+import com.hazia.emivita.core.format.formatDecimal
 import com.hazia.emivita.MainActivity
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -60,12 +61,15 @@ class StockLevelsWidget : GlanceAppWidget() {
         val tracked = container.medicineRepository.getAllTracked()
         val rows = tracked
             .asSequence()
-            .map { medicine ->
+            // getAllTracked()'s query is `WHERE unit IS NOT NULL`, so this
+            // never drops a row in practice -- but the invariant lives in
+            // MedicineDao's SQL, not in the type, so don't assert it here.
+            .mapNotNull { medicine ->
                 StockRow(
                     medicineId = medicine.id,
                     medicineName = medicine.name,
                     quantity = medicine.stockInfo.quantity,
-                    unit = medicine.stockInfo.unit!!,
+                    unit = medicine.stockInfo.unit ?: return@mapNotNull null,
                     runOutDate = state.stockRunOutDates[medicine.id],
                     refillQuantity = medicine.stockInfo.refillQuantity,
                 )
@@ -121,7 +125,7 @@ private fun StockRowItem(row: StockRow, showRefillAction: Boolean) {
         Column(modifier = GlanceModifier.defaultWeight()) {
             Text(row.medicineName, style = TextStyle(fontSize = 13.sp, color = GlanceTheme.colors.onSurface))
             Text(
-                "${formatQuantity(row.quantity)} ${row.unit} • $subtitle",
+                "${formatDecimal(row.quantity)} ${row.unit} • $subtitle",
                 style = TextStyle(fontSize = 11.sp, color = GlanceTheme.colors.onSurfaceVariant),
             )
         }
@@ -145,9 +149,6 @@ private fun StockRowItem(row: StockRow, showRefillAction: Boolean) {
         }
     }
 }
-
-private fun formatQuantity(quantity: Double): String =
-    if (quantity == quantity.toLong().toDouble()) quantity.toLong().toString() else quantity.toString()
 
 private val StockMedicineIdKey = ActionParameters.Key<Long>("medicineId")
 private val StockRefillAmountKey = ActionParameters.Key<Double>("refillAmount")

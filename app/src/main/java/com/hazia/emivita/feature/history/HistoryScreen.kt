@@ -48,9 +48,10 @@ import com.hazia.emivita.core.data.entity.DoseStatus
 import com.hazia.emivita.core.data.export.HistoryExporter
 import com.hazia.emivita.core.data.repository.DoseEventRepository
 import com.hazia.emivita.ui.components.DoseEditDialog
-import com.hazia.emivita.ui.components.formatDoseWithUnit
+import com.hazia.emivita.core.format.formatDoseWithUnit
 import com.hazia.emivita.ui.components.parseHexColor
 import com.hazia.emivita.ui.icons.MedicineIcons
+import com.hazia.emivita.ui.theme.NeutralMedicineAccent
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -367,7 +368,7 @@ private fun DayHeader(date: LocalDate) {
 internal fun HistoryEntryRow(row: DoseEventWithMedicine, onClick: () -> Unit) {
     val medicine = row.medicine
     val status = row.doseEvent.status
-    val accent = medicine.color?.let { parseHexColor(it) } ?: Color(0xFFB8ABA9)
+    val accent = medicine.color?.let { parseHexColor(it) } ?: NeutralMedicineAccent
     val editable = status == DoseStatus.TAKEN || status == DoseStatus.SKIPPED
     val time = remember(row.doseEvent.resolvedAtEpochMillis, row.doseEvent.scheduledEpochMillis) {
         val epochMillis = row.doseEvent.resolvedAtEpochMillis ?: row.doseEvent.scheduledEpochMillis
