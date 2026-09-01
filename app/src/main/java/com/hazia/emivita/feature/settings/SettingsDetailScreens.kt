@@ -1,6 +1,9 @@
 package com.hazia.emivita.feature.settings
 
+import android.content.Context
 import android.content.Intent
+import android.net.Uri
+import android.os.Build
 import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -30,6 +33,7 @@ import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -49,6 +53,10 @@ import androidx.compose.material.icons.filled.Check
 import androidx.compose.material3.Surface
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.platform.LocalContext
+import androidx.core.app.NotificationManagerCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.hazia.emivita.core.data.settings.SettingsRepository
 import com.hazia.emivita.ui.components.TimeOfDayField
 import com.hazia.emivita.ui.theme.MedPalette
@@ -239,6 +247,8 @@ fun NotificationsAlertsScreen(onBack: () -> Unit) {
         NotificationTierRow("High", "Higher-priority reminders that shouldn't be easy to miss.")
         NotificationTierRow("Alarm", "Full-screen alarm reminders for medicines that must not be skipped.")
 
+        FullScreenAlarmAccessCard()
+
         Spacer(Modifier.height(20.dp))
         Text(
             "Sound and vibration for each channel are controlled by Android itself, " +
@@ -255,6 +265,84 @@ fun NotificationsAlertsScreen(onBack: () -> Unit) {
         }) { Text("Open system notification settings") }
     }
 }
+
+/**
+ * Shown only while the Alarm tier can't actually do what the row above
+ * promises it does.
+ *
+ * `ReminderNotificationBuilder.configureAlarmPresentation` already checks
+ * [NotificationManagerCompat.canUseFullScreenIntent] and degrades to a
+ * tap-to-open action when it's false -- correct, but silent: it writes one
+ * `Log.i` line and carries on. From Android 14 the permission is not granted
+ * at install to an app outside the calling/alarm categories, and the user can
+ * revoke it at any time, so the Alarm tier can arrive already degraded on a
+ * fresh install with nothing in the app saying so and no way back.
+ *
+ * Re-read on ON_RESUME rather than through an activity result: this is a
+ * special-access settings screen, and those don't deliver a result to the
+ * caller, so `rememberLauncherForActivityResult` would never fire.
+ */
+@Composable
+private fun FullScreenAlarmAccessCard() {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var granted by remember { mutableStateOf(NotificationManagerCompat.from(context).canUseFullScreenIntent()) }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                granted = NotificationManagerCompat.from(context).canUseFullScreenIntent()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    if (granted) return
+
+    Spacer(Modifier.height(16.dp))
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.errorContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Text(
+                "Alarm reminders can't take over the screen",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Right now an Alarm-tier reminder arrives as an ordinary notification you have to " +
+                    "notice and tap, instead of waking the screen. Allow full-screen notifications to " +
+                    "restore it.",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Spacer(Modifier.height(10.dp))
+            Button(onClick = { context.startActivity(fullScreenIntentSettings(context)) }) {
+                Text("Allow full-screen alarms")
+            }
+        }
+    }
+}
+
+/** The dedicated special-access screen exists from Android 14; below that the
+ *  permission is install-granted and this card shouldn't be showing at all, so
+ *  the per-app notification settings are the honest fallback rather than an
+ *  intent that would fail to resolve. */
+private fun fullScreenIntentSettings(context: Context): Intent =
+    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
+        Intent(
+            Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
+            Uri.fromParts("package", context.packageName, null),
+        )
+    } else {
+        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+        }
+    }
 
 @Composable
 private fun NotificationTierRow(title: String, description: String) {
