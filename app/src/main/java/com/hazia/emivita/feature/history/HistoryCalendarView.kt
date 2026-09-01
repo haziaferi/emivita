@@ -35,6 +35,7 @@ import androidx.compose.ui.unit.dp
 import com.hazia.emivita.core.data.dao.DoseEventWithMedicine
 import com.hazia.emivita.core.data.entity.DoseStatus
 import com.hazia.emivita.core.data.repository.DoseEventRepository
+import com.hazia.emivita.ui.components.rememberCurrentDate
 import com.kizitonwose.calendar.compose.CalendarState
 import com.kizitonwose.calendar.compose.HorizontalCalendar
 import com.kizitonwose.calendar.compose.rememberCalendarState
@@ -76,7 +77,11 @@ fun HistoryCalendarView(
     doseEventRepository: DoseEventRepository,
     onEntryClick: (DoseEventWithMedicine) -> Unit,
 ) {
-    val currentMonth = remember { YearMonth.now(zone) }
+    // Hoisted here rather than read inside CalendarDayCell: one date source
+    // for the whole grid, and it keeps tracking after midnight so the
+    // today-marker doesn't stay stuck on the day the screen opened.
+    val today = rememberCurrentDate(zone)
+    val currentMonth = remember(today, zone) { YearMonth.now(zone) }
     val startMonth = remember { currentMonth.minusMonths(24) }
     val daysOfWeek = remember { daysOfWeek() }
     val calendarState = rememberCalendarState(
@@ -113,6 +118,7 @@ fun HistoryCalendarView(
             dayContent = { day ->
                 CalendarDayCell(
                     day = day,
+                    today = today,
                     statuses = byDay[day.date]?.map { it.doseEvent.status }.orEmpty(),
                     selected = day.date == selectedDate,
                     onClick = { selectedDate = if (selectedDate == day.date) null else day.date },
@@ -191,9 +197,8 @@ private fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
 }
 
 @Composable
-private fun CalendarDayCell(day: CalendarDay, statuses: List<DoseStatus>, selected: Boolean, onClick: () -> Unit) {
+private fun CalendarDayCell(day: CalendarDay, today: LocalDate, statuses: List<DoseStatus>, selected: Boolean, onClick: () -> Unit) {
     val inMonth = day.position == DayPosition.MonthDate
-    val today = remember { LocalDate.now() }
     Box(
         modifier = Modifier
             .aspectRatio(1f)

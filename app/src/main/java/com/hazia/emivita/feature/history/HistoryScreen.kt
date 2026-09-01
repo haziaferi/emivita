@@ -48,6 +48,7 @@ import com.hazia.emivita.core.data.entity.DoseStatus
 import com.hazia.emivita.core.data.export.HistoryExporter
 import com.hazia.emivita.core.data.repository.DoseEventRepository
 import com.hazia.emivita.ui.components.DoseEditDialog
+import com.hazia.emivita.ui.components.rememberCurrentDate
 import com.hazia.emivita.core.format.formatDoseWithUnit
 import com.hazia.emivita.ui.components.parseHexColor
 import com.hazia.emivita.ui.icons.MedicineIcons
@@ -103,10 +104,14 @@ fun HistoryScreen(
     doseEventRepository: DoseEventRepository,
 ) {
     val zone = remember { ZoneId.systemDefault() }
-    val rangeEnd = remember { LocalDate.now(zone).plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() }
-    val rangeStart = remember { LocalDate.now(zone).minusDays(HISTORY_LOOKBACK_DAYS).atStartOfDay(zone).toInstant().toEpochMilli() }
+    // Keyed on the real current date, not on first composition -- otherwise
+    // this rolling window silently stops rolling once the screen has been
+    // open across midnight. See rememberCurrentDate.
+    val today = rememberCurrentDate(zone)
+    val rangeEnd = remember(today, zone) { today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() }
+    val rangeStart = remember(today, zone) { today.minusDays(HISTORY_LOOKBACK_DAYS).atStartOfDay(zone).toInstant().toEpochMilli() }
 
-    val events = produceState<List<DoseEventWithMedicine>?>(initialValue = null, profileId) {
+    val events = produceState<List<DoseEventWithMedicine>?>(initialValue = null, profileId, rangeStart, rangeEnd) {
         doseEventRepository.observeInRange(profileId, rangeStart, rangeEnd).collectLatest { value = it }
     }.value
 
@@ -201,14 +206,14 @@ fun HistoryScreen(
                 }
                 else -> {
                     AdherenceSummary(events)
-                    val dailyCounts = remember(events, zone) { dailyAdherenceCounts(events, zone) }
+                    val dailyCounts = remember(events, zone, today) { dailyAdherenceCounts(events, zone, today) }
                     if (dailyCounts.any { it.total > 0 }) {
                         AdherenceChart(dailyCounts)
                         Spacer(Modifier.height(12.dp))
                     }
                     LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)) {
                         items(days, key = { it.date.toEpochDay() }) { day ->
-                            DayHeader(day.date)
+                            DayHeader(day.date, today)
                             day.entries.forEach { row ->
                                 HistoryEntryRow(row, onClick = {
                                     if (row.doseEvent.status == DoseStatus.TAKEN || row.doseEvent.status == DoseStatus.SKIPPED) editing = row
@@ -291,8 +296,7 @@ private fun adherenceSubtitle(events: List<DoseEventWithMedicine>): String {
  *  happened to have a dose. Refills are excluded (see [DayAdherenceCounts]'s
  *  own doc comment); PENDING here means "fired, never resolved," same
  *  reading [historyStatusLabel] already gives it as "Missed." */
-private fun dailyAdherenceCounts(events: List<DoseEventWithMedicine>, zone: ZoneId): List<DayAdherenceCounts> {
-    val today = LocalDate.now(zone)
+private fun dailyAdherenceCounts(events: List<DoseEventWithMedicine>, zone: ZoneId, today: LocalDate): List<DayAdherenceCounts> {
     val windowStart = today.minusDays(HISTORY_LOOKBACK_DAYS - 1)
     val byDay = events
         .filter { it.doseEvent.status != DoseStatus.REFILLED }
@@ -346,8 +350,7 @@ private fun AdherenceSummary(events: List<DoseEventWithMedicine>) {
 }
 
 @Composable
-private fun DayHeader(date: LocalDate) {
-    val today = remember { LocalDate.now() }
+private fun DayHeader(date: LocalDate, today: LocalDate) {
     val label = when {
         date == today -> "Today"
         date == today.minusDays(1) -> "Yesterday"

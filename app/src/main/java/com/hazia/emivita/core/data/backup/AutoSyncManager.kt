@@ -13,6 +13,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.serialization.json.Json
 import java.io.File
+import java.util.Arrays
 
 private const val AUTO_SYNC_DEBOUNCE_MILLIS = 12_000L // vs #4's cache at 1s, per spec §9 #9(b)
 const val AUTO_SYNC_FILE_NAME = "emivita_autosync.zip"
@@ -57,6 +58,20 @@ class AutoSyncManager(
     private suspend fun writeIfConfigured() {
         val folderUriString = settingsRepository.autoSyncFolderUri.first() ?: return
         val password = AutoSyncPassphraseStore.get(appContext) ?: return
+        // AutoSyncPassphraseStore hands back a CharArray precisely so it can be
+        // wiped, and its own doc comment says the caller should -- this is that
+        // caller, and it wasn't. Wiping on every exit path (including the early
+        // returns below) is the whole reason that class avoids Strings; leaving
+        // the plaintext live for the lifetime of a debounced background write
+        // undoes it.
+        try {
+            writeTo(folderUriString, password)
+        } finally {
+            Arrays.fill(password, ' ')
+        }
+    }
+
+    private suspend fun writeTo(folderUriString: String, password: CharArray) {
         val treeDoc = DocumentFile.fromTreeUri(appContext, folderUriString.toUri()) ?: return
         // Permission can be revoked outside the app (storage settings, folder
         // deleted) -- nothing to do until the user re-grants it from the
