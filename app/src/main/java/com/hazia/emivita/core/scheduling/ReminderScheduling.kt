@@ -19,8 +19,8 @@ import java.time.ZonedDateTime
  * this reminder at or after `notBeforeEpochMillis`?" for one [ReminderConfig]
  * type. [SchedulingEngine] is what actually calls these against real data.
  *
- * Deliberately NOT covered here (see the architecture note this batch shipped
- * with): [ReminderConfig.LowStockAlert] and [ReminderConfig.ExpirationAlert]
+ * Deliberately NOT covered here: [ReminderConfig.LowStockAlert] and
+ * [ReminderConfig.ExpirationAlert]
  * need periodic re-evaluation against live stock/date data rather than a
  * fixed "next occurrence", so they don't fit this per-dose-chain shape --
  * they're a separate follow-up, not an oversight.
@@ -154,9 +154,8 @@ private fun windowSlotOnDay(
 
 // ---- Shared helpers for the alarm-fired path ------------------------------
 
-/** The dose amount to materialize a DoseEvent with, for the types this batch
- *  schedules. `null` for LowStockAlert/ExpirationAlert, which don't represent
- *  a "dose" at all. */
+/** The dose amount to materialize a DoseEvent with. `null` for
+ *  LowStockAlert/ExpirationAlert, which don't represent a "dose" at all. */
 fun ReminderConfig.doseAmountOrNull(): Double? = when (this) {
     is ReminderConfig.FixedTime -> dose
     is ReminderConfig.RepeatingInterval -> dose

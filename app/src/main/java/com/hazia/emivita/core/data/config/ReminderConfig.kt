@@ -2,9 +2,12 @@ package com.hazia.emivita.core.data.config
 
 import kotlinx.serialization.Serializable
 
-// @Serializable on this and the other enums below: Reminder.type (a raw
-// ReminderType field, not JSON-encoded like configJson) needs it for the
-// backup/restore JSON snapshot (spec §9 #9) to round-trip it directly.
+// @Serializable here specifically: Reminder.type is a raw column, not
+// JSON-encoded the way configJson is, so the backup/restore snapshot (spec
+// §9 #9) round-trips it directly. LowStockTriggerMode and
+// ExpirationTriggerFrequency below don't carry the annotation -- they only
+// ever appear nested inside an already-@Serializable ReminderConfig, and
+// kotlinx generates enum serializers for that case automatically.
 @Serializable
 enum class ReminderType { FIXED_TIME, REPEATING_INTERVAL, DAILY_WINDOW, LOW_STOCK_ALERT, EXPIRATION_ALERT, LINKED_FOLLOWING }
 
@@ -94,9 +97,9 @@ sealed interface ReminderConfig {
         val frequency: ExpirationTriggerFrequency,
     ) : ReminderConfig
 
-    /** Chained "following dose" reminders (spec §3/§9 #14) -- the one actual
-     *  new top-level ReminderConfig variant this batch adds (CyclicActivePause
-     *  above is a RepeatPattern case, not a new type; see R8, spec §7).
+    /** Chained "following dose" reminders (spec §3/§9 #14). Note that
+     *  CyclicActivePause above is a RepeatPattern case, not a top-level type
+     *  of its own (R8, spec §7).
      *  [Reminder.parentReminderId] carries which reminder this follows -- kept
      *  as a real FK column rather than inside this config specifically so the
      *  engine can query "children of reminder X" without deserializing every

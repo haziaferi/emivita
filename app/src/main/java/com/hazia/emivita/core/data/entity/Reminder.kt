@@ -11,8 +11,8 @@ import kotlinx.serialization.Serializable
 /** Nag-until-answered behavior for an unresolved dose. Embedded (not part of the
  *  per-type ReminderConfig JSON) because it's cross-cutting -- every reminder
  *  type can opt into it, independent of its schedule shape (spec §3). Null =
- *  disabled; all-columns-null is how Room persists a null @Embedded object. Not
- *  yet read by SchedulingEngine (§9 #-adjacent) -- schema only, this batch. */
+ *  disabled; all-columns-null is how Room persists a null @Embedded object.
+ *  Read by ReminderAlarmReceiver's nag scheduling. */
 @Serializable
 data class RepeatConfig(
     val delayMinutes: Int,
@@ -42,14 +42,15 @@ data class Reminder(
     val configJson: String, // serialized ReminderConfig matching `type`
     val enabled: Boolean = true,
     // Auto-resolve a fired dose as Taken without a user tap (e.g. a passive
-    // supplement reminder). Not read by SchedulingEngine yet -- schema only,
-    // same as RepeatConfig above (spec §3).
+    // supplement reminder, or one tracking someone else). Honored by
+    // ReminderAlarmReceiver, which resolves silently and posts no
+    // notification at all (spec §3).
     val autoResolve: Boolean = false,
     // Inclusive epoch-day bounds clamping when this reminder is considered
     // active at all (e.g. a course of antibiotics) -- independent of, and
     // narrower than, whatever its per-type schedule config computes. Null =
-    // unbounded on that side. Not yet consulted by nextOccurrenceFor() (spec §3,
-    // §9 follow-up) -- schema only, this batch.
+    // unbounded on that side. Applied by SchedulingEngine.nextOccurrenceFor()
+    // after the type-specific calculator, before weekend mode (spec §3/§4).
     val activeFromEpochDay: Long? = null,
     val activeUntilEpochDay: Long? = null,
     @Embedded(prefix = "repeat_") val repeatOnUnanswered: RepeatConfig? = null,

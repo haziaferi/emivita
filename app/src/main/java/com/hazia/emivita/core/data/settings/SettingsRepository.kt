@@ -25,10 +25,11 @@ private val DEFAULT_WEEKEND_END = LocalTime.of(18, 0)
 /**
  * Global, non-sensitive, device-wide preferences (spec §3's "Global user
  * preferences (DataStore, not the SQLCipher medical DB)" table, resolved as
- * spec §9 item 12) -- pure AndroidX, no GMS, fits §1. Palette/theme mode were
- * pulled forward into an earlier batch since onboarding needed somewhere
- * durable immediately; snooze duration, weekend mode, and the lock-until-
- * taken default land here now, in the batch spec always scoped them to.
+ * spec §9 item 12) -- pure AndroidX, no GMS, fits §1.
+ *
+ * Note that lockRemindersUntilTakenByDefault currently has no Settings UI to
+ * set it: [isLockedUntilTaken] resolves against it and Add/Edit Medicine can
+ * override it per medicine, but the global default itself is unreachable.
  */
 class SettingsRepository(context: Context) {
     private val dataStore = context.applicationContext.settingsDataStore

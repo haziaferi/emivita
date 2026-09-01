@@ -7,13 +7,10 @@ import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.graphics.Color
 
-/** The 8 curated palettes from spec section 6 / Appendix A (replaced the
- *  original 4 -- Clinical/Cozy/Neutral/Playful -- entirely in section 9 item
- *  0b; this is not an additive change). Persisted as a string in DataStore
- *  (see core/data SettingsRepository once that's built) -- this enum is the
- *  source of truth for valid values, so store `.name`. No persisted palette
- *  identifier exists anywhere in the codebase yet (nothing has shipped that
- *  writes one), so there is nothing to migrate off the old 4 names. */
+/** The 8 curated palettes from spec §6 / Appendix A. SettingsRepository
+ *  persists the choice as `.name`, so this enum is the source of truth for
+ *  valid values -- that Flow falls back to GOLDEN_HOUR for any name it can't
+ *  parse. */
 enum class MedPalette {
     GOLDEN_HOUR,
     SUNLIT_FOCUS,

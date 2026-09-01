@@ -18,8 +18,8 @@ import javax.crypto.spec.GCMParameterSpec
  *  e.g. a stolen/rooted device reading the raw .db file, without adding a
  *  login screen (that's the separate, optional biometric App Lock feature).
  *
- *  Two changes from the original design, made as part of an efficiency pass
- *  (see docs/SPEC.md and this batch's optimizer review) -- both keep the
+ *  Two deliberate departures from the obvious implementation (see
+ *  docs/SPEC.md) -- both keep the
  *  exact same threat model (256-bit SecureRandom key, never user-typed,
  *  Keystore-protected at rest) while removing cost that model doesn't buy
  *  anything for:

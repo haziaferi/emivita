@@ -13,11 +13,12 @@ plugins {
 // configured in Android Studio's own Gradle-JDK setting (README's manual
 // setup step 4) -- invisible to anyone opening the project on a different
 // machine or in CI, silently breaking there with no signal in the codebase
-// pointing at the fix. This does NOT pin the Gradle *daemon's* own JVM
-// (Gradle has no supported way to do that from inside a build script --
-// that's still JAVA_HOME/org.gradle.java.home/the IDE setting), only the
-// toolchain used for compilation, which Gradle can auto-detect from an
-// already-installed JDK 21 without needing network access.
+// pointing at the fix. This pins only the toolchain used for compilation,
+// which Gradle can auto-detect from an already-installed JDK 21 without
+// needing network access. The Gradle *daemon's* own JVM is pinned separately
+// by gradle/gradle-daemon-jvm.properties (toolchainVersion=21), which also
+// travels with the repo -- so neither half depends on a machine-local IDE
+// setting any more.
 kotlin {
     jvmToolchain(21)
 }
@@ -167,13 +168,13 @@ dependencies {
     // SAF (sync-safe local backup export)
     implementation("androidx.documentfile:documentfile:1.0.1")
 
-    // NOTE: no androidx.security:security-crypto dependency here on purpose
-    // (efficiency pass, this batch). PassphraseProvider used to lean on
-    // EncryptedSharedPreferences/MasterKey (that library, pinned to the
-    // 1.1.0-alpha07 release those classes were deprecated in) to wrap the
-    // SQLCipher key. It now wraps the key directly with an AndroidKeyStore
-    // AES/GCM Cipher -- same Keystore-backed guarantee, no Tink dependency,
-    // no deprecated-API liability to revisit later.
+    // NOTE: no androidx.security:security-crypto dependency here on purpose.
+    // EncryptedSharedPreferences/MasterKey would be the obvious way to wrap
+    // the SQLCipher key, but that library is pinned at the 1.1.0-alpha07
+    // release those classes were deprecated in, and pulls in Tink.
+    // PassphraseProvider wraps the key directly with an AndroidKeyStore
+    // AES/GCM Cipher instead -- same Keystore-backed guarantee, no extra
+    // dependency, no deprecated-API liability.
 
     // NOTE: no Health Connect dependency here on purpose (R4, spec section 9 item 0
     // housekeeping note; also spec section 9 #13, dropped). Health Connect's

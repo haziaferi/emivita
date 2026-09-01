@@ -54,8 +54,8 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 
 /**
- * Calendar view for History (spec §5 ADR-0001 shopping list, §9 #6 --
- * previously unbuilt, closed out this batch). Unlike the List/Table views,
+ * Calendar view for History (spec §5 ADR-0001 shopping list, §9 #6).
+ * Unlike the List/Table views,
  * which both read the fixed [HISTORY_LOOKBACK_DAYS] window already loaded by
  * [HistoryScreen], this view re-queries [DoseEventRepository] per visible
  * month as the user scrolls -- a real calendar needs to browse arbitrary past

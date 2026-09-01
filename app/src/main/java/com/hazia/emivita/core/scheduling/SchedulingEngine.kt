@@ -29,10 +29,12 @@ class SchedulingEngine(
     private val zone: ZoneId = ZoneId.systemDefault(),
     private val nowEpochMillis: () -> Long = System::currentTimeMillis,
 ) {
-    /** Reminder types this batch can actually schedule. LOW_STOCK_ALERT and
-     *  EXPIRATION_ALERT are excluded on purpose -- they need periodic
-     *  re-evaluation against live stock/date data, not a fixed next-occurrence
-     *  chain, and are a deliberate follow-up rather than a gap in this logic. */
+    /** Reminder types that have a next-occurrence chain at all.
+     *  LOW_STOCK_ALERT and EXPIRATION_ALERT are excluded on purpose -- they
+     *  need periodic re-evaluation against live stock/date data rather than a
+     *  fixed next occurrence, and are handled by
+     *  [LowStockExpirationAlertEvaluator] on the projection cache's own
+     *  recompute pass instead. */
     val supportedTypes: Set<ReminderType> = setOf(
         ReminderType.FIXED_TIME,
         ReminderType.REPEATING_INTERVAL,

@@ -34,14 +34,12 @@ class AppContainer(context: Context) {
     // rest of this container's "lives as long as the process" singletons.
     private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
 
-    // `by lazy` on purpose: EmivitaDatabase.getInstance() does Keystore access,
-    // EncryptedSharedPreferences setup, and SQLCipher native-library loading +
-    // keying -- none of it fast or guaranteed synchronous-safe. Previously this
-    // ran unconditionally the instant AppContainer was constructed, which
-    // happens in EmivitaApplication.onCreate() on the main thread, risking an
-    // ANR at app launch. Deferring it here means it only runs on first actual
-    // access (still worth wrapping that first access in
-    // `withContext(Dispatchers.IO)` at the call site once one exists).
+    // `by lazy` on purpose: EmivitaDatabase.getInstance() does Keystore access
+    // and SQLCipher keying -- neither fast nor guaranteed synchronous-safe --
+    // and AppContainer is constructed in EmivitaApplication.onCreate(), on the
+    // main thread. Deferring means that cost lands on first actual access
+    // rather than on every app launch (still worth wrapping that first access
+    // in `withContext(Dispatchers.IO)` at the call site once one exists).
     private val database: EmivitaDatabase by lazy { EmivitaDatabase.getInstance(context) }
 
     val profileRepository: ProfileRepository by lazy {

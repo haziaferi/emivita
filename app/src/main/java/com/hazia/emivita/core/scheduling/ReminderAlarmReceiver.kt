@@ -9,8 +9,6 @@ import com.hazia.emivita.core.data.config.IntervalStartBehavior
 import com.hazia.emivita.core.data.config.ReminderConfig
 import com.hazia.emivita.core.data.config.decodeReminderConfig
 import com.hazia.emivita.core.data.entity.DoseStatus
-// doseAmountOrNull() and reschedulesImmediatelyOnFire() are same-package
-// extensions from ReminderScheduling.kt -- no import needed.
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -89,8 +87,8 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
         val config = decodeReminderConfig(reminder.configJson)
         val doseAmount = config.doseAmountOrNull()
         if (doseAmount == null) {
-            // LOW_STOCK_ALERT / EXPIRATION_ALERT aren't materialized as dose
-            // events at all in this batch -- see SchedulingEngine's doc comment.
+            // LOW_STOCK_ALERT / EXPIRATION_ALERT are never materialized as
+            // dose events -- see SchedulingEngine.supportedTypes.
             Log.i(TAG, "Reminder $reminderId is not a dose-producing type yet -- skipping.")
             return
         }

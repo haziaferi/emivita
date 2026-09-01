@@ -106,19 +106,16 @@ fun AddMedicineScreen(
 }
 
 /**
- * Edit Medicine (spec §9 item 1's "immediate follow-up" -- add + list only
- * shipped last batch, edit was called out explicitly as needing the same
- * form as add once add existed). Loads the existing [Medicine] and its
+ * Edit Medicine (spec §9 item 1). Loads the existing [Medicine] and its
  * current tags, then reuses [MedicineFormBody] with those as the initial
  * values. Tag reconciliation on save is a plain set diff against the
  * snapshot of tags loaded when the screen opened -- fine for a single-user,
  * single-device, non-collaborative app (spec §1), no optimistic-concurrency
  * handling needed.
  *
- * Delete is deliberately still not here -- what happens to a deleted
- * medicine's existing Reminders/DoseEvents (cascade vs. archive) is an open
- * data-integrity question the spec flags as undecided (§9 item 1), not
- * something to resolve as a side effect of shipping edit.
+ * Delete is not on this form: it acts on the medicine as a whole, cascading
+ * to its reminders and dose history, so it lives behind a confirm dialog on
+ * MedicineDetailScreen instead. See MedicineRepository.delete.
  */
 @Composable
 fun EditMedicineScreen(

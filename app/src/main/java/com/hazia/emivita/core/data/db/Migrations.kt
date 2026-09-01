@@ -14,13 +14,13 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * rather than patched column-by-column -- the standard SQLite migration shape,
  * not a shortcut.
  *
- * NOT run against a real device/emulator -- there's no Android SDK in the
- * environment this batch was written in. The column defs below were built to
- * match the new entities field-for-field, but Room's schema validator is
- * strict (name, type affinity, notNull, default value), so treat this as a
- * strong draft: run it against a debug build with a few sample rows before
- * trusting it with real data, the same caveat already on file for the
- * MIGRATION_HISTORY color-column change in spec §9 item 0b.
+ * Covered by MigrationFrom1To2Test, which builds the v1 tables from SQL and
+ * asserts the colour rewrite, the sortOrder backfill and the dose-event
+ * medicineId denormalisation against real rows. That is host-JVM (Robolectric)
+ * coverage of the data movement, not of Room's own schema validator on a real
+ * device -- so a first run against a debug build with real data is still worth
+ * watching, since the validator is strict about name, type affinity, notNull
+ * and default value.
  */
 object Migrations {
 

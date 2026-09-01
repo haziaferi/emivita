@@ -11,10 +11,10 @@ val LocalAppContainer = staticCompositionLocalOf<AppContainer> {
     error("No AppContainer provided -- LocalAppContainer.current read outside EmivitaApp's content")
 }
 
-/** The active profile's id. Single-profile assumption for this batch (spec §9
- *  item 1 follow-up: "no current/active profile concept anywhere") -- resolved
- *  once in EmivitaApp from the one Profile onboarding creates, not a real
- *  multi-profile switcher. Revisit when/if multi-profile support is built. */
+/** The active profile's id. Single-profile assumption (spec §9 item 1
+ *  follow-up: "no current/active profile concept anywhere") -- resolved once
+ *  in EmivitaApp from the one Profile it auto-creates on first launch, not a
+ *  real multi-profile switcher. Revisit if multi-profile support is built. */
 val LocalCurrentProfileId = staticCompositionLocalOf<Long> {
     error("No current profile id provided -- LocalCurrentProfileId.current read outside EmivitaApp's content")
 }

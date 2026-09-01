@@ -67,6 +67,15 @@ private data class HistoryDay(
     val entries: List<DoseEventWithMedicine>,
 )
 
+/** The three readings of the same history. Only LIST carries the summary
+ *  card and trend chart; CALENDAR and TABLE are denser alternate views, not
+ *  copies of the same content. */
+private enum class HistoryViewMode(val label: String) {
+    LIST("List"),
+    CALENDAR("Calendar"),
+    TABLE("Table"),
+}
+
 /**
  * History: past entries from a direct DB query, not the projection cache --
  * spec's own split (§9 #6, "medTimer's own split, per ADR-0002"), the cache
@@ -79,22 +88,14 @@ private data class HistoryDay(
  * than a separate log" -- Today deliberately filters these out (a restock
  * isn't a dose to take), History does not.
  *
- * §9 #6's full vision, now complete: the List view (adherence-summary card +
- * Vico trend chart [AdherenceChart] + reverse-chronological day groups) sits
- * alongside a Calendar view ([HistoryCalendarView], month grid with per-day
- * taken/skipped/missed dots, browses its own DB query per visible month
- * rather than [HISTORY_LOOKBACK_DAYS]'s fixed window -- see that file's doc
- * comment) and a Table view ([HistoryTableView], hand-rolled, sortable by
- * tapping a column header) -- both from §5's ADR-0001 shopping list. Only
- * List carries the summary card/chart; Calendar and Table are dense
- * alternate readings of the same [HISTORY_LOOKBACK_DAYS] data (Table) or
- * their own wider one (Calendar), not three copies of the same content.
+ * Three views (§5's ADR-0001 shopping list, §9 #6): the List view here
+ * (adherence-summary card + Vico trend chart [AdherenceChart] +
+ * reverse-chronological day groups), a Calendar view ([HistoryCalendarView],
+ * month grid with per-day taken/skipped/missed dots, which browses its own
+ * DB query per visible month rather than [HISTORY_LOOKBACK_DAYS]'s fixed
+ * window -- see that file's doc comment), and a Table view
+ * ([HistoryTableView], hand-rolled, sortable by tapping a column header).
  */
-private enum class HistoryViewMode(val label: String) {
-    LIST("List"),
-    CALENDAR("Calendar"),
-    TABLE("Table"),
-}
 @Composable
 fun HistoryScreen(
     profileId: Long,

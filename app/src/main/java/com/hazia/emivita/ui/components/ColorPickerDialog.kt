@@ -90,8 +90,8 @@ fun ColorPickerDialog(
         title = { Text("Choose a color") },
         text = {
             Column {
-                // Saturation/hue square: x = saturation, y = value(brightness) at
-                // this hue's max, hue itself picked via the ring below it.
+                // Saturation/value square: x = saturation, y = brightness, both
+                // at the current hue; hue itself comes from the strip below.
                 val squareSize = 220.dp
                 Box(
                     modifier = Modifier

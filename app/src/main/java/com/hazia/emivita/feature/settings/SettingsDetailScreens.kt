@@ -205,12 +205,6 @@ fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit
     }
 }
 
-// PrivacySecurityScreen (spec §9 #11's original biometric-toggle screen) was
-// removed in the Settings click/page-count optimization pass -- a one-switch
-// screen doesn't need its own destination, so that toggle now lives inline
-// on SettingsScreen's own Privacy & Security row. See SettingsScreen.kt's
-// doc comment for the full navigate/sheet/toggle reasoning.
-
 /** Notifications & Alerts -- the 3 [com.hazia.emivita.core.notification.ReminderNotificationChannels]
  *  tiers (Standard/High/Alarm) are real, working channels already; what's
  *  actually missing in-app for "sound, priority, how reminders behave" is
