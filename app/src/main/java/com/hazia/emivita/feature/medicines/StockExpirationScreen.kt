@@ -38,6 +38,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.hazia.emivita.core.data.config.ExpirationTriggerFrequency
@@ -45,6 +46,7 @@ import com.hazia.emivita.core.data.config.LowStockTriggerMode
 import com.hazia.emivita.core.data.config.ReminderConfig
 import com.hazia.emivita.core.data.config.ReminderType
 import com.hazia.emivita.core.data.entity.StockInfo
+import com.hazia.emivita.core.format.formatDecimal
 import com.hazia.emivita.core.data.repository.DoseEventRepository
 import com.hazia.emivita.core.data.repository.MedicineRepository
 import com.hazia.emivita.core.data.repository.ReminderRepository
@@ -108,9 +110,9 @@ fun StockExpirationScreen(
 
     LaunchedEffect(medicineId) {
         val medicine = medicineRepository.getById(medicineId) ?: return@LaunchedEffect
-        quantity = formatNumber(medicine.stockInfo.quantity)
+        quantity = formatDecimal(medicine.stockInfo.quantity)
         unit = medicine.stockInfo.unit ?: ""
-        refillQuantity = medicine.stockInfo.refillQuantity?.let { formatNumber(it) } ?: ""
+        refillQuantity = medicine.stockInfo.refillQuantity?.let { formatDecimal(it) } ?: ""
         expirationDateEpochDay = medicine.stockInfo.expirationDateEpochDay
 
         val reminders = reminderRepository.observeForMedicine(medicineId).first()
@@ -119,7 +121,7 @@ fun StockExpirationScreen(
             lowStockEnabled = reminder.enabled
             val config = reminderRepository.decodeConfig(reminder) as? ReminderConfig.LowStockAlert
             if (config != null) {
-                threshold = formatNumber(config.threshold)
+                threshold = formatDecimal(config.threshold)
                 triggerMode = config.triggerMode
             }
         }
@@ -193,7 +195,7 @@ fun StockExpirationScreen(
                     scope.launch {
                         doseEventRepository.logRefill(medicineId, amount, System.currentTimeMillis())
                         val fresh = medicineRepository.getById(medicineId)
-                        quantity = formatNumber(fresh?.stockInfo?.quantity ?: 0.0)
+                        quantity = formatDecimal(fresh?.stockInfo?.quantity ?: 0.0)
                         saveStatus = "Refilled."
                     }
                 },
@@ -339,7 +341,6 @@ fun StockExpirationScreen(
                     }
                 }
 
-                saveStatus = "Saved."
                 onBack()
             }
         }) { Text("Save") }
@@ -351,7 +352,7 @@ fun StockExpirationScreen(
 }
 
 @Composable
-private fun ZonedSection(title: String, color: androidx.compose.ui.graphics.Color, content: @Composable () -> Unit) {
+private fun ZonedSection(title: String, color: Color, content: @Composable () -> Unit) {
     Surface(shape = RoundedCornerShape(14.dp), color = color, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
             Text(title, style = MaterialTheme.typography.titleMedium)
@@ -360,6 +361,3 @@ private fun ZonedSection(title: String, color: androidx.compose.ui.graphics.Colo
         }
     }
 }
-
-private fun formatNumber(value: Double): String =
-    if (value == value.toLong().toDouble()) value.toLong().toString() else value.toString()

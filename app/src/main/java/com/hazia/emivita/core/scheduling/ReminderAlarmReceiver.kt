@@ -8,7 +8,11 @@ import com.hazia.emivita.EmivitaApplication
 import com.hazia.emivita.core.data.config.IntervalStartBehavior
 import com.hazia.emivita.core.data.config.ReminderConfig
 import com.hazia.emivita.core.data.config.decodeReminderConfig
+import com.hazia.emivita.core.data.entity.DoseEvent
 import com.hazia.emivita.core.data.entity.DoseStatus
+import com.hazia.emivita.core.data.entity.Reminder
+import com.hazia.emivita.core.data.entity.RepeatConfig
+import com.hazia.emivita.core.di.AppContainer
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -71,7 +75,7 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
     private suspend fun handleAlarm(
         reminderId: Long,
         scheduledEpochMillis: Long,
-        container: com.hazia.emivita.core.di.AppContainer,
+        container: AppContainer,
     ) {
         val reminder = container.reminderRepository.getById(reminderId)
         if (reminder == null || !reminder.enabled) {
@@ -157,10 +161,10 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
      *  and still deserves the nag safety net; `FLAG_UPDATE_CURRENT` means a
      *  snooze simply resets the nag countdown rather than doubling up. */
     private fun scheduleFirstNagIfConfigured(
-        reminder: com.hazia.emivita.core.data.entity.Reminder,
-        doseEvent: com.hazia.emivita.core.data.entity.DoseEvent,
+        reminder: Reminder,
+        doseEvent: DoseEvent,
         scheduledEpochMillis: Long,
-        container: com.hazia.emivita.core.di.AppContainer,
+        container: AppContainer,
     ) {
         val repeatConfig = reminder.repeatOnUnanswered ?: return
         if (doseEvent.repeatCount >= repeatConfig.maxRepeats) return
@@ -172,8 +176,8 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
     }
 
     /** The nag-fire counterpart to [handleAlarm] -- re-shows the notification
-     *  for a still-unanswered dose, increments [com.hazia.emivita.core.data.entity.DoseEvent.repeatCount],
-     *  and re-arms the next nag if [com.hazia.emivita.core.data.entity.RepeatConfig.maxRepeats]
+     *  for a still-unanswered dose, increments [DoseEvent.repeatCount],
+     *  and re-arms the next nag if [RepeatConfig.maxRepeats]
      *  hasn't been reached yet. Deliberately does not touch
      *  `schedulingCoordinator`/cascade-reschedule at all -- see this class's
      *  own doc comment for why nag re-fires and the regular occurrence chain
@@ -182,7 +186,7 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
     private suspend fun handleNagFire(
         reminderId: Long,
         scheduledEpochMillis: Long,
-        container: com.hazia.emivita.core.di.AppContainer,
+        container: AppContainer,
     ) {
         val reminder = container.reminderRepository.getById(reminderId)
         if (reminder == null || !reminder.enabled) {
@@ -222,7 +226,7 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
 
     private suspend fun cascadeRescheduleOnRemindedChildren(
         reminderId: Long,
-        container: com.hazia.emivita.core.di.AppContainer,
+        container: AppContainer,
     ) {
         val children = container.reminderRepository.getChildrenOf(reminderId)
         for (child in children) {

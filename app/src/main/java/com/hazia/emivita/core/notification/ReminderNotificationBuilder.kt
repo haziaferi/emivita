@@ -1,14 +1,11 @@
 package com.hazia.emivita.core.notification
 
-import android.Manifest
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
-import androidx.core.content.ContextCompat
 import com.hazia.emivita.R
 import com.hazia.emivita.core.data.dao.DoseGroupDao
 import com.hazia.emivita.core.data.entity.DoseEvent
@@ -74,7 +71,7 @@ class ReminderNotificationBuilder(
             configureAlarmPresentation(builder, reminder.id, doseEvent.id)
         }
 
-        postIfPermitted(notificationId, builder.build())
+        postIfPermitted(context, TAG, notificationId, builder.build())
     }
 
     private suspend fun effectivePriority(reminder: Reminder, medicine: Medicine): NotificationPriority =
@@ -142,16 +139,5 @@ class ReminderNotificationBuilder(
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-    }
-
-    private fun postIfPermitted(notificationId: Int, notification: android.app.Notification) {
-        val granted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
-            android.content.pm.PackageManager.PERMISSION_GRANTED
-        if (!granted) {
-            Log.w(TAG, "POST_NOTIFICATIONS not granted -- reminder notification $notificationId not shown.")
-            return
-        }
-        NotificationManagerCompat.from(context).notify(notificationId, notification)
     }
 }

@@ -1,17 +1,14 @@
 package com.hazia.emivita.core.notification
 
-import android.Manifest
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
-import android.os.Build
 import android.util.Log
 import androidx.core.app.NotificationCompat
-import androidx.core.app.NotificationManagerCompat
-import androidx.core.content.ContextCompat
 import com.hazia.emivita.R
 import com.hazia.emivita.core.data.entity.Medicine
 import com.hazia.emivita.core.data.entity.Reminder
+import com.hazia.emivita.core.format.formatDecimal
 import com.hazia.emivita.core.scheduling.AlertActionReceiver
 import java.time.LocalDate
 
@@ -37,13 +34,13 @@ private const val TAG = "AlertNotification"
  */
 class AlertNotificationBuilder(private val context: Context) {
 
-    suspend fun postLowStock(medicine: Medicine, reminder: Reminder) {
+    fun postLowStock(medicine: Medicine, reminder: Reminder) {
         val notificationId = -(reminder.id.toInt())
         val unit = medicine.stockInfo.unit?.let { " $it" } ?: ""
         val builder = NotificationCompat.Builder(context, ReminderNotificationChannels.channelIdFor(medicine.notificationPriority))
             .setSmallIcon(R.drawable.ic_notification_reminder)
             .setContentTitle("${medicine.name} is running low")
-            .setContentText("${formatQuantity(medicine.stockInfo.quantity)}$unit left")
+            .setContentText("${formatDecimal(medicine.stockInfo.quantity)}$unit left")
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
@@ -56,10 +53,10 @@ class AlertNotificationBuilder(private val context: Context) {
             builder.addAction(0, "Refill", refillPendingIntent(medicine.id, refillAmount, notificationId))
         }
 
-        postIfPermitted(notificationId, builder.build())
+        postIfPermitted(context, TAG, notificationId, builder.build())
     }
 
-    suspend fun postExpiration(medicine: Medicine, reminder: Reminder, expirationEpochDay: Long) {
+    fun postExpiration(medicine: Medicine, reminder: Reminder, expirationEpochDay: Long) {
         val notificationId = -(reminder.id.toInt())
         val expirationDate = LocalDate.ofEpochDay(expirationEpochDay)
         val builder = NotificationCompat.Builder(context, ReminderNotificationChannels.channelIdFor(medicine.notificationPriority))
@@ -70,7 +67,7 @@ class AlertNotificationBuilder(private val context: Context) {
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
 
-        postIfPermitted(notificationId, builder.build())
+        postIfPermitted(context, TAG, notificationId, builder.build())
     }
 
     private fun refillPendingIntent(medicineId: Long, refillAmount: Double, notificationId: Int): PendingIntent {
@@ -86,19 +83,5 @@ class AlertNotificationBuilder(private val context: Context) {
             intent,
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
-    }
-
-    private fun formatQuantity(quantity: Double): String =
-        if (quantity == quantity.toLong().toDouble()) quantity.toLong().toString() else quantity.toString()
-
-    private fun postIfPermitted(notificationId: Int, notification: android.app.Notification) {
-        val granted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-            ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
-            android.content.pm.PackageManager.PERMISSION_GRANTED
-        if (!granted) {
-            Log.w(TAG, "POST_NOTIFICATIONS not granted -- alert notification $notificationId not shown.")
-            return
-        }
-        NotificationManagerCompat.from(context).notify(notificationId, notification)
     }
 }

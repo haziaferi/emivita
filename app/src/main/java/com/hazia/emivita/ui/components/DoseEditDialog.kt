@@ -14,6 +14,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -22,6 +23,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.hazia.emivita.core.data.entity.DoseStatus
+import com.hazia.emivita.core.format.formatDecimal
 import com.hazia.emivita.core.data.repository.DoseEventRepository
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -59,9 +61,9 @@ fun DoseEditDialog(
     }
 
     var status by remember { mutableStateOf(originalStatus) }
-    var hour by remember { mutableStateOf(originalZoned.hour) }
-    var minute by remember { mutableStateOf(originalZoned.minute) }
-    var doseAmount by remember { mutableStateOf(formatDoseAmount(originalDoseAmount)) }
+    var hour by remember { mutableIntStateOf(originalZoned.hour) }
+    var minute by remember { mutableIntStateOf(originalZoned.minute) }
+    var doseAmount by remember { mutableStateOf(formatDecimal(originalDoseAmount)) }
     var saving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -124,17 +126,4 @@ fun DoseEditDialog(
             TextButton(onClick = onDismiss) { Text("Cancel") }
         },
     )
-}
-
-fun formatDoseAmount(dose: Double): String =
-    if (dose == dose.toLong().toDouble()) dose.toLong().toString() else dose.toString()
-
-/** [formatDoseAmount] plus the medicine's own measurement label
- *  (`Medicine.doseUnit`, e.g. "1 capsules") wherever a dose amount is
- *  displayed -- falls back to the generic "dose"/"doses" wording every call
- *  site used to hardcode before this field existed, so a medicine with
- *  nothing set reads exactly as it always did. */
-fun formatDoseWithUnit(dose: Double, doseUnit: String?): String {
-    val suffix = doseUnit?.takeIf { it.isNotBlank() } ?: if (dose == 1.0) "dose" else "doses"
-    return "${formatDoseAmount(dose)} $suffix"
 }

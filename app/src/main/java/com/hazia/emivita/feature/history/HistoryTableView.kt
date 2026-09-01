@@ -33,13 +33,12 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.hazia.emivita.core.data.dao.DoseEventWithMedicine
 import com.hazia.emivita.core.data.entity.DoseStatus
-import com.hazia.emivita.ui.components.formatDoseWithUnit
+import com.hazia.emivita.core.format.formatDoseWithUnit
 import com.hazia.emivita.ui.components.parseHexColor
+import com.hazia.emivita.ui.theme.NeutralMedicineAccent
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
-
-private val NEUTRAL_ACCENT = Color(0xFFB8ABA9)
 
 /** Sortable columns for [HistoryTableView] -- hand-rolled per spec §5's
  *  ADR-0001 shopping list ("hand-rolled `SortableTable`"), §9 #6.
@@ -131,7 +130,7 @@ private fun HistoryTableHeader(sortColumn: HistoryTableColumn, descending: Boole
 @Composable
 private fun HistoryTableRow(row: DoseEventWithMedicine, zone: ZoneId, onClick: () -> Unit) {
     val medicine = row.medicine
-    val accent = medicine.color?.let { parseHexColor(it) } ?: NEUTRAL_ACCENT
+    val accent = medicine.color?.let { parseHexColor(it) } ?: NeutralMedicineAccent
     val editable = row.doseEvent.status == DoseStatus.TAKEN || row.doseEvent.status == DoseStatus.SKIPPED
     val time = remember(row.doseEvent.resolvedAtEpochMillis, row.doseEvent.scheduledEpochMillis) {
         val epochMillis = row.doseEvent.resolvedAtEpochMillis ?: row.doseEvent.scheduledEpochMillis

@@ -51,6 +51,7 @@ import com.hazia.emivita.core.data.dao.MedicineWithTags
 import com.hazia.emivita.core.data.repository.MedicineRepository
 import com.hazia.emivita.ui.components.parseHexColor
 import com.hazia.emivita.ui.icons.MedicineIcons
+import com.hazia.emivita.ui.theme.NeutralMedicineAccent
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -93,7 +94,7 @@ fun MedicinesScreen(
                         try {
                             scanLauncher.launch(Intent("com.google.zxing.client.android.SCAN"))
                             scanUnavailable = false
-                        } catch (e: ActivityNotFoundException) {
+                        } catch (_: ActivityNotFoundException) {
                             scanUnavailable = true
                         }
                     }) {
@@ -158,7 +159,7 @@ fun MedicinesScreen(
 @Composable
 private fun MedicineCard(entry: MedicineWithTags, onClick: () -> Unit) {
     val medicine = entry.medicine
-    val accent = medicine.color?.let { parseHexColor(it) } ?: Color(0xFFB8ABA9)
+    val accent = medicine.color?.let { parseHexColor(it) } ?: NeutralMedicineAccent
 
     Surface(
         shape = RoundedCornerShape(16.dp),

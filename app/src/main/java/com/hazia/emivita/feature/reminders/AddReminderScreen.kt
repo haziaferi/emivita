@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -40,6 +41,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -59,11 +61,13 @@ import com.hazia.emivita.core.data.config.RepeatPattern
 import com.hazia.emivita.core.data.config.decodeReminderConfig
 import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.entity.RepeatConfig
+import com.hazia.emivita.core.format.formatDecimal
 import com.hazia.emivita.core.data.repository.MedicineRepository
 import com.hazia.emivita.core.data.repository.ReminderRepository
 import com.hazia.emivita.ui.components.DateField
 import com.hazia.emivita.ui.components.TimeOfDayField
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 private data class ReminderTypeOption(
     val type: ReminderType,
@@ -387,7 +391,7 @@ private fun DoseField(dose: String, doseUnit: String? = null, onChange: (String)
         onValueChange = onChange,
         label = { Text("Dose amount") },
         suffix = doseUnit?.let { unit -> { Text(unit) } },
-        keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Decimal),
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         singleLine = true,
         modifier = Modifier.fillMaxWidth(),
     )
@@ -500,7 +504,7 @@ private fun AdvancedReminderFieldsSection(state: AdvancedReminderFieldsState) {
                 value = state.nagDelayMinutes,
                 onValueChange = { state.nagDelayMinutes = it },
                 label = { Text("Every (min)") },
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
                 modifier = Modifier.weight(1f),
             )
@@ -508,7 +512,7 @@ private fun AdvancedReminderFieldsSection(state: AdvancedReminderFieldsState) {
                 value = state.nagMaxRepeats,
                 onValueChange = { state.nagMaxRepeats = it },
                 label = { Text("Max repeats") },
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
                 modifier = Modifier.weight(1f),
             )
@@ -545,12 +549,12 @@ private fun FixedTimeFormBody(
     onCancel: () -> Unit,
 ) {
     val advanced = rememberAdvancedReminderFieldsState(initialReminder)
-    var hour by remember { mutableStateOf(initial.hour) }
-    var minute by remember { mutableStateOf(initial.minute) }
-    var dose by remember { mutableStateOf(if (initial.dose == initial.dose.toLong().toDouble()) initial.dose.toLong().toString() else initial.dose.toString()) }
+    var hour by remember { mutableIntStateOf(initial.hour) }
+    var minute by remember { mutableIntStateOf(initial.minute) }
+    var dose by remember { mutableStateOf(formatDecimal(initial.dose)) }
     val initialPattern = initial.repeatPattern
     var patternKind by remember {
-        mutableStateOf(
+        mutableIntStateOf(
             when (initialPattern) {
                 is RepeatPattern.SpecificDaysOfWeek -> 1
                 is RepeatPattern.EveryNDays -> 2
@@ -561,7 +565,7 @@ private fun FixedTimeFormBody(
     }
     var selectedDays by remember { mutableStateOf((initialPattern as? RepeatPattern.SpecificDaysOfWeek)?.days ?: setOf()) }
     var everyN by remember { mutableStateOf((initialPattern as? RepeatPattern.EveryNDays)?.n?.toString() ?: "2") }
-    val everyNStartEpochDay = (initialPattern as? RepeatPattern.EveryNDays)?.startEpochDay ?: java.time.LocalDate.now().toEpochDay()
+    val everyNStartEpochDay = (initialPattern as? RepeatPattern.EveryNDays)?.startEpochDay ?: LocalDate.now().toEpochDay()
     var activeDays by remember { mutableStateOf((initialPattern as? RepeatPattern.CyclicActivePause)?.activeDays?.toString() ?: "21") }
     var pauseDays by remember { mutableStateOf((initialPattern as? RepeatPattern.CyclicActivePause)?.pauseDays?.toString() ?: "7") }
     // First-cycle anchor isn't editable in this pass (spec doesn't call for a
@@ -569,7 +573,7 @@ private fun FixedTimeFormBody(
     // already get) -- defaults to today for a new reminder, preserved as-is
     // when editing an existing one, matching how EveryNDays' own startEpochDay
     // is handled above.
-    val firstCycleStartEpochDay = (initialPattern as? RepeatPattern.CyclicActivePause)?.firstCycleStartEpochDay ?: java.time.LocalDate.now().toEpochDay()
+    val firstCycleStartEpochDay = (initialPattern as? RepeatPattern.CyclicActivePause)?.firstCycleStartEpochDay ?: LocalDate.now().toEpochDay()
     val scope = rememberCoroutineScope()
     val doseValue = dose.toDoubleOrNull()
     val activeDaysValue = activeDays.toIntOrNull()
@@ -629,7 +633,7 @@ private fun FixedTimeFormBody(
                 value = everyN,
                 onValueChange = { everyN = it },
                 label = { Text("Every N days") },
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
             )
         }
@@ -639,7 +643,7 @@ private fun FixedTimeFormBody(
                 value = activeDays,
                 onValueChange = { activeDays = it },
                 label = { Text("Active days") },
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
             )
             Spacer(Modifier.height(8.dp))
@@ -647,7 +651,7 @@ private fun FixedTimeFormBody(
                 value = pauseDays,
                 onValueChange = { pauseDays = it },
                 label = { Text("Pause days") },
-                keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
             )
             Spacer(Modifier.height(4.dp))
@@ -673,7 +677,7 @@ private fun RepeatingIntervalFormBody(
 ) {
     val advanced = rememberAdvancedReminderFieldsState(initialReminder)
     var intervalHours by remember { mutableStateOf(formatHours(initial.intervalMinutes)) }
-    var dose by remember { mutableStateOf(formatDose(initial.dose)) }
+    var dose by remember { mutableStateOf(formatDecimal(initial.dose)) }
     var startBehavior by remember { mutableStateOf(initial.startBehavior) }
     val scope = rememberCoroutineScope()
     val doseValue = dose.toDoubleOrNull()
@@ -705,7 +709,7 @@ private fun RepeatingIntervalFormBody(
             value = intervalHours,
             onValueChange = { intervalHours = it },
             label = { Text("Every ___ hours") },
-            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -729,11 +733,11 @@ private fun DailyWindowFormBody(
 ) {
     val advanced = rememberAdvancedReminderFieldsState(initialReminder)
     var intervalHours by remember { mutableStateOf(formatHours(initial.intervalMinutes)) }
-    var dose by remember { mutableStateOf(formatDose(initial.dose)) }
-    var startHour by remember { mutableStateOf(initial.windowStartHour) }
-    var startMinute by remember { mutableStateOf(initial.windowStartMinute) }
-    var endHour by remember { mutableStateOf(initial.windowEndHour) }
-    var endMinute by remember { mutableStateOf(initial.windowEndMinute) }
+    var dose by remember { mutableStateOf(formatDecimal(initial.dose)) }
+    var startHour by remember { mutableIntStateOf(initial.windowStartHour) }
+    var startMinute by remember { mutableIntStateOf(initial.windowStartMinute) }
+    var endHour by remember { mutableIntStateOf(initial.windowEndHour) }
+    var endMinute by remember { mutableIntStateOf(initial.windowEndMinute) }
     var startBehavior by remember { mutableStateOf(initial.startBehavior) }
     val scope = rememberCoroutineScope()
     val doseValue = dose.toDoubleOrNull()
@@ -765,7 +769,7 @@ private fun DailyWindowFormBody(
             value = intervalHours,
             onValueChange = { intervalHours = it },
             label = { Text("Every ___ hours") },
-            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -793,7 +797,7 @@ private fun LowStockAlertFormBody(
     onSave: suspend (ReminderConfig.LowStockAlert) -> Unit,
     onCancel: () -> Unit,
 ) {
-    var threshold by remember { mutableStateOf(formatDose(initial.threshold)) }
+    var threshold by remember { mutableStateOf(formatDecimal(initial.threshold)) }
     var triggerMode by remember { mutableStateOf(initial.triggerMode) }
     val scope = rememberCoroutineScope()
     val thresholdValue = threshold.toDoubleOrNull()
@@ -813,7 +817,7 @@ private fun LowStockAlertFormBody(
             value = threshold,
             onValueChange = { threshold = it },
             label = { Text("Alert when stock is at or below") },
-            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Decimal),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -866,7 +870,7 @@ private fun ExpirationAlertFormBody(
             value = leadDays,
             onValueChange = { leadDays = it },
             label = { Text("Days before expiration to start alerting") },
-            keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -914,7 +918,7 @@ private fun LinkedFollowingFormBody(
     var siblings by remember { mutableStateOf<List<Reminder>?>(null) }
     var selectedParent by remember { mutableStateOf<Reminder?>(null) }
     var delayMinutes by remember { mutableStateOf(initial.delayMinutes.toString()) }
-    var dose by remember { mutableStateOf(formatDose(initial.dose)) }
+    var dose by remember { mutableStateOf(formatDecimal(initial.dose)) }
     var startBehavior by remember { mutableStateOf(initial.startBehavior) }
     var menuExpanded by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -982,7 +986,7 @@ private fun LinkedFollowingFormBody(
                     value = delayMinutes,
                     onValueChange = { delayMinutes = it },
                     label = { Text("Minutes after parent (1-1440)") },
-                    keyboardOptions = androidx.compose.foundation.text.KeyboardOptions(keyboardType = KeyboardType.Number),
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
@@ -1005,10 +1009,4 @@ private fun reminderLabel(reminder: Reminder): String = when (val config = decod
     is ReminderConfig.ExpirationAlert -> "Expiration Alert"
 }
 
-private fun formatHours(intervalMinutes: Int): String {
-    val hours = intervalMinutes / 60.0
-    return if (hours == hours.toLong().toDouble()) hours.toLong().toString() else hours.toString()
-}
-
-private fun formatDose(dose: Double): String =
-    if (dose == dose.toLong().toDouble()) dose.toLong().toString() else dose.toString()
+private fun formatHours(intervalMinutes: Int): String = formatDecimal(intervalMinutes / 60.0)

@@ -60,9 +60,10 @@ import com.hazia.emivita.core.scheduling.OccurrenceProjectionCache
 import com.hazia.emivita.core.scheduling.ProjectedOccurrence
 import com.hazia.emivita.core.scheduling.ProjectionState
 import com.hazia.emivita.ui.components.DoseEditDialog
-import com.hazia.emivita.ui.components.formatDoseWithUnit
+import com.hazia.emivita.core.format.formatDoseWithUnit
 import com.hazia.emivita.ui.components.parseHexColor
 import com.hazia.emivita.ui.icons.MedicineIcons
+import com.hazia.emivita.ui.theme.NeutralMedicineAccent
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -312,7 +313,7 @@ private fun TimelineNodeItem(node: TimelineNode, doseEventRepository: DoseEventR
 
 @Composable
 private fun TimelineEntryRow(entry: TimelineEntry, onResolve: (DoseStatus) -> Unit, onClick: () -> Unit) {
-    val accent = entry.medicine.color?.let { parseHexColor(it) } ?: Color(0xFFB8ABA9)
+    val accent = entry.medicine.color?.let { parseHexColor(it) } ?: NeutralMedicineAccent
     val muted = entry.status == TimelineStatus.UPCOMING
     val editable = entry.status == TimelineStatus.TAKEN || entry.status == TimelineStatus.SKIPPED
 

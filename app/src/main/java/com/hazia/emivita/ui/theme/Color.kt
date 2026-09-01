@@ -350,3 +350,11 @@ object VelvetRibbonPalette {
     val DarkError = Color(0xFF42B82E)
     val DarkOnError = Color(0xFF000000)
 }
+
+/**
+ * Fallback accent for a medicine or profile with no colour of its own -- the
+ * flat neutral spec §3/§6 calls for. Palette-independent on purpose: it is
+ * what a medicine wearing *no* colour looks like, so it must not shift when
+ * the user switches palette.
+ */
+val NeutralMedicineAccent = Color(0xFFB8ABA9)
