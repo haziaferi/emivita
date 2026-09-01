@@ -1,0 +1,41 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   Governs what is allowed to leave this device. Android 12+ (this app
+   targets 36) splits the two paths android:allowBackup used to cover
+   together: allowBackup="false" still stops cloud backup, but on builds
+   from some device manufacturers it does not stop a device to device
+   transfer. With no rules file, those builds are free to carry this app's
+   files to a new phone. See docs/SPEC.md §7 R20.
+
+   Nothing here should ever travel, by either path. The SQLCipher
+   passphrase is wrapped by a non exportable AndroidKeyStore key (§2,
+   PassphraseProvider), which by design stays on the device that created
+   it, so a copied database arrives as ciphertext the new install can
+   never open. The failure mode is a first launch that cannot read its own
+   database, which is worse than a clean empty start, not a data leak.
+
+   The supported way to move to a new phone is the app's own SAF backup
+   and restore (§9 #9). That path works precisely because it is not
+   Keystore bound: it carries its own password, chosen by the user.
+
+   Both sections are written out in full rather than relying on
+   allowBackup="false" to cover the cloud half, so that flipping that flag
+   later cannot silently re enable cloud extraction.
+-->
+<data-extraction-rules>
+    <cloud-backup>
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
+    </cloud-backup>
+
+    <device-transfer>
+        <exclude domain="root" path="." />
+        <exclude domain="file" path="." />
+        <exclude domain="database" path="." />
+        <exclude domain="sharedpref" path="." />
+        <exclude domain="external" path="." />
+    </device-transfer>
+</data-extraction-rules>
