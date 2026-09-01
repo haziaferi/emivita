@@ -93,11 +93,53 @@ android {
             // release APK cannot be installed at all -- which blocks both
             // on-device verification of the minified build and keeping an
             // archived APK to upgrade FROM when testing a Room migration
-            // in place. The trade this accepts: the signing password is the
-            // published Android default, so this identity is not secret and
-            // anyone could build an APK that installs over this one. Swap in
-            // a real keystore (read from a gitignored keystore.properties)
-            // the moment this app is distributed to anyone else.
+            // in place.
+            //
+            // READ THIS BEFORE GIVING THIS APP TO A SECOND PERSON.
+            //
+            // The trade is bigger than "anyone could build an APK that
+            // installs over this one", which is how this comment used to put
+            // it. AndroidKeyStore aliases are scoped to (package name,
+            // signing identity) and survive an in-place upgrade. This
+            // keystore is committed and its password is the published Android
+            // default, so anyone holding this repository can build an APK
+            // that Android accepts as an *upgrade* -- no signature-mismatch
+            // prompt, because an identical signer is the entire point of
+            // sharing this identity. That upgrade inherits the app's data
+            // directory AND its Keystore aliases (emivita_db_wrap_key,
+            // emivita_autosync_wrap_key), so it can call
+            // PassphraseProvider.getOrCreatePassphrase() and
+            // AutoSyncPassphraseStore.get() and read out both the SQLCipher
+            // key and the user's auto-sync backup password in plaintext.
+            //
+            // So the whole at-rest design -- 256-bit SecureRandom key, a
+            // non-exportable Keystore wrap, separate blast radii for the DB
+            // key and the backup password -- is in practice only as strong as
+            // control of keystores/my-shared-debug.keystore. It still holds
+            // against the threat it was built for (a lost or stolen device
+            // reading the raw .db file); it does not hold against installing
+            // a build someone else produced. Note this is also why
+            // res/xml/data_extraction_rules.xml's reasoning that a copied
+            // database "arrives as ciphertext the new install can never open"
+            // is true for a device-to-device transfer and NOT true for an
+            // upgrade install under this identity.
+            //
+            // Acceptable while the only installs are the owner's own, on the
+            // owner's own devices. Before this reaches anyone else, in
+            // preference order:
+            //  1. Give `release` a real keystore read from a gitignored
+            //     keystore.properties, and keep this shared identity for
+            //     `debug`, where cross-machine reinstalls without wiping the
+            //     database are what it actually buys. Cut a fresh dist/
+            //     baseline under the new identity; the archived vc1 stays
+            //     valid for migration testing under the old one.
+            //  2. If one identity has to stay, add
+            //     setUserAuthenticationRequired(true) to the
+            //     KeyGenParameterSpec in
+            //     AutoSyncPassphraseStore.getOrCreateWrapKey(), so the backup
+            //     password at least needs a biometric to unwrap. That has a
+            //     real cost on the debounced auto-sync write path and is a
+            //     design decision, not a one-line edit.
             signingConfig = signingConfigs.getByName("debug")
         }
         debug {
