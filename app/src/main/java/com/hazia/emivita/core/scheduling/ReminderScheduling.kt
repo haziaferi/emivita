@@ -258,3 +258,22 @@ fun applyWeekendMode(
     val pushed = pushDate.atTime(weekendEnd).atZone(zone)
     return occurrence.copy(epochMillis = pushed.toInstant().toEpochMilli())
 }
+
+/**
+ * A snapshot of the global weekend-mode preferences, read once per
+ * scheduling pass by [SchedulingEngine.readWeekendMode].
+ *
+ * Two states rather than a nullable set of fields, so "the toggle is off"
+ * and "the toggle is on but no days are chosen" stay distinguishable --
+ * [applyWeekendMode] treats an empty day set as a no-op anyway, but the
+ * engine skips the call entirely for Off.
+ */
+sealed interface WeekendMode {
+    data object Off : WeekendMode
+
+    data class On(
+        val days: Set<Int>,
+        val start: LocalTime,
+        val end: LocalTime,
+    ) : WeekendMode
+}

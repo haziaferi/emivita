@@ -9,7 +9,6 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collect
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -132,7 +131,11 @@ class OccurrenceProjectionCache(
         val windowDays = effectiveWindowDays()
         val toEpochMillis = start + windowDays * 24 * 60 * 60 * 1000L
 
-        val medicines = medicineDao.observeAllWithReminders().first()
+        val medicines = medicineDao.getAllWithReminders()
+        // Read once for the whole pass rather than per projected occurrence:
+        // SchedulingEngine.occurrencesFor walks up to maxOccurrences per
+        // reminder, and each weekend-mode lookup is a fresh DataStore read.
+        val weekendMode = schedulingEngine.readWeekendMode()
         val occurrences = mutableListOf<ProjectedOccurrence>()
         val runOutDates = mutableMapOf<Long, LocalDate>()
 
@@ -145,7 +148,7 @@ class OccurrenceProjectionCache(
             val medicineOccurrences = mutableListOf<NextOccurrence>()
             for (reminder in entry.reminders) {
                 if (!reminder.enabled) continue
-                val forReminder = schedulingEngine.occurrencesFor(reminder, start, toEpochMillis)
+                val forReminder = schedulingEngine.occurrencesFor(reminder, start, toEpochMillis, weekendMode = weekendMode)
                 medicineOccurrences += forReminder
                 forReminder.forEach { occurrence ->
                     occurrences += ProjectedOccurrence(reminder.id, entry.medicine.id, occurrence.epochMillis, occurrence.doseAmount)

@@ -83,9 +83,20 @@ interface MedicineDao {
     @Query("UPDATE medicines SET quantity = quantity + :amount WHERE id = :medicineId")
     suspend fun incrementStock(medicineId: Long, amount: Double)
 
+    /** The change-notification side of [OccurrenceProjectionCache]: Room
+     *  re-fires this on any write to `medicines` or `reminders`. */
     @Transaction
     @Query("SELECT * FROM medicines")
     fun observeAllWithReminders(): Flow<List<MedicineWithReminders>>
+
+    /** The read side of the same data. A one-shot suspend query rather than
+     *  `observeAllWithReminders().first()`, which registers and immediately
+     *  tears down a Room InvalidationTracker observer just to take one
+     *  snapshot -- pure overhead on a recompute pass that is already
+     *  subscribed to the Flow above for exactly that signal. */
+    @Transaction
+    @Query("SELECT * FROM medicines")
+    suspend fun getAllWithReminders(): List<MedicineWithReminders>
 
     /** Widgets (spec §9 #7) -- StockLevelsWidget's one-shot snapshot of every
      *  medicine with stock tracking active, across all profiles (matches the
