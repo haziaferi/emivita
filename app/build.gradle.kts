@@ -175,13 +175,32 @@ dependencies {
     implementation("androidx.room:room-ktx:2.8.4")
     ksp("androidx.room:room-compiler:2.8.4")
     // IMPORTANT: net.zetetic:android-database-sqlcipher is the OLD, now-deprecated
-    // artifact -- its SupportFactory lives in the `net.sqlcipher.database` package.
-    // EmivitaDatabase.kt imports `net.zetetic.database.sqlcipher.SupportFactory`,
-    // which belongs to the NEW artifact below (`sqlcipher-android`). The old
-    // artifactId + that import together would not compile/resolve at all.
-    // sqlcipher-android is also the only one of the two still receiving updates,
-    // including 16KB-page-size-compatible native libraries.
-    implementation("net.zetetic:sqlcipher-android:4.16.0")
+    // artifact, and its classes live in the `net.sqlcipher.database` package.
+    // EmivitaDatabase.kt imports
+    // `net.zetetic.database.sqlcipher.SupportOpenHelperFactory`, which belongs
+    // to the NEW artifact below (`sqlcipher-android`). The old artifactId plus
+    // that import would not resolve at all. sqlcipher-android is also the only
+    // one of the two still receiving updates, including 16KB-page-size-
+    // compatible native libraries.
+    //
+    // Pinned to 4.17.0, not the current 4.18.0 latest: 4.18.0's AAR metadata
+    // requires consumers to compile against API 37, and checkReleaseAarMetadata
+    // fails outright on this project's compileSdk 36 -- confirmed by trying it,
+    // not assumed. compileSdk 37 needs AGP 9.x, which the root build.gradle.kts
+    // deliberately avoids (it drops the org.jetbrains.kotlin.android plugin this
+    // build uses). So 4.18.0 is gated behind that whole migration, not behind a
+    // version string. Same shape as the kizitonwose calendar pin below.
+    //
+    // On upgrading this at all: SQLCipher keeps its on-disk format stable across
+    // a 4.x series, and this app hands SupportOpenHelperFactory a raw key
+    // (PassphraseProvider's `x'...'` literal) rather than a passphrase, so it
+    // isn't exposed to KDF parameter changes either -- an existing database
+    // keeps opening. That is reasoning, not a test result: nothing in the unit
+    // suite touches SQLCipher at all (the Room tests build an unencrypted
+    // in-memory database precisely because this native library won't load under
+    // Robolectric), so a bump here is only ever really verified by opening an
+    // existing database on a real device.
+    implementation("net.zetetic:sqlcipher-android:4.17.0")
     implementation("androidx.sqlite:sqlite:2.6.2")
     // Plain (non-SQLCipher) framework SQLite open helper -- migration tests
     // (spec §7 R11) build their "before" fixture with this rather than the
