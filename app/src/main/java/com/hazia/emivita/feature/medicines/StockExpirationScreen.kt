@@ -310,8 +310,11 @@ fun StockExpirationScreen(
                     if (existingId != null) {
                         val reminder = reminderRepository.getById(existingId)
                         if (reminder != null) {
-                            reminderRepository.updateConfig(reminder, config)
-                            reminderRepository.setEnabled(reminder, true)
+                            // One write, not updateConfig + setEnabled: both are
+                            // full-row Room @Updates built from the same pre-edit
+                            // `reminder`, so the second reverted the first's
+                            // configJson (docs/SPEC.md §7 R23).
+                            reminderRepository.updateConfig(reminder.copy(enabled = true), config)
                         }
                     } else {
                         lowStockReminderId = reminderRepository.create(medicineId, null, ReminderType.LOW_STOCK_ALERT, config)
@@ -329,8 +332,11 @@ fun StockExpirationScreen(
                     if (existingId != null) {
                         val reminder = reminderRepository.getById(existingId)
                         if (reminder != null) {
-                            reminderRepository.updateConfig(reminder, config)
-                            reminderRepository.setEnabled(reminder, true)
+                            // One write, not updateConfig + setEnabled: both are
+                            // full-row Room @Updates built from the same pre-edit
+                            // `reminder`, so the second reverted the first's
+                            // configJson (docs/SPEC.md §7 R23).
+                            reminderRepository.updateConfig(reminder.copy(enabled = true), config)
                         }
                     } else {
                         expirationReminderId = reminderRepository.create(medicineId, null, ReminderType.EXPIRATION_ALERT, config)

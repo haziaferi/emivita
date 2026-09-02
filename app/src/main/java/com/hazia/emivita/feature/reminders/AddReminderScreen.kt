@@ -247,9 +247,8 @@ fun EditReminderScreen(
             initialReminder = current,
             doseUnit = doseUnit,
             onSave = { updated, advanced ->
-                reminderRepository.updateConfig(current, updated)
-                reminderRepository.updateAdvancedFields(
-                    current, advanced.autoResolve, advanced.activeFromEpochDay,
+                reminderRepository.updateConfigAndAdvancedFields(
+                    current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
                     advanced.activeUntilEpochDay, advanced.repeatOnUnanswered,
                 )
                 onDone()
@@ -263,9 +262,8 @@ fun EditReminderScreen(
             initialReminder = current,
             doseUnit = doseUnit,
             onSave = { updated, advanced ->
-                reminderRepository.updateConfig(current, updated)
-                reminderRepository.updateAdvancedFields(
-                    current, advanced.autoResolve, advanced.activeFromEpochDay,
+                reminderRepository.updateConfigAndAdvancedFields(
+                    current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
                     advanced.activeUntilEpochDay, advanced.repeatOnUnanswered,
                 )
                 onDone()
@@ -279,9 +277,8 @@ fun EditReminderScreen(
             initialReminder = current,
             doseUnit = doseUnit,
             onSave = { updated, advanced ->
-                reminderRepository.updateConfig(current, updated)
-                reminderRepository.updateAdvancedFields(
-                    current, advanced.autoResolve, advanced.activeFromEpochDay,
+                reminderRepository.updateConfigAndAdvancedFields(
+                    current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
                     advanced.activeUntilEpochDay, advanced.repeatOnUnanswered,
                 )
                 onDone()
@@ -313,10 +310,10 @@ fun EditReminderScreen(
             initialReminder = current,
             doseUnit = doseUnit,
             onSave = { parentId, updated, advanced ->
-                reminderRepository.updateLinkedFollowingParent(current, updated, parentId)
-                reminderRepository.updateAdvancedFields(
-                    current, advanced.autoResolve, advanced.activeFromEpochDay,
+                reminderRepository.updateConfigAndAdvancedFields(
+                    current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
                     advanced.activeUntilEpochDay, advanced.repeatOnUnanswered,
+                    parentReminderId = parentId,
                 )
                 onDone()
             },
@@ -578,17 +575,24 @@ private fun FixedTimeFormBody(
     val doseValue = dose.toDoubleOrNull()
     val activeDaysValue = activeDays.toIntOrNull()
     val pauseDaysValue = pauseDays.toIntOrNull()
+    // "0".toIntOrNull() is 0, not null, so the `?: 2` fallback below never
+    // catches it -- an unguarded Every-N-days field let n = 0 (or negative)
+    // reach a committed row, and matchingDateOnOrAfter's require(n >= 1) then
+    // threw on every projection recompute. Validated here like the other two
+    // patterns already are. See docs/SPEC.md §7 R23.
+    val everyNValue = everyN.toIntOrNull()
 
     ReminderFormScaffold(
         title = title,
         saveLabel = saveLabel,
         saveEnabled = doseValue != null && doseValue > 0 &&
             (patternKind != 1 || selectedDays.isNotEmpty()) &&
+            (patternKind != 2 || (everyNValue != null && everyNValue >= 1)) &&
             (patternKind != 3 || (activeDaysValue != null && activeDaysValue >= 1 && pauseDaysValue != null && pauseDaysValue >= 0)),
         onSave = {
             val pattern = when (patternKind) {
                 1 -> RepeatPattern.SpecificDaysOfWeek(selectedDays)
-                2 -> RepeatPattern.EveryNDays(everyN.toIntOrNull() ?: 2, everyNStartEpochDay)
+                2 -> RepeatPattern.EveryNDays(everyNValue ?: 2, everyNStartEpochDay)
                 3 -> RepeatPattern.CyclicActivePause(firstCycleStartEpochDay, activeDaysValue ?: 21, pauseDaysValue ?: 7)
                 else -> RepeatPattern.Daily
             }
@@ -682,16 +686,23 @@ private fun RepeatingIntervalFormBody(
     val scope = rememberCoroutineScope()
     val doseValue = dose.toDoubleOrNull()
     val hoursValue = intervalHours.toDoubleOrNull()
+    // Guard the value actually stored, not the raw hours: 0.01 passes
+    // `hoursValue > 0` but truncates to 0 minutes, which the calculator's
+    // require(intervalMinutes >= 1) then threw on -- after the row was
+    // already committed. Same shape as the Every-N-days guard above.
+    // See docs/SPEC.md §7 R23.
+    val intervalMinutesValue = hoursValue?.let { (it * 60).toInt() }
 
     ReminderFormScaffold(
         title = title,
         saveLabel = saveLabel,
-        saveEnabled = doseValue != null && doseValue > 0 && hoursValue != null && hoursValue > 0,
+        saveEnabled = doseValue != null && doseValue > 0 &&
+            intervalMinutesValue != null && intervalMinutesValue >= 1,
         onSave = {
             scope.launch {
                 onSave(
                     ReminderConfig.RepeatingInterval(
-                        intervalMinutes = ((hoursValue ?: 8.0) * 60).toInt(),
+                        intervalMinutes = intervalMinutesValue ?: 480,
                         dose = doseValue ?: 1.0,
                         startBehavior = startBehavior,
                         // Editing doesn't reset the clock -- keep the original anchor
@@ -742,16 +753,23 @@ private fun DailyWindowFormBody(
     val scope = rememberCoroutineScope()
     val doseValue = dose.toDoubleOrNull()
     val hoursValue = intervalHours.toDoubleOrNull()
+    // Guard the value actually stored, not the raw hours: 0.01 passes
+    // `hoursValue > 0` but truncates to 0 minutes, which the calculator's
+    // require(intervalMinutes >= 1) then threw on -- after the row was
+    // already committed. Same shape as the Every-N-days guard above.
+    // See docs/SPEC.md §7 R23.
+    val intervalMinutesValue = hoursValue?.let { (it * 60).toInt() }
 
     ReminderFormScaffold(
         title = title,
         saveLabel = saveLabel,
-        saveEnabled = doseValue != null && doseValue > 0 && hoursValue != null && hoursValue > 0,
+        saveEnabled = doseValue != null && doseValue > 0 &&
+            intervalMinutesValue != null && intervalMinutesValue >= 1,
         onSave = {
             scope.launch {
                 onSave(
                     ReminderConfig.DailyWindow(
-                        intervalMinutes = ((hoursValue ?: 4.0) * 60).toInt(),
+                        intervalMinutes = intervalMinutesValue ?: 240,
                         dose = doseValue ?: 1.0,
                         windowStartHour = startHour,
                         windowStartMinute = startMinute,
@@ -925,7 +943,17 @@ private fun LinkedFollowingFormBody(
 
     LaunchedEffect(medicineId) {
         reminderRepository.observeForMedicine(medicineId).collect { list ->
-            val candidates = list.filter { it.id != excludeReminderId }
+            // Alert reminders are excluded, not just the reminder being
+            // edited: SchedulingEngine.supportedTypes leaves both out, so
+            // neither ever produces a DoseEvent, so a following dose anchored
+            // to one has no anchor to read and never fires. They were offered
+            // here and, being oldest-first, could even be preselected as the
+            // default parent. See docs/SPEC.md §7 R23.
+            val candidates = list.filter {
+                it.id != excludeReminderId &&
+                    it.type != ReminderType.LOW_STOCK_ALERT &&
+                    it.type != ReminderType.EXPIRATION_ALERT
+            }
             siblings = candidates
             if (selectedParent == null) {
                 selectedParent = candidates.firstOrNull { it.id == initialParentReminderId } ?: candidates.firstOrNull()

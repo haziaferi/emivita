@@ -7,6 +7,15 @@ exercises a real in-place upgrade of a database written by a real previous
 build. `docs/SPEC.md` §9 #1 / §7 R11 record that gap as unclosable because
 no v1 APK was ever kept. This is that APK. Keep it.
 
+**Read the "v1" in that paragraph as `versionCode` 1, not Room schema 1.**
+The two are unrelated numbers and this APK ships schema **4** (see the table
+below), so installing it and upgrading exercises the *next* migration, 4→5,
+and never `MIGRATION_1_2` — which stays fixture-tested only, because no
+build of this source tree has ever written a v1, v2 or v3 database.
+`docs/SPEC.md` §9 #1 spells the same caveat out; it is repeated here so this
+file cannot be read on its own and mistaken for a way to validate the three
+migrations that already exist.
+
 **Do not rebuild and overwrite this file.** Its value is entirely that it is
 the artifact a real database was created by. A regenerated APK from a later
 tree is a different thing wearing the same name.
@@ -19,7 +28,7 @@ tree is a different thing wearing the same name.
 | Built on | 2026-09-01 |
 | applicationId | `com.hazia.emivita` (no suffix — release, not the `.debug` variant) |
 | versionName / versionCode | 0.1.0 / 1 |
-| Room schema version | 4 (`app/schemas/4.json`) |
+| Room schema version | 4 (`app/schemas/com.hazia.emivita.core.data.db.EmivitaDatabase/4.json`) |
 | minSdk / targetSdk / compileSdk | 30 / 36 / 36 |
 | Build type | release — R8 minify + resource shrinking on, `isDebuggable = false` |
 | ABIs | arm64-v8a, armeabi-v7a |

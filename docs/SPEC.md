@@ -84,14 +84,20 @@ Non-negotiable, checked against every batch before it ships:
 ## 2. Architecture 🔒
 
 - **DI: manual `AppContainer`, not Hilt.** Decided explicitly (see §9 for the
-  tradeoff writeup). OS-instantiated entry points (`BroadcastReceiver`,
-  future `AppWidgetProvider`) reach the graph via
+  tradeoff writeup). OS-instantiated entry points (`BroadcastReceiver`, and
+  the Glance `AppWidgetProvider` subclasses `NextRemindersWidgetReceiver` /
+  `StockLevelsWidgetReceiver`, both shipped) reach the graph via
   `(context.applicationContext as EmivitaApplication).container` — the same
   idiom throughout, not a special case. Revisit only if a future batch
   genuinely needs multi-instance scoping (nothing on the roadmap does).
 - **UI: Jetpack Compose / Material3 throughout.** The only XML views are the
-  unavoidable pre-Compose splash theme (`themes.xml`) and the notification
-  small-icon vector drawable.
+  unavoidable pre-Compose splash theme (`themes.xml`), the notification
+  small-icon vector drawable, and `res/layout/glance_default_loading_layout.xml`
+  — a `FrameLayout` + `ProgressBar` that both widget descriptors point at as
+  their `android:initialLayout`, because `AppWidgetProviderInfo` cannot name
+  Glance content directly and the platform needs *some* RemoteViews for the
+  window before Glance composes. Unavoidable for the same reason as the other
+  two, not a lapse.
 - **DB: Room + SQLCipher**, encrypted at rest. Key is a random 256-bit value
   (never user-typed). 🔒 **Resolved this batch (efficiency pass, supersedes
   the `EncryptedSharedPreferences`/`MasterKey`/DataStore+Tink item below):**
@@ -280,12 +286,20 @@ become `Boolean?` (`null` = inherit `lockRemindersUntilTakenByDefault` above,
 non-null = explicit override) — a real (if small) migration, not just a spec
 note. Separately, and more importantly: **nothing currently reads this field
 at all.** `ReminderNotificationBuilder` offers Skip unconditionally on every
-notification regardless of it. Fixing this means: resolve the effective
-lock state (`medicine.remindersLockedUntilTaken ?: preferences
-.lockRemindersUntilTakenByDefault`) when building a notification and omit
-the Skip action entirely when true, and defensively reject a Skip action in
-`ReminderActionReceiver`/`AlarmActivity` too, in case a stale notification
-button survives a setting change. Distinct from `DoseGroup.priority`
+notification regardless of it.
+
+🔒 **Both halves resolved** (recorded here rather than rewritten away, since
+the reasoning below is what got built). The `Boolean?` widening shipped in
+`Migrations.MIGRATION_2_3`, and the effective lock state now resolves through
+one place, `SettingsRepository.isLockedUntilTaken(medicine)` — exactly the
+`medicine.remindersLockedUntilTaken ?: lockRemindersUntilTakenByDefault`
+fallback described below it. Four sites honour it:
+`ReminderNotificationBuilder` omits the Skip action entirely when locked
+(not "adds it disabled", so there is no button to guard), and
+`ReminderActionReceiver` plus `AlarmActivity` (twice) each re-check
+independently, which is the defensive rejection this paragraph asked for
+against a stale notification button surviving a setting change.
+Distinct from `DoseGroup.priority`
 (§3 above) — that's a notification-loudness default, this is a hard
 behavioral constraint; the two aren't the same mechanism and §6's UX bullet
 about this was wrong to conflate them, corrected there now.
@@ -372,8 +386,8 @@ field on Add Medicine, suffix hint on a Fixed Time reminder's Dose amount
 field and the Log dose dialog, and the resulting "1 tablets" text on
 Today, History List, and History Table.
 
-**`Medicine.color: String?`** (hex, new field) — 🔒 resolved. Continuous
-HSV wheel + lightness strip + hex readout (Material-style picker, opened
+**`Medicine.color: String?`** (hex, new field) — 🔒 resolved. An HSV
+saturation/value square + hue strip + hex readout (Material-style picker, opened
 as a modal from a "Color" toggle row, confirmed via Ok/Cancel) — not a
 curated swatch set, so differentiation between medicines isn't capped at
 a fixed count. Toggle **off** → flat `#B8ABA9` neutral card, not an
@@ -396,7 +410,7 @@ type change in the migration rather than a real value-preserving backfill,
 but write it as a real Room migration regardless, in case a test build has
 sample rows. 🔒 **Resolved:** `Profile` also drops `colorArgb: Int?` in favor
 of `color: String?` (hex) — same move as `Medicine`, and specifically the
-*same* continuous HSV wheel + lightness strip + hex-readout picker component,
+*same* HSV saturation/value square + hue strip + hex-readout picker component,
 not a second, simpler swatch-based widget built just for profiles. The
 premise that a curated swatch set would be "enough" for profiles doesn't
 hold up: someone tracking more people/pets than a small fixed palette
@@ -491,7 +505,7 @@ Still genuinely open:
 ## 6. UX decisions — confirmed 🔒 (from the UX audit, now Appendix B)
 
 - **Today screen:** linked/timeline pattern with aggregate grouped-dose
-  nodes (not yet built — waiting on the Add flow, §9).
+  nodes. ✅ built (`TodayScreen.kt`'s `TimelineNode`/`TimelineEntry`, §9 #5).
 - **Medicine card:** full-card color, icon-per-medicine-type, tags as
   colored chips.
 - **Add-medicine reminder-type picker:** 5 labeled cards — icon + name +
@@ -499,7 +513,7 @@ Still genuinely open:
   screen). Tapping a card goes straight to its config, no disambiguation
   step. Labels: "Fixed times", "Repeating interval", "Daily window",
   "Low-stock alert", "Expiration alert".
-- **Medicine color picker:** continuous HSV wheel + lightness strip + hex
+- **Medicine color picker:** HSV saturation/value square + hue strip + hex
   readout (Material-style modal, "Color" toggle row opens it, confirmed
   via Ok/Cancel) — not a curated swatch set, so differentiating many
   medicines isn't capped at a fixed count (§3). Toggle off → flat
@@ -522,8 +536,11 @@ Still genuinely open:
   engine uses it — not Fixed Time) → dose → Save/Cancel. Fixed Time's
   `RepeatPattern` control (Daily / Specific days / Every N days) reveals
   its day-chip or every-N-days stepper progressively, only once picked;
-  `CyclicActivePause` stays out of the picker for now, same "coming soon"
-  treatment as Low-Stock/Expiration above, not a new pattern.
+  `CyclicActivePause` ships as the 4th `RepeatPattern` chip ("Active/pause
+  cycle") inside the Fixed Time card, revealing its active/pause day steppers
+  the same way (§9 #14). It is a pattern within that card, not a new card —
+  which is what the "not a new pattern" note here was protecting, and that
+  part held. The "stays out of the picker for now" half did not.
 - **Semantic state tokens** (selected/unselected, focus, error, disabled)
   are resolved relative to whichever of the 8 palettes' Accent is active
   (was 4 — updated this session along with the palette replacement above),
@@ -651,10 +668,14 @@ Still genuinely open:
 - **"Log dose" entry point** (PRN, §3/§9): a secondary action alongside the
   Today screen's FAB, not a separate bottom-nav destination — picks a
   medicine, suggests its last-used amount, defaults to "just now."
-- **Event editing:** swipe-to-edit on a Today/History entry (matches
-  medTimer's interaction, §3/§9) — status switch (Taken↔Skipped), recorded
-  time, and dose amount are each editable; editing amount doesn't
-  retroactively touch stock (only a status switch does, per §3).
+- **Event editing:** tap-to-edit on a Today/History entry, opening the
+  shared `DoseEditDialog` — status switch (Taken↔Skipped), recorded time,
+  and dose amount are each editable; editing amount doesn't retroactively
+  touch stock (only a status switch does, per §3). Shipped as a tap rather
+  than medTimer's swipe deliberately (`DoseEditDialog.kt`): every field this
+  bullet calls out is editable either way, and a modal step before altering
+  a medication record reads safer than a gesture that is easy to trigger by
+  accident.
 - **Snooze duration is user-configurable**, not hardcoded — lives on the
   already-planned "Alarms & Snooze" Settings destination, default 10
   minutes (§9).
@@ -716,6 +737,7 @@ merely related reading.
 | R20 | `res/xml/data_extraction_rules.xml` was deleted as a dead template file (R14's follow-up pass: "inert since `allowBackup=\"false\"`"). True for cloud backup, not for device-to-device transfer. Checked against Android's own backup documentation rather than reasoned from memory: for apps targeting Android 12+ — this app targets 36 — "on devices from some device manufacturers, specifying `android:allowBackup=\"false\"` disables cloud-based backup and restore (such as Google Drive backups) but doesn't disable device-to-device transfers for the app." So on those OEMs the app's files are still eligible to be carried to a new phone, with nothing in the project expressing an opinion about it. Found while verifying the pre-reconciliation batches were safe to delete — those two res/xml files were the only content in any of them absent from the reconciled tree | ✅ **Resolved this pass.** The exposure was never a data leak: the SQLCipher passphrase is wrapped by a non-exportable `AndroidKeyStore` key (§2, `PassphraseProvider`), which by design does not travel. A D2D transfer therefore lands ciphertext on the new device that nothing there can ever decrypt — the failure mode is a database that cannot be opened on first launch, not readable data in the wrong hands. That is worse than a clean empty install, and it bypasses the app's own intended migration path (§9 #9's SAF backup/restore, which carries its own password and works precisely because it is not Keystore-bound). Fixed: a real `res/xml/data_extraction_rules.xml` (written, not restored — the file R14 removed was the unmodified Studio stub with every rule commented out, and is still at `git show 19a7f19:docs/retired/data_extraction_rules.xml` if the original is ever wanted), excluding `root`/`file`/`database`/`sharedpref`/`external` from **both** `<device-transfer>` and `<cloud-backup>`, wired up with `android:dataExtractionRules` on `<application>`. The cloud half is deliberately spelled out rather than left to `allowBackup="false"`, so flipping that flag later cannot silently re-enable cloud extraction. Verified rather than assumed applied: `assembleDebug` and `lintVitalRelease` both pass, the attribute reaches the merged manifest, and `res/xml/data_extraction_rules.xml` is present in the packaged APK. **What stays unverified, and cannot be closed from this machine:** the documentation says "some device manufacturers", so whether the OnePlus 6T would have transferred anything in the first place is unknown, and no D2D transfer has been attempted before or after. This row fixes a documented behavior, not an observed one — the rules file is correct either way, but nobody has watched it prevent anything | **R22** — scope bounded |
 | R21 | Second full audit pass (`android-app-auditor` registry + Android Lint + a line-by-line read of all ~12,700 lines), run against the reconciled tree rather than a diff. Eleven commits, `e03be7f`-`4ac7d3b` inclusive. Same shape as R14 and, like R14, the durable record is this row rather than the transcript | ✅ Resolved, with two items left as decisions and two needing a device. **Supersedes R14 item 12.** That row records `WAKE_LOCK`/`FOREGROUND_SERVICE`/`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` as removed per least-privilege, "confirmed by grep". The grep was right about the app's own code and the fix did not work: deleting a `<uses-permission>` line removes it from *this* manifest only, and the manifest merger put `WAKE_LOCK` and `FOREGROUND_SERVICE` straight back from `androidx.work` (transitive via `glance-appwidget`, the same route R14's own follow-up note already identified for `ACCESS_NETWORK_STATE`). Only the battery-optimizations one had actually gone. Verified by reading `app/build/intermediates/merged_manifest/`, which carried nine permissions against the five declared. Now genuinely removed via `tools:node="remove"` — four of them, adding `USE_FINGERPRINT` (from `androidx.biometric`, deprecated since API 28, dead at minSdk 30) — and confirmed in both the debug *and* release merged manifests, which now carry exactly the five. The general lesson, worth more than the fix: a permission claim is only checkable against the merged manifest, never against the source one. **CRITICAL, and structurally identical to R14's `POST_NOTIFICATIONS` finding:** `SCHEDULE_EXACT_ALARM` was declared and read (`AlarmScheduler.canScheduleExact()`) but never requested anywhere — `ACTION_REQUEST_SCHEDULE_EXACT_ALARM` appeared exactly once in the whole codebase, inside a KDoc promising a Settings prompt that was never built. From Android 14 the permission is not granted at install to an app targeting 34+, so on a fresh install of the release build every reminder, nag and snooze silently took the inexact, Doze-batched branch, leaving only a `Log.w`. For a medication-adherence app that is the failure the app exists to prevent. Fixed by declaring `USE_EXACT_ALARM` (install-granted, no user interaction, no Kotlin change) and capping `SCHEDULE_EXACT_ALARM` at API 32. **Also fixed:** the one Android Lint *error* — `Locale.getDefault()` read inside a composable, so History's calendar headers never followed a locale change; whole-database JSON serialization, AES-256 zip encryption and SAF stream copies running on the main thread in History's CSV/PDF export and both of Backup & Sync's flows (`rememberCoroutineScope()` dispatches on Main; `AutoSyncManager` already had this right); `Today`/`History` computing their date windows with a keyless `remember`, so a screen left open across midnight kept rendering the previous day (five further derived values were keyed on stale inputs and had to move with it); `AutoSyncPassphraseStore`'s `CharArray` contract being ignored by its only caller, plus three more unwiped password arrays in `BackupSyncScreen`; and weekend-mode preferences being re-read off DataStore per projected occurrence inside a loop bounded at 500 per reminder per recompute. **Removed as dead, each verified unreferenced first:** `asOnSurfaceSafe` (whose KDoc claimed it was used by the alarm screen and notification buttons — it never was), `supportsDynamicColor`, `NoOpSchedulingCoordinator`, `src/main/keepRules/rules.keep` (commented-out WebView boilerplate, and inert regardless — that is not an AGP application-module source path), an orphaned `ic_launcher_round.xml`, both New-Project template tests and the three `androidTestImplementation` entries they were the only users of, six unreferenced DAO/repository members, and nine unused imports. **Comments corrected:** six said a schema field was "not read yet" when all six were read (`autoResolve`, `repeatOnUnanswered`, `activeFrom`/`activeUntilEpochDay`, the stock sentinels, `repeatCount`, `remindersLockedUntilTaken`), and four contradicted the artifact — including two files still describing medicine deletion as an open cascade-vs-archive question after it shipped cascading. Development chronology ("this batch", "previously unbuilt") stripped; every SPEC reference and design rationale kept. **Also:** seven duplicate number formatters collapsed to one, six hardcoded neutral-accent literals to one constant, `DetailHeader` and the POST_NOTIFICATIONS guard each written twice to once; `Theme.kt` 448 → 302 lines (all 352 colour assignments proven identical to the previous revision before and after, since it is not otherwise testable); SQLCipher 4.16.0 → 4.17.0. Lint went 1 error / 39 warnings / 15 hints → 0 / 32 / 1. **Left as decisions, not defects:** the shared-keystore exposure (see below) and whether to take the remaining dependency bumps. **Not verifiable from this machine, and the two things to check on a device before trusting this build:** that the home-screen widgets still update now that `WAKE_LOCK`/`FOREGROUND_SERVICE` are gone (Glance's session manager is the real WorkManager consumer — this is the one genuine regression risk in the ten commits, and `AndroidManifest.xml` records what to restore if it bites), and that an existing 4.16.0-created database still opens under SQLCipher 4.17.0 — no test touches SQLCipher at all, because the Room tests deliberately build an unencrypted in-memory database. |  |
 | R22 | `SIGN-001` — the release-signing comment understated its own consequence. It read "anyone could build an APK that installs over this one", which reads as a nuisance | ✅ Documented, deliberately not "fixed". AndroidKeyStore aliases are scoped to (package name, signing identity) and survive an in-place upgrade. The debug keystore is committed and its password is the published Android default, so anyone holding this repository can build an APK Android accepts as an *upgrade* — with no signature-mismatch prompt, since an identical signer is the entire point of sharing the identity — which inherits the data directory **and** the `emivita_db_wrap_key`/`emivita_autosync_wrap_key` aliases, and can therefore read out the SQLCipher key and the auto-sync backup password in plaintext. So the at-rest design is in practice only as strong as control of `keystores/my-shared-debug.keystore`: it still holds against the threat it was built for (a lost device reading the raw `.db`), and does not hold against installing a build someone else produced. This also bounds R20: `data_extraction_rules.xml`'s "arrives as ciphertext the new install can never open" is true for a device-to-device transfer and false for an upgrade install under this identity. The configuration is unchanged, because for the current threat model — the owner's own installs on the owner's own devices — the existing trade is still the right one. `app/build.gradle.kts` now states the real scope and lists the two fixes in preference order (a separate release keystore read from a gitignored `keystore.properties`; or `setUserAuthenticationRequired(true)` on the auto-sync wrap key) for whenever this reaches a second person. Related: `.gitignore` now ignores `*.keystore` by extension and re-admits the debug key by name, so a future `keystores/prod.keystore` cannot be committed by being differently named. |  |
+| R23 | Third full audit pass, run against the reconciled tree after R21 rather than as a diff review. The method differed from R14/R21 deliberately, because two passes had already swept the obvious layer: 22 parallel readers covering every file, 6 cross-cutting sweeps (deactivated code, dead symbols, comment-claim verification, duplication, concurrency, dev workflow), and a separate 4-reader fleet for documentation-versus-code, with every finding then put to an adversarial verifier and every behavioural one to three diverse lenses (correctness, author-intent, regression-risk) instructed to refute rather than agree. 264 agents, 250 raw findings, 177 surviving. Crucially it was **not** a reading-only pass: `assembleDebug`, `lintDebug` and `testDebugUnitTest` were actually run, which is the only reason the backup-rules item below was caught. The thesis, borne out: what survives two audits is not sloppiness but defects living in the *seams* between two individually-correct pieces of code | ✅ Resolved, with four items left as decisions and one structural gap named but not closed. **CRITICAL, and the most user-visible defect ever recorded in this ledger: editing a reminder silently did nothing.** All four edit paths in `AddReminderScreen` called `updateConfig(current, ...)` and then `updateAdvancedFields(current, ...)`, passing the *same pre-edit* `Reminder` to both. `ReminderDao.update` is a plain Room `@Update`, which writes every column, so the second call restored the pre-edit `configJson` over the first call's. Changing a reminder's time or pattern ran a success path and kept the old schedule; the `LinkedFollowing` path reverted `parentReminderId` the same way. `StockExpirationScreen` had the identical shape twice (`updateConfig` then `setEnabled`). Fixed by collapsing each into one write via a new `ReminderRepository.updateConfigAndAdvancedFields()` -- two full-row writes describing one edit is what made this recurrable, so the fix is the single `copy()`, not a re-ordering. **CRITICAL: three form paths committed a config the scheduler then threw on, permanently.** `"0".toIntOrNull()` is `0`, not null, so Every-N-days' `?: 2` fallback never fired and `saveEnabled` gated patterns 1 and 3 but not 2; `RepeatingInterval` and `DailyWindow` guarded raw hours `> 0` while storing `(hours * 60).toInt()`, so 0.01h stored 0 minutes. `ReminderRepository.create` inserts before notifying the coordinator, so the bad row was already committed when `matchingDateOnOrAfter` and the interval calculators hit their `require(... >= 1)` -- thrown on a `Dispatchers.Default` scope with no `CoroutineExceptionHandler`, and re-entered on *every* projection recompute thereafter. Fixed on both sides: the three forms now validate the value they actually store, and `matchingDateOnOrAfter` returns null for `n < 1` instead of throwing, which is what its own KDoc already promised ("a UI validation bug if it ever happens, not something this function should crash over") while the code nine lines below it contradicted that. **Low-stock alerts fed their own trigger.** `ALWAYS_WHEN_BELOW` wrote `lastAlertNotifiedEpochDay` unconditionally; that UPDATE lands on `reminders`, one of the two tables `observeAllWithReminders()` re-fires on, which invalidates the projection cache, whose recompute calls the evaluator again -- self-sustaining at the cache's own 1s debounce for as long as any medicine sat below threshold, re-posting the notification each pass. The class doc asserted the opposite in as many words ("this can't become unbounded spam"). The write is now guarded exactly like the rearm path above it already was. **Saving Weekend Mode did nothing until the next reboot:** four DataStore writes then `onBack()`, and nothing observes those keys -- `rescheduleAll()` ran only from the boot receiver and backup restore, and the projection cache watches tables, not DataStore. It now reschedules before `onBack()`, before rather than after because dismissing the sheet cancels the composition scope mid-flight. **The first-launch database key was written with `apply()`** and then immediately used to create `emivita.db`. A crash before the async flush would leave a database the next launch could never open, with no `fallbackToDestructiveMigration` anywhere -- an unrecoverable brick caused by a lost preference write. Now `commit = true`; `AutoSyncPassphraseStore` deliberately stays on `apply()`, where a lost write costs nothing worse than a re-prompt. **Backup export reported success after writing zero bytes** (`openOutputStream(uri)?.use { }` -- a null stream made the block a no-op that fell through to "Backup exported."), while restore and auto-sync both already treated the same null as an error. **Also fixed:** `getMostRecentForMedicine` had no status filter, so the first Log dose after any refill suggested the pack size -- `logRefill` writes the restock quantity into the same `doseAmount` column and a restock is by construction the newest row; and Linked Following's parent picker offered Low-Stock/Expiration reminders, which `supportedTypes` excludes and which therefore never produce a `DoseEvent`, making them an anchor that can never resolve and, being oldest-first, a selectable default parent. **Backup rules had a version hole that R20's own reasoning denied, and only a real Lint run surfaced it.** R20 wrote `data_extraction_rules.xml` and argued that spelling both sections out meant "flipping that flag later cannot silently re enable cloud extraction". `android:dataExtractionRules` is ignored below API 31 and this app's minSdk is 30, so on Android 11 that sentence was false: the flag flip it defends against would have re-enabled an unfiltered cloud backup. Android Lint says precisely this as a `DataExtractionRules` warning on `<application>`, which had been sitting unread in the report. Fixed with `res/xml/backup_rules.xml` (the same exclude list in the pre-Android-12 `<full-backup-content>` format) wired via `android:fullBackupContent`, and the false sentence corrected in place. Verified the way R20 asks rather than assumed: the warning is gone, the attribute reaches the merged manifest, and the file is packaged in the APK. Bounds R20 further than R22 did. **Removed as dead, each grep-verified across `app/src`, `res/`, the manifest and the tests first:** four unused imports R21's sweep missed -- including `EmivitaNavHost`'s byte-identical *duplicate* `Icon` import, which a usage-based sweep structurally cannot catch because the symbol *is* used -- plus `DoseEventDao.insertAll` (no call site; its referring comment retargeted to `insert`), the `ReminderDao` injected into `DoseEventRepository` and never read, `NextReminderRow.unit` (populated, never rendered), and an orphaned duplicate KDoc block stacked above `colorSchemeFor`, an earlier draft of the block below it that documents nothing and is the closest thing to commented-out code left in the tree. **Comments corrected**, beyond those already named: `ColorPickerDialog`'s KDoc described the inverse of its own code -- it said the square resolves hue+saturation by "polar mapping" and the strip controls lightness, where the square sets saturation/value by plain linear mapping and the strip sets hue, and the file's own inline comment 30 lines below had it right all along; `EmivitaRoute` called `DataBackupSettings` "the one Settings destination" warranting a real route, contradicted by two more route objects four lines below it; `SchedulingEngine`'s orphaned-`LinkedFollowing` branch said "shouldn't happen" about the exact state its own FK is designed to produce; plus references to symbols that do not exist (`notificationPermissionGate`, `[isCyclicActiveOn]`, `ProfileDao.rename`), a default documented as HIGH that is ALARM, and a count of three reminder types that is four. **11 `docs/SPEC.md` sites corrected** where the source of truth had gone stale against shipped code: §3's lock-until-taken "nothing currently reads this field at all" (four sites read it), §8's claim that all three main screens read through the projection cache (only Today does), §6's Today-timeline and `CyclicActivePause` "not yet built" markers, §9 #14's "what's left" list (all built), §9 #15's "Only Data & Backup pushes a real route" (three do), §9 #3's swipe-to-edit (shipped as tap, deliberately), §2's "future `AppWidgetProvider`" and its XML-views exception, the colour-picker wording in three places, and §8's Appearance paragraph still comparing itself to deleted onboarding. README's step 4 claimed the daemon JDK is "still an IDE/machine-local setting Gradle has no supported way to pin" while `gradle/gradle-daemon-jvm.properties` is tracked, pins it, and `app/build.gradle.kts` says so in as many words. `dist/vc1/MANIFEST.md` named a schema path that does not exist and, read on its own, invited exactly the versionCode-1-means-schema-1 confusion §9 #1 spells out a caveat against; both corrected. **Left as decisions, not defects:** (a) `Reminder.parentReminderId`'s FK is `ON DELETE SET_NULL` while §3 specifies `ON DELETE CASCADE`, and the entity comment cites §3 for the rule §3 does not state -- schema 4 already records SET_NULL, so changing it costs a migration. It is unreachable today only because `ReminderRepository.delete()` has no call sites at all; wiring a per-reminder delete makes orphaned, still-enabled, never-firing children reachable, which is why that branch now documents the hazard instead of asserting it cannot occur. (b) `switchStatus()` writes an absolute recorded stock quantity, discarding intervening changes -- documented as deliberate in four places, so recorded here rather than "fixed" against its own spec. (c) Today's 2-day window is the only `requestWindow` registrant and therefore shrinks the shared projection the stock consumers read. (d) `DoseGroupRepository` is constructed nowhere and its five methods are unreachable. **Named, not closed -- the structural gap:** 12 tests, all Room, none touching `SchedulingEngine`/`ReminderScheduling`'s ~650 lines of pure, Android-free date math. That is exactly where this pass and R21 both found real bugs by reading, and it is the most testable code in the app -- no Android dependencies, no mocking required. There is also no CI and no lint gate, so R21's hand-won 0-error state is a snapshot rather than an invariant, as this pass demonstrated by finding a warning that had been sitting unread in the report. **Verified, not assumed:** `assembleDebug`, `lintDebug` and `testDebugUnitTest` all green after the changes, 12/12 tests passing on a forced full rerun, 0 lint errors. **Still needs a device, unchanged from R21:** the widget-update and SQLCipher-upgrade checks. |  |
 
 ---
 
@@ -749,16 +771,22 @@ a user's own per-channel choice once the channel exists, so there's
 nothing further for in-app UI to do here.
 
 **Appearance** (`AppearanceScreen`): palette grid (all 8, §6) + theme-mode
-picker (Light/Dark/System), the same choice onboarding makes but revisitable
-after first run — `SettingsRepository`-backed, not the onboarding-only path
-it was before this batch. Palette persistence now has a real revisit path;
-the ❓ note under §6's palette bullet (no way to change the arbitrary
-Golden-Hour-default pick after onboarding) is resolved by this screen's
-existence, though a real *default*-palette decision is still open.
+picker (Light/Dark/System), `SettingsRepository`-backed. This is now the
+*only* place either is ever chosen: the onboarding screen this paragraph
+used to compare against was deleted outright (§9 #1's reversal), so a fresh
+install silently takes `SettingsRepository.palette`'s `GOLDEN_HOUR` default
+with no prompt at all. That makes the ❓ note under §6's palette bullet more
+open, not less — this screen gives the arbitrary default a revisit path,
+but nothing anywhere asks the user to choose, and a real *default*-palette
+decision is still open.
 
 **Corrected — the three main screens are built.** `TodayScreen`,
-`MedicinesScreen` and `HistoryScreen` all read real DB contents through
-the projection cache, and all three are device-verified (§9 #1, #5, #6):
+`MedicinesScreen` and `HistoryScreen` all read real DB contents, and all
+three are device-verified (§9 #1, #5, #6). Only `TodayScreen` reads it
+*through the projection cache*, which this paragraph used to claim for all
+three: `MedicinesScreen` observes `MedicineRepository.observeForProfile()`
+and `HistoryScreen` observes `DoseEventRepository.observeInRange()`, which
+is §9 #6's direct-query side. The screens are:
 the live timeline, medicines list plus detail, and History's
 List/Calendar/Table views. The paragraph that stood here said the exact
 opposite — "literal placeholder text, no data-entry UI exists at all",
@@ -1036,8 +1064,10 @@ this session.
    action the same way — `logRefill` doesn't need #8's notification-triggered
    path to be useful on its own.
 3. **✅ Event editing / undo** (§3/§6) — `switchStatus` (stock-correct
-   Taken↔Skipped), `editRecordedTime`, `editDoseAmount`, swipe-to-edit
-   interaction. Needs #1 shipped first (nothing to edit otherwise).
+   Taken↔Skipped), `editRecordedTime`, `editDoseAmount`, and the
+   tap-to-edit `DoseEditDialog` shared by Today and History (a tap, not the
+   swipe §6 originally specified — see that bullet for why). Needs #1
+   shipped first (nothing to edit otherwise).
 4. **✅ Shared occurrence-projection cache** (§2's locked decision; the
    Emivita equivalent of medTimer's `FutureRemindersRepository`, now
    verified against medTimer's actual — recently modularized —
@@ -1256,20 +1286,22 @@ this session.
 14. **✅ Cyclic, linked (following-dose), and weekend-mode reminders**
     (§3/§4) — schema and engine design are now resolved (`CyclicActivePause`,
     `LinkedFollowing` + cascade reschedule, the weekend adjustment step off
-    #12's preferences). What's left is: the `SchedulingEngine` branches for
-    the two new types, the cascade-reschedule trigger points, the weekend
-    adjustment step itself, and Add-Reminder-form UI work — **only for
-    `LinkedFollowing`**, since it's the one actual new top-level
-    `ReminderConfig` variant (R8, §7: an earlier draft of this item wrongly
-    scoped `CyclicActivePause` in here too, "a 6th and 7th card"; per §3/§6
-    it's a 4th `RepeatPattern` case living inside the already-existing
-    "Fixed Time" card, needing no new top-level picker card at all). So:
-    a 6th card beyond §6's original 5 for `LinkedFollowing` (or nested
-    under an "Advanced" entry point the way medTimer does it — not yet
-    decided, smaller call than the schema work above), plus revealing
-    `CyclicActivePause` as a 4th option in Fixed Time's existing
-    `RepeatPattern` selector. Depends on #12 for the weekend-mode piece
-    specifically; the cyclic/linked piece doesn't.
+    #12's preferences). ✅ **All of it is now built**, and the R8 scoping
+    call it rested on held up: `CyclicActivePause` is a 4th `RepeatPattern`
+    case inside the already-existing "Fixed Time" card, needing no new
+    top-level picker card (R8, §7 — an earlier draft of this item wrongly
+    scoped it as "a 6th and 7th card"). What shipped: the `SchedulingEngine`
+    branches for both new types (`SchedulingEngine.kt`'s `LinkedFollowing`
+    case; `ReminderScheduling.kt`'s `RepeatPattern.CyclicActivePause` case),
+    the weekend adjustment step (`ReminderScheduling.applyWeekendMode`,
+    called from `SchedulingEngine`), and both cascade-reschedule trigger
+    points (`ReminderAlarmReceiver` and `RealSchedulingCoordinator`, each
+    gated on the child config being `LinkedFollowing`). On the form,
+    `LinkedFollowing` landed as a top-level card and `CyclicActivePause` as
+    the 4th chip in Fixed Time's `RepeatPattern` selector — so the picker is
+    4 cards, not the "6th card" this item anticipated, because the two alert
+    types came out of it (§7 R15). The "or nested under an Advanced entry
+    point — not yet decided" question is therefore closed by what shipped.
 15. **✅ Cheap fixes** (§7's still-open rows: R1, R2, R3, `asOnSurfaceSafe`,
     launcher icon, placeholder copy). All resolved: R1 (transaction-wrapped
     `addTag`) landed alongside #1; R2 (`MedicineRepository.decrementStock`
@@ -1284,8 +1316,11 @@ this session.
     open as `ModalBottomSheet`s instead of full page pushes, and the
     biometric-lock toggle (#11) is inline on the row itself, cutting three
     of the built destinations down to zero or one tap instead of a full
-    navigate+back cycle. Only Data & Backup (#9) still pushes a real route
-    — genuinely multi-flow content that doesn't fit a sheet.
+    navigate+back cycle. Data & Backup (#9), Notifications & Alerts and
+    Appearance still push real routes — each genuinely multi-flow content
+    that doesn't fit a sheet. (This line read "Only Data & Backup" until the
+    third audit pass; `EmivitaNavHost` navigates to all three and
+    `EmivitaRoute` declares all three.)
 16. ~~**EncryptedSharedPreferences → DataStore+Tink migration**~~ — ✅
     resolved directly (§2, efficiency pass this batch), not deferred:
     `PassphraseProvider` dropped `EncryptedSharedPreferences`/`MasterKey`

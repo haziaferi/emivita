@@ -35,11 +35,12 @@ sealed interface EmivitaRoute {
     // reminders, reached from MedicineDetailScreen.
     @Serializable data class StockExpiration(val medicineId: Long) : EmivitaRoute
 
-    // Backup & Sync (spec §9 #9) -- the one Settings destination complex
-    // enough (export/restore/auto-sync, each its own SAF flow) to still
-    // warrant a real route. Alarms & Snooze, Weekend Mode, and the
-    // biometric-lock toggle (spec §9 #11) all live inline/as bottom sheets
-    // on SettingsScreen itself instead -- see its own doc comment for why.
+    // The three Settings destinations complex enough to warrant a real route
+    // rather than a sheet: Backup & Sync (spec §9 #9 -- export/restore/
+    // auto-sync, each its own SAF flow), Notifications & Alerts, and
+    // Appearance. Alarms & Snooze, Weekend Mode, and the biometric-lock
+    // toggle (spec §9 #11) all live inline/as bottom sheets on
+    // SettingsScreen itself instead -- see its own doc comment for why.
     @Serializable data object DataBackupSettings : EmivitaRoute
 
     @Serializable data object NotificationsAlertsSettings : EmivitaRoute

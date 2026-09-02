@@ -59,7 +59,7 @@ data class Reminder(
     // re-notify on every cache recompute. Null = never notified (or, for
     // LowStockAlert, restocked back above threshold since the last notify --
     // see LowStockExpirationAlertEvaluator for the reset rule). Unused by the
-    // other three reminder types.
+    // other four reminder types.
     val lastAlertNotifiedEpochDay: Long? = null,
     val createdAtEpochMillis: Long,
 )

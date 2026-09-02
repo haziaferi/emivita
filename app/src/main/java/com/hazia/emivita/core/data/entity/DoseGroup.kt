@@ -18,7 +18,7 @@ data class DoseGroup(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val profileId: Long,
     val name: String,
-    // Defaults to HIGH + full-screen alarm on confirmation, per the agreed rule:
+    // Defaults to ALARM (full-screen alarm) on confirmation, per the agreed rule:
     // a confirmed group of items is treated as "shouldn't skip" even if its
     // individual members are ordinarily standard-priority supplements.
     // Editable afterward -- this default is a starting point, not a hard rule.

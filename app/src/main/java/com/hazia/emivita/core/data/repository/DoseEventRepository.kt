@@ -5,7 +5,6 @@ import com.hazia.emivita.core.data.backup.AutoSyncManager
 import com.hazia.emivita.core.data.dao.DoseEventDao
 import com.hazia.emivita.core.data.dao.DoseEventWithMedicine
 import com.hazia.emivita.core.data.dao.MedicineDao
-import com.hazia.emivita.core.data.dao.ReminderDao
 import com.hazia.emivita.core.data.db.EmivitaDatabase
 import com.hazia.emivita.core.data.entity.DoseEvent
 import com.hazia.emivita.core.data.entity.DoseStatus
@@ -25,7 +24,6 @@ class DoseEventRepository(
     private val database: EmivitaDatabase,
     private val doseEventDao: DoseEventDao,
     private val medicineDao: MedicineDao,
-    private val reminderDao: ReminderDao,
     private val schedulingCoordinator: SchedulingCoordinator,
     private val occurrenceProjectionCache: OccurrenceProjectionCache,
     private val autoSyncManager: AutoSyncManager,
@@ -187,9 +185,11 @@ class DoseEventRepository(
     }
 
     /** Source for the "suggest the medicine's last-used amount" default on
-     *  the Log dose / Refill entry points (spec §3) -- simpler than medTimer's
+     *  the Log dose entry point (spec §3) -- simpler than medTimer's
      *  inactive-reminder-as-preset indirection, same outcome. Null if the
-     *  medicine has never had a dose logged against it. */
+     *  medicine has never had a dose logged against it. (Refill was named
+     *  here too; StockExpirationScreen's refill field has always been its
+     *  own input and has never called this.) */
     suspend fun getLastUsedDoseAmount(medicineId: Long): Double? =
         doseEventDao.getMostRecentForMedicine(medicineId)?.doseAmount
 

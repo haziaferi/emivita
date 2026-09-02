@@ -80,10 +80,54 @@ class ReminderRepository(
         return id
     }
 
+    /** The whole of an edit-form save, in ONE write.
+     *
+     *  Every edit path used to call [updateConfig] and then
+     *  [updateAdvancedFields], passing the same pre-edit `Reminder` to both.
+     *  `ReminderDao.update` is a plain Room `@Update`, which writes every
+     *  column of the row, so the second call wrote the pre-edit `configJson`
+     *  straight back over the first call's: editing a reminder's time or
+     *  pattern appeared to succeed and silently kept the old schedule. Four
+     *  call sites had it, and the `LinkedFollowing` one reverted
+     *  `parentReminderId` with it. Combining the two into a single `copy()`
+     *  is what makes that unrepeatable -- the ordering hazard only exists
+     *  while two full-row writes describe one edit. See docs/SPEC.md §7 R23.
+     *
+     *  [parentReminderId] defaults to leaving the existing link alone, and is
+     *  passed explicitly only by the `LinkedFollowing` form, which is the one
+     *  config whose edit is also a relationship change (see
+     *  [updateLinkedFollowingParent]). */
+    suspend fun updateConfigAndAdvancedFields(
+        reminder: Reminder,
+        config: ReminderConfig,
+        autoResolve: Boolean,
+        activeFromEpochDay: Long?,
+        activeUntilEpochDay: Long?,
+        repeatOnUnanswered: RepeatConfig?,
+        parentReminderId: Long? = reminder.parentReminderId,
+    ) {
+        reminderDao.update(
+            reminder.copy(
+                configJson = encodeReminderConfig(config),
+                parentReminderId = parentReminderId,
+                autoResolve = autoResolve,
+                activeFromEpochDay = activeFromEpochDay,
+                activeUntilEpochDay = activeUntilEpochDay,
+                repeatOnUnanswered = repeatOnUnanswered,
+            )
+        )
+        schedulingCoordinator.onReminderChanged(reminder.id, System.currentTimeMillis())
+        autoSyncManager.notifyChanged()
+    }
+
     /** Edit-side counterpart to the four cross-cutting fields [create] takes --
      *  a separate method from [updateConfig] since these live directly on the
      *  `Reminder` row, not inside `configJson`, so editing them shouldn't
-     *  force a caller to also have a decoded `ReminderConfig` on hand. */
+     *  force a caller to also have a decoded `ReminderConfig` on hand.
+     *
+     *  Safe on its own; do not pair it with a second full-row write derived
+     *  from the same pre-edit object -- use [updateConfigAndAdvancedFields]
+     *  when an edit changes both halves. */
     suspend fun updateAdvancedFields(
         reminder: Reminder,
         autoResolve: Boolean,

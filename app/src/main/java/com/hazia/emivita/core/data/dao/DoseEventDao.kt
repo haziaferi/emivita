@@ -79,19 +79,25 @@ interface DoseEventDao {
     @Query("SELECT * FROM dose_events WHERE reminderId = :reminderId ORDER BY scheduledEpochMillis DESC LIMIT 1")
     suspend fun getMostRecentForReminder(reminderId: Long): DoseEvent?
 
-    /** Most recently *logged* event for a medicine, scheduled or PRN --
+    /** Most recently *logged dose* for a medicine, scheduled or PRN --
      *  source for the "suggest the medicine's last-used amount" default on
-     *  the Log dose / Refill entry points (spec §3). createdAtEpochMillis,
-     *  not scheduledEpochMillis, so a retroactively-logged PRN dose still
-     *  ranks by when it was actually entered. */
-    @Query("SELECT * FROM dose_events WHERE medicineId = :medicineId ORDER BY createdAtEpochMillis DESC LIMIT 1")
+     *  the Log dose entry point (spec §3). createdAtEpochMillis, not
+     *  scheduledEpochMillis, so a retroactively-logged PRN dose still ranks
+     *  by when it was actually entered.
+     *
+     *  REFILLED rows are excluded, and that is load-bearing rather than
+     *  tidiness: logRefill() writes the restock quantity into the same
+     *  doseAmount column, and a restock is by construction the newest row
+     *  for that medicine, so without this filter the first Log dose after
+     *  any refill suggested the pack size (30) instead of the dose (1). */
+    @Query(
+        "SELECT * FROM dose_events WHERE medicineId = :medicineId AND status != 'REFILLED' " +
+            "ORDER BY createdAtEpochMillis DESC LIMIT 1"
+    )
     suspend fun getMostRecentForMedicine(medicineId: Long): DoseEvent?
 
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun insert(event: DoseEvent): Long
-
-    @Insert(onConflict = OnConflictStrategy.IGNORE)
-    suspend fun insertAll(events: List<DoseEvent>): List<Long>
 
     @Query("UPDATE dose_events SET status = :status, resolvedAtEpochMillis = :resolvedAtEpochMillis WHERE id = :id")
     suspend fun updateStatus(id: Long, status: DoseStatus, resolvedAtEpochMillis: Long)
@@ -133,7 +139,7 @@ interface DoseEventDao {
     suspend fun deleteAllForMedicine(medicineId: Long)
 
     // Backup/restore (spec §9 #9) -- restoreAll is REPLACE (preserves original
-    // ids, unlike insertAll()'s IGNORE above, which exists for a different
+    // ids, unlike insert()'s IGNORE above, which exists for a different
     // purpose: idempotent materialization, not import).
     @Query("SELECT * FROM dose_events")
     suspend fun getAllOnce(): List<DoseEvent>

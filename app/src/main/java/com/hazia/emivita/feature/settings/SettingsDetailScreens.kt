@@ -57,6 +57,7 @@ import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
+import com.hazia.emivita.core.di.LocalAppContainer
 import com.hazia.emivita.core.data.settings.SettingsRepository
 import com.hazia.emivita.ui.components.TimeOfDayField
 import com.hazia.emivita.ui.theme.MedPalette
@@ -143,6 +144,7 @@ private val weekendDayLabels = listOf("Mon" to 1, "Tue" to 2, "Wed" to 3, "Thu" 
  *  WeekendModeSchedulingDecorator (spec §5), no per-reminder opt-out. */
 @Composable
 fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit) {
+    val schedulingCoordinator = LocalAppContainer.current.schedulingCoordinator
     var loaded by remember { mutableStateOf(false) }
     var enabled by remember { mutableStateOf(false) }
     var days by remember { mutableStateOf(setOf<Int>()) }
@@ -214,6 +216,15 @@ fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit
                 settingsRepository.setWeekendDays(days)
                 settingsRepository.setWeekendStartTime(LocalTime.of(startHour, startMinute))
                 settingsRepository.setWeekendEndTime(LocalTime.of(endHour, endMinute))
+                // Weekend mode is read by SchedulingEngine at compute time, but
+                // nothing observes these DataStore keys: without this, already
+                // armed alarms keep their old times and the projection cache
+                // (which watches the medicines/reminders tables, not DataStore)
+                // never recomputes, so a saved change did nothing until the next
+                // reboot. Before onBack(), not after -- dismissing the sheet
+                // leaves the composition and cancels this scope mid-flight.
+                // See docs/SPEC.md §7 R23.
+                schedulingCoordinator.rescheduleAll()
                 onBack()
             }
         }) { Text("Save") }
