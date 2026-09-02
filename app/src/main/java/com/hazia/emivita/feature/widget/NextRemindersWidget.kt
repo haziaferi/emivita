@@ -44,7 +44,6 @@ private data class NextReminderRow(
     val medicineName: String,
     val epochMillis: Long,
     val doseAmount: Double,
-    val unit: String?,
 )
 
 /**
@@ -84,7 +83,6 @@ class NextRemindersWidget : GlanceAppWidget() {
                 medicineName = medicine.name,
                 epochMillis = occurrence.epochMillis,
                 doseAmount = occurrence.doseAmount,
-                unit = medicine.stockInfo.unit,
             )
         }
 

@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!--
+   The pre Android 12 half of res/xml/data_extraction_rules.xml, and it
+   exists for exactly one reason: android:dataExtractionRules is ignored
+   below API 31, and this app's minSdk is 30. On an Android 11 device the
+   only backup configuration the platform reads is android:allowBackup plus
+   this file.
+
+   Without it, data_extraction_rules.xml's own closing claim (that spelling
+   both sections out means "flipping allowBackup later cannot silently re
+   enable cloud extraction") held only on Android 12 and above. On the
+   oldest devices this app supports, flipping that flag would have re
+   enabled a full, unfiltered cloud backup. Android Lint says the same
+   thing as a DataExtractionRules warning on <application>.
+
+   Same rule as the other file: nothing here ever travels. See
+   docs/SPEC.md §7 R20 for why, and R23 for why this second file exists.
+-->
+<full-backup-content>
+    <exclude domain="root" path="." />
+    <exclude domain="file" path="." />
+    <exclude domain="database" path="." />
+    <exclude domain="sharedpref" path="." />
+    <exclude domain="external" path="." />
+</full-backup-content>

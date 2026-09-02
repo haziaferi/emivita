@@ -32,7 +32,7 @@ sealed interface RepeatPattern {
      *  reminders are still "a time of day + a day-selection rule" exactly
      *  like the other three. Truly periodic in *both* directions -- active on
      *  dates before [firstCycleStartEpochDay] too, matching medTimer's own
-     *  documented behavior. See [isCyclicActiveOn] for the actual rule. */
+     *  documented behavior. See [isActiveOn] for the actual rule. */
     @Serializable
     data class CyclicActivePause(
         val firstCycleStartEpochDay: Long,

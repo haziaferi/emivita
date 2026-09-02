@@ -80,7 +80,16 @@ object PassphraseProvider {
 
         val newRawKey = ByteArray(RAW_KEY_BYTES).also { SecureRandom().nextBytes(it) }
         val (ciphertext, iv) = encrypt(newRawKey)
-        prefs.edit {
+        // commit = true, not the default apply(): this key is returned below
+        // and immediately used to create emivita.db. If the process died
+        // before an async flush landed, the next launch would generate a
+        // different key and find a database it could never open -- an
+        // unrecoverable brick, since EmivitaDatabase sets no destructive
+        // migration fallback. One synchronous write, once, on first launch
+        // only. AutoSyncPassphraseStore deliberately stays on apply(), where
+        // a lost write costs nothing worse than re-entering a password.
+        // See docs/SPEC.md §7 R23.
+        prefs.edit(commit = true) {
             putString(KEY_CIPHERTEXT, Base64.encodeToString(ciphertext, Base64.NO_WRAP))
             putString(KEY_IV, Base64.encodeToString(iv, Base64.NO_WRAP))
         }

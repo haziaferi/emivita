@@ -192,19 +192,6 @@ private fun tokensFor(palette: MedPalette, dark: Boolean): PaletteTokens = when 
 /**
  * Expands one palette's tokens into a Material3 ColorScheme.
  *
- * Two mappings here are deliberate and were uniform across all eight
- * hand-written palettes this replaced, so they are not a simplification:
- *  - `onSurface` is fed from the palette's OnBackground. Appendix A audits one
- *    text colour, not a separate on-surface tone, so there is no OnSurface
- *    token to read.
- *  - Every `*Container` slot reuses its base role rather than a lighter tone.
- *    Appendix A audits a single tone per role, framed as large-element use --
- *    see Color.kt's own note, which flags a second container tier as
- *    unspecified rather than missing.
- */
-/**
- * Expands one palette's tokens into a Material3 ColorScheme.
- *
  * Two mappings here are deliberate, and were uniform across all eight
  * hand-written palettes this replaced -- they are preserved, not simplified:
  *  - `onSurface` is fed from the palette's OnBackground. Appendix A audits one

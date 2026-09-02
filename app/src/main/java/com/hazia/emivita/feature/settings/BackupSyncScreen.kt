@@ -96,7 +96,14 @@ fun BackupSyncScreen(
                 withContext(Dispatchers.IO) {
                     val json = Json.encodeToString(BackupData.serializer(), backupRepository.exportSnapshot(System.currentTimeMillis()))
                     BackupZipWriter.write(tempFile, json, password)
-                    context.contentResolver.openOutputStream(uri)?.use { out -> tempFile.inputStream().use { it.copyTo(out) } }
+                    // Not `?.use { }`: a null stream made the whole block a
+                    // no-op that fell through to "Backup exported." below,
+                    // reporting success for a backup that wrote nothing.
+                    // attemptRestore and AutoSyncManager both already treat
+                    // null as an error. See docs/SPEC.md §7 R23.
+                    val out = context.contentResolver.openOutputStream(uri)
+                        ?: error("Couldn't open the chosen file for writing")
+                    out.use { tempFile.inputStream().use { input -> input.copyTo(it) } }
                 }
                 exportStatus = "Backup exported."
                 exportPassword = "" // cleared after use, matching restorePasswordInput/syncPassphraseInput below

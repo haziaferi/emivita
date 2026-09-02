@@ -37,9 +37,12 @@ shell from scratch, which is already done here.
 4. **Settings → Build, Execution, Deployment → Build Tools → Gradle → Gradle JDK →
    set to JDK 21.** Android Studio bundles JDK 21 itself, so this is usually just
    picking "Embedded JDK" from the dropdown rather than installing anything.
-   (This is the JDK that *runs the Gradle daemon* — still an IDE/machine-local
-   setting Gradle has no supported way to pin from inside a build script.
-   `app/build.gradle.kts` separately pins `kotlin { jvmToolchain(21) }`, which
+   (This is the JDK that *runs the Gradle daemon*, and it is no longer only an
+   IDE-local setting: `gradle/gradle-daemon-jvm.properties` is tracked in this
+   repo and pins `toolchainVersion=21` for the daemon, which the tracked Gradle
+   8.13 wrapper honours. Setting it in Studio is the belt-and-braces half, for
+   when the IDE supplies its own daemon criteria. `app/build.gradle.kts`
+   separately pins `kotlin { jvmToolchain(21) }`, which
    covers the JDK that runs the *compiler tasks* specifically — so a mismatch
    here now fails loudly and specifically rather than surfacing as a vague
    "AGP requires Java 17/21" error with nothing in the repo pointing at the

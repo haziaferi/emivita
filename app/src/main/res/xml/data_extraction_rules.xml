@@ -21,6 +21,15 @@
    Both sections are written out in full rather than relying on
    allowBackup="false" to cover the cloud half, so that flipping that flag
    later cannot silently re enable cloud extraction.
+
+   That last sentence is only true from API 31 up. The platform ignores
+   android:dataExtractionRules entirely below it, and this app's minSdk is
+   30, so on Android 11 the flag flip this file is meant to defend against
+   would have re enabled an unfiltered cloud backup with nothing to stop
+   it. res/xml/backup_rules.xml is the same exclude list in the pre
+   Android 12 format, wired up alongside this one via
+   android:fullBackupContent, and is what makes the claim hold across the
+   whole supported range. See docs/SPEC.md §7 R23.
 -->
 <data-extraction-rules>
     <cloud-backup>

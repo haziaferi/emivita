@@ -142,7 +142,6 @@ class AppContainer(context: Context) {
             database = database,
             doseEventDao = database.doseEventDao(),
             medicineDao = database.medicineDao(),
-            reminderDao = database.reminderDao(),
             schedulingCoordinator = schedulingCoordinator,
             occurrenceProjectionCache = occurrenceProjectionCache,
             autoSyncManager = autoSyncManager,

@@ -52,7 +52,7 @@ class SettingsRepository(context: Context) {
         val BIOMETRIC_LOCK_ENABLED = booleanPreferencesKey("biometric_lock_enabled")
         // POST_NOTIFICATIONS is a runtime permission on API 33+; this tracks
         // whether the app has already shown the system request dialog once,
-        // so EmivitaApp's launcher (see notificationPermissionGate) asks
+        // so EmivitaApp's launcher (see NotificationPermissionEffect) asks
         // exactly once rather than re-prompting on every app open after a
         // denial (PERM-023/PERM-024 -- respect the user's decision).
         val NOTIFICATION_PERMISSION_REQUESTED = booleanPreferencesKey("notification_permission_requested")

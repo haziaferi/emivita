@@ -29,9 +29,17 @@ import java.time.ZonedDateTime
 // ---- FixedTime ----------------------------------------------------------
 
 /** Finds the earliest date on/after [fromDate] that matches [pattern], or
- *  `null` if [pattern] can never match (only possible for an empty
- *  `SpecificDaysOfWeek.days` set -- a UI validation bug if it ever happens,
- *  not something this function should crash over). */
+ *  `null` if [pattern] can never match: an empty `SpecificDaysOfWeek.days`
+ *  set, or an `EveryNDays.n` below 1. Both are UI validation bugs if they
+ *  ever happen, and neither is something this function should crash over.
+ *
+ *  The `n` case used to be a `require(n >= 1)`, which contradicted the
+ *  sentence above it and mattered because of *where* it threw: the row is
+ *  committed before the scheduler ever sees it, and the projection cache
+ *  re-reads every reminder on a loop, so one bad row threw on every
+ *  recompute rather than at the point of entry. Returning null degrades to
+ *  "this reminder has no next occurrence", which every caller already
+ *  handles. See docs/SPEC.md §7 R23. */
 private fun matchingDateOnOrAfter(pattern: RepeatPattern, fromDate: LocalDate): LocalDate? = when (pattern) {
     is RepeatPattern.Daily -> fromDate
     is RepeatPattern.SpecificDaysOfWeek -> {
@@ -43,8 +51,9 @@ private fun matchingDateOnOrAfter(pattern: RepeatPattern, fromDate: LocalDate): 
                 .firstOrNull { pattern.days.contains(it.dayOfWeek.value) } // DayOfWeek.value: Mon=1..Sun=7, matches our convention
         }
     }
-    is RepeatPattern.EveryNDays -> {
-        require(pattern.n >= 1) { "EveryNDays.n must be >= 1, was ${pattern.n}" }
+    is RepeatPattern.EveryNDays -> if (pattern.n < 1) {
+        null
+    } else {
         val anchor = LocalDate.ofEpochDay(pattern.startEpochDay)
         if (fromDate.isBefore(anchor)) {
             anchor

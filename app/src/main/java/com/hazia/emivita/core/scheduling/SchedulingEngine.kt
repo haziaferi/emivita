@@ -9,7 +9,6 @@ import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.settings.SettingsRepository
 import kotlinx.coroutines.flow.first
 import java.time.Instant
-import java.time.LocalTime
 import java.time.ZoneId
 
 /**
@@ -105,7 +104,21 @@ class SchedulingEngine(
             is ReminderConfig.LinkedFollowing -> {
                 val parentId = reminder.parentReminderId
                 if (parentId == null) {
-                    null // orphaned config -- shouldn't happen, but not this function's job to crash over
+                    // Orphaned child. Not a "shouldn't happen" case, which is
+                    // what this comment used to claim: the self-referencing FK
+                    // on Reminder.parentReminderId is ON DELETE SET_NULL, so
+                    // detaching a child is exactly what deleting its parent
+                    // does. Returning null here means such a child keeps its
+                    // row, keeps enabled = true, keeps showing in the medicine's
+                    // reminder list, and never fires again -- silently. Nothing
+                    // reaches this today only because ReminderRepository.delete()
+                    // has no call sites (deleting a medicine cascades the whole
+                    // set instead, parent and children together). Wiring a
+                    // per-reminder delete makes it reachable. See docs/SPEC.md
+                    // §7 R23: the FK's semantics and §3's "ON DELETE CASCADE"
+                    // still contradict each other, and that is the decision to
+                    // settle before this path can be reached.
+                    null
                 } else {
                     val anchorEpochMillis = when (config.startBehavior) {
                         IntervalStartBehavior.ON_REMINDED -> doseEventDao.getMostRecentForReminder(parentId)?.scheduledEpochMillis

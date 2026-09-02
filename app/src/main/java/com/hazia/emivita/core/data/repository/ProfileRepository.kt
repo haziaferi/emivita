@@ -7,7 +7,7 @@ import kotlinx.coroutines.flow.Flow
 /** Deliberately just the two operations the app actually performs: EmivitaApp
  *  observes the profile list and silently creates the one profile on first
  *  launch. There is no multi-profile UI (see LocalCurrentProfileId), so
- *  getById/rename/delete were unreferenced and are gone; ProfileDao still
+ *  getById/update/delete were unreferenced and are gone; ProfileDao still
  *  exposes them for whenever that UI is built. Note that a real delete path
  *  will need to cancel each cascaded reminder's pending AlarmManager alarm the
  *  way MedicineRepository.delete does -- Room's cascade can't reach OS state. */

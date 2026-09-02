@@ -26,8 +26,12 @@ import java.time.ZoneId
  *  - `ALWAYS_WHEN_BELOW` / no `DAILY`-style gate for expiration: notify on
  *    every recompute this reminder is evaluated in while the condition
  *    holds. Bounded by real events (debounced at the cache's own 1s), not a
- *    timer, so this can't become unbounded spam -- it fires once per actual
- *    stock/reminder change while low, which is the point of "Always".
+ *    timer -- it fires once per actual stock/reminder change while low,
+ *    which is the point of "Always". That bound only holds because the
+ *    `lastAlertNotifiedEpochDay` write below is guarded: an unconditional
+ *    write is itself a `reminders` change, so it re-triggered the very
+ *    recompute that called this, and "bounded by real events" quietly
+ *    became a 1s loop. See the comment at that write, and §7 R23.
  *  - `ONCE_WHEN_BELOW` / `ExpirationTriggerFrequency.ONCE`: notify the first
  *    time the condition is met, then go silent. LowStockAlert specifically
  *    rearms itself once stock rises back above threshold (a real restock),
@@ -78,7 +82,16 @@ class LowStockExpirationAlertEvaluator(
         if (!shouldNotify) return
 
         notificationBuilder.postLowStock(medicine, reminder)
-        reminderDao.updateLastAlertNotifiedEpochDay(reminder.id, todayEpochDay)
+        // Guarded like the rearm path above, and for a sharper reason than
+        // avoiding a redundant write: this UPDATE hits `reminders`, which is
+        // one of the two tables MedicineDao.observeAllWithReminders() re-fires
+        // on, which is what invalidates the projection cache, whose recompute
+        // calls back into this evaluator. Writing unconditionally made
+        // ALWAYS_WHEN_BELOW self-sustaining at the cache's 1s debounce for as
+        // long as a medicine stayed below threshold. See docs/SPEC.md §7 R23.
+        if (reminder.lastAlertNotifiedEpochDay != todayEpochDay) {
+            reminderDao.updateLastAlertNotifiedEpochDay(reminder.id, todayEpochDay)
+        }
     }
 
     private suspend fun evaluateExpiration(medicine: Medicine, reminder: Reminder, config: ReminderConfig.ExpirationAlert, todayEpochDay: Long) {
