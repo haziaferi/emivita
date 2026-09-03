@@ -105,10 +105,17 @@ interface MedicineDao {
     suspend fun getAllTracked(): List<Medicine>
 
     /** Direct set, not a relative +/- like decrementStock/incrementStock --
-     *  used by DoseEventRepository.switchStatus() (spec §9 #3) to restore/
-     *  reapply a specific recorded quantity (DoseEvent.stockBefore/After)
-     *  rather than doing relative math that could compound across repeated
-     *  switches. */
+     *  used by DoseEventRepository.resolve(), which computes the target
+     *  quantity from a stock read taken inside the same transaction, so the
+     *  absolute write has no staleness window and is a decrement in all but
+     *  name.
+     *
+     *  switchStatus() used to be the other caller, and must not become one
+     *  again: its sentinel pair was recorded at some earlier resolution, so
+     *  writing it back absolutely discarded every stock change made since.
+     *  It now applies a relative delta instead -- see docs/SPEC.md §7 R27,
+     *  which also retires the "relative math could compound" claim this
+     *  comment used to make. */
     @Query("UPDATE medicines SET quantity = :quantity WHERE id = :medicineId")
     suspend fun setStock(medicineId: Long, quantity: Double)
 

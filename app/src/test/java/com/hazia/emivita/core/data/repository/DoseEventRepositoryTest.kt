@@ -100,6 +100,9 @@ class DoseEventRepositoryTest {
             DoseEvent(reminderId = reminderId, medicineId = medicineId, scheduledEpochMillis = 0, doseAmount = doseAmount, createdAtEpochMillis = 0)
         )
 
+    private suspend fun stockOf(medicineId: Long): Double =
+        database.medicineDao().getById(medicineId)!!.stockInfo.quantity
+
     @Test
     fun `resolve TAKEN decrements stock and notifies the scheduling coordinator`() = runTest {
         val medicineId = seedMedicineWithStock(10.0)
@@ -136,7 +139,7 @@ class DoseEventRepositoryTest {
     }
 
     @Test
-    fun `switchStatus from Skipped to Taken reapplies the recorded stockAfter, not a fresh decrement`() = runTest {
+    fun `switchStatus from Skipped to Taken spends the recorded amount`() = runTest {
         val medicineId = seedMedicineWithStock(10.0)
         val reminderId = seedReminder(medicineId)
         val eventId = seedPendingEvent(reminderId, medicineId, doseAmount = 2.0)
@@ -149,7 +152,7 @@ class DoseEventRepositoryTest {
     }
 
     @Test
-    fun `switchStatus back to Skipped restores the recorded stockBefore`() = runTest {
+    fun `switchStatus back to Skipped gives the recorded amount back`() = runTest {
         val medicineId = seedMedicineWithStock(10.0)
         val reminderId = seedReminder(medicineId)
         val eventId = seedPendingEvent(reminderId, medicineId, doseAmount = 2.0)
@@ -179,5 +182,86 @@ class DoseEventRepositoryTest {
         val updated = database.doseEventDao().getById(eventId)!!
         assertEquals(-1.0, updated.stockBefore, 0.001)
         assertEquals(-1.0, updated.stockAfter, 0.001)
+    }
+
+    @Test
+    fun `switchStatus to Skipped preserves a refill made after the dose was resolved`() = runTest {
+        val medicineId = seedMedicineWithStock(10.0)
+        val reminderId = seedReminder(medicineId)
+        val eventId = seedPendingEvent(reminderId, medicineId, doseAmount = 2.0)
+        repository.resolve(eventId, DoseStatus.TAKEN)
+        assertEquals(8.0, stockOf(medicineId), 0.001)
+
+        repository.logRefill(medicineId, refillAmount = 60.0, atEpochMillis = 1)
+        assertEquals(68.0, stockOf(medicineId), 0.001)
+
+        repository.switchStatus(eventId, DoseStatus.SKIPPED)
+
+        // The absolute write this replaced put stock back to the recorded
+        // stockBefore of 10.0, destroying the 60-unit refill outright.
+        assertEquals(70.0, stockOf(medicineId), 0.001)
+    }
+
+    @Test
+    fun `switchStatus to Skipped preserves a later dose taken from the same medicine`() = runTest {
+        // The everyday version of the same defect: a twice-daily medicine
+        // whose morning dose is corrected after the evening one was taken.
+        val medicineId = seedMedicineWithStock(10.0)
+        val reminderId = seedReminder(medicineId)
+        val morning = seedPendingEvent(reminderId, medicineId, doseAmount = 2.0)
+        val evening = database.doseEventDao().insert(
+            DoseEvent(
+                reminderId = reminderId,
+                medicineId = medicineId,
+                scheduledEpochMillis = 1,
+                doseAmount = 3.0,
+                createdAtEpochMillis = 0,
+            )
+        )
+        repository.resolve(morning, DoseStatus.TAKEN)
+        repository.resolve(evening, DoseStatus.TAKEN)
+        assertEquals(5.0, stockOf(medicineId), 0.001)
+
+        repository.switchStatus(morning, DoseStatus.SKIPPED)
+
+        // Absolute would have written 10.0, silently un-taking the evening dose.
+        assertEquals(7.0, stockOf(medicineId), 0.001)
+    }
+
+    @Test
+    fun `repeated switching is exactly reversible`() = runTest {
+        // The rationale the absolute write carried claimed relative math
+        // "could compound error across repeated switches". A delta read from
+        // the recorded pair gives back exactly what it takes away, so it
+        // does not -- which is why that claim is retired rather than worked
+        // around. See docs/SPEC.md §7 R27.
+        val medicineId = seedMedicineWithStock(10.0)
+        val reminderId = seedReminder(medicineId)
+        val eventId = seedPendingEvent(reminderId, medicineId, doseAmount = 2.0)
+        repository.resolve(eventId, DoseStatus.TAKEN)
+
+        repeat(3) {
+            repository.switchStatus(eventId, DoseStatus.SKIPPED)
+            assertEquals(10.0, stockOf(medicineId), 0.001)
+            repository.switchStatus(eventId, DoseStatus.TAKEN)
+            assertEquals(8.0, stockOf(medicineId), 0.001)
+        }
+    }
+
+    @Test
+    fun `switchStatus gives back only what was actually consumed when stock ran short`() = runTest {
+        // hypotheticalStockSentinels floors stockAfter at 0, so a 3-unit dose
+        // against 1 unit of stock records 1 consumed, not 3. Handing back the
+        // recorded difference is therefore right; handing back doseAmount
+        // would invent 2 units that never existed.
+        val medicineId = seedMedicineWithStock(1.0)
+        val reminderId = seedReminder(medicineId)
+        val eventId = seedPendingEvent(reminderId, medicineId, doseAmount = 3.0)
+        repository.resolve(eventId, DoseStatus.TAKEN)
+        assertEquals(0.0, stockOf(medicineId), 0.001)
+
+        repository.switchStatus(eventId, DoseStatus.SKIPPED)
+
+        assertEquals(1.0, stockOf(medicineId), 0.001)
     }
 }
