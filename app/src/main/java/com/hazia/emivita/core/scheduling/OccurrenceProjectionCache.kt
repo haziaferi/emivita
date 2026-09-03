@@ -1,6 +1,7 @@
 package com.hazia.emivita.core.scheduling
 
 import com.hazia.emivita.core.data.dao.MedicineDao
+import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
@@ -15,7 +16,7 @@ import java.time.LocalDate
 import java.time.ZoneId
 import java.util.concurrent.ConcurrentHashMap
 
-private const val DEFAULT_WINDOW_DAYS = 28L
+private const val MINIMUM_WINDOW_DAYS = 28L
 private const val DEBOUNCE_MILLIS = 1_000L
 private const val COMPUTE_BUDGET_MILLIS = 2_000L
 
@@ -33,7 +34,7 @@ data class ProjectionState(
     // present for medicines with stock tracking active (a unit set) whose
     // run-out falls inside the current window.
     val stockRunOutDates: Map<Long, LocalDate> = emptyMap(),
-    val windowDays: Long = DEFAULT_WINDOW_DAYS,
+    val windowDays: Long = MINIMUM_WINDOW_DAYS,
     val computedAtEpochMillis: Long = 0L,
 )
 
@@ -50,12 +51,18 @@ data class ProjectionState(
  * ExpirationAlert triggering (§9 #8) rides the same recompute pass rather
  * than reading [state] itself -- see [alertEvaluator].
  *
- * **Window ownership** (medTimer's own glossary, verbatim): each consumer
- * registers its required days via [requestWindow]; the effective window is
- * the max across all current registrations, [DEFAULT_WINDOW_DAYS] if none.
- * [releaseWindow] removes a registration but does not force an immediate
- * recompute -- shrinking isn't urgent, it takes effect on the next trigger
- * that happens anyway.
+ * **Window ownership** (medTimer's own glossary): each consumer registers the
+ * days it needs via [requestWindow], and the effective window is the max of
+ * those registrations and [MINIMUM_WINDOW_DAYS] -- a floor, not a fallback.
+ * That distinction is the entire point of the mechanism: this projection is
+ * *shared*, so a registration means "I need at least this much", never "this
+ * much is all anyone needs". The constant used to apply only when no consumer
+ * had registered at all, which let the Today screen's 2-day request collapse
+ * the window for every other reader of [state] the moment Today composed --
+ * silently dropping the stock run-out dates that Stock & Expiration and the
+ * stock widget both read. See docs/SPEC.md §7 R28. [releaseWindow] removes a
+ * registration but does not force an immediate recompute -- shrinking isn't
+ * urgent, it takes effect on the next trigger that happens anyway.
  *
  * **Two invalidation channels, not one:**
  *  - *Reactive:* the `init` block collects [MedicineDao.observeAllWithReminders]
@@ -84,6 +91,10 @@ class OccurrenceProjectionCache(
     private val scope: CoroutineScope,
     private val zone: ZoneId = ZoneId.systemDefault(),
     private val nowEpochMillis: () -> Long = System::currentTimeMillis,
+    // Injectable for the same reason [zone] and [nowEpochMillis] already are:
+    // the debounce below is real wall-clock time on Dispatchers.Default, which
+    // a test cannot advance. Production never passes this.
+    private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) {
     private val windowRequests = ConcurrentHashMap<String, Long>()
     private val trigger = Channel<Unit>(capacity = Channel.CONFLATED)
@@ -92,20 +103,23 @@ class OccurrenceProjectionCache(
     val state: StateFlow<ProjectionState> = _state.asStateFlow()
 
     init {
-        scope.launch(Dispatchers.Default) {
+        scope.launch(dispatcher) {
             for (unused in trigger) {
                 delay(DEBOUNCE_MILLIS)
                 recompute()
             }
         }
-        scope.launch(Dispatchers.Default) {
+        scope.launch(dispatcher) {
             medicineDao.observeAllWithReminders().collect { invalidate() }
         }
         invalidate()
     }
 
-    /** Registers/updates [consumerId]'s required window in days -- growing
-     *  the effective window triggers an immediate recompute. */
+    /** Registers/updates [consumerId]'s required window in days. Can only
+     *  ever grow the effective window, never shrink it below the floor --
+     *  see [effectiveWindowDays]. Triggers a recompute either way, since a
+     *  registration that does grow the window needs one immediately and the
+     *  conflated channel makes a redundant trigger nearly free. */
     fun requestWindow(consumerId: String, days: Long) {
         windowRequests[consumerId] = days
         invalidate()
@@ -124,7 +138,12 @@ class OccurrenceProjectionCache(
         trigger.trySend(Unit)
     }
 
-    private fun effectiveWindowDays(): Long = windowRequests.values.maxOrNull() ?: DEFAULT_WINDOW_DAYS
+    /** The max of every current registration and [MINIMUM_WINDOW_DAYS]. The
+     *  constant is a floor, not an empty-map fallback: a consumer asking for
+     *  fewer days than the floor is stating a minimum that is already met,
+     *  and must never drag the shared projection down to it. */
+    private fun effectiveWindowDays(): Long =
+        maxOf(windowRequests.values.maxOrNull() ?: 0L, MINIMUM_WINDOW_DAYS)
 
     private suspend fun recompute() {
         val start = nowEpochMillis()
