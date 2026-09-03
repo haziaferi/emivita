@@ -30,8 +30,10 @@ import java.time.ZonedDateTime
 
 /** Finds the earliest date on/after [fromDate] that matches [pattern], or
  *  `null` if [pattern] can never match: an empty `SpecificDaysOfWeek.days`
- *  set, or an `EveryNDays.n` below 1. Both are UI validation bugs if they
- *  ever happen, and neither is something this function should crash over.
+ *  set, an `EveryNDays.n` below 1, or a `CyclicActivePause` whose
+ *  `activeDays` is below 1 or whose `pauseDays` is negative. All three are UI
+ *  validation bugs if they ever happen, and none is something this function
+ *  should crash over.
  *
  *  The `n` case used to be a `require(n >= 1)`, which contradicted the
  *  sentence above it and mattered because of *where* it threw: the row is
@@ -63,7 +65,18 @@ private fun matchingDateOnOrAfter(pattern: RepeatPattern, fromDate: LocalDate): 
             if (remainder == 0L) fromDate else fromDate.plusDays(pattern.n - remainder)
         }
     }
-    is RepeatPattern.CyclicActivePause -> {
+    is RepeatPattern.CyclicActivePause -> if (pattern.activeDays < 1 || pattern.pauseDays < 0) {
+        // Same reasoning as the EveryNDays guard above, and the same defect
+        // shape R23 fixed there: isActiveOn carries a require(activeDays >= 1
+        // && pauseDays >= 0), and reaching it with a degenerate cycle threw
+        // from inside the projection cache's recompute loop rather than at
+        // the point of entry. AddReminderScreen gates both fields, but
+        // BackupRepository.restoreAll() writes reminder rows back with no
+        // config revalidation, so a corrupted backup is enough to commit one.
+        // Guarded here rather than by loosening isActiveOn, which keeps its
+        // require as the contract for direct callers.
+        null
+    } else {
         // Unlike EveryNDays, truly periodic in both directions (spec §3) --
         // isActiveOn's floorMod already handles fromDate being before the
         // anchor correctly, so no separate "before anchor" branch is needed

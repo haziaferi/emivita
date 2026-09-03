@@ -25,10 +25,18 @@ data class RepeatConfig(
     foreignKeys = [
         ForeignKey(entity = Medicine::class, parentColumns = ["id"], childColumns = ["medicineId"], onDelete = ForeignKey.CASCADE),
         ForeignKey(entity = DoseGroup::class, parentColumns = ["id"], childColumns = ["groupId"], onDelete = ForeignKey.SET_NULL),
-        // Self-referencing: a Low-Stock/Expiration alert reminder (once built,
-        // §9 follow-up) can be spawned from and tied to the medicine's primary
-        // dosing reminder. SET_NULL, not CASCADE -- deleting the parent reminder
-        // shouldn't delete the alert, just detach it (spec §3).
+        // Self-referencing: carries which reminder a LinkedFollowing "following
+        // dose" follows. SET_NULL, not CASCADE -- deleting a parent detaches its
+        // children, and ReminderRepository.delete() switches each detached child
+        // off in the same transaction so none is left enabled and unfirable.
+        //
+        // This comment used to justify SET_NULL by a Low-Stock/Expiration alert
+        // "spawned from and tied to the medicine's primary dosing reminder", and
+        // cited spec §3 for a rule §3 did not state -- §3 specified CASCADE. No
+        // alert reminder ever sets this column; only the LinkedFollowing form
+        // writes it, so that rationale described a feature that does not exist.
+        // Settled in favour of SET_NULL and §3 corrected to match: see
+        // docs/SPEC.md §7 R25.
         ForeignKey(entity = Reminder::class, parentColumns = ["id"], childColumns = ["parentReminderId"], onDelete = ForeignKey.SET_NULL),
     ],
     indices = [Index("medicineId"), Index("groupId"), Index("parentReminderId")],

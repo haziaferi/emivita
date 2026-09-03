@@ -108,16 +108,22 @@ class SchedulingEngine(
                     // what this comment used to claim: the self-referencing FK
                     // on Reminder.parentReminderId is ON DELETE SET_NULL, so
                     // detaching a child is exactly what deleting its parent
-                    // does. Returning null here means such a child keeps its
-                    // row, keeps enabled = true, keeps showing in the medicine's
-                    // reminder list, and never fires again -- silently. Nothing
-                    // reaches this today only because ReminderRepository.delete()
-                    // has no call sites (deleting a medicine cascades the whole
-                    // set instead, parent and children together). Wiring a
-                    // per-reminder delete makes it reachable. See docs/SPEC.md
-                    // §7 R23: the FK's semantics and §3's "ON DELETE CASCADE"
-                    // still contradict each other, and that is the decision to
-                    // settle before this path can be reached.
+                    // does.
+                    //
+                    // R23 left the FK's semantics contradicting §3's "ON DELETE
+                    // CASCADE" as an open decision; §7 R25 settled it in favour
+                    // of SET_NULL and corrected §3. The silent-dead-row problem
+                    // this branch used to describe is handled at the source:
+                    // ReminderRepository.delete() switches every detached child
+                    // off in the same transaction, so a child that reaches this
+                    // branch by that route is already disabled and returns null
+                    // one gate earlier.
+                    //
+                    // This guard is still load-bearing, because delete() is not
+                    // the only way to get here: BackupRepository.restoreAll()
+                    // writes reminder rows back verbatim, so a backup whose
+                    // parent row is missing restores an enabled child with a
+                    // null parent, as would any row predating R25.
                     null
                 } else {
                     val anchorEpochMillis = when (config.startBehavior) {

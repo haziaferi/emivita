@@ -1,11 +1,13 @@
 package com.hazia.emivita.core.data.repository
 
+import androidx.room.withTransaction
 import com.hazia.emivita.core.data.backup.AutoSyncManager
 import com.hazia.emivita.core.data.config.ReminderConfig
 import com.hazia.emivita.core.data.config.ReminderType
 import com.hazia.emivita.core.data.config.decodeReminderConfig
 import com.hazia.emivita.core.data.config.encodeReminderConfig
 import com.hazia.emivita.core.data.dao.ReminderDao
+import com.hazia.emivita.core.data.db.EmivitaDatabase
 import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.entity.RepeatConfig
 import com.hazia.emivita.core.scheduling.SchedulingCoordinator
@@ -20,6 +22,7 @@ import kotlinx.coroutines.flow.Flow
  * (spec §9 #9(b): "medicine/reminder edits" is one of its trigger events).
  */
 class ReminderRepository(
+    private val database: EmivitaDatabase,
     private val reminderDao: ReminderDao,
     private val schedulingCoordinator: SchedulingCoordinator,
     private val autoSyncManager: AutoSyncManager,
@@ -169,9 +172,45 @@ class ReminderRepository(
         autoSyncManager.notifyChanged()
     }
 
+    /** Deleting a reminder switches its direct LinkedFollowing children off
+     *  first (spec §3, settled in §7 R25).
+     *
+     *  The self-referencing FK is `ON DELETE SET_NULL`, so SQLite detaches a
+     *  child rather than removing it. Left alone, that child keeps its row,
+     *  keeps `enabled = true`, keeps showing in the medicine's reminder list,
+     *  and never fires again -- SchedulingEngine's LinkedFollowing branch
+     *  returns null for a null parent. Switching it off turns a silent dead
+     *  row into a visible off toggle the user can act on, and costs no schema
+     *  change; CASCADE was the alternative and would have deleted rows the
+     *  user never selected, in a list that does not show the chain.
+     *
+     *  Children are read BEFORE the delete: the FK nulls `parentReminderId`
+     *  as part of it, so afterwards there is nothing left to query by.
+     *
+     *  One level down only, matching [getChildrenOf]'s own documented scope
+     *  and [setEnabled]'s existing semantics -- disabling a chain's head has
+     *  never disabled the rest of the chain, and a grandchild is not orphaned
+     *  here, just following a parent that no longer fires. */
     suspend fun delete(reminder: Reminder) {
-        reminderDao.delete(reminder)
+        val children = reminderDao.getChildrenOf(reminder.id)
+
+        database.withTransaction {
+            for (child in children) {
+                reminderDao.update(child.copy(enabled = false))
+            }
+            reminderDao.delete(reminder)
+        }
+
+        // Outside the transaction -- OS-level alarm cancellation, not a DB
+        // write, the same reasoning MedicineRepository.delete() documents.
+        // Each disabled child routes through onReminderChanged rather than
+        // onReminderRemoved: its row still exists, and scheduleOrCancel's
+        // "no next occurrence" branch is what cancels the alarm.
         schedulingCoordinator.onReminderRemoved(reminder.id)
+        val now = System.currentTimeMillis()
+        for (child in children) {
+            schedulingCoordinator.onReminderChanged(child.id, now)
+        }
         autoSyncManager.notifyChanged()
     }
 }
