@@ -1,0 +1,78 @@
+# Runs the same three tasks the SPEC's §7 ledger has been quoting by hand
+# after every audit pass -- assembleDebug, testDebugUnitTest, lintDebug --
+# so "green" stops being a snapshot someone remembered to take and becomes
+# something the repository enforces. See docs/SPEC.md §7 R26.
+#
+# Kept to one job on purpose. Splitting build/test/lint across parallel jobs
+# would triple the Gradle configuration cost and the SDK download for a
+# single-module app whose full local run is about two minutes; three steps in
+# one job still attribute a failure to the right task in the UI, and the
+# daemon and the configuration cache carry over between them.
+name: CI
+
+on:
+  push:
+    branches: [master, main]
+  pull_request:
+  workflow_dispatch:
+
+# A second push to the same branch makes the first run's result irrelevant.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  verify:
+    name: Build, test, lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@v4
+
+      # JDK 21 to match gradle/gradle-daemon-jvm.properties (toolchainVersion=21)
+      # and app/build.gradle.kts's jvmToolchain(21). Without it Gradle would try
+      # to auto-provision a daemon JVM from foojay on every run.
+      - name: Set up JDK 21
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '21'
+
+      # Accepts SDK licences and exports ANDROID_HOME. The runner image does not
+      # reliably carry API 36 (compileSdk/targetSdk 36, AGP 8.13.2), so AGP's own
+      # sdkDownload fetches what is missing once this action has set the licences.
+      - name: Set up Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Set up Gradle
+        uses: gradle/actions/setup-gradle@v4
+
+      - name: Assemble debug
+        run: ./gradlew assembleDebug --stacktrace
+
+      - name: Unit tests
+        run: ./gradlew testDebugUnitTest --stacktrace
+
+      # The lint gate itself lives in app/build.gradle.kts (abortOnError +
+      # warningsAsErrors against lint-baseline.xml), so this step fails on any
+      # finding not already recorded in the baseline. Nothing to configure here.
+      - name: Lint
+        run: ./gradlew lintDebug --stacktrace
+
+      # if: always() so a failing run still uploads the report that explains it
+      # -- the whole point of R23's finding was a report nobody opened.
+      - name: Upload reports
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: build-reports
+          path: |
+            app/build/reports/
+            app/build/test-results/
+          retention-days: 14
+          if-no-files-found: ignore

@@ -10,6 +10,16 @@ run to completion from this directory with no Android Studio involvement.
     ./gradlew assembleDebug        # app/build/outputs/apk/debug/app-debug.apk
     ./gradlew assembleRelease      # app/build/outputs/apk/release/app-release.apk
     ./gradlew testDebugUnitTest    # JVM unit + Room migration tests
+    ./gradlew lintDebug            # gated: fails on any finding not in the baseline
+
+`lintDebug` is a gate, not a report: `app/build.gradle.kts`'s `lint` block sets
+`warningsAsErrors` against `app/lint-baseline.xml`, so a new warning fails the
+build rather than being written to a file nobody opens (spec §7 R23 lost a real
+finding that way; R26 put the gate up). The baseline holds what existed the day
+it went up. Version-currency checks are demoted to informational instead of
+baselined, because they fire on calendar time rather than on the change under
+test. `.github/workflows/ci.yml` runs these same three tasks on push and pull
+request.
 
 Both variants are signed with the shared debug keystore at
 `keystores/my-shared-debug.keystore`, checked in deliberately so builds from any
