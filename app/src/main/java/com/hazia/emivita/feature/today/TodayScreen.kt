@@ -93,7 +93,15 @@ private data class TimelineNode(
 )
 
 private const val TODAY_CONSUMER_ID = "today-screen"
-private const val TODAY_WINDOW_DAYS = 2L // today + a peek into tomorrow, cheap relative to the cache's 28-day default
+// Today + a peek into tomorrow is all this screen renders. Declaring it is a
+// statement of Today's *minimum*, not a request for a cheaper projection: the
+// cache's window is the max of every registration and its own floor, so this
+// is a no-op while the floor stands at 28 and would only bite if the floor
+// ever dropped below 2. The comment here used to read "cheap relative to the
+// cache's 28-day default", which had it backwards -- the request replaced the
+// 28-day window for every other reader of the shared projection rather than
+// buying Today a cheaper slice of it. See docs/SPEC.md §7 R28.
+private const val TODAY_WINDOW_DAYS = 2L
 
 /**
  * Today's linked/timeline pattern (spec §6/§9 #5): a chronological rail of
