@@ -128,12 +128,37 @@ class DoseEventRepository(
         autoSyncManager.notifyChanged()
     }
 
-    /** Taken<->Skipped switch (spec §3/§9 #3), stock-correct: reapplies the
-     *  exact quantity [resolve] recorded at original resolution time rather
-     *  than blindly re-decrementing/incrementing, which could compound error
-     *  across repeated switches. A no-op for an event that was never tracked
-     *  (stockBefore == stockAfter, the -1.0 sentinel pair or a genuinely
-     *  zero-dose event -- both correctly mean "nothing to restore"). */
+    /** Taken<->Skipped switch (spec §3/§9 #3), stock-correct: applies the
+     *  quantity this dose actually consumed as a *relative* adjustment, taken
+     *  from the sentinel pair [resolve] recorded at resolution time.
+     *
+     *  It used to write that pair back as an absolute quantity --
+     *  `setStock(stockAfter)` for Taken, `setStock(stockBefore)` for Skipped --
+     *  which silently discarded every stock change made since the dose was
+     *  resolved. Correcting this morning's dose after the evening one had been
+     *  taken reverted the evening one; correcting a dose logged before a refill
+     *  destroyed the refill. See docs/SPEC.md §7 R27.
+     *
+     *  The rationale that absolute write carried -- that relative math "could
+     *  compound error across repeated switches" -- does not hold for a delta
+     *  read from the recorded pair. Taken->Skipped gives back exactly what
+     *  Skipped->Taken takes away, so any sequence of switches is reversible,
+     *  and the same-status guard below stops one direction being applied
+     *  twice. Compounding would only be a risk if the delta were recomputed
+     *  from the event's *current* doseAmount, which [editDoseAmount] can change
+     *  independently of the sentinels -- which is precisely why the delta comes
+     *  from stockBefore/stockAfter rather than from doseAmount.
+     *
+     *  The recorded pair is clamp-aware for free: [hypotheticalStockSentinels]
+     *  floors stockAfter at 0, so a dose taken against insufficient stock
+     *  records what was really consumed, and handing back exactly that is
+     *  right. A REFILLED event can never reach here -- the require below
+     *  admits only an already-resolved Taken/Skipped one -- so the difference
+     *  is never negative.
+     *
+     *  A no-op for an event that was never tracked (stockBefore == stockAfter,
+     *  the -1.0 sentinel pair or a genuinely zero-dose event -- both correctly
+     *  mean "nothing to restore"). */
     suspend fun switchStatus(doseEventId: Long, newStatus: DoseStatus) {
         require(newStatus == DoseStatus.TAKEN || newStatus == DoseStatus.SKIPPED) {
             "switchStatus is for Taken<->Skipped only, was $newStatus"
@@ -156,8 +181,12 @@ class DoseEventRepository(
             // wrongly shift an ON_RESOLVED interval reminder's anchor.
             doseEventDao.updateStatus(doseEventId, newStatus, event.resolvedAtEpochMillis ?: System.currentTimeMillis())
             if (event.stockBefore != event.stockAfter) {
-                val targetQuantity = if (newStatus == DoseStatus.TAKEN) event.stockAfter else event.stockBefore
-                medicineDao.setStock(event.medicineId, targetQuantity)
+                val consumed = event.stockBefore - event.stockAfter
+                if (newStatus == DoseStatus.TAKEN) {
+                    medicineDao.decrementStock(event.medicineId, consumed)
+                } else {
+                    medicineDao.incrementStock(event.medicineId, consumed)
+                }
             }
             true
         }

@@ -54,8 +54,11 @@ data class DoseEvent(
     // nullable Double, and "was stock tracked for this event" collapses to one
     // check (stockBefore != stockAfter) that also correctly covers old migrated
     // rows and un-tracked medicines. Written by resolve()/logAdhocDose()/
-    // logRefill(), and read back by switchStatus() to restore or reapply the
-    // exact recorded quantity rather than doing relative math (§9 #3).
+    // logRefill(), and read back by switchStatus(), which uses the pair as a
+    // *difference* -- how much this dose actually consumed -- and applies it
+    // relative to current stock. Writing the pair back as an absolute
+    // quantity is what §7 R27 fixed: it discarded every stock change made
+    // between the resolution and the switch (§9 #3).
     val stockBefore: Double = -1.0,
     val stockAfter: Double = -1.0,
     // Incremented per "nag" fire, capped at Reminder.repeatOnUnanswered.maxRepeats
