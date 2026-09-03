@@ -154,6 +154,43 @@ android {
             excludes += "/META-INF/{AL2.0,LGPL2.1}"
         }
     }
+
+    // The lint gate (spec §7 R26). Until this block existed, lintDebug
+    // reported and the build carried on regardless: R23 found a real
+    // DataExtractionRules warning that had sat unread in the report through
+    // an entire audit cycle. Errors already aborted by default; what was
+    // missing was any consequence for a *warning*, which is the severity the
+    // finding that got through actually had.
+    lint {
+        abortOnError = true
+        warningsAsErrors = true
+
+        // Records the findings that existed the day the gate went up, so the
+        // gate is about NEW findings rather than a demand to clear the
+        // backlog first. Regenerate deliberately with:
+        //     ./gradlew lintDebug -Dlint.baselines.continue=true
+        // after deleting the file -- never as a reflex to make a red build
+        // green, which is the one habit that turns a baseline into a way of
+        // never reading lint again.
+        baseline = file("lint-baseline.xml")
+
+        // Demoted rather than baselined, because these three fire on calendar
+        // time instead of on the diff: they mean "something newer exists
+        // upstream", so a month from now they would fail a build whose commit
+        // touched nothing related. A gate that goes red for reasons outside
+        // the change under test is a gate people switch off. Informational
+        // keeps them visible in the report -- which is the whole R23 lesson --
+        // without letting them block. OldTargetApi is here for the same
+        // reason and is already a documented decision: compileSdk 37 needs
+        // AGP 9.x, see the note above the dependency block.
+        informational += setOf("GradleDependency", "NewerVersionAvailable", "OldTargetApi")
+
+        // CI uploads these as artifacts; the XML is also what any future
+        // tooling would parse.
+        xmlReport = true
+        htmlReport = true
+        textReport = true
+    }
 }
 
 dependencies {
