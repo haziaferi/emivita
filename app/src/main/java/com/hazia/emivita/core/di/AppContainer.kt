@@ -130,7 +130,7 @@ class AppContainer(context: Context) {
     // ---- Repositories ---------------------------------------------------------
 
     val reminderRepository: ReminderRepository by lazy {
-        ReminderRepository(database.reminderDao(), schedulingCoordinator, autoSyncManager)
+        ReminderRepository(database, database.reminderDao(), schedulingCoordinator, autoSyncManager)
     }
 
     val doseGroupRepository: DoseGroupRepository by lazy {
