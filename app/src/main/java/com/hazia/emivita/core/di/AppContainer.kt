@@ -5,7 +5,6 @@ import com.hazia.emivita.core.data.backup.AutoSyncManager
 import com.hazia.emivita.core.data.backup.BackupRepository
 import com.hazia.emivita.core.data.db.EmivitaDatabase
 import com.hazia.emivita.core.data.repository.DoseEventRepository
-import com.hazia.emivita.core.data.repository.DoseGroupRepository
 import com.hazia.emivita.core.data.repository.MedicineRepository
 import com.hazia.emivita.core.data.repository.ProfileRepository
 import com.hazia.emivita.core.data.repository.ReminderRepository
@@ -131,10 +130,6 @@ class AppContainer(context: Context) {
 
     val reminderRepository: ReminderRepository by lazy {
         ReminderRepository(database, database.reminderDao(), schedulingCoordinator, autoSyncManager)
-    }
-
-    val doseGroupRepository: DoseGroupRepository by lazy {
-        DoseGroupRepository(database, database.doseGroupDao(), database.reminderDao())
     }
 
     val doseEventRepository: DoseEventRepository by lazy {
