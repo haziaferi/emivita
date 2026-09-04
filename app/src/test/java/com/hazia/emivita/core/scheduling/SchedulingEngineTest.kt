@@ -110,6 +110,7 @@ class SchedulingEngineTest {
         activeFromEpochDay: Long? = null,
         activeUntilEpochDay: Long? = null,
         createdAtEpochMillis: Long = 0L,
+        weekendModeOptIn: Boolean = false,
     ) = Reminder(
         id = id,
         medicineId = 1L,
@@ -119,6 +120,7 @@ class SchedulingEngineTest {
         enabled = enabled,
         activeFromEpochDay = activeFromEpochDay,
         activeUntilEpochDay = activeUntilEpochDay,
+        weekendModeOptIn = weekendModeOptIn,
         createdAtEpochMillis = createdAtEpochMillis,
     )
 
@@ -129,12 +131,14 @@ class SchedulingEngineTest {
         activeUntilEpochDay: Long? = null,
         enabled: Boolean = true,
         config: ReminderConfig.FixedTime = dailyAt8,
+        weekendModeOptIn: Boolean = false,
     ) = reminder(
         config = config,
         type = ReminderType.FIXED_TIME,
         enabled = enabled,
         activeFromEpochDay = activeFromEpochDay,
         activeUntilEpochDay = activeUntilEpochDay,
+        weekendModeOptIn = weekendModeOptIn,
     )
 
     // ---- Gates -------------------------------------------------------------
@@ -167,9 +171,45 @@ class SchedulingEngineTest {
     // ---- activeFrom / activeUntil clamp ------------------------------------
 
     @Test
-    fun `a candidate before the active range opens is clamped away`() = runTest {
+    fun `a range that has not opened yet defers to its first day rather than never firing`() = runTest {
+        // This used to assert null, pinning the bug rather than the rule: a
+        // future activeFrom means "not yet", not "never", and nothing in the
+        // app re-arms a reminder on the passage of time alone, so cancelling
+        // here cancelled it permanently. A course or taper -- which spec §4
+        // says this clamp is the whole mechanism for -- could only ever fire
+        // the segment that was already in range.
         val reminder = fixedTimeReminder(activeFromEpochDay = epochDay("2026-06-10"))
+        assertOccursAt("2026-06-10T08:00", engine().nextOccurrenceFor(reminder, at("2026-06-01T06:00")))
+    }
+
+    @Test
+    fun `a deferred range still respects the far end`() = runTest {
+        // Deferring forward must not walk past activeUntil: a range whose two
+        // bounds cannot both be satisfied has no occurrence at all.
+        val reminder = fixedTimeReminder(
+            activeFromEpochDay = epochDay("2026-06-10"),
+            activeUntilEpochDay = epochDay("2026-06-09"),
+        )
         assertNull(engine().nextOccurrenceFor(reminder, at("2026-06-01T06:00")))
+    }
+
+    @Test
+    fun `a projection walk covers a course that starts inside the window`() = runTest {
+        // The consumer-visible half of the same fix: Today, History and both
+        // widgets read occurrencesFor, which returned an empty list for every
+        // not-yet-started course.
+        val slots = engine().occurrencesFor(
+            fixedTimeReminder(
+                activeFromEpochDay = epochDay("2026-06-03"),
+                activeUntilEpochDay = epochDay("2026-06-05"),
+            ),
+            fromEpochMillis = at("2026-06-01T00:00"),
+            toEpochMillis = at("2026-06-30T00:00"),
+        )
+        assertEquals(
+            listOf("2026-06-03T08:00", "2026-06-04T08:00", "2026-06-05T08:00"),
+            slots.map { it.epochMillis.asLocal().toString() },
+        )
     }
 
     @Test
@@ -204,8 +244,47 @@ class SchedulingEngineTest {
         val reminder = fixedTimeReminder(
             config = ReminderConfig.FixedTime(hour = 23, minute = 0, dose = 1.0, repeatPattern = RepeatPattern.Daily),
             activeUntilEpochDay = epochDay("2026-06-06"),
+            weekendModeOptIn = true,
         )
         assertOccursAt("2026-06-07T06:00", engine.nextOccurrenceFor(reminder, at("2026-06-06T12:00")))
+    }
+
+    @Test
+    fun `weekend mode leaves a reminder that has not opted in alone`() = runTest {
+        // The gate R36 added. Same engine, same settings, same slot as the
+        // test above -- only the opt-in differs, so a regression that reverts
+        // to the old global behaviour fails here and nowhere else.
+        val engine = engine(
+            settings = fakeSettings(
+                WeekendMode.On(days = setOf(6, 7), start = LocalTime.of(22, 0), end = LocalTime.of(6, 0)),
+            ),
+        )
+        val reminder = fixedTimeReminder(
+            config = ReminderConfig.FixedTime(hour = 23, minute = 0, dose = 1.0, repeatPattern = RepeatPattern.Daily),
+        )
+        assertOccursAt("2026-06-06T23:00", engine.nextOccurrenceFor(reminder, at("2026-06-06T12:00")))
+    }
+
+    @Test
+    fun `an opted-in reminder is still untouched while the global toggle is off`() = runTest {
+        // Both switches are required, not either. The per-reminder flag says
+        // "shift me by the weekend window"; there is no window to shift by
+        // until the global side defines one.
+        val reminder = fixedTimeReminder(
+            config = ReminderConfig.FixedTime(hour = 23, minute = 0, dose = 1.0, repeatPattern = RepeatPattern.Daily),
+            weekendModeOptIn = true,
+        )
+        assertOccursAt("2026-06-06T23:00", engine().nextOccurrenceFor(reminder, at("2026-06-06T12:00")))
+    }
+
+    @Test
+    fun `a reminder that has not opted in never reads the weekend preferences`() = runTest {
+        // The cost half of the gate: readWeekendMode() is a fresh cold-flow
+        // collection per call, and the walk can call nextOccurrenceFor up to
+        // maxOccurrences times. Opting out should cost nothing, not one read.
+        val settings = fakeSettings()
+        engine(settings = settings).nextOccurrenceFor(fixedTimeReminder(), at("2026-06-01T06:00"))
+        verify(exactly = 0) { settings.weekendModeEnabled }
     }
 
     // ---- RepeatingInterval anchors -----------------------------------------
@@ -280,6 +359,29 @@ class SchedulingEngineTest {
         val dao = fakeDao(lastResolved = mapOf(PARENT_ID to doseEvent(resolvedAtEpochMillis = at("2026-06-01T09:15"))))
         val child = linkedReminder(IntervalStartBehavior.ON_RESOLVED, parentReminderId = PARENT_ID)
         assertOccursAt("2026-06-01T09:45", engine(dao = dao).nextOccurrenceFor(child, at("2026-06-01T06:00")))
+    }
+
+    @Test
+    fun `a child whose slot has already passed has no next occurrence`() = runTest {
+        // The anchor is the parent's *last* event, so a child's computed slot
+        // goes stale on its own once delayMinutes has elapsed. Returning it
+        // anyway broke nextOccurrenceFor's own at/after contract, and the two
+        // things that consume it: RealSchedulingCoordinator armed an alarm in
+        // the past (AlarmManager fires those immediately) on every reschedule
+        // after the child's dose was answered, and the shared projection kept
+        // publishing the stale slot until the parent fired again.
+        val dao = fakeDao(mostRecent = mapOf(PARENT_ID to doseEvent(scheduledEpochMillis = at("2026-06-01T08:00"))))
+        val child = linkedReminder(IntervalStartBehavior.ON_REMINDED, parentReminderId = PARENT_ID)
+        assertNull(engine(dao = dao).nextOccurrenceFor(child, at("2026-06-01T09:00")))
+    }
+
+    @Test
+    fun `a child whose slot is still ahead survives the notBefore floor`() = runTest {
+        // The boundary the guard above must not overshoot: exactly on the slot
+        // still counts as due, the same rule the fixed-time calculator uses.
+        val dao = fakeDao(mostRecent = mapOf(PARENT_ID to doseEvent(scheduledEpochMillis = at("2026-06-01T08:00"))))
+        val child = linkedReminder(IntervalStartBehavior.ON_REMINDED, parentReminderId = PARENT_ID)
+        assertOccursAt("2026-06-01T08:30", engine(dao = dao).nextOccurrenceFor(child, at("2026-06-01T08:30")))
     }
 
     @Test

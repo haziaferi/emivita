@@ -273,22 +273,50 @@ private fun defaultExportFileName(extension: String): String {
     return "emivita_history_$stamp.$extension"
 }
 
-/** Same taken/(taken+skipped) calc [AdherenceSummary] renders, as a plain
- *  string for the PDF report's subtitle line -- kept in sync by both reading
- *  from the same [HISTORY_LOOKBACK_DAYS] window, not by sharing code (the
- *  Composable version needs to skip rendering the whole summary card when
- *  total == 0; this one just needs a sentence either way). */
+/** Same calculation [AdherenceSummary] renders, as a plain string for the PDF
+ *  report's subtitle line -- kept in sync by both reading from the same
+ *  [HISTORY_LOOKBACK_DAYS] window and the same [adherenceCounts], not by
+ *  sharing layout. */
 private fun adherenceSubtitle(events: List<DoseEventWithMedicine>): String {
-    val taken = events.count { it.doseEvent.status == DoseStatus.TAKEN }
-    val skipped = events.count { it.doseEvent.status == DoseStatus.SKIPPED }
-    val total = taken + skipped
-    return if (total == 0) {
-        "Last $HISTORY_LOOKBACK_DAYS days"
-    } else {
-        val percent = (taken * 100) / total
-        "$percent% adherence -- $taken taken, $skipped skipped, last $HISTORY_LOOKBACK_DAYS days"
-    }
+    val counts = adherenceCounts(events)
+    if (counts.answered == 0 && counts.missed == 0) return "Last $HISTORY_LOOKBACK_DAYS days"
+    val lead = if (counts.answered == 0) "No doses answered" else "${counts.percent}% of answered doses taken"
+    return "$lead -- ${counts.taken} taken, ${counts.skipped} skipped, " +
+        "${counts.missed} missed, last $HISTORY_LOOKBACK_DAYS days"
 }
+
+/** Taken / (Taken + Skipped) over the visible window, with the missed count
+ *  carried alongside rather than dropped.
+ *
+ *  The percentage's denominator is unchanged -- it is the "did you take what
+ *  you meant to take" reading, where a deliberate Skip counts against you and
+ *  a dose that fired and was never answered is a different kind of event. What
+ *  changed is that the missed count no longer disappears on the way to the
+ *  screen. Reporting the ratio alone put two contradictory claims about the
+ *  same rows a few dp apart: [AdherenceChart] renders missed as its own series
+ *  and its doc comment ranks it explicitly as "worse than a deliberate Skip"
+ *  -- which is why it gets the reserved `error` colour -- while the headline
+ *  above it counted the Skip and ignored the miss. Ten taken and twenty missed
+ *  read as "100% adherence" over a chart that was two-thirds red.
+ *
+ *  Naming what the percentage is *of* is the other half: "100% adherence" is a
+ *  claim about a month, "100% of answered doses taken" is a claim about a
+ *  denominator the same card then prints. Whether missed doses belong *in* that
+ *  denominator is a product decision, deliberately not made here. */
+private data class AdherenceCounts(val taken: Int, val skipped: Int, val missed: Int) {
+    val answered: Int get() = taken + skipped
+    val percent: Int get() = if (answered == 0) 0 else (taken * 100) / answered
+}
+
+/** PENDING means "fired, never resolved" -- the same reading
+ *  [historyStatusLabel] gives it as "Missed" and [dailyAdherenceCounts] uses
+ *  for the chart's third series. REFILLED is a restock, not a dose, and is
+ *  excluded from all three counts. */
+private fun adherenceCounts(events: List<DoseEventWithMedicine>) = AdherenceCounts(
+    taken = events.count { it.doseEvent.status == DoseStatus.TAKEN },
+    skipped = events.count { it.doseEvent.status == DoseStatus.SKIPPED },
+    missed = events.count { it.doseEvent.status == DoseStatus.PENDING },
+)
 
 /** [DayAdherenceCounts] for every day in the visible [HISTORY_LOOKBACK_DAYS]
  *  window, oldest first -- including days with zero entries, so the chart's
@@ -321,16 +349,15 @@ private fun groupByDay(events: List<DoseEventWithMedicine>?, zone: ZoneId): List
         .sortedByDescending { it.date }
 }
 
-/** Taken / (Taken + Skipped) over the visible window -- refills and
- *  still-pending (missed) entries don't count toward adherence either way,
- *  matching the common "did you take what you meant to" definition. */
+/** See [adherenceCounts] for what this shows and what it deliberately does
+ *  not decide. */
 @Composable
 private fun AdherenceSummary(events: List<DoseEventWithMedicine>) {
-    val taken = events.count { it.doseEvent.status == DoseStatus.TAKEN }
-    val skipped = events.count { it.doseEvent.status == DoseStatus.SKIPPED }
-    val total = taken + skipped
-    if (total == 0) return
-    val percent = (taken * 100) / total
+    val counts = adherenceCounts(events)
+    // Was `if (taken + skipped == 0) return`, which hid the whole card for a
+    // window containing nothing but missed doses -- the one window whose
+    // summary matters most.
+    if (counts.answered == 0 && counts.missed == 0) return
 
     Surface(
         shape = RoundedCornerShape(14.dp),
@@ -338,9 +365,13 @@ private fun AdherenceSummary(events: List<DoseEventWithMedicine>) {
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
     ) {
         Column(Modifier.padding(14.dp)) {
-            Text("$percent% adherence", style = MaterialTheme.typography.titleMedium)
             Text(
-                "$taken taken, $skipped skipped, last $HISTORY_LOOKBACK_DAYS days",
+                if (counts.answered == 0) "No doses answered" else "${counts.percent}% of answered doses taken",
+                style = MaterialTheme.typography.titleMedium,
+            )
+            Text(
+                "${counts.taken} taken, ${counts.skipped} skipped, ${counts.missed} missed, " +
+                    "last $HISTORY_LOOKBACK_DAYS days",
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
             )

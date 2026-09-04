@@ -50,6 +50,18 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
 
+    testOptions {
+        // Stubbed android.* calls return 0/null instead of throwing "not
+        // mocked". Needed because the JVM test suite exercises classes that log
+        // through android.util.Log on their failure paths --
+        // OccurrenceProjectionCache's recompute guard is the one that matters:
+        // it exists so a bad row costs one pass instead of the loop, and it
+        // would itself have thrown, from inside the handler, in any test that
+        // reached it. Only the migration and repository tests run under
+        // Robolectric; the scheduling tests deliberately do not.
+        unitTests.isReturnDefaultValues = true
+    }
+
     buildFeatures {
         compose = true
     }
@@ -303,7 +315,18 @@ dependencies {
     // compiled with an incompatible version of Kotlin... binary version...
     // 2.3.0, expected... 2.1.0") -- confirmed by testing 2.10.1 directly
     // against this build, not assumed. 2.7.0 predates that jump.
-    implementation("com.kizitonwose.calendar:compose:2.7.0")
+    implementation("com.kizitonwose.calendar:compose:2.7.0") {
+        // ui-tooling is declared as an ordinary dependency here, not a
+        // debugImplementation, so it lands on releaseRuntimeClasspath and
+        // drags androidx.compose.ui.tooling.PreviewActivity -- exported, no
+        // permission -- into the release manifest. The project's own
+        // debugImplementation on ui-tooling (above) is correctly scoped and is
+        // the one that should govern. AndroidManifest.xml removes the activity
+        // from both variants; this keeps the artifact itself out of release.
+        // Nothing in this app calls into ui-tooling at runtime -- it is IDE
+        // tooling -- so excluding it is a no-op for behaviour.
+        exclude(group = "androidx.compose.ui", module = "ui-tooling")
+    }
 
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")

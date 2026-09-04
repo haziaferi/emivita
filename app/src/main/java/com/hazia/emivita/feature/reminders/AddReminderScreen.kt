@@ -127,6 +127,7 @@ fun AddReminderScreen(
                     medicineId, null, ReminderType.FIXED_TIME, config,
                     autoResolve = advanced.autoResolve, activeFromEpochDay = advanced.activeFromEpochDay,
                     activeUntilEpochDay = advanced.activeUntilEpochDay, repeatOnUnanswered = advanced.repeatOnUnanswered,
+                    weekendModeOptIn = advanced.weekendModeOptIn,
                 )
                 onDone()
             },
@@ -147,6 +148,7 @@ fun AddReminderScreen(
                     medicineId, null, ReminderType.REPEATING_INTERVAL, config,
                     autoResolve = advanced.autoResolve, activeFromEpochDay = advanced.activeFromEpochDay,
                     activeUntilEpochDay = advanced.activeUntilEpochDay, repeatOnUnanswered = advanced.repeatOnUnanswered,
+                    weekendModeOptIn = advanced.weekendModeOptIn,
                 )
                 onDone()
             },
@@ -170,6 +172,7 @@ fun AddReminderScreen(
                     medicineId, null, ReminderType.DAILY_WINDOW, config,
                     autoResolve = advanced.autoResolve, activeFromEpochDay = advanced.activeFromEpochDay,
                     activeUntilEpochDay = advanced.activeUntilEpochDay, repeatOnUnanswered = advanced.repeatOnUnanswered,
+                    weekendModeOptIn = advanced.weekendModeOptIn,
                 )
                 onDone()
             },
@@ -196,6 +199,7 @@ fun AddReminderScreen(
                     medicineId, null, ReminderType.LINKED_FOLLOWING, config, parentReminderId = parentId,
                     autoResolve = advanced.autoResolve, activeFromEpochDay = advanced.activeFromEpochDay,
                     activeUntilEpochDay = advanced.activeUntilEpochDay, repeatOnUnanswered = advanced.repeatOnUnanswered,
+                    weekendModeOptIn = advanced.weekendModeOptIn,
                 )
                 onDone()
             },
@@ -249,7 +253,7 @@ fun EditReminderScreen(
             onSave = { updated, advanced ->
                 reminderRepository.updateConfigAndAdvancedFields(
                     current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
-                    advanced.activeUntilEpochDay, advanced.repeatOnUnanswered,
+                    advanced.activeUntilEpochDay, advanced.repeatOnUnanswered, advanced.weekendModeOptIn,
                 )
                 onDone()
             },
@@ -264,7 +268,7 @@ fun EditReminderScreen(
             onSave = { updated, advanced ->
                 reminderRepository.updateConfigAndAdvancedFields(
                     current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
-                    advanced.activeUntilEpochDay, advanced.repeatOnUnanswered,
+                    advanced.activeUntilEpochDay, advanced.repeatOnUnanswered, advanced.weekendModeOptIn,
                 )
                 onDone()
             },
@@ -279,7 +283,7 @@ fun EditReminderScreen(
             onSave = { updated, advanced ->
                 reminderRepository.updateConfigAndAdvancedFields(
                     current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
-                    advanced.activeUntilEpochDay, advanced.repeatOnUnanswered,
+                    advanced.activeUntilEpochDay, advanced.repeatOnUnanswered, advanced.weekendModeOptIn,
                 )
                 onDone()
             },
@@ -312,7 +316,7 @@ fun EditReminderScreen(
             onSave = { parentId, updated, advanced ->
                 reminderRepository.updateConfigAndAdvancedFields(
                     current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
-                    advanced.activeUntilEpochDay, advanced.repeatOnUnanswered,
+                    advanced.activeUntilEpochDay, advanced.repeatOnUnanswered, advanced.weekendModeOptIn,
                     parentReminderId = parentId,
                 )
                 onDone()
@@ -403,6 +407,7 @@ private data class AdvancedFields(
     val activeFromEpochDay: Long?,
     val activeUntilEpochDay: Long?,
     val repeatOnUnanswered: RepeatConfig?,
+    val weekendModeOptIn: Boolean,
 )
 
 /** State holder for [AdvancedReminderFieldsSection] -- a plain class with
@@ -416,6 +421,7 @@ private class AdvancedReminderFieldsState(initialReminder: Reminder?) {
     var nagEnabled by mutableStateOf(initialReminder?.repeatOnUnanswered != null)
     var nagDelayMinutes by mutableStateOf(initialReminder?.repeatOnUnanswered?.delayMinutes?.toString() ?: "30")
     var nagMaxRepeats by mutableStateOf(initialReminder?.repeatOnUnanswered?.maxRepeats?.toString() ?: "3")
+    var weekendModeOptIn by mutableStateOf(initialReminder?.weekendModeOptIn ?: false)
 
     fun snapshot(): AdvancedFields = AdvancedFields(
         autoResolve = autoResolve,
@@ -426,6 +432,7 @@ private class AdvancedReminderFieldsState(initialReminder: Reminder?) {
         } else {
             null
         },
+        weekendModeOptIn = weekendModeOptIn,
     )
 }
 
@@ -514,6 +521,28 @@ private fun AdvancedReminderFieldsSection(state: AdvancedReminderFieldsState) {
                 modifier = Modifier.weight(1f),
             )
         }
+    }
+
+    Spacer(Modifier.height(12.dp))
+    Row(
+        Modifier.fillMaxWidth(),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text("Follow weekend mode", style = MaterialTheme.typography.bodyMedium)
+            // Says what it costs, not just what it does: this switch delays a
+            // dose, and which days and how late are set once in Settings >
+            // Weekend mode rather than per reminder. Off by default -- see
+            // Reminder.weekendModeOptIn and docs/SPEC.md §7 R36.
+            Text(
+                "Push this reminder to the end of the weekend window on weekend days. " +
+                    "Set the days and window in Settings.",
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(checked = state.weekendModeOptIn, onCheckedChange = { state.weekendModeOptIn = it })
     }
 }
 
@@ -687,10 +716,16 @@ private fun RepeatingIntervalFormBody(
     val doseValue = dose.toDoubleOrNull()
     val hoursValue = intervalHours.toDoubleOrNull()
     // Guard the value actually stored, not the raw hours: 0.01 passes
-    // `hoursValue > 0` but truncates to 0 minutes, which the calculator's
-    // require(intervalMinutes >= 1) then threw on -- after the row was
-    // already committed. Same shape as the Every-N-days guard above.
-    // See docs/SPEC.md §7 R23.
+    // `hoursValue > 0` but truncates to 0 minutes, which the calculator then
+    // rejects -- after the row would already have been committed. Same shape
+    // as the Every-N-days guard above. See docs/SPEC.md §7 R23.
+    //
+    // Still the right place for this even though the calculator no longer
+    // throws (R33 made it return null, matching the rest of the file): a zero
+    // that reaches the database yields a reminder that silently never fires,
+    // which is worse than a save button that stays disabled. The two guards
+    // are belt and braces, not a duplicate -- the calculator's exists because
+    // BackupRepository.restoreSnapshot bypasses this form entirely.
     val intervalMinutesValue = hoursValue?.let { (it * 60).toInt() }
 
     ReminderFormScaffold(
@@ -754,10 +789,16 @@ private fun DailyWindowFormBody(
     val doseValue = dose.toDoubleOrNull()
     val hoursValue = intervalHours.toDoubleOrNull()
     // Guard the value actually stored, not the raw hours: 0.01 passes
-    // `hoursValue > 0` but truncates to 0 minutes, which the calculator's
-    // require(intervalMinutes >= 1) then threw on -- after the row was
-    // already committed. Same shape as the Every-N-days guard above.
-    // See docs/SPEC.md §7 R23.
+    // `hoursValue > 0` but truncates to 0 minutes, which the calculator then
+    // rejects -- after the row would already have been committed. Same shape
+    // as the Every-N-days guard above. See docs/SPEC.md §7 R23.
+    //
+    // Still the right place for this even though the calculator no longer
+    // throws (R33 made it return null, matching the rest of the file): a zero
+    // that reaches the database yields a reminder that silently never fires,
+    // which is worse than a save button that stays disabled. The two guards
+    // are belt and braces, not a duplicate -- the calculator's exists because
+    // BackupRepository.restoreSnapshot bypasses this form entirely.
     val intervalMinutesValue = hoursValue?.let { (it * 60).toInt() }
 
     ReminderFormScaffold(

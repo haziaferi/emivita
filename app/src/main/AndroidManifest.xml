@@ -176,5 +176,41 @@
                 android:resource="@xml/stock_levels_widget_info" />
         </receiver>
 
+        <!-- androidx.compose.ui.tooling.PreviewActivity, removed from BOTH
+             variants.
+
+             Every component this app declares is exported="false" except the
+             LAUNCHER activity, and the data those components sit on is a
+             SQLCipher database whose key is wrapped by a non-exportable
+             AndroidKeyStore key. This one arrived exported="true", with no
+             android:permission, from androidx.compose.ui:ui-tooling, which
+             reaches the merged manifest twice: once from the
+             debugImplementation on it, and once transitively as an ordinary
+             (not debug-scoped) dependency of com.kizitonwose.calendar:compose,
+             which is why it was on releaseRuntimeClasspath too. The build file
+             now excludes that second copy; this removes the component itself.
+
+             Release was never the exposure: PreviewActivity's own onCreate
+             checks FLAG_DEBUGGABLE and finishes when it is unset, so there it
+             was dead weight. Debug is. It is built and installed on the same
+             device (see buildTypes.release's note on the shared signing
+             identity, which exists so the two install over each other),
+             android:debuggable is true there, and past that guard the activity
+             reads two intent string extras and reflectively loads and renders
+             the class they name, inside the process holding the unlocked
+             database handle. Any app on the device could start it.
+
+             The cost is Android Studio's "Deploy Preview to Device", which is
+             what launches this activity. The IDE's own preview pane does not
+             use it and is unaffected, as is the @Preview annotation and
+             everything else ui-tooling provides. If deploy-to-device is ever
+             wanted back, move this node to a src/release/AndroidManifest.xml:
+             that keeps the component out of the shipped variant while
+             restoring it in debug, and re-accepts the exposure above
+             knowingly rather than by omission. -->
+        <activity
+            android:name="androidx.compose.ui.tooling.PreviewActivity"
+            tools:node="remove" />
+
     </application>
 </manifest>

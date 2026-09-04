@@ -1,6 +1,7 @@
 package com.hazia.emivita.core.scheduling
 
 import com.hazia.emivita.core.data.dao.MedicineDao
+import android.util.Log
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -15,6 +16,8 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.util.concurrent.ConcurrentHashMap
+
+private const val TAG = "OccurrenceProjectionCache"
 
 private const val MINIMUM_WINDOW_DAYS = 28L
 private const val DEBOUNCE_MILLIS = 1_000L
@@ -106,7 +109,24 @@ class OccurrenceProjectionCache(
         scope.launch(dispatcher) {
             for (unused in trigger) {
                 delay(DEBOUNCE_MILLIS)
-                recompute()
+                // A failed pass must cost one pass, not the loop. An exception
+                // escaping here cancels this coroutine permanently -- the
+                // SupervisorJob in AppContainer keeps its siblings alive, it
+                // does not restart this one -- and every consumer of [state]
+                // then reads a snapshot that never updates again: Today,
+                // History/Calendar and both widgets freeze, and the alert
+                // evaluator that rides this pass stops firing low-stock and
+                // expiration notifications, all with no visible failure.
+                //
+                // That is the same "keep the pass alive" intent
+                // [COMPUTE_BUDGET_MILLIS] already encodes for a pathological
+                // config, extended to a throwing one. Nothing is expected to
+                // throw here -- the calculators return null for invalid configs
+                // rather than raising (see ReminderScheduling.kt) -- but this
+                // loop is the single point every projection consumer depends
+                // on, which is exactly the place not to rely on that holding.
+                runCatching { recompute() }
+                    .onFailure { Log.e(TAG, "Projection recompute failed -- keeping the last good state until the next trigger.", it) }
             }
         }
         scope.launch(dispatcher) {
