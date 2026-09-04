@@ -214,4 +214,33 @@ object Migrations {
             db.execSQL("ALTER TABLE medicines ADD COLUMN doseUnit TEXT")
         }
     }
+
+    /** v4 -> v5: adds `reminders.weekendModeOptIn`, turning weekend mode from
+     *  a global that shifted every reminder into a per-reminder opt-in
+     *  (spec §3, §7 R36). NOT NULL with a constant DEFAULT 0, which is the
+     *  other case plain `ALTER TABLE ADD COLUMN` handles -- SQLite only
+     *  rejects a non-constant default.
+     *
+     *  The `DEFAULT 0` is required twice over: ALTER TABLE cannot add a NOT
+     *  NULL column without one, and it has to match what Room generates for a
+     *  fresh install or the runtime schema validation fails on the first
+     *  launch after upgrade. Room does not infer a SQL default from a Kotlin
+     *  one, so `Reminder.weekendModeOptIn` carries an explicit
+     *  `@ColumnInfo(defaultValue = "0")` to make the two agree. Remove that
+     *  annotation and this migration breaks -- see the note on the field.
+     *
+     *  Defaulting existing rows to 0 rather than 1 is the deliberate half:
+     *  before this column, a reminder was shifted iff the global toggle was
+     *  on, so 1 would preserve each row's *observed* behaviour for anyone who
+     *  had that toggle on. It still defaults to 0. Weekend mode delays a dose,
+     *  and silently keeping every existing reminder opted in would carry a
+     *  blanket setting forward as if each reminder had individually asked for
+     *  it -- which is the thing this change exists to stop. Opting back in is
+     *  one switch per reminder in the Advanced section; a dose delayed because
+     *  a migration assumed consent is not recoverable the same way. */
+    val MIGRATION_4_5 = object : Migration(4, 5) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE reminders ADD COLUMN weekendModeOptIn INTEGER NOT NULL DEFAULT 0")
+        }
+    }
 }

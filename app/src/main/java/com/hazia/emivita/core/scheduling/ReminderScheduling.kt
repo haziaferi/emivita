@@ -129,8 +129,26 @@ fun nextRepeatingIntervalOccurrence(
     config: ReminderConfig.RepeatingInterval,
     notBeforeEpochMillis: Long,
     effectiveAnchorEpochMillis: Long,
-): NextOccurrence {
-    require(config.intervalMinutes >= 1) { "RepeatingInterval.intervalMinutes must be >= 1" }
+): NextOccurrence? {
+    // Null, not `require`, for the reason [matchingDateOnOrAfter] spells out
+    // above: R23 replaced exactly this guard in the EveryNDays and
+    // CyclicActivePause branches and left it standing in the two interval
+    // calculators, so one file ended up answering the same question -- what
+    // does an invalid config do? -- two opposite ways. The half that was fixed
+    // carries the argument that settles the other half: AddReminderScreen gates
+    // the field (see its own comment, which cites this require by name), but
+    // BackupRepository.restoreSnapshot writes reminder rows back with no config
+    // revalidation, so a corrupted backup is enough to commit a zero here.
+    //
+    // Where it threw is what made it matter. OccurrenceProjectionCache's
+    // recompute runs inside a `for (trigger)` loop, so an exception did not
+    // skip one reminder -- it cancelled the loop for the life of the process,
+    // silently freezing Today, History and both widgets and stopping every
+    // low-stock and expiration alert. SchedulingCoordinator.rescheduleAll()
+    // walks every enabled reminder at boot, so a throw there left each one
+    // after the bad row with no alarm at all. Null degrades to "this reminder
+    // has no next occurrence", which every caller already handles.
+    if (config.intervalMinutes < 1) return null
     val intervalMillis = config.intervalMinutes * 60_000L
     val elapsed = notBeforeEpochMillis - effectiveAnchorEpochMillis
     val stepsElapsed = if (elapsed <= 0) 0L else (elapsed + intervalMillis - 1) / intervalMillis
@@ -218,7 +236,10 @@ fun nextDailyWindowOccurrence(
     lastResolvedEpochMillis: Long?,
     zone: ZoneId,
 ): NextOccurrence? {
-    require(config.intervalMinutes >= 1) { "DailyWindow.intervalMinutes must be >= 1" }
+    // Same reasoning as nextRepeatingIntervalOccurrence's guard, and the same
+    // policy this function already applies one level down: windowSlotOnDay
+    // returns null for an end-before-start window rather than throwing.
+    if (config.intervalMinutes < 1) return null
     val notBefore = Instant.ofEpochMilli(notBeforeEpochMillis).atZone(zone)
     val lastResolved = lastResolvedEpochMillis?.let { Instant.ofEpochMilli(it).atZone(zone) }
     var day = notBefore.toLocalDate()

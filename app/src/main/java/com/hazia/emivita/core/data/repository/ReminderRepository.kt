@@ -47,8 +47,9 @@ class ReminderRepository(
      *  this class (see ReminderConfigCodec.kt for why that matters). */
     fun decodeConfig(reminder: Reminder): ReminderConfig = decodeReminderConfig(reminder.configJson)
 
-    /** [autoResolve]/[activeFromEpochDay]/[activeUntilEpochDay]/[repeatOnUnanswered]
-     *  (spec §3/§4's "five schema-driven gap resolutions") are cross-cutting --
+    /** [autoResolve]/[activeFromEpochDay]/[activeUntilEpochDay]/[repeatOnUnanswered]/
+     *  [weekendModeOptIn] (spec §3/§4's "five schema-driven gap resolutions",
+     *  plus §7 R36's weekend opt-in) are cross-cutting --
      *  independent of `type`/`config`, every dose-producing reminder type can
      *  opt into them. Defaulted so every pre-existing call site (LowStockAlert/
      *  ExpirationAlert, which don't produce DoseEvents and so can't
@@ -63,6 +64,7 @@ class ReminderRepository(
         activeFromEpochDay: Long? = null,
         activeUntilEpochDay: Long? = null,
         repeatOnUnanswered: RepeatConfig? = null,
+        weekendModeOptIn: Boolean = false,
     ): Long {
         val id = reminderDao.insert(
             Reminder(
@@ -75,6 +77,7 @@ class ReminderRepository(
                 activeFromEpochDay = activeFromEpochDay,
                 activeUntilEpochDay = activeUntilEpochDay,
                 repeatOnUnanswered = repeatOnUnanswered,
+                weekendModeOptIn = weekendModeOptIn,
                 createdAtEpochMillis = System.currentTimeMillis(),
             )
         )
@@ -107,6 +110,7 @@ class ReminderRepository(
         activeFromEpochDay: Long?,
         activeUntilEpochDay: Long?,
         repeatOnUnanswered: RepeatConfig?,
+        weekendModeOptIn: Boolean,
         parentReminderId: Long? = reminder.parentReminderId,
     ) {
         reminderDao.update(
@@ -117,6 +121,7 @@ class ReminderRepository(
                 activeFromEpochDay = activeFromEpochDay,
                 activeUntilEpochDay = activeUntilEpochDay,
                 repeatOnUnanswered = repeatOnUnanswered,
+                weekendModeOptIn = weekendModeOptIn,
             )
         )
         schedulingCoordinator.onReminderChanged(reminder.id, System.currentTimeMillis())
@@ -137,6 +142,7 @@ class ReminderRepository(
         activeFromEpochDay: Long?,
         activeUntilEpochDay: Long?,
         repeatOnUnanswered: RepeatConfig?,
+        weekendModeOptIn: Boolean,
     ) {
         reminderDao.update(
             reminder.copy(
@@ -144,6 +150,7 @@ class ReminderRepository(
                 activeFromEpochDay = activeFromEpochDay,
                 activeUntilEpochDay = activeUntilEpochDay,
                 repeatOnUnanswered = repeatOnUnanswered,
+                weekendModeOptIn = weekendModeOptIn,
             )
         )
         schedulingCoordinator.onReminderChanged(reminder.id, System.currentTimeMillis())

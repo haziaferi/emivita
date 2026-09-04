@@ -56,6 +56,7 @@ import com.hazia.emivita.core.data.entity.DoseStatus
 import com.hazia.emivita.core.data.entity.Medicine
 import com.hazia.emivita.core.data.repository.DoseEventRepository
 import com.hazia.emivita.core.data.repository.MedicineRepository
+import com.hazia.emivita.core.data.settings.SettingsRepository
 import com.hazia.emivita.core.scheduling.OccurrenceProjectionCache
 import com.hazia.emivita.core.scheduling.ProjectedOccurrence
 import com.hazia.emivita.core.scheduling.ProjectionState
@@ -126,6 +127,7 @@ fun TodayScreen(
     medicineRepository: MedicineRepository,
     doseEventRepository: DoseEventRepository,
     occurrenceProjectionCache: OccurrenceProjectionCache,
+    settingsRepository: SettingsRepository,
 ) {
     var showLogDose by remember { mutableStateOf(false) }
 
@@ -157,6 +159,27 @@ fun TodayScreen(
         occurrenceProjectionCache.state.collectLatest { value = it }
     }
 
+    // "Lock reminders until taken" (spec §3) resolves per medicine as
+    // `medicine.remindersLockedUntilTaken ?: this global default`, which is
+    // exactly what SettingsRepository.isLockedUntilTaken does. That function is
+    // suspend (it reads the DataStore flow), so it can't be called from
+    // composition -- the global half is collected once here and the per-medicine
+    // override applied synchronously at each row, giving the same answer.
+    //
+    // This screen used to offer an unconditional Skip chip, which made the
+    // whole feature decorative: the notification builder omits Skip when
+    // locked, ReminderActionReceiver rejects a stale one, and AlarmActivity
+    // does both -- and then Today, the app's start destination and the surface
+    // a user actually reaches for, let the same dose be dismissed in one tap.
+    // A safety gate with an unguarded door on the front page is not a gate.
+    //
+    // `false` as the initial value is the repository's own default for this
+    // key, not a placeholder, so the first frame can't briefly offer a Skip
+    // that the resolved value would forbid.
+    val lockedByDefault by produceState(initialValue = false) {
+        settingsRepository.lockRemindersUntilTakenByDefault.collectLatest { value = it }
+    }
+
     val nodes = remember(medicinesById, materializedToday, projectionState, startOfToday, startOfTomorrow) {
         buildTimeline(medicinesById, materializedToday, projectionState, startOfToday, startOfTomorrow)
     }
@@ -182,7 +205,7 @@ fun TodayScreen(
                 }
                 else -> LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)) {
                     items(nodes, key = { it.epochMillis }) { node ->
-                        TimelineNodeItem(node, doseEventRepository)
+                        TimelineNodeItem(node, doseEventRepository, lockedByDefault)
                         Spacer(Modifier.height(12.dp))
                     }
                 }
@@ -269,7 +292,11 @@ private fun buildTimeline(
 }
 
 @Composable
-private fun TimelineNodeItem(node: TimelineNode, doseEventRepository: DoseEventRepository) {
+private fun TimelineNodeItem(
+    node: TimelineNode,
+    doseEventRepository: DoseEventRepository,
+    lockedByDefault: Boolean,
+) {
     val time = remember(node.epochMillis) {
         Instant.ofEpochMilli(node.epochMillis).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
     }
@@ -291,6 +318,10 @@ private fun TimelineNodeItem(node: TimelineNode, doseEventRepository: DoseEventR
             node.entries.forEach { entry ->
                 TimelineEntryRow(
                     entry = entry,
+                    // Same resolution SettingsRepository.isLockedUntilTaken
+                    // performs: the per-medicine override wins, the global
+                    // default fills in when it is null.
+                    canSkip = !(entry.medicine.remindersLockedUntilTaken ?: lockedByDefault),
                     onResolve = { status ->
                         val id = entry.doseEventId ?: return@TimelineEntryRow
                         scope.launch { doseEventRepository.resolve(id, status) }
@@ -325,7 +356,12 @@ private fun TimelineNodeItem(node: TimelineNode, doseEventRepository: DoseEventR
 }
 
 @Composable
-private fun TimelineEntryRow(entry: TimelineEntry, onResolve: (DoseStatus) -> Unit, onClick: () -> Unit) {
+private fun TimelineEntryRow(
+    entry: TimelineEntry,
+    canSkip: Boolean,
+    onResolve: (DoseStatus) -> Unit,
+    onClick: () -> Unit,
+) {
     val accent = entry.medicine.color?.let { parseHexColor(it) } ?: NeutralMedicineAccent
     val muted = entry.status == TimelineStatus.UPCOMING
     val editable = entry.status == TimelineStatus.TAKEN || entry.status == TimelineStatus.SKIPPED
@@ -363,12 +399,19 @@ private fun TimelineEntryRow(entry: TimelineEntry, onResolve: (DoseStatus) -> Un
                         label = { Text("Take") },
                         leadingIcon = { Icon(Icons.Filled.Check, contentDescription = null) },
                     )
-                    Spacer(Modifier.width(6.dp))
-                    AssistChip(
-                        onClick = { onResolve(DoseStatus.SKIPPED) },
-                        label = { Text("Skip") },
-                        leadingIcon = { Icon(Icons.Filled.Close, contentDescription = null) },
-                    )
+                    // Omitted rather than disabled, matching how
+                    // ReminderNotificationBuilder handles the same lock: a
+                    // greyed-out control invites a tap and then explains
+                    // nothing, and "Take" is the only answer the lock allows
+                    // anyway. AlarmActivity does the same.
+                    if (canSkip) {
+                        Spacer(Modifier.width(6.dp))
+                        AssistChip(
+                            onClick = { onResolve(DoseStatus.SKIPPED) },
+                            label = { Text("Skip") },
+                            leadingIcon = { Icon(Icons.Filled.Close, contentDescription = null) },
+                        )
+                    }
                 }
                 else -> {}
             }

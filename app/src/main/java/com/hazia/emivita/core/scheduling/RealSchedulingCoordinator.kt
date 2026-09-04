@@ -1,10 +1,13 @@
 package com.hazia.emivita.core.scheduling
 
+import android.util.Log
 import com.hazia.emivita.core.data.config.IntervalStartBehavior
 import com.hazia.emivita.core.data.config.ReminderConfig
 import com.hazia.emivita.core.data.config.decodeReminderConfig
 import com.hazia.emivita.core.data.dao.ReminderDao
 import com.hazia.emivita.core.data.entity.Reminder
+
+private const val TAG = "RealSchedulingCoordinator"
 
 /**
  * Production [SchedulingCoordinator]: recomputes a reminder's next
@@ -53,7 +56,18 @@ class RealSchedulingCoordinator(
 
     override suspend fun rescheduleAll() {
         val now = System.currentTimeMillis()
-        reminderDao.getAllEnabled().forEach { reminder -> scheduleOrCancel(reminder, now) }
+        // Per-reminder, not per-batch. This is the boot and post-restore path,
+        // and AlarmManager has already forgotten everything by the time it
+        // runs, so one reminder that fails to reschedule must not take the
+        // rest of the list down with it -- the reminders after it in iteration
+        // order would simply have no alarm until the app was next opened, with
+        // nothing on screen to say so. Failing one is visible as a reminder
+        // that does not fire; failing the tail is indistinguishable from the
+        // app working.
+        reminderDao.getAllEnabled().forEach { reminder ->
+            runCatching { scheduleOrCancel(reminder, now) }
+                .onFailure { Log.e(TAG, "Could not reschedule reminder ${reminder.id} -- continuing with the rest.", it) }
+        }
     }
 
     private suspend fun rescheduleOne(reminderId: Long, notBeforeEpochMillis: Long) {

@@ -75,6 +75,12 @@ class SettingsRepository(context: Context) {
         prefs[Keys.SNOOZE_DURATION_MINUTES] ?: DEFAULT_SNOOZE_MINUTES.toInt()
     }
 
+    /** The master switch and, with the three keys below, the definition of
+     *  *what* the weekend is -- which days, and the start/end of the quiet
+     *  window. It no longer decides *which* reminders are shifted by it: that
+     *  is per reminder, on `Reminder.weekendModeOptIn`, and both have to be on
+     *  (spec §7 R36). A window is a property of the user's week; being willing
+     *  to wait is a property of one medicine. */
     val weekendModeEnabled: Flow<Boolean> = dataStore.data.map { prefs -> prefs[Keys.WEEKEND_MODE_ENABLED] ?: false }
 
     val weekendDays: Flow<Set<Int>> = dataStore.data.map { prefs ->
