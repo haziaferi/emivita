@@ -10,9 +10,12 @@ import com.hazia.emivita.core.data.config.ReminderConfig
 import com.hazia.emivita.core.data.config.decodeReminderConfig
 import com.hazia.emivita.core.data.entity.DoseEvent
 import com.hazia.emivita.core.data.entity.DoseStatus
+import com.hazia.emivita.core.data.entity.Medicine
 import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.entity.RepeatConfig
 import com.hazia.emivita.core.di.AppContainer
+import java.time.LocalDate
+import java.time.ZoneId
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
@@ -91,9 +94,11 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
         val config = decodeReminderConfig(reminder.configJson)
         val doseAmount = config.doseAmountOrNull()
         if (doseAmount == null) {
-            // LOW_STOCK_ALERT / EXPIRATION_ALERT are never materialized as
-            // dose events -- see SchedulingEngine.supportedTypes.
-            Log.i(TAG, "Reminder $reminderId is not a dose-producing type yet -- skipping.")
+            // LOW_STOCK_ALERT / EXPIRATION_ALERT. They are real scheduled
+            // reminders since spec §7 R37, but they never materialize a
+            // DoseEvent -- there is no dose -- so they get their own path
+            // rather than falling through this one.
+            handleAlertFire(reminder, medicine, config, container)
             return
         }
 
@@ -149,6 +154,62 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
         // materialized event) just changed. ON_RESOLVED children are the
         // other trigger point, in RealSchedulingCoordinator.onDoseResolved.
         cascadeRescheduleOnRemindedChildren(reminderId, container)
+    }
+
+    /**
+     * An alert reminder's alarm fired (spec §7 R37).
+     *
+     * The condition is re-checked against live data rather than trusted from
+     * scheduling time, because an alert alarm is armed for a *future* instant
+     * and the world moves in between: a low-stock alarm set for tomorrow
+     * morning is wrong if the user refills tonight, and
+     * SchedulingCoordinator.onMedicineChanged only re-arms alarms for changes
+     * this app performed. A restore, a clock change, or an alarm the OS
+     * delivers late can all land here with the condition no longer true. Cheap
+     * to verify, so it is verified.
+     *
+     * Always re-arms afterwards, whether or not it notified, and does so
+     * through the coordinator rather than computing anything here: the next
+     * firing depends on `lastAlertNotifiedEpochDay`, which the write below may
+     * have just moved, and the coordinator reads the row back.
+     */
+    private suspend fun handleAlertFire(
+        reminder: Reminder,
+        medicine: Medicine,
+        config: ReminderConfig,
+        container: AppContainer,
+    ) {
+        val todayEpochDay = LocalDate.now(ZoneId.systemDefault()).toEpochDay()
+        val notified = when (config) {
+            is ReminderConfig.LowStockAlert -> {
+                val stock = medicine.stockInfo
+                val stillLow = stock.unit != null && stock.quantity <= config.threshold
+                if (stillLow) container.alertNotificationBuilder.postLowStock(medicine, reminder)
+                stillLow
+            }
+
+            is ReminderConfig.ExpirationAlert -> {
+                val expiry = medicine.stockInfo.expirationDateEpochDay
+                val stillDue = expiry != null && todayEpochDay >= expiry - config.leadDays
+                if (stillDue) container.alertNotificationBuilder.postExpiration(medicine, reminder, expiry!!)
+                stillDue
+            }
+
+            else -> {
+                // doseAmountOrNull() returning null is what routed us here, and
+                // only the two alert configs do that. Kept explicit so a new
+                // non-dose config type has to come through this file.
+                Log.w(TAG, "Alert fire for reminder ${reminder.id} with a config that is neither alert type -- ignoring.")
+                false
+            }
+        }
+
+        if (notified) {
+            container.reminderRepository.markAlertNotified(reminder.id, todayEpochDay)
+        }
+        // +1 minute past this firing, the same idiom the dose path uses, so the
+        // calculator cannot hand back the slot that just fired.
+        container.schedulingCoordinator.onReminderChanged(reminder.id, System.currentTimeMillis() + 60_000L)
     }
 
     /** Nagging (spec §3/§4 `repeatOnUnanswered`), ported from medTimer's

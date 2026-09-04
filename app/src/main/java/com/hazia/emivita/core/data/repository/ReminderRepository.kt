@@ -173,6 +173,18 @@ class ReminderRepository(
         autoSyncManager.notifyChanged()
     }
 
+    /** Records that an alert reminder announced itself today (spec §7 R37).
+     *
+     *  Deliberately NOT routed through [schedulingCoordinator] or
+     *  [autoSyncManager] the way every other mutation here is. This column is
+     *  the alert calculators' own bookkeeping, not user data: the caller
+     *  (ReminderAlarmReceiver.handleAlertFire) re-arms the alarm itself
+     *  immediately afterwards, so notifying the coordinator here would
+     *  schedule twice, and a notification having been shown is not a change
+     *  worth waking the backup writer for. */
+    suspend fun markAlertNotified(reminderId: Long, epochDay: Long) =
+        reminderDao.updateLastAlertNotifiedEpochDay(reminderId, epochDay)
+
     suspend fun setEnabled(reminder: Reminder, enabled: Boolean) {
         reminderDao.update(reminder.copy(enabled = enabled))
         schedulingCoordinator.onReminderChanged(reminder.id, System.currentTimeMillis())

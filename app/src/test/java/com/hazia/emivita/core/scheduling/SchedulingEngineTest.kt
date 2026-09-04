@@ -6,8 +6,12 @@ import com.hazia.emivita.core.data.config.ReminderConfig
 import com.hazia.emivita.core.data.config.ReminderType
 import com.hazia.emivita.core.data.config.RepeatPattern
 import com.hazia.emivita.core.data.config.encodeReminderConfig
+import com.hazia.emivita.core.data.config.ExpirationTriggerFrequency
 import com.hazia.emivita.core.data.dao.DoseEventDao
+import com.hazia.emivita.core.data.dao.MedicineDao
 import com.hazia.emivita.core.data.entity.DoseEvent
+import com.hazia.emivita.core.data.entity.Medicine
+import com.hazia.emivita.core.data.entity.StockInfo
 import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.settings.SettingsRepository
 import io.mockk.coEvery
@@ -79,11 +83,37 @@ class SchedulingEngineTest {
             }
         }
 
+    /** Alert scheduling reads the medicine's stock and expiry (spec §7 R37),
+     *  so the engine now needs a MedicineDao. Defaults to "no such medicine",
+     *  which every dose-type test is indifferent to. */
+    private fun fakeMedicineDao(medicine: Medicine? = null): MedicineDao =
+        mockk<MedicineDao>().also { dao -> coEvery { dao.getById(any()) } returns medicine }
+
+    private fun medicine(
+        quantity: Double = 0.0,
+        unit: String? = null,
+        expirationDateEpochDay: Long? = null,
+    ) = Medicine(
+        id = 1L,
+        profileId = 1L,
+        name = "Test",
+        iconKey = "pill",
+        stockInfo = StockInfo(
+            quantity = quantity,
+            unit = unit,
+            expirationDateEpochDay = expirationDateEpochDay,
+        ),
+        sortOrder = 0.0,
+        createdAtEpochMillis = 0L,
+    )
+
     private fun engine(
         dao: DoseEventDao = fakeDao(),
         settings: SettingsRepository = fakeSettings(),
+        medicines: MedicineDao = fakeMedicineDao(),
     ) = SchedulingEngine(
         doseEventDao = dao,
+        medicineDao = medicines,
         settingsRepository = settings,
         zone = zone,
         nowEpochMillis = { at("2026-06-01T00:00") },
@@ -149,16 +179,114 @@ class SchedulingEngineTest {
         assertNull(next)
     }
 
+    // ---- Alert types (spec §7 R37) -----------------------------------------
+
+    private fun lowStockReminder(
+        triggerMode: LowStockTriggerMode,
+        threshold: Double = 5.0,
+        lastNotifiedEpochDay: Long? = null,
+    ) = reminder(
+        config = ReminderConfig.LowStockAlert(threshold, triggerMode, hour = 9, minute = 0),
+        type = ReminderType.LOW_STOCK_ALERT,
+    ).copy(lastAlertNotifiedEpochDay = lastNotifiedEpochDay)
+
+    private fun expirationReminder(
+        frequency: ExpirationTriggerFrequency,
+        leadDays: Int = 7,
+        lastNotifiedEpochDay: Long? = null,
+    ) = reminder(
+        config = ReminderConfig.ExpirationAlert(leadDays, frequency, hour = 9, minute = 0),
+        type = ReminderType.EXPIRATION_ALERT,
+    ).copy(lastAlertNotifiedEpochDay = lastNotifiedEpochDay)
+
     @Test
-    fun `an alert-type reminder is skipped rather than scheduled`() = runTest {
-        // LOW_STOCK_ALERT and EXPIRATION_ALERT deliberately have no
-        // next-occurrence chain -- LowStockExpirationAlertEvaluator handles
-        // them on the cache's own recompute pass instead.
-        val alert = reminder(
-            config = ReminderConfig.LowStockAlert(threshold = 5.0, triggerMode = LowStockTriggerMode.ONCE_WHEN_BELOW),
-            type = ReminderType.LOW_STOCK_ALERT,
+    fun `a daily low-stock alert below its threshold is scheduled`() = runTest {
+        // The whole point of R37: this used to assert null, because both alert
+        // types were excluded from supportedTypes and nothing drove them from
+        // a clock.
+        val engine = engine(medicines = fakeMedicineDao(medicine(quantity = 2.0, unit = "tablets")))
+        assertOccursAt(
+            "2026-06-01T09:00",
+            engine.nextOccurrenceFor(lowStockReminder(LowStockTriggerMode.DAILY_WHEN_BELOW), at("2026-06-01T06:00")),
         )
-        assertNull(engine().nextOccurrenceFor(alert, at("2026-06-01T06:00")))
+    }
+
+    @Test
+    fun `a daily low-stock alert already announced today waits for tomorrow`() = runTest {
+        val engine = engine(medicines = fakeMedicineDao(medicine(quantity = 2.0, unit = "tablets")))
+        val alert = lowStockReminder(LowStockTriggerMode.DAILY_WHEN_BELOW, lastNotifiedEpochDay = epochDay("2026-06-01"))
+        assertOccursAt("2026-06-02T09:00", engine.nextOccurrenceFor(alert, at("2026-06-01T06:00")))
+    }
+
+    @Test
+    fun `a low-stock alert above its threshold has nothing to arm`() = runTest {
+        val engine = engine(medicines = fakeMedicineDao(medicine(quantity = 50.0, unit = "tablets")))
+        assertNull(engine.nextOccurrenceFor(lowStockReminder(LowStockTriggerMode.DAILY_WHEN_BELOW), at("2026-06-01T06:00")))
+    }
+
+    @Test
+    fun `a low-stock alert on an untracked medicine has nothing to arm`() = runTest {
+        // unit == null is the app-wide "stock tracking is off" flag, so there
+        // is no threshold to be below however small the quantity reads.
+        val engine = engine(medicines = fakeMedicineDao(medicine(quantity = 0.0, unit = null)))
+        assertNull(engine.nextOccurrenceFor(lowStockReminder(LowStockTriggerMode.DAILY_WHEN_BELOW), at("2026-06-01T06:00")))
+    }
+
+    @Test
+    fun `once and always low-stock modes stay event-driven, not scheduled`() = runTest {
+        // Matches medTimer: OutOfStockScheduling returns null unless the mode
+        // is DAILY, and StockHandlingProcessor announces the other two inline
+        // the moment stock crosses. An alarm cannot express "the instant this
+        // changes"; LowStockExpirationAlertEvaluator still owns these.
+        val engine = engine(medicines = fakeMedicineDao(medicine(quantity = 2.0, unit = "tablets")))
+        assertNull(engine.nextOccurrenceFor(lowStockReminder(LowStockTriggerMode.ONCE_WHEN_BELOW), at("2026-06-01T06:00")))
+        assertNull(engine.nextOccurrenceFor(lowStockReminder(LowStockTriggerMode.ALWAYS_WHEN_BELOW), at("2026-06-01T06:00")))
+    }
+
+    @Test
+    fun `an expiration alert waits until its lead window opens`() = runTest {
+        // Expires 2026-06-20, 7 days lead, so the first alert is on 06-13 --
+        // not today, even though the reminder exists today.
+        val engine = engine(medicines = fakeMedicineDao(medicine(expirationDateEpochDay = epochDay("2026-06-20"))))
+        assertOccursAt(
+            "2026-06-13T09:00",
+            engine.nextOccurrenceFor(expirationReminder(ExpirationTriggerFrequency.DAILY), at("2026-06-01T06:00")),
+        )
+    }
+
+    @Test
+    fun `a daily expiration alert keeps firing past the expiry date`() = runTest {
+        // An expired medicine is more worth mentioning than one about to
+        // expire, not less.
+        val engine = engine(medicines = fakeMedicineDao(medicine(expirationDateEpochDay = epochDay("2026-05-01"))))
+        assertOccursAt(
+            "2026-06-01T09:00",
+            engine.nextOccurrenceFor(expirationReminder(ExpirationTriggerFrequency.DAILY), at("2026-06-01T06:00")),
+        )
+    }
+
+    @Test
+    fun `a once expiration alert that already fired is never scheduled again`() = runTest {
+        // Unlike low stock there is no restock to rearm from -- an expiry date
+        // does not un-pass.
+        val engine = engine(medicines = fakeMedicineDao(medicine(expirationDateEpochDay = epochDay("2026-06-05"))))
+        val alert = expirationReminder(ExpirationTriggerFrequency.ONCE, lastNotifiedEpochDay = epochDay("2026-05-30"))
+        assertNull(engine.nextOccurrenceFor(alert, at("2026-06-01T06:00")))
+    }
+
+    @Test
+    fun `an expiration alert on a medicine with no expiry date has nothing to arm`() = runTest {
+        val engine = engine(medicines = fakeMedicineDao(medicine(expirationDateEpochDay = null)))
+        assertNull(engine.nextOccurrenceFor(expirationReminder(ExpirationTriggerFrequency.DAILY), at("2026-06-01T06:00")))
+    }
+
+    @Test
+    fun `an alert whose slot has passed today rolls to tomorrow`() = runTest {
+        val engine = engine(medicines = fakeMedicineDao(medicine(quantity = 2.0, unit = "tablets")))
+        assertOccursAt(
+            "2026-06-02T09:00",
+            engine.nextOccurrenceFor(lowStockReminder(LowStockTriggerMode.DAILY_WHEN_BELOW), at("2026-06-01T18:00")),
+        )
     }
 
     @Test

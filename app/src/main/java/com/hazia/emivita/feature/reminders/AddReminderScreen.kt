@@ -92,10 +92,12 @@ private val reminderTypeOptions = listOf(
 
 /**
  * Type picker + the 6 sub-forms (spec §6/§9 items 1, 8, and 14).
- * LowStockAlert/ExpirationAlert don't get an AlarmManager occurrence the way
- * the others do (SchedulingEngine.supportedTypes excludes them on purpose)
- * -- they're evaluated by LowStockExpirationAlertEvaluator as part of
- * OccurrenceProjectionCache's own recompute pass instead. CyclicActivePause
+ * LowStockAlert/ExpirationAlert get a real AlarmManager occurrence like every
+ * other type as of spec §7 R37 -- which is why both their forms carry a time
+ * of day. Only low stock's ONCE/ALWAYS modes are still announced by
+ * LowStockExpirationAlertEvaluator on the projection cache's recompute pass,
+ * because those two mean "the moment it crosses" and an alarm cannot say that.
+ * CyclicActivePause
  * is a 4th RepeatPattern case inside Fixed Time's own form, not a top-level
  * type with a card of its own (R8, §7).
  */
@@ -858,6 +860,8 @@ private fun LowStockAlertFormBody(
 ) {
     var threshold by remember { mutableStateOf(formatDecimal(initial.threshold)) }
     var triggerMode by remember { mutableStateOf(initial.triggerMode) }
+    var hour by remember { mutableStateOf(initial.hour) }
+    var minute by remember { mutableStateOf(initial.minute) }
     val scope = rememberCoroutineScope()
     val thresholdValue = threshold.toDoubleOrNull()
 
@@ -867,7 +871,7 @@ private fun LowStockAlertFormBody(
         saveEnabled = thresholdValue != null && thresholdValue >= 0,
         onSave = {
             scope.launch {
-                onSave(ReminderConfig.LowStockAlert(thresholdValue ?: 0.0, triggerMode))
+                onSave(ReminderConfig.LowStockAlert(thresholdValue ?: 0.0, triggerMode, hour, minute))
             }
         },
         onCancel = onCancel,
@@ -896,6 +900,13 @@ private fun LowStockAlertFormBody(
                 Text("Every relevant change, while low", Modifier.clickable { triggerMode = LowStockTriggerMode.ALWAYS_WHEN_BELOW })
             }
         }
+
+        // Alert reminders carry a time of day since spec §7 R37 -- they are
+        // real scheduled reminders now, and something has to say when the
+        // alarm rings. Last in the form on purpose: the threshold or lead
+        // time is what the user came here to set; the hour is a detail with
+        // a sensible default.
+        TimeOfDayField("Alert at", hour, minute) { h, m -> hour = h; minute = m }
     }
 }
 
@@ -911,6 +922,8 @@ private fun ExpirationAlertFormBody(
 ) {
     var leadDays by remember { mutableStateOf(initial.leadDays.toString()) }
     var frequency by remember { mutableStateOf(initial.frequency) }
+    var hour by remember { mutableStateOf(initial.hour) }
+    var minute by remember { mutableStateOf(initial.minute) }
     val scope = rememberCoroutineScope()
     val leadDaysValue = leadDays.toIntOrNull()
 
@@ -920,7 +933,7 @@ private fun ExpirationAlertFormBody(
         saveEnabled = leadDaysValue != null && leadDaysValue >= 0,
         onSave = {
             scope.launch {
-                onSave(ReminderConfig.ExpirationAlert(leadDaysValue ?: 0, frequency))
+                onSave(ReminderConfig.ExpirationAlert(leadDaysValue ?: 0, frequency, hour, minute))
             }
         },
         onCancel = onCancel,
@@ -945,6 +958,10 @@ private fun ExpirationAlertFormBody(
                 Text("Once a day", Modifier.clickable { frequency = ExpirationTriggerFrequency.DAILY })
             }
         }
+
+        // See LowStockAlertFormBody's note: alert reminders own a real
+        // alarm since spec §7 R37, so they need a time to ring at.
+        TimeOfDayField("Alert at", hour, minute) { h, m -> hour = h; minute = m }
     }
 }
 
