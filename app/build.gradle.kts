@@ -157,7 +157,27 @@ android {
         debug {
             isDebuggable = true
             isMinifyEnabled = false
-            applicationIdSuffix = ".debug"
+            // No applicationIdSuffix, deliberately. The usual reason for one is
+            // to run debug and release side by side; here that is the thing to
+            // avoid. A suffix makes them two unrelated apps to Android -- two
+            // package names, two data directories, two sets of AndroidKeyStore
+            // aliases, two sets of alarms -- and this project is one app.
+            //
+            // It also broke two things that were written down as true. The
+            // archived baseline in dist/vc1/ exists, by its own MANIFEST, to be
+            // "an installed predecessor to upgrade from" so that a real in-place
+            // Room migration can be exercised; it is com.hazia.emivita, so a
+            // suffixed debug build could never upgrade it and the artifact's
+            // entire purpose was unreachable from the build anyone actually
+            // develops with. README.md's claim that both variants "can install
+            // over each other" was false for the same reason -- the shared
+            // signing identity is necessary for that and was never sufficient.
+            // Both are true now.
+            //
+            // The cost is that debug and release cannot be installed at once.
+            // That is the intended trade: they are one app, and the release
+            // variant is built for archiving and for verifying the minified
+            // build, not for running alongside. See docs/SPEC.md §7 R41.
         }
     }
 
