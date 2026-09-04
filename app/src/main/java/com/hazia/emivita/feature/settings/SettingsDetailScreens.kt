@@ -3,7 +3,9 @@ package com.hazia.emivita.feature.settings
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
+import android.content.pm.PackageManager
 import android.os.Build
+import android.os.PowerManager
 import android.provider.Settings
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -259,6 +261,7 @@ fun NotificationsAlertsScreen(onBack: () -> Unit) {
         NotificationTierRow("Alarm", "Full-screen alarm reminders for medicines that must not be skipped.")
 
         FullScreenAlarmAccessCard()
+        BatteryOptimizationCard()
 
         Spacer(Modifier.height(20.dp))
         Text(
@@ -334,6 +337,107 @@ private fun FullScreenAlarmAccessCard() {
             Spacer(Modifier.height(10.dp))
             Button(onClick = { context.startActivity(fullScreenIntentSettings(context)) }) {
                 Text("Allow full-screen alarms")
+            }
+        }
+    }
+}
+
+
+/**
+ * Warns when the OS is allowed to defer this app's alarms, and offers the way
+ * out (spec §7 R39).
+ *
+ * Measured, not assumed. On a OnePlus 9 Pro (OxygenOS, Android 14) with
+ * battery saver on, a reminder scheduled for 19:50 via
+ * `setExactAndAllowWhileIdle` — with `USE_EXACT_ALARM` held and
+ * `canScheduleExact()` returning true, so the strongest scheduling call the
+ * platform offers — arrived at about 19:55. `dumpsys alarm` showed the OS
+ * carrying a four-minute tolerance window on that firing and a **one hour**
+ * window on the next day's, with a `battery_saver` policy delta applied and
+ * OxygenOS's own app freezer having suspended the process. Everything the app
+ * can do at the AlarmManager layer was already being done; the remaining lever
+ * is the battery-optimization exemption, which only the user can grant.
+ *
+ * An app whose entire purpose is timely reminders should say so when it is
+ * being throttled rather than quietly arriving late, which is what it did
+ * before this card existed.
+ *
+ * **No new permission.** `isIgnoringBatteryOptimizations` is a plain query and
+ * `ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS` opens the system list, neither
+ * of which requires holding `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` — that one
+ * is only needed to pop the direct allow-this-app dialog. AndroidManifest.xml
+ * removed it on least-privilege grounds and it stays removed: the user takes
+ * the last step in Settings, which is one extra tap and keeps §1's permission
+ * posture intact.
+ *
+ * Re-read on ON_RESUME for the same reason [FullScreenAlarmAccessCard] does:
+ * this is a special-access settings screen and does not deliver a result.
+ */
+@Composable
+private fun BatteryOptimizationCard() {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    fun isExempt(): Boolean {
+        val power = context.getSystemService(Context.POWER_SERVICE) as? PowerManager ?: return true
+        return power.isIgnoringBatteryOptimizations(context.packageName)
+    }
+
+    var exempt by remember { mutableStateOf(isExempt()) }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                exempt = isExempt()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    if (exempt) return
+
+    val settingsIntent = remember { Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS) }
+    // Every device that reaches this app has the screen (it is standard from
+    // API 23 and minSdk is 30), but an OEM can remove it, and starting an
+    // unresolvable intent throws.
+    val resolvable = remember {
+        settingsIntent.resolveActivity(context.packageManager) != null ||
+            context.packageManager.queryIntentActivities(settingsIntent, PackageManager.MATCH_DEFAULT_ONLY).isNotEmpty()
+    }
+
+    Spacer(Modifier.height(16.dp))
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.errorContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Text(
+                "Reminders can arrive late",
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                "Battery optimisation lets the system hold this app's alarms back, so a dose can be " +
+                    "announced minutes after it was due — measured at about five on one phone, and the " +
+                    "system reserves the right to defer a daily reminder by up to an hour. Excluding " +
+                    "Emivita from optimisation is the only remaining way to stop that.",
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            if (resolvable) {
+                Spacer(Modifier.height(10.dp))
+                Button(onClick = { context.startActivity(settingsIntent) }) {
+                    Text("Open battery settings")
+                }
+                Spacer(Modifier.height(4.dp))
+                Text(
+                    "Find Emivita in the list and set it to not optimised.",
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
             }
         }
     }
