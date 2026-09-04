@@ -187,6 +187,14 @@ class OccurrenceProjectionCache(
             val medicineOccurrences = mutableListOf<NextOccurrence>()
             for (reminder in entry.reminders) {
                 if (!reminder.enabled) continue
+                // Dose-producing types only. Since spec §7 R37 the alert types
+                // are schedulable too, so occurrencesFor would happily return
+                // their next firing -- but an alert is not a dose: it would
+                // appear on Today's timeline as a zero-amount entry and be
+                // subtracted from the stock run-out walk below. They reach
+                // AlarmManager through SchedulingCoordinator like everything
+                // else; they just have nothing to project here.
+                if (reminder.type !in schedulingEngine.doseProducingTypes) continue
                 val forReminder = schedulingEngine.occurrencesFor(reminder, start, toEpochMillis, weekendMode = weekendMode)
                 medicineOccurrences += forReminder
                 forReminder.forEach { occurrence ->

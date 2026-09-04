@@ -1,6 +1,5 @@
 package com.hazia.emivita.core.scheduling
 
-import com.hazia.emivita.core.data.config.ExpirationTriggerFrequency
 import com.hazia.emivita.core.data.config.LowStockTriggerMode
 import com.hazia.emivita.core.data.config.ReminderConfig
 import com.hazia.emivita.core.data.config.decodeReminderConfig
@@ -13,17 +12,30 @@ import java.time.LocalDate
 import java.time.ZoneId
 
 /**
- * LowStockAlert/ExpirationAlert triggering (spec §3/§9 #8) -- evaluated as
- * the last step of [OccurrenceProjectionCache]'s recompute pass rather than
- * a separate periodic job, per spec: "No separate WorkManager polling job;
- * the cache's existing DB-change and alarm-fired triggers keep it current on
- * their own." Reuses the medicine+reminder snapshot the cache already
- * fetched for its own projection, so this adds no extra query.
+ * The *event-driven half* of low-stock alerting (spec §3/§9 #8, narrowed by
+ * §7 R37) -- evaluated as the last step of [OccurrenceProjectionCache]'s
+ * recompute pass, reusing the medicine+reminder snapshot the cache already
+ * fetched, so it adds no extra query.
+ *
+ * It used to be the *only* path for both alert types, on §9 #8's reasoning
+ * that "the cache's existing DB-change and alarm-fired triggers keep it
+ * current on their own". That holds for a condition a data change can create
+ * -- stock crossing a threshold, which only ever happens because something
+ * wrote to the database -- and not for one the calendar creates on its own.
+ * Since R37 both alert types are real scheduled reminders with real alarms,
+ * and this class keeps only the cases where "the instant it changes" beats
+ * "tomorrow morning": `ONCE_WHEN_BELOW` and `ALWAYS_WHEN_BELOW`.
+ *
+ * That is the same division medTimer draws, arrived at by reading it rather
+ * than by inference: `StockHandlingProcessor.checkForThreshold` fires ONCE and
+ * ALWAYS inline on every stock decrement, while `OutOfStockScheduling`
+ * schedules only DAILY and `ExpirationDateScheduling` schedules both of its
+ * modes.
  *
  * **Trigger-mode semantics** (not spelled out beyond the mode names in spec,
  * resolved here consistently with how the cache itself is triggered -- by
  * real data-changing events, not a clock):
- *  - `ALWAYS_WHEN_BELOW` / no `DAILY`-style gate for expiration: notify on
+ *  - `ALWAYS_WHEN_BELOW`: notify on
  *    every recompute this reminder is evaluated in while the condition
  *    holds. Bounded by real events (debounced at the cache's own 1s), not a
  *    timer -- it fires once per actual stock/reminder change while low,
@@ -32,16 +44,15 @@ import java.time.ZoneId
  *    write is itself a `reminders` change, so it re-triggered the very
  *    recompute that called this, and "bounded by real events" quietly
  *    became a 1s loop. See the comment at that write, and §7 R23.
- *  - `ONCE_WHEN_BELOW` / `ExpirationTriggerFrequency.ONCE`: notify the first
- *    time the condition is met, then go silent. LowStockAlert specifically
- *    rearms itself once stock rises back above threshold (a real restock),
- *    so re-crossing notifies again; ExpirationAlert has no such "resolved"
- *    state to rearm from, so ONCE really means once, ever, for that reminder.
- *  - `DAILY_WHEN_BELOW` / `ExpirationTriggerFrequency.DAILY`: at most one
- *    notification per calendar day while the condition holds.
+ *  - `ONCE_WHEN_BELOW`: notify the first time the condition is met, then go
+ *    silent, rearming once stock rises back above threshold (a real restock)
+ *    so a re-crossing notifies again.
+ *  - `DAILY_WHEN_BELOW`: not handled here at all -- see the branch below.
  *
- * [Reminder.lastAlertNotifiedEpochDay] is the one piece of state all three
- * modes share to implement this without a second table.
+ * [Reminder.lastAlertNotifiedEpochDay] is the one piece of state these modes
+ * share to implement this without a second table, and the alarm-driven
+ * calculators in ReminderScheduling.kt read the same column, so the restock
+ * rearm below re-arms the DAILY alarm too.
  */
 class LowStockExpirationAlertEvaluator(
     private val reminderDao: ReminderDao,
@@ -56,7 +67,11 @@ class LowStockExpirationAlertEvaluator(
                 if (!reminder.enabled) continue
                 when (val config = decodeReminderConfig(reminder.configJson)) {
                     is ReminderConfig.LowStockAlert -> evaluateLowStock(entry.medicine, reminder, config, todayEpochDay)
-                    is ReminderConfig.ExpirationAlert -> evaluateExpiration(entry.medicine, reminder, config, todayEpochDay)
+                    // Expiration is entirely alarm-driven since spec §7 R37.
+                    // It never had an event to ride: a medicine expiring in a
+                    // cupboard produces no database writes, so this evaluator
+                    // could only ever notice on the next unrelated change.
+                    is ReminderConfig.ExpirationAlert -> {}
                     else -> {} // FixedTime/RepeatingInterval/DailyWindow -- SchedulingEngine's concern, not this evaluator's
                 }
             }
@@ -77,7 +92,14 @@ class LowStockExpirationAlertEvaluator(
         val shouldNotify = when (config.triggerMode) {
             LowStockTriggerMode.ALWAYS_WHEN_BELOW -> true
             LowStockTriggerMode.ONCE_WHEN_BELOW -> reminder.lastAlertNotifiedEpochDay == null
-            LowStockTriggerMode.DAILY_WHEN_BELOW -> reminder.lastAlertNotifiedEpochDay == null || reminder.lastAlertNotifiedEpochDay < todayEpochDay
+            // Alarm-driven since spec §7 R37, and deliberately not *also*
+            // handled here: this evaluator runs on data changes, so firing
+            // DAILY from both paths would announce on every stock change as
+            // well as once a day, which is what ALWAYS already means. This is
+            // the same split medTimer draws -- StockHandlingProcessor fires
+            // ONCE and ALWAYS inline on a stock decrement, OutOfStockScheduling
+            // schedules only DAILY.
+            LowStockTriggerMode.DAILY_WHEN_BELOW -> false
         }
         if (!shouldNotify) return
 
@@ -92,20 +114,5 @@ class LowStockExpirationAlertEvaluator(
         if (reminder.lastAlertNotifiedEpochDay != todayEpochDay) {
             reminderDao.updateLastAlertNotifiedEpochDay(reminder.id, todayEpochDay)
         }
-    }
-
-    private suspend fun evaluateExpiration(medicine: Medicine, reminder: Reminder, config: ReminderConfig.ExpirationAlert, todayEpochDay: Long) {
-        val expirationEpochDay = medicine.stockInfo.expirationDateEpochDay ?: return
-        val isDue = todayEpochDay >= expirationEpochDay - config.leadDays
-        if (!isDue) return
-
-        val shouldNotify = when (config.frequency) {
-            ExpirationTriggerFrequency.ONCE -> reminder.lastAlertNotifiedEpochDay == null
-            ExpirationTriggerFrequency.DAILY -> reminder.lastAlertNotifiedEpochDay == null || reminder.lastAlertNotifiedEpochDay < todayEpochDay
-        }
-        if (!shouldNotify) return
-
-        notificationBuilder.postExpiration(medicine, reminder, expirationEpochDay)
-        reminderDao.updateLastAlertNotifiedEpochDay(reminder.id, todayEpochDay)
     }
 }

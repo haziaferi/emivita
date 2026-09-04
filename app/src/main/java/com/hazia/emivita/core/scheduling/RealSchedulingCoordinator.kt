@@ -3,6 +3,7 @@ package com.hazia.emivita.core.scheduling
 import android.util.Log
 import com.hazia.emivita.core.data.config.IntervalStartBehavior
 import com.hazia.emivita.core.data.config.ReminderConfig
+import com.hazia.emivita.core.data.config.ReminderType
 import com.hazia.emivita.core.data.config.decodeReminderConfig
 import com.hazia.emivita.core.data.dao.ReminderDao
 import com.hazia.emivita.core.data.entity.Reminder
@@ -53,6 +54,17 @@ class RealSchedulingCoordinator(
     }
 
     override suspend fun cancelNag(reminderId: Long) = alarmScheduler.cancelNag(reminderId)
+
+    override suspend fun onMedicineChanged(medicineId: Long) {
+        val now = System.currentTimeMillis()
+        reminderDao.getEnabledForMedicine(medicineId)
+            .filter { it.type == ReminderType.LOW_STOCK_ALERT || it.type == ReminderType.EXPIRATION_ALERT }
+            .forEach { reminder ->
+                // Per-reminder, same reasoning as rescheduleAll below.
+                runCatching { scheduleOrCancel(reminder, now) }
+                    .onFailure { Log.e(TAG, "Could not re-arm alert reminder ${reminder.id} -- continuing.", it) }
+            }
+    }
 
     override suspend fun rescheduleAll() {
         val now = System.currentTimeMillis()

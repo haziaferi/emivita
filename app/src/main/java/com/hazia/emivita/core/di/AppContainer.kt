@@ -76,10 +76,13 @@ class AppContainer(context: Context) {
     // so RealSchedulingCoordinator and the cache itself (both below, in this file)
     // are the only remaining consumers.
     private val schedulingEngine: SchedulingEngine by lazy {
-        SchedulingEngine(database.doseEventDao(), settingsRepository)
+        SchedulingEngine(database.doseEventDao(), database.medicineDao(), settingsRepository)
     }
 
-    private val alertNotificationBuilder: AlertNotificationBuilder by lazy {
+    // Public since spec §7 R37: ReminderAlarmReceiver posts alert
+    // notifications directly now that alert reminders own real alarms,
+    // rather than every alert going through the evaluator.
+    val alertNotificationBuilder: AlertNotificationBuilder by lazy {
         AlertNotificationBuilder(appContext)
     }
 

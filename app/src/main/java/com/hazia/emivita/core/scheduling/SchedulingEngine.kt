@@ -5,6 +5,7 @@ import com.hazia.emivita.core.data.config.ReminderConfig
 import com.hazia.emivita.core.data.config.ReminderType
 import com.hazia.emivita.core.data.config.decodeReminderConfig
 import com.hazia.emivita.core.data.dao.DoseEventDao
+import com.hazia.emivita.core.data.dao.MedicineDao
 import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.settings.SettingsRepository
 import kotlinx.coroutines.flow.first
@@ -26,21 +27,43 @@ import java.time.ZoneId
  */
 class SchedulingEngine(
     private val doseEventDao: DoseEventDao,
+    // LowStockAlert/ExpirationAlert schedule against live stock and expiry
+    // (spec §7 R37), the way medTimer's OutOfStockScheduling and
+    // ExpirationDateScheduling take the Medicine they belong to. A DAO, not
+    // MedicineRepository -- the repository depends on SchedulingCoordinator,
+    // which depends on this class, so the same cycle DoseEventDao is here to
+    // avoid applies unchanged.
+    private val medicineDao: MedicineDao,
     private val settingsRepository: SettingsRepository,
     private val zone: ZoneId = ZoneId.systemDefault(),
     private val nowEpochMillis: () -> Long = System::currentTimeMillis,
 ) {
-    /** Reminder types that have a next-occurrence chain at all.
-     *  LOW_STOCK_ALERT and EXPIRATION_ALERT are excluded on purpose -- they
-     *  need periodic re-evaluation against live stock/date data rather than a
-     *  fixed next occurrence, and are handled by
-     *  [LowStockExpirationAlertEvaluator] on the projection cache's own
-     *  recompute pass instead. */
-    val supportedTypes: Set<ReminderType> = setOf(
+    /** The types that materialize a DoseEvent when they fire. These are the
+     *  ones [OccurrenceProjectionCache] projects onto Today, History and the
+     *  widgets, and the only ones whose occurrences carry a real dose amount. */
+    val doseProducingTypes: Set<ReminderType> = setOf(
         ReminderType.FIXED_TIME,
         ReminderType.REPEATING_INTERVAL,
         ReminderType.DAILY_WINDOW,
         ReminderType.LINKED_FOLLOWING,
+    )
+
+    /** Reminder types that have a next-occurrence chain at all -- every type
+     *  that can be handed to [AlarmScheduler].
+     *
+     *  The two alert types used to be excluded, on the grounds that they
+     *  "need periodic re-evaluation against live stock/date data rather than a
+     *  fixed next occurrence". That was a description of the evaluator they
+     *  were given instead, not a property of the problem: medTimer schedules
+     *  both as ordinary reminder types (`SchedulingFactory` has a branch for
+     *  each, feeding `ReminderScheduler` and the same alarm chain as doses).
+     *  Excluding them meant nothing drove them from a clock, so an expiry
+     *  alert on a medicine with no dosing reminder -- a box in a cupboard,
+     *  which produces no database writes at all -- only fired at boot or when
+     *  the app happened to be opened. See docs/SPEC.md §7 R37. */
+    val supportedTypes: Set<ReminderType> = doseProducingTypes + setOf(
+        ReminderType.LOW_STOCK_ALERT,
+        ReminderType.EXPIRATION_ALERT,
     )
 
     /** Reads the weekend-mode preferences once, so a projection walk doesn't
@@ -246,11 +269,33 @@ class SchedulingEngine(
                 }
             }
 
-            // Unreachable given nextOccurrenceFor's supportedTypes guard; kept
-            // explicit (not `else ->`) so adding a 7th ReminderConfig case
-            // forces this file to be revisited instead of silently falling
-            // through.
-            is ReminderConfig.LowStockAlert, is ReminderConfig.ExpirationAlert -> null
+            // Both alert types read the medicine they belong to rather than
+            // dose history -- their condition is "is stock below the line" and
+            // "is the expiry date within lead time", neither of which any
+            // DoseEvent records. A missing medicine yields null rather than
+            // throwing: the FK makes it unreachable in a consistent database,
+            // and a restored backup is not guaranteed to be one.
+            is ReminderConfig.LowStockAlert -> nextLowStockAlertOccurrence(
+                config = config,
+                notBeforeEpochMillis = notBeforeEpochMillis,
+                stockQuantity = medicineDao.getById(reminder.medicineId)
+                    ?.stockInfo
+                    // unit == null is the app-wide "stock tracking is off for
+                    // this medicine" flag (see Medicine.doseUnit's comment on
+                    // why that nullability is load-bearing), and an untracked
+                    // medicine has no threshold to cross.
+                    ?.let { if (it.unit == null) null else it.quantity },
+                lastNotifiedEpochDay = reminder.lastAlertNotifiedEpochDay,
+                zone = zone,
+            )
+
+            is ReminderConfig.ExpirationAlert -> nextExpirationAlertOccurrence(
+                config = config,
+                notBeforeEpochMillis = notBeforeEpochMillis,
+                expirationEpochDay = medicineDao.getById(reminder.medicineId)?.stockInfo?.expirationDateEpochDay,
+                lastNotifiedEpochDay = reminder.lastAlertNotifiedEpochDay,
+                zone = zone,
+            )
         }
 
     /** Projects every occurrence of [reminder] in `[fromEpochMillis,

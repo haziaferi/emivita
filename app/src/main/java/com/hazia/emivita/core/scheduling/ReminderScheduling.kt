@@ -1,6 +1,8 @@
 package com.hazia.emivita.core.scheduling
 
+import com.hazia.emivita.core.data.config.ExpirationTriggerFrequency
 import com.hazia.emivita.core.data.config.IntervalStartBehavior
+import com.hazia.emivita.core.data.config.LowStockTriggerMode
 import com.hazia.emivita.core.data.config.ReminderConfig
 import com.hazia.emivita.core.data.config.RepeatPattern
 import com.hazia.emivita.core.data.config.isActiveOn
@@ -19,11 +21,14 @@ import java.time.ZonedDateTime
  * this reminder at or after `notBeforeEpochMillis`?" for one [ReminderConfig]
  * type. [SchedulingEngine] is what actually calls these against real data.
  *
- * Deliberately NOT covered here: [ReminderConfig.LowStockAlert] and
- * [ReminderConfig.ExpirationAlert]
- * need periodic re-evaluation against live stock/date data rather than a
- * fixed "next occurrence", so they don't fit this per-dose-chain shape --
- * they're a separate follow-up, not an oversight.
+ * [ReminderConfig.LowStockAlert] and [ReminderConfig.ExpirationAlert] are
+ * covered here too, as of spec §7 R37. This comment used to say they were
+ * "deliberately NOT covered" because they "need periodic re-evaluation against
+ * live stock/date data rather than a fixed next occurrence" -- which was true
+ * of the evaluator they were given instead, and false of the reference this
+ * file ports from: medTimer schedules both as ordinary reminder types. Their
+ * two calculators take the live stock quantity and expiry date as parameters,
+ * which keeps them as pure as the rest of the file.
  */
 
 // ---- FixedTime ----------------------------------------------------------
@@ -190,6 +195,117 @@ private fun windowSlotOnDay(
         candidate = candidate.plus(Duration.ofMillis(steps * intervalMillis))
     }
     return if (!candidate.isBefore(windowStart) && !candidate.isAfter(windowEnd)) candidate else null
+}
+
+// ---- LowStockAlert / ExpirationAlert --------------------------------------
+
+/**
+ * The next instant an alert reminder should fire, or null for "not due, and
+ * nothing to arm". Spec §7 R37, ported from medTimer's `OutOfStockScheduling`
+ * and `ExpirationDateScheduling`, which are ordinary [Scheduling]
+ * implementations feeding the same alarm chain as every dose reminder.
+ *
+ * Emivita differs from the reference in one mechanical respect: medTimer finds
+ * "the next day this has not already been announced on" by scanning reminder
+ * *events* (`SchedulingBase.getNextNotRemindedDay` walks 31 days calling
+ * `isRaisedOn`). Emivita already records the same fact as a single column,
+ * [com.hazia.emivita.core.data.entity.Reminder.lastAlertNotifiedEpochDay], so
+ * this takes it as a parameter instead of replaying history. Same answer,
+ * one comparison instead of a scan.
+ *
+ * [lastNotifiedEpochDay] is null for "never announced" -- and, for low stock
+ * specifically, is reset to null when stock rises back above the threshold, so
+ * a restock genuinely re-arms a ONCE alert. See LowStockExpirationAlertEvaluator.
+ */
+private fun nextAlertSlot(
+    earliestEpochDay: Long,
+    hour: Int,
+    minute: Int,
+    notBeforeEpochMillis: Long,
+    zone: ZoneId,
+): NextOccurrence? {
+    if (hour !in 0..23 || minute !in 0..59) return null // same degrade-don't-throw policy as the calculators above
+    val notBefore = Instant.ofEpochMilli(notBeforeEpochMillis).atZone(zone)
+    var day = maxOf(earliestEpochDay, notBefore.toLocalDate().toEpochDay())
+    var slot = LocalDate.ofEpochDay(day).atTime(hour, minute).atZone(zone)
+    if (slot.isBefore(notBefore)) {
+        // Today's slot has already passed -- the next one is tomorrow's. Only
+        // ever one step: the slot recurs daily, so day+1 cannot also be behind
+        // a floor that day was only just behind.
+        day += 1
+        slot = LocalDate.ofEpochDay(day).atTime(hour, minute).atZone(zone)
+    }
+    // doseAmount 0.0: an alert is not a dose. Nothing materializes a DoseEvent
+    // from it (ReminderAlarmReceiver routes alert fires to their own branch),
+    // and OccurrenceProjectionCache projects only dose-producing types, so this
+    // value is never summed against stock or rendered on a timeline.
+    return NextOccurrence(slot.toInstant().toEpochMilli(), 0.0)
+}
+
+/**
+ * Next firing of a [ReminderConfig.LowStockAlert].
+ *
+ * Only `DAILY_WHEN_BELOW` is scheduled, which is exactly medTimer's rule --
+ * `OutOfStockScheduling.getNextScheduledTime` returns null unless the type is
+ * DAILY. `ONCE_WHEN_BELOW` and `ALWAYS_WHEN_BELOW` are announced at the moment
+ * stock actually crosses the threshold, the way medTimer's
+ * `StockHandlingProcessor.checkForThreshold` does it inline on every stock
+ * decrement; an alarm cannot express "the instant this changes", and waiting
+ * until tomorrow morning to mention that a medicine just ran out would be
+ * worse than the event-driven path those two already have.
+ *
+ * [stockQuantity] is null when the medicine has stock tracking off (no unit
+ * set), which is the app-wide meaning of that state and is not an alert.
+ */
+fun nextLowStockAlertOccurrence(
+    config: ReminderConfig.LowStockAlert,
+    notBeforeEpochMillis: Long,
+    stockQuantity: Double?,
+    lastNotifiedEpochDay: Long?,
+    zone: ZoneId,
+): NextOccurrence? {
+    if (config.triggerMode != LowStockTriggerMode.DAILY_WHEN_BELOW) return null
+    if (stockQuantity == null || stockQuantity > config.threshold) return null
+    // Already announced today -- the next one is tomorrow at the earliest.
+    val earliest = lastNotifiedEpochDay?.plus(1) ?: Long.MIN_VALUE
+    return nextAlertSlot(earliest, config.hour, config.minute, notBeforeEpochMillis, zone)
+}
+
+/**
+ * Next firing of a [ReminderConfig.ExpirationAlert]. Unlike low stock, *both*
+ * modes are scheduled -- matching medTimer, where `ExpirationDateScheduling`
+ * handles ONCE and DAILY alike. There is no event to hang an expiry on: a
+ * medicine sitting in a cupboard produces no writes, which is precisely why
+ * this type could not survive as an evaluator riding data changes.
+ *
+ * [expirationEpochDay] null means the medicine has no expiry recorded, which
+ * is not an alert. The alert opens on `expiration - leadDays` and, for DAILY,
+ * keeps firing past the expiry date -- an expired medicine is more worth
+ * mentioning than one about to expire, not less.
+ */
+fun nextExpirationAlertOccurrence(
+    config: ReminderConfig.ExpirationAlert,
+    notBeforeEpochMillis: Long,
+    expirationEpochDay: Long?,
+    lastNotifiedEpochDay: Long?,
+    zone: ZoneId,
+): NextOccurrence? {
+    if (expirationEpochDay == null) return null
+    if (config.leadDays < 0) return null // degrade rather than schedule nonsense; UI gates this too
+    val opensOnEpochDay = expirationEpochDay - config.leadDays
+
+    val earliest = when (config.frequency) {
+        // Once really means once: announced already, never again for this
+        // reminder. Unlike low stock there is no "resolved" state to re-arm
+        // from -- an expiry date does not un-pass.
+        ExpirationTriggerFrequency.ONCE -> {
+            if (lastNotifiedEpochDay != null) return null
+            opensOnEpochDay
+        }
+        ExpirationTriggerFrequency.DAILY ->
+            maxOf(opensOnEpochDay, lastNotifiedEpochDay?.plus(1) ?: Long.MIN_VALUE)
+    }
+    return nextAlertSlot(earliest, config.hour, config.minute, notBeforeEpochMillis, zone)
 }
 
 // ---- Shared helpers for the alarm-fired path ------------------------------

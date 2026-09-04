@@ -120,6 +120,13 @@ class DoseEventRepository(
             schedulingCoordinator.cancelNag(it)
         }
 
+        // An alert reminder's next firing is computed from this medicine's
+        // stock and expiry, so a change to either can move, cancel or create
+        // its alarm with nothing about the reminder row itself having
+        // changed -- and the projection cache, which is what invalidate()
+        // below drives, does not touch AlarmManager. Spec §7 R37.
+        schedulingCoordinator.onMedicineChanged(resolvedEvent.medicineId)
+
         // Explicit invalidation channel (spec §9 #4) -- a dose resolution needs
         // the projection cache's stock run-out date recomputed regardless of
         // whether the stock write above happens to also trip the cache's
@@ -169,8 +176,10 @@ class DoseEventRepository(
         // second switchStatus()/resolve() call that commits in the gap
         // between an outside read and this write would apply a target
         // quantity computed from an already-stale stockBefore/stockAfter pair.
+        var switchedMedicineId = -1L
         val switched = database.withTransaction {
             val event = doseEventDao.getById(doseEventId) ?: error("No DoseEvent with id=$doseEventId")
+            switchedMedicineId = event.medicineId
             require(event.status == DoseStatus.TAKEN || event.status == DoseStatus.SKIPPED) {
                 "switchStatus needs an already-resolved event, was ${event.status}"
             }
@@ -192,6 +201,12 @@ class DoseEventRepository(
         }
         if (!switched) return
 
+        // An alert reminder's next firing is computed from this medicine's
+        // stock and expiry, so a change to either can move, cancel or create
+        // its alarm with nothing about the reminder row itself having
+        // changed -- and the projection cache, which is what invalidate()
+        // below drives, does not touch AlarmManager. Spec §7 R37.
+        schedulingCoordinator.onMedicineChanged(switchedMedicineId)
         occurrenceProjectionCache.invalidate()
         autoSyncManager.notifyChanged()
     }
@@ -239,6 +254,12 @@ class DoseEventRepository(
                 ).withStockSentinels(medicineId, decrease = doseAmount),
             )
         }
+        // An alert reminder's next firing is computed from this medicine's
+        // stock and expiry, so a change to either can move, cancel or create
+        // its alarm with nothing about the reminder row itself having
+        // changed -- and the projection cache, which is what invalidate()
+        // below drives, does not touch AlarmManager. Spec §7 R37.
+        schedulingCoordinator.onMedicineChanged(medicineId)
         occurrenceProjectionCache.invalidate()
         autoSyncManager.notifyChanged()
         return id
@@ -263,6 +284,12 @@ class DoseEventRepository(
                 ).withStockSentinels(medicineId, increase = refillAmount),
             )
         }
+        // An alert reminder's next firing is computed from this medicine's
+        // stock and expiry, so a change to either can move, cancel or create
+        // its alarm with nothing about the reminder row itself having
+        // changed -- and the projection cache, which is what invalidate()
+        // below drives, does not touch AlarmManager. Spec §7 R37.
+        schedulingCoordinator.onMedicineChanged(medicineId)
         occurrenceProjectionCache.invalidate()
         autoSyncManager.notifyChanged()
         return id

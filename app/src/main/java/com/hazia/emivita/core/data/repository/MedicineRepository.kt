@@ -37,8 +37,13 @@ class MedicineRepository(
     suspend fun create(medicine: Medicine): Long =
         medicineDao.insert(medicine).also { autoSyncManager.notifyChanged() }
 
+    /** Editing a medicine can change its stock quantity or expiry date, both
+     *  of which are inputs to alert-reminder scheduling (spec §7 R37), so this
+     *  re-arms that medicine's alert alarms. The reminder rows are untouched,
+     *  so nothing else would. */
     suspend fun update(medicine: Medicine) {
         medicineDao.update(medicine)
+        schedulingCoordinator.onMedicineChanged(medicine.id)
         autoSyncManager.notifyChanged()
     }
 
