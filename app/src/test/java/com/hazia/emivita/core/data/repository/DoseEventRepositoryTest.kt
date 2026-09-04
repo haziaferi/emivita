@@ -110,6 +110,87 @@ class DoseEventRepositoryTest {
     private suspend fun stockOf(medicineId: Long): Double =
         database.medicineDao().getById(medicineId)!!.stockInfo.quantity
 
+    // ---- Correcting a missed dose (spec §7 R46) ----------------------------
+
+    private suspend fun seedPendingEventAt(reminderId: Long, medicineId: Long, scheduledEpochMillis: Long): Long =
+        database.doseEventDao().insert(
+            DoseEvent(
+                reminderId = reminderId,
+                medicineId = medicineId,
+                scheduledEpochMillis = scheduledEpochMillis,
+                doseAmount = 2.0,
+                createdAtEpochMillis = 0,
+            )
+        )
+
+    @Test
+    fun `resolving retroactively records the time given, not now`() = runTest {
+        // The whole point of the parameter. A dose taken on Tuesday and only
+        // recorded on Friday happened on Tuesday, and the History this app
+        // exists to hand a clinician should say so.
+        val medicineId = seedMedicineWithStock(10.0)
+        val reminderId = seedReminder(medicineId)
+        val tuesday = 1_700_000_000_000L
+        val eventId = seedPendingEventAt(reminderId, medicineId, tuesday)
+
+        repository.resolve(eventId, DoseStatus.TAKEN, resolvedAtEpochMillis = tuesday)
+
+        val stored = database.doseEventDao().getById(eventId)!!
+        assertEquals(DoseStatus.TAKEN, stored.status)
+        assertEquals(tuesday, stored.resolvedAtEpochMillis)
+        // Stock still moves: the pill left the bottle when it was taken, so the
+        // count has been one dose too high ever since and correcting the record
+        // is what brings it back in line.
+        assertEquals(8.0, stockOf(medicineId), 0.001)
+    }
+
+    @Test
+    fun `a backdated correction does not become the ON_RESOLVED anchor over a newer dose`() = runTest {
+        // The hazard that made this feature worth thinking about rather than
+        // just unlocking the UI. DoseEventDao.getLastResolved picks a
+        // reminder's ON_RESOLVED anchor with ORDER BY resolvedAtEpochMillis
+        // DESC. Had the correction stamped "now", tidying up last Tuesday's
+        // missed dose on Friday would have silently re-anchored a live interval
+        // reminder to Friday. Recording the truthful time is what makes it safe
+        // -- so this asserts the anchor, not just the row.
+        val medicineId = seedMedicineWithStock(10.0)
+        val reminderId = seedReminder(medicineId)
+        val tuesday = 1_700_000_000_000L
+        val thursday = tuesday + 2 * 24 * 60 * 60 * 1000L
+
+        val newer = seedPendingEventAt(reminderId, medicineId, thursday)
+        repository.resolve(newer, DoseStatus.TAKEN, resolvedAtEpochMillis = thursday)
+
+        val missed = seedPendingEventAt(reminderId, medicineId, tuesday)
+        repository.resolve(missed, DoseStatus.TAKEN, resolvedAtEpochMillis = tuesday)
+
+        val anchor = database.doseEventDao().getLastResolved(reminderId)!!
+        assertEquals(
+            "the anchor must stay on the genuinely most recent dose, not the one corrected last",
+            thursday,
+            anchor.resolvedAtEpochMillis,
+        )
+    }
+
+    @Test
+    fun `a correction newer than everything else does become the anchor`() = runTest {
+        // The other half, so the test above cannot pass by the anchor simply
+        // ignoring corrections. When the corrected dose really is the most
+        // recent one taken, that is exactly what the anchor means.
+        val medicineId = seedMedicineWithStock(10.0)
+        val reminderId = seedReminder(medicineId)
+        val monday = 1_700_000_000_000L
+        val wednesday = monday + 2 * 24 * 60 * 60 * 1000L
+
+        val older = seedPendingEventAt(reminderId, medicineId, monday)
+        repository.resolve(older, DoseStatus.TAKEN, resolvedAtEpochMillis = monday)
+
+        val missed = seedPendingEventAt(reminderId, medicineId, wednesday)
+        repository.resolve(missed, DoseStatus.TAKEN, resolvedAtEpochMillis = wednesday)
+
+        assertEquals(wednesday, database.doseEventDao().getLastResolved(reminderId)!!.resolvedAtEpochMillis)
+    }
+
     @Test
     fun `resolve TAKEN decrements stock and notifies the scheduling coordinator`() = runTest {
         val medicineId = seedMedicineWithStock(10.0)
