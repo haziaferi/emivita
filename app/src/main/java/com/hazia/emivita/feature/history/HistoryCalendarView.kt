@@ -168,7 +168,7 @@ private fun CalendarSelectedDayPanel(
                 )
                 entries.forEach { row ->
                     HistoryEntryRow(row, onClick = {
-                        if (row.doseEvent.status == DoseStatus.TAKEN || row.doseEvent.status == DoseStatus.SKIPPED) onEntryClick(row)
+                        if (row.doseEvent.status != DoseStatus.REFILLED) onEntryClick(row) // §7 R46: a missed dose is correctable too
                     })
                     Spacer(Modifier.height(8.dp))
                 }
