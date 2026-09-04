@@ -23,12 +23,31 @@ import androidx.compose.ui.graphics.Color
  * the base color, the same rule section 6's own selected/active state-token
  * formula already uses.
  *
- * Error itself is also computed, not an Appendix A hex: section 6's
- * semantic-state-token table defines it as "Accent hue +150-165 degrees
- * (compound/near-complementary), S60/L45." This file uses +158 degrees,
- * picked as a single fixed value inside that range so all 8 palettes are
- * computed consistently; retune the constant below if a different point in
- * the range is preferred.
+ * Error is a FIXED red -- #B8322E, one value shared by all 8 palettes, with
+ * white as its onError (5.97:1, against 3.52:1 for black) -- and is
+ * deliberately NOT computed from the accent (spec section 7 R42).
+ *
+ * It used to follow section 6's semantic-state-token rule, "Accent hue
+ * +150-165 degrees (compound/near-complementary), S60/L45", implemented at
+ * +158 degrees. That rule is right for the three accent roles and wrong for
+ * this one, because a hue rotated to stay in harmony with the accent cannot
+ * also carry the meaning "something is wrong". Rotating each palette's accent
+ * produced, across the eight: teal, cyan, magenta, blue -- and green in four
+ * of them. This colour is what AdherenceChart paints its `missed` series with,
+ * and what R34's own doc comment calls "the app's reserved alarm-adjacent
+ * color", so a missed medication dose was rendering green in half the
+ * palettes.
+ *
+ * The spec had already recorded the rule failing once: section 7 T4 notes it
+ * "has no hue to rotate from against Neutral's fully-desaturated Accent". Two
+ * independent failures of one rule is the rule being wrong, not the palettes.
+ *
+ * #B8322E keeps the rule's own S60/L45 discipline and only fixes the hue at
+ * 2 degrees, so it sits at the same value and saturation as the computed set
+ * it replaces (note the shared 0xB8 max channel) and stays coherent beside
+ * every accent -- while reading as an error to anyone who has ever seen one.
+ * Ink & Ledger's old #B8472E was already within a few degrees of this, which
+ * is why that one palette looked correct.
  */
 
 // ---------- Golden Hour ----------
@@ -52,8 +71,8 @@ object GoldenHourPalette {
     val LightOnSecondary = Color(0xFF000000)
     val LightTertiary = Color(0xFF5C3D2E) // Appendix A "accent"
     val LightOnTertiary = Color(0xFFFFFFFF)
-    val LightError = Color(0xFF2EB8B2)
-    val LightOnError = Color(0xFF000000)
+    val LightError = Color(0xFFB8322E)
+    val LightOnError = Color(0xFFFFFFFF)
 
     // Dark (OLED-tuned background per Appendix A's phone-specific notes)
     val DarkBackground = Color(0xFF140D08)
@@ -67,8 +86,8 @@ object GoldenHourPalette {
     val DarkOnSecondary = Color(0xFF000000)
     val DarkTertiary = Color(0xFFE8C79A)
     val DarkOnTertiary = Color(0xFF000000)
-    val DarkError = Color(0xFF2E9BB8)
-    val DarkOnError = Color(0xFF000000)
+    val DarkError = Color(0xFFB8322E)
+    val DarkOnError = Color(0xFFFFFFFF)
 }
 
 // ---------- Sunlit Focus ----------
@@ -92,8 +111,8 @@ object SunlitFocusPalette {
     val LightOnSecondary = Color(0xFF000000)
     val LightTertiary = Color(0xFF6B4A1E) // Appendix A "accent"
     val LightOnTertiary = Color(0xFFFFFFFF)
-    val LightError = Color(0xFF2E9BB8)
-    val LightOnError = Color(0xFF000000)
+    val LightError = Color(0xFFB8322E)
+    val LightOnError = Color(0xFFFFFFFF)
 
     // Dark (OLED-tuned background per Appendix A's phone-specific notes)
     val DarkBackground = Color(0xFF14120A)
@@ -107,8 +126,8 @@ object SunlitFocusPalette {
     val DarkOnSecondary = Color(0xFF000000)
     val DarkTertiary = Color(0xFFE9CE94)
     val DarkOnTertiary = Color(0xFF000000)
-    val DarkError = Color(0xFF2E8CB8)
-    val DarkOnError = Color(0xFF000000)
+    val DarkError = Color(0xFFB8322E)
+    val DarkOnError = Color(0xFFFFFFFF)
 }
 
 // ---------- Forest Floor ----------
@@ -132,8 +151,8 @@ object ForestFloorPalette {
     val LightOnSecondary = Color(0xFF000000)
     val LightTertiary = Color(0xFF7A5A3A) // Appendix A "accent"
     val LightOnTertiary = Color(0xFFFFFFFF)
-    val LightError = Color(0xFF2EA5B8)
-    val LightOnError = Color(0xFF000000)
+    val LightError = Color(0xFFB8322E)
+    val LightOnError = Color(0xFFFFFFFF)
 
     // Dark (OLED-tuned background per Appendix A's phone-specific notes)
     val DarkBackground = Color(0xFF101508) // OLED-adjusted, was #0E1207 (L 4.9 -> 5.7)
@@ -147,8 +166,8 @@ object ForestFloorPalette {
     val DarkOnSecondary = Color(0xFF000000)
     val DarkTertiary = Color(0xFFC79868)
     val DarkOnTertiary = Color(0xFF000000)
-    val DarkError = Color(0xFF2EA5B8)
-    val DarkOnError = Color(0xFF000000)
+    val DarkError = Color(0xFFB8322E)
+    val DarkOnError = Color(0xFFFFFFFF)
 }
 
 // ---------- Sage Clinical ----------
@@ -172,7 +191,7 @@ object SageClinicalPalette {
     val LightOnSecondary = Color(0xFF000000)
     val LightTertiary = Color(0xFF567863) // Appendix A "accent"
     val LightOnTertiary = Color(0xFFFFFFFF)
-    val LightError = Color(0xFFB82EB5)
+    val LightError = Color(0xFFB8322E)
     val LightOnError = Color(0xFFFFFFFF)
 
     // Dark (OLED-tuned background per Appendix A's phone-specific notes)
@@ -187,7 +206,7 @@ object SageClinicalPalette {
     val DarkOnSecondary = Color(0xFF000000)
     val DarkTertiary = Color(0xFFB8D6C4)
     val DarkOnTertiary = Color(0xFF000000)
-    val DarkError = Color(0xFFB82EB3)
+    val DarkError = Color(0xFFB8322E)
     val DarkOnError = Color(0xFFFFFFFF)
 }
 
@@ -212,8 +231,8 @@ object InkLedgerPalette {
     val LightOnSecondary = Color(0xFFFFFFFF)
     val LightTertiary = Color(0xFFB33A3A) // Appendix A "accent"
     val LightOnTertiary = Color(0xFFFFFFFF)
-    val LightError = Color(0xFF2EB885)
-    val LightOnError = Color(0xFF000000)
+    val LightError = Color(0xFFB8322E)
+    val LightOnError = Color(0xFFFFFFFF)
 
     // Dark (OLED-tuned background per Appendix A's phone-specific notes)
     val DarkBackground = Color(0xFF0A0C13) // OLED-adjusted, was #080A10 (L 4.7 -> 5.7)
@@ -227,8 +246,8 @@ object InkLedgerPalette {
     val DarkOnSecondary = Color(0xFF000000)
     val DarkTertiary = Color(0xFFC2564F)
     val DarkOnTertiary = Color(0xFF000000)
-    val DarkError = Color(0xFF2EB88D)
-    val DarkOnError = Color(0xFF000000)
+    val DarkError = Color(0xFFB8322E)
+    val DarkOnError = Color(0xFFFFFFFF)
 }
 
 // ---------- Cobalt Porcelain ----------
@@ -252,7 +271,7 @@ object CobaltPorcelainPalette {
     val LightOnSecondary = Color(0xFFFFFFFF)
     val LightTertiary = Color(0xFF163A66) // Appendix A "accent"
     val LightOnTertiary = Color(0xFFFFFFFF)
-    val LightError = Color(0xFFB8472E)
+    val LightError = Color(0xFFB8322E)
     val LightOnError = Color(0xFFFFFFFF)
 
     // Dark (OLED-tuned background per Appendix A's phone-specific notes)
@@ -267,7 +286,7 @@ object CobaltPorcelainPalette {
     val DarkOnSecondary = Color(0xFF000000)
     val DarkTertiary = Color(0xFFC9D4E2)
     val DarkOnTertiary = Color(0xFF000000)
-    val DarkError = Color(0xFFB8492E)
+    val DarkError = Color(0xFFB8322E)
     val DarkOnError = Color(0xFFFFFFFF)
 }
 
@@ -292,8 +311,8 @@ object RosePetalPalette {
     val LightOnSecondary = Color(0xFF000000)
     val LightTertiary = Color(0xFF7C6178) // Appendix A "accent"
     val LightOnTertiary = Color(0xFFFFFFFF)
-    val LightError = Color(0xFF4CB82E)
-    val LightOnError = Color(0xFF000000)
+    val LightError = Color(0xFFB8322E)
+    val LightOnError = Color(0xFFFFFFFF)
 
     // Dark (OLED-tuned background per Appendix A's phone-specific notes)
     val DarkBackground = Color(0xFF130A0E) // OLED-adjusted, was #0F080B (L 4.5 -> 5.7)
@@ -307,8 +326,8 @@ object RosePetalPalette {
     val DarkOnSecondary = Color(0xFF000000)
     val DarkTertiary = Color(0xFFC7B06B)
     val DarkOnTertiary = Color(0xFF000000)
-    val DarkError = Color(0xFF2E83B8)
-    val DarkOnError = Color(0xFF000000)
+    val DarkError = Color(0xFFB8322E)
+    val DarkOnError = Color(0xFFFFFFFF)
 }
 
 // ---------- Velvet Ribbon ----------
@@ -332,8 +351,8 @@ object VelvetRibbonPalette {
     val LightOnSecondary = Color(0xFF000000)
     val LightTertiary = Color(0xFF6E5570) // Appendix A "accent"
     val LightOnTertiary = Color(0xFFFFFFFF)
-    val LightError = Color(0xFF6BB82E)
-    val LightOnError = Color(0xFF000000)
+    val LightError = Color(0xFFB8322E)
+    val LightOnError = Color(0xFFFFFFFF)
 
     // Dark (OLED-tuned background per Appendix A's phone-specific notes)
     val DarkBackground = Color(0xFF120A08)
@@ -347,8 +366,8 @@ object VelvetRibbonPalette {
     val DarkOnSecondary = Color(0xFF000000)
     val DarkTertiary = Color(0xFFA5859E)
     val DarkOnTertiary = Color(0xFF000000)
-    val DarkError = Color(0xFF42B82E)
-    val DarkOnError = Color(0xFF000000)
+    val DarkError = Color(0xFFB8322E)
+    val DarkOnError = Color(0xFFFFFFFF)
 }
 
 /**

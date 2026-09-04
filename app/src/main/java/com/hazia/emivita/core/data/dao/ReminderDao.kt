@@ -48,6 +48,14 @@ interface ReminderDao {
     @Query("SELECT * FROM reminders WHERE parentReminderId = :parentReminderId")
     suspend fun getChildrenOf(parentReminderId: Long): List<Reminder>
 
+    /** One-shot counterpart to [observeForMedicine], for
+     *  SchedulingCoordinator.onMedicineChanged: an alert reminder's next firing
+     *  depends on its medicine's stock and expiry, so a change to those has to
+     *  re-arm its alarm, and that path is a suspend call rather than a Flow
+     *  collector (spec §7 R37). */
+    @Query("SELECT * FROM reminders WHERE medicineId = :medicineId AND enabled = 1")
+    suspend fun getEnabledForMedicine(medicineId: Long): List<Reminder>
+
     // Backup/restore (spec §9 #9).
     @Query("SELECT * FROM reminders")
     suspend fun getAllOnce(): List<Reminder>

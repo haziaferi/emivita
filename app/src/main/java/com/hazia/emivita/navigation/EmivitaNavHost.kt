@@ -81,6 +81,7 @@ fun EmivitaNavHost() {
                     medicineRepository = container.medicineRepository,
                     doseEventRepository = container.doseEventRepository,
                     occurrenceProjectionCache = container.occurrenceProjectionCache,
+                    settingsRepository = container.settingsRepository,
                 )
             }
             composable<EmivitaRoute.Medicines> {

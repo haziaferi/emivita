@@ -30,7 +30,7 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         Reminder::class,
         DoseEvent::class,
     ],
-    version = 4,
+    version = 5,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -55,7 +55,12 @@ abstract class EmivitaDatabase : RoomDatabase() {
             val factory = SupportOpenHelperFactory(passphrase)
             return Room.databaseBuilder(context, EmivitaDatabase::class.java, "emivita.db")
                 .openHelperFactory(factory)
-                .addMigrations(Migrations.MIGRATION_1_2, Migrations.MIGRATION_2_3, Migrations.MIGRATION_3_4)
+                .addMigrations(
+                    Migrations.MIGRATION_1_2,
+                    Migrations.MIGRATION_2_3,
+                    Migrations.MIGRATION_3_4,
+                    Migrations.MIGRATION_4_5,
+                )
                 .build()
         }
     }

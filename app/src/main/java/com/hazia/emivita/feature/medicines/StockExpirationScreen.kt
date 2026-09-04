@@ -41,6 +41,8 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.hazia.emivita.core.data.config.DEFAULT_ALERT_HOUR
+import com.hazia.emivita.core.data.config.DEFAULT_ALERT_MINUTE
 import com.hazia.emivita.core.data.config.ExpirationTriggerFrequency
 import com.hazia.emivita.core.data.config.LowStockTriggerMode
 import com.hazia.emivita.core.data.config.ReminderConfig
@@ -305,10 +307,28 @@ fun StockExpirationScreen(
 
                 val thresholdValue = threshold.toDoubleOrNull()
                 if (lowStockEnabled && thresholdValue != null) {
-                    val config = ReminderConfig.LowStockAlert(thresholdValue, triggerMode)
                     val existingId = lowStockReminderId
+                    val existingReminder = existingId?.let { reminderRepository.getById(it) }
+                    // Carry the existing alert time forward rather than rebuilding
+                    // the config from this screen alone. This screen owns the
+                    // threshold and the trigger mode; it does not own hour/minute,
+                    // which spec §7 R37 added and which the reminder's own edit
+                    // form sets. Constructing a fresh config here and handing it to
+                    // updateConfig -- a full-row write -- silently reset a user's
+                    // 20:00 alert to the 09:00 default every time they adjusted the
+                    // threshold. Same defect shape as §7 R23 and R27: a partial
+                    // object, rebuilt by a screen that does not own all its fields,
+                    // overwriting the ones it cannot see.
+                    val priorLowStock = existingReminder
+                        ?.let { reminderRepository.decodeConfig(it) as? ReminderConfig.LowStockAlert }
+                    val config = ReminderConfig.LowStockAlert(
+                        threshold = thresholdValue,
+                        triggerMode = triggerMode,
+                        hour = priorLowStock?.hour ?: DEFAULT_ALERT_HOUR,
+                        minute = priorLowStock?.minute ?: DEFAULT_ALERT_MINUTE,
+                    )
                     if (existingId != null) {
-                        val reminder = reminderRepository.getById(existingId)
+                        val reminder = existingReminder
                         if (reminder != null) {
                             // One write, not updateConfig + setEnabled: both are
                             // full-row Room @Updates built from the same pre-edit
@@ -327,10 +347,19 @@ fun StockExpirationScreen(
 
                 val leadDaysValue = leadDays.toIntOrNull()
                 if (expirationEnabled && leadDaysValue != null) {
-                    val config = ReminderConfig.ExpirationAlert(leadDaysValue, frequency)
                     val existingId = expirationReminderId
+                    val existingReminder = existingId?.let { reminderRepository.getById(it) }
+                    // Same reasoning as the low-stock block above.
+                    val priorExpiration = existingReminder
+                        ?.let { reminderRepository.decodeConfig(it) as? ReminderConfig.ExpirationAlert }
+                    val config = ReminderConfig.ExpirationAlert(
+                        leadDays = leadDaysValue,
+                        frequency = frequency,
+                        hour = priorExpiration?.hour ?: DEFAULT_ALERT_HOUR,
+                        minute = priorExpiration?.minute ?: DEFAULT_ALERT_MINUTE,
+                    )
                     if (existingId != null) {
-                        val reminder = reminderRepository.getById(existingId)
+                        val reminder = existingReminder
                         if (reminder != null) {
                             // One write, not updateConfig + setEnabled: both are
                             // full-row Room @Updates built from the same pre-edit

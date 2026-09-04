@@ -26,11 +26,18 @@ import org.robolectric.RobolectricTestRunner
 private class FakeSchedulingCoordinator : SchedulingCoordinator {
     val resolvedReminderIds = mutableListOf<Long>()
     val nagCancelledReminderIds = mutableListOf<Long>()
+    val medicineChangedIds = mutableListOf<Long>()
     override suspend fun onDoseResolved(reminderId: Long) {
         resolvedReminderIds += reminderId
     }
     override suspend fun onReminderChanged(reminderId: Long, notBeforeEpochMillis: Long) = Unit
     override suspend fun onReminderRemoved(reminderId: Long) = Unit
+    // Recorded, not ignored: every stock-moving path in DoseEventRepository has
+    // to re-arm that medicine's alert alarms (spec §7 R37), and the tests below
+    // assert it does.
+    override suspend fun onMedicineChanged(medicineId: Long) {
+        medicineChangedIds += medicineId
+    }
     override suspend fun rescheduleAll() = Unit
     override suspend fun cancelNag(reminderId: Long) {
         nagCancelledReminderIds += reminderId

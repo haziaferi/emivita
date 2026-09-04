@@ -6,8 +6,12 @@ import com.hazia.emivita.core.data.config.ReminderConfig
 import com.hazia.emivita.core.data.config.ReminderType
 import com.hazia.emivita.core.data.config.RepeatPattern
 import com.hazia.emivita.core.data.config.encodeReminderConfig
+import com.hazia.emivita.core.data.config.ExpirationTriggerFrequency
 import com.hazia.emivita.core.data.dao.DoseEventDao
+import com.hazia.emivita.core.data.dao.MedicineDao
 import com.hazia.emivita.core.data.entity.DoseEvent
+import com.hazia.emivita.core.data.entity.Medicine
+import com.hazia.emivita.core.data.entity.StockInfo
 import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.settings.SettingsRepository
 import io.mockk.coEvery
@@ -79,11 +83,37 @@ class SchedulingEngineTest {
             }
         }
 
+    /** Alert scheduling reads the medicine's stock and expiry (spec §7 R37),
+     *  so the engine now needs a MedicineDao. Defaults to "no such medicine",
+     *  which every dose-type test is indifferent to. */
+    private fun fakeMedicineDao(medicine: Medicine? = null): MedicineDao =
+        mockk<MedicineDao>().also { dao -> coEvery { dao.getById(any()) } returns medicine }
+
+    private fun medicine(
+        quantity: Double = 0.0,
+        unit: String? = null,
+        expirationDateEpochDay: Long? = null,
+    ) = Medicine(
+        id = 1L,
+        profileId = 1L,
+        name = "Test",
+        iconKey = "pill",
+        stockInfo = StockInfo(
+            quantity = quantity,
+            unit = unit,
+            expirationDateEpochDay = expirationDateEpochDay,
+        ),
+        sortOrder = 0.0,
+        createdAtEpochMillis = 0L,
+    )
+
     private fun engine(
         dao: DoseEventDao = fakeDao(),
         settings: SettingsRepository = fakeSettings(),
+        medicines: MedicineDao = fakeMedicineDao(),
     ) = SchedulingEngine(
         doseEventDao = dao,
+        medicineDao = medicines,
         settingsRepository = settings,
         zone = zone,
         nowEpochMillis = { at("2026-06-01T00:00") },
@@ -110,6 +140,7 @@ class SchedulingEngineTest {
         activeFromEpochDay: Long? = null,
         activeUntilEpochDay: Long? = null,
         createdAtEpochMillis: Long = 0L,
+        weekendModeOptIn: Boolean = false,
     ) = Reminder(
         id = id,
         medicineId = 1L,
@@ -119,6 +150,7 @@ class SchedulingEngineTest {
         enabled = enabled,
         activeFromEpochDay = activeFromEpochDay,
         activeUntilEpochDay = activeUntilEpochDay,
+        weekendModeOptIn = weekendModeOptIn,
         createdAtEpochMillis = createdAtEpochMillis,
     )
 
@@ -129,12 +161,14 @@ class SchedulingEngineTest {
         activeUntilEpochDay: Long? = null,
         enabled: Boolean = true,
         config: ReminderConfig.FixedTime = dailyAt8,
+        weekendModeOptIn: Boolean = false,
     ) = reminder(
         config = config,
         type = ReminderType.FIXED_TIME,
         enabled = enabled,
         activeFromEpochDay = activeFromEpochDay,
         activeUntilEpochDay = activeUntilEpochDay,
+        weekendModeOptIn = weekendModeOptIn,
     )
 
     // ---- Gates -------------------------------------------------------------
@@ -145,16 +179,114 @@ class SchedulingEngineTest {
         assertNull(next)
     }
 
+    // ---- Alert types (spec §7 R37) -----------------------------------------
+
+    private fun lowStockReminder(
+        triggerMode: LowStockTriggerMode,
+        threshold: Double = 5.0,
+        lastNotifiedEpochDay: Long? = null,
+    ) = reminder(
+        config = ReminderConfig.LowStockAlert(threshold, triggerMode, hour = 9, minute = 0),
+        type = ReminderType.LOW_STOCK_ALERT,
+    ).copy(lastAlertNotifiedEpochDay = lastNotifiedEpochDay)
+
+    private fun expirationReminder(
+        frequency: ExpirationTriggerFrequency,
+        leadDays: Int = 7,
+        lastNotifiedEpochDay: Long? = null,
+    ) = reminder(
+        config = ReminderConfig.ExpirationAlert(leadDays, frequency, hour = 9, minute = 0),
+        type = ReminderType.EXPIRATION_ALERT,
+    ).copy(lastAlertNotifiedEpochDay = lastNotifiedEpochDay)
+
     @Test
-    fun `an alert-type reminder is skipped rather than scheduled`() = runTest {
-        // LOW_STOCK_ALERT and EXPIRATION_ALERT deliberately have no
-        // next-occurrence chain -- LowStockExpirationAlertEvaluator handles
-        // them on the cache's own recompute pass instead.
-        val alert = reminder(
-            config = ReminderConfig.LowStockAlert(threshold = 5.0, triggerMode = LowStockTriggerMode.ONCE_WHEN_BELOW),
-            type = ReminderType.LOW_STOCK_ALERT,
+    fun `a daily low-stock alert below its threshold is scheduled`() = runTest {
+        // The whole point of R37: this used to assert null, because both alert
+        // types were excluded from supportedTypes and nothing drove them from
+        // a clock.
+        val engine = engine(medicines = fakeMedicineDao(medicine(quantity = 2.0, unit = "tablets")))
+        assertOccursAt(
+            "2026-06-01T09:00",
+            engine.nextOccurrenceFor(lowStockReminder(LowStockTriggerMode.DAILY_WHEN_BELOW), at("2026-06-01T06:00")),
         )
-        assertNull(engine().nextOccurrenceFor(alert, at("2026-06-01T06:00")))
+    }
+
+    @Test
+    fun `a daily low-stock alert already announced today waits for tomorrow`() = runTest {
+        val engine = engine(medicines = fakeMedicineDao(medicine(quantity = 2.0, unit = "tablets")))
+        val alert = lowStockReminder(LowStockTriggerMode.DAILY_WHEN_BELOW, lastNotifiedEpochDay = epochDay("2026-06-01"))
+        assertOccursAt("2026-06-02T09:00", engine.nextOccurrenceFor(alert, at("2026-06-01T06:00")))
+    }
+
+    @Test
+    fun `a low-stock alert above its threshold has nothing to arm`() = runTest {
+        val engine = engine(medicines = fakeMedicineDao(medicine(quantity = 50.0, unit = "tablets")))
+        assertNull(engine.nextOccurrenceFor(lowStockReminder(LowStockTriggerMode.DAILY_WHEN_BELOW), at("2026-06-01T06:00")))
+    }
+
+    @Test
+    fun `a low-stock alert on an untracked medicine has nothing to arm`() = runTest {
+        // unit == null is the app-wide "stock tracking is off" flag, so there
+        // is no threshold to be below however small the quantity reads.
+        val engine = engine(medicines = fakeMedicineDao(medicine(quantity = 0.0, unit = null)))
+        assertNull(engine.nextOccurrenceFor(lowStockReminder(LowStockTriggerMode.DAILY_WHEN_BELOW), at("2026-06-01T06:00")))
+    }
+
+    @Test
+    fun `once and always low-stock modes stay event-driven, not scheduled`() = runTest {
+        // Matches medTimer: OutOfStockScheduling returns null unless the mode
+        // is DAILY, and StockHandlingProcessor announces the other two inline
+        // the moment stock crosses. An alarm cannot express "the instant this
+        // changes"; LowStockExpirationAlertEvaluator still owns these.
+        val engine = engine(medicines = fakeMedicineDao(medicine(quantity = 2.0, unit = "tablets")))
+        assertNull(engine.nextOccurrenceFor(lowStockReminder(LowStockTriggerMode.ONCE_WHEN_BELOW), at("2026-06-01T06:00")))
+        assertNull(engine.nextOccurrenceFor(lowStockReminder(LowStockTriggerMode.ALWAYS_WHEN_BELOW), at("2026-06-01T06:00")))
+    }
+
+    @Test
+    fun `an expiration alert waits until its lead window opens`() = runTest {
+        // Expires 2026-06-20, 7 days lead, so the first alert is on 06-13 --
+        // not today, even though the reminder exists today.
+        val engine = engine(medicines = fakeMedicineDao(medicine(expirationDateEpochDay = epochDay("2026-06-20"))))
+        assertOccursAt(
+            "2026-06-13T09:00",
+            engine.nextOccurrenceFor(expirationReminder(ExpirationTriggerFrequency.DAILY), at("2026-06-01T06:00")),
+        )
+    }
+
+    @Test
+    fun `a daily expiration alert keeps firing past the expiry date`() = runTest {
+        // An expired medicine is more worth mentioning than one about to
+        // expire, not less.
+        val engine = engine(medicines = fakeMedicineDao(medicine(expirationDateEpochDay = epochDay("2026-05-01"))))
+        assertOccursAt(
+            "2026-06-01T09:00",
+            engine.nextOccurrenceFor(expirationReminder(ExpirationTriggerFrequency.DAILY), at("2026-06-01T06:00")),
+        )
+    }
+
+    @Test
+    fun `a once expiration alert that already fired is never scheduled again`() = runTest {
+        // Unlike low stock there is no restock to rearm from -- an expiry date
+        // does not un-pass.
+        val engine = engine(medicines = fakeMedicineDao(medicine(expirationDateEpochDay = epochDay("2026-06-05"))))
+        val alert = expirationReminder(ExpirationTriggerFrequency.ONCE, lastNotifiedEpochDay = epochDay("2026-05-30"))
+        assertNull(engine.nextOccurrenceFor(alert, at("2026-06-01T06:00")))
+    }
+
+    @Test
+    fun `an expiration alert on a medicine with no expiry date has nothing to arm`() = runTest {
+        val engine = engine(medicines = fakeMedicineDao(medicine(expirationDateEpochDay = null)))
+        assertNull(engine.nextOccurrenceFor(expirationReminder(ExpirationTriggerFrequency.DAILY), at("2026-06-01T06:00")))
+    }
+
+    @Test
+    fun `an alert whose slot has passed today rolls to tomorrow`() = runTest {
+        val engine = engine(medicines = fakeMedicineDao(medicine(quantity = 2.0, unit = "tablets")))
+        assertOccursAt(
+            "2026-06-02T09:00",
+            engine.nextOccurrenceFor(lowStockReminder(LowStockTriggerMode.DAILY_WHEN_BELOW), at("2026-06-01T18:00")),
+        )
     }
 
     @Test
@@ -167,9 +299,45 @@ class SchedulingEngineTest {
     // ---- activeFrom / activeUntil clamp ------------------------------------
 
     @Test
-    fun `a candidate before the active range opens is clamped away`() = runTest {
+    fun `a range that has not opened yet defers to its first day rather than never firing`() = runTest {
+        // This used to assert null, pinning the bug rather than the rule: a
+        // future activeFrom means "not yet", not "never", and nothing in the
+        // app re-arms a reminder on the passage of time alone, so cancelling
+        // here cancelled it permanently. A course or taper -- which spec §4
+        // says this clamp is the whole mechanism for -- could only ever fire
+        // the segment that was already in range.
         val reminder = fixedTimeReminder(activeFromEpochDay = epochDay("2026-06-10"))
+        assertOccursAt("2026-06-10T08:00", engine().nextOccurrenceFor(reminder, at("2026-06-01T06:00")))
+    }
+
+    @Test
+    fun `a deferred range still respects the far end`() = runTest {
+        // Deferring forward must not walk past activeUntil: a range whose two
+        // bounds cannot both be satisfied has no occurrence at all.
+        val reminder = fixedTimeReminder(
+            activeFromEpochDay = epochDay("2026-06-10"),
+            activeUntilEpochDay = epochDay("2026-06-09"),
+        )
         assertNull(engine().nextOccurrenceFor(reminder, at("2026-06-01T06:00")))
+    }
+
+    @Test
+    fun `a projection walk covers a course that starts inside the window`() = runTest {
+        // The consumer-visible half of the same fix: Today, History and both
+        // widgets read occurrencesFor, which returned an empty list for every
+        // not-yet-started course.
+        val slots = engine().occurrencesFor(
+            fixedTimeReminder(
+                activeFromEpochDay = epochDay("2026-06-03"),
+                activeUntilEpochDay = epochDay("2026-06-05"),
+            ),
+            fromEpochMillis = at("2026-06-01T00:00"),
+            toEpochMillis = at("2026-06-30T00:00"),
+        )
+        assertEquals(
+            listOf("2026-06-03T08:00", "2026-06-04T08:00", "2026-06-05T08:00"),
+            slots.map { it.epochMillis.asLocal().toString() },
+        )
     }
 
     @Test
@@ -204,8 +372,47 @@ class SchedulingEngineTest {
         val reminder = fixedTimeReminder(
             config = ReminderConfig.FixedTime(hour = 23, minute = 0, dose = 1.0, repeatPattern = RepeatPattern.Daily),
             activeUntilEpochDay = epochDay("2026-06-06"),
+            weekendModeOptIn = true,
         )
         assertOccursAt("2026-06-07T06:00", engine.nextOccurrenceFor(reminder, at("2026-06-06T12:00")))
+    }
+
+    @Test
+    fun `weekend mode leaves a reminder that has not opted in alone`() = runTest {
+        // The gate R36 added. Same engine, same settings, same slot as the
+        // test above -- only the opt-in differs, so a regression that reverts
+        // to the old global behaviour fails here and nowhere else.
+        val engine = engine(
+            settings = fakeSettings(
+                WeekendMode.On(days = setOf(6, 7), start = LocalTime.of(22, 0), end = LocalTime.of(6, 0)),
+            ),
+        )
+        val reminder = fixedTimeReminder(
+            config = ReminderConfig.FixedTime(hour = 23, minute = 0, dose = 1.0, repeatPattern = RepeatPattern.Daily),
+        )
+        assertOccursAt("2026-06-06T23:00", engine.nextOccurrenceFor(reminder, at("2026-06-06T12:00")))
+    }
+
+    @Test
+    fun `an opted-in reminder is still untouched while the global toggle is off`() = runTest {
+        // Both switches are required, not either. The per-reminder flag says
+        // "shift me by the weekend window"; there is no window to shift by
+        // until the global side defines one.
+        val reminder = fixedTimeReminder(
+            config = ReminderConfig.FixedTime(hour = 23, minute = 0, dose = 1.0, repeatPattern = RepeatPattern.Daily),
+            weekendModeOptIn = true,
+        )
+        assertOccursAt("2026-06-06T23:00", engine().nextOccurrenceFor(reminder, at("2026-06-06T12:00")))
+    }
+
+    @Test
+    fun `a reminder that has not opted in never reads the weekend preferences`() = runTest {
+        // The cost half of the gate: readWeekendMode() is a fresh cold-flow
+        // collection per call, and the walk can call nextOccurrenceFor up to
+        // maxOccurrences times. Opting out should cost nothing, not one read.
+        val settings = fakeSettings()
+        engine(settings = settings).nextOccurrenceFor(fixedTimeReminder(), at("2026-06-01T06:00"))
+        verify(exactly = 0) { settings.weekendModeEnabled }
     }
 
     // ---- RepeatingInterval anchors -----------------------------------------
@@ -280,6 +487,29 @@ class SchedulingEngineTest {
         val dao = fakeDao(lastResolved = mapOf(PARENT_ID to doseEvent(resolvedAtEpochMillis = at("2026-06-01T09:15"))))
         val child = linkedReminder(IntervalStartBehavior.ON_RESOLVED, parentReminderId = PARENT_ID)
         assertOccursAt("2026-06-01T09:45", engine(dao = dao).nextOccurrenceFor(child, at("2026-06-01T06:00")))
+    }
+
+    @Test
+    fun `a child whose slot has already passed has no next occurrence`() = runTest {
+        // The anchor is the parent's *last* event, so a child's computed slot
+        // goes stale on its own once delayMinutes has elapsed. Returning it
+        // anyway broke nextOccurrenceFor's own at/after contract, and the two
+        // things that consume it: RealSchedulingCoordinator armed an alarm in
+        // the past (AlarmManager fires those immediately) on every reschedule
+        // after the child's dose was answered, and the shared projection kept
+        // publishing the stale slot until the parent fired again.
+        val dao = fakeDao(mostRecent = mapOf(PARENT_ID to doseEvent(scheduledEpochMillis = at("2026-06-01T08:00"))))
+        val child = linkedReminder(IntervalStartBehavior.ON_REMINDED, parentReminderId = PARENT_ID)
+        assertNull(engine(dao = dao).nextOccurrenceFor(child, at("2026-06-01T09:00")))
+    }
+
+    @Test
+    fun `a child whose slot is still ahead survives the notBefore floor`() = runTest {
+        // The boundary the guard above must not overshoot: exactly on the slot
+        // still counts as due, the same rule the fixed-time calculator uses.
+        val dao = fakeDao(mostRecent = mapOf(PARENT_ID to doseEvent(scheduledEpochMillis = at("2026-06-01T08:00"))))
+        val child = linkedReminder(IntervalStartBehavior.ON_REMINDED, parentReminderId = PARENT_ID)
+        assertOccursAt("2026-06-01T08:30", engine(dao = dao).nextOccurrenceFor(child, at("2026-06-01T08:30")))
     }
 
     @Test

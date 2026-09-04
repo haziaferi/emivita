@@ -21,9 +21,15 @@ baselined, because they fire on calendar time rather than on the change under
 test. `.github/workflows/ci.yml` runs these same three tasks on push and pull
 request.
 
-Both variants are signed with the shared debug keystore at
+Both variants share one `applicationId` (`com.hazia.emivita`; `debug` sets no
+`applicationIdSuffix`) and are signed with the shared debug keystore at
 `keystores/my-shared-debug.keystore`, checked in deliberately so builds from any
-machine share one signing identity and can install over each other. Its password
+machine share one signing identity. Together those two facts are what let any
+build install over any other — this sentence used to credit the shared signer
+alone, which was necessary and not sufficient: while `debug` carried a suffix
+the two variants were separate apps and could not replace each other at all
+(docs/SPEC.md §7 R41). The consequence to know is that they cannot be installed
+side by side; that is intended, since this is one app. Its password
 is the published Android default, so that identity is not secret — see the
 comment on `buildTypes.release` in `app/build.gradle.kts` for the trade that
 accepts and when to replace it.

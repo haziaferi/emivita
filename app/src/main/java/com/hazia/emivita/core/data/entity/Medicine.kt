@@ -47,7 +47,13 @@ data class Medicine(
     // lockRemindersUntilTakenByDefault preference, non-null = explicit
     // per-medicine override (spec §3). SettingsRepository.isLockedUntilTaken()
     // is the one place that resolution happens; the notification builder, the
-    // action receiver and the alarm screen all go through it.
+    // action receiver and the alarm screen all go through it. TodayScreen
+    // resolves the same two inputs inline instead -- composition cannot call a
+    // suspend function, so it collects the global default as state and applies
+    // this override at each row. It is named here because it *is* an
+    // enforcement point: this list read as exhaustive while Today shipped an
+    // unconditional Skip chip, which is how the gate stayed open on the app's
+    // start destination.
     val remindersLockedUntilTaken: Boolean? = null,
     val notes: String? = null,
     @Embedded val stockInfo: StockInfo = StockInfo(),
