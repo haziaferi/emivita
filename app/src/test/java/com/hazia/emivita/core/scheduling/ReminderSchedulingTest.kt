@@ -9,7 +9,6 @@ import com.hazia.emivita.core.data.config.isActiveOn
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertNull
-import org.junit.Assert.assertThrows
 import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.time.Instant
@@ -282,11 +281,14 @@ class ReminderSchedulingTest {
     }
 
     @Test
-    fun `repeating interval below one minute is rejected at the calculator`() {
+    fun `repeating interval below one minute returns null rather than throwing`() {
+        // Was assertThrows. R23 made this exact change for EveryNDays and
+        // CyclicActivePause and stopped short of the interval calculators,
+        // leaving one file with two answers to the same question. Throwing
+        // from inside OccurrenceProjectionCache's recompute loop kills the
+        // loop, not the pass.
         val config = repeatingInterval(intervalMinutes = 0, anchorEpochMillis = at("2026-06-01T08:00"))
-        assertThrows(IllegalArgumentException::class.java) {
-            nextRepeatingIntervalOccurrence(config, at("2026-06-01T09:00"), config.anchorEpochMillis)
-        }
+        assertNull(nextRepeatingIntervalOccurrence(config, at("2026-06-01T09:00"), config.anchorEpochMillis))
     }
 
     // ---- DailyWindow ------------------------------------------------------
@@ -342,10 +344,8 @@ class ReminderSchedulingTest {
     }
 
     @Test
-    fun `daily window below one minute of interval is rejected at the calculator`() {
-        assertThrows(IllegalArgumentException::class.java) {
-            nextDailyWindowOccurrence(dailyWindow(intervalMinutes = 0), at("2026-06-01T06:00"), null, zone)
-        }
+    fun `daily window below one minute of interval returns null rather than throwing`() {
+        assertNull(nextDailyWindowOccurrence(dailyWindow(intervalMinutes = 0), at("2026-06-01T06:00"), null, zone))
     }
 
     // ---- Weekend mode -----------------------------------------------------

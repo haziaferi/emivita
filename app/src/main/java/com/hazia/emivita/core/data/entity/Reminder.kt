@@ -1,5 +1,6 @@
 package com.hazia.emivita.core.data.entity
 
+import androidx.room.ColumnInfo
 import androidx.room.Embedded
 import androidx.room.Entity
 import androidx.room.ForeignKey
@@ -62,6 +63,34 @@ data class Reminder(
     val activeFromEpochDay: Long? = null,
     val activeUntilEpochDay: Long? = null,
     @Embedded(prefix = "repeat_") val repeatOnUnanswered: RepeatConfig? = null,
+    // Weekend mode is opt-in per reminder, not a blanket global (spec §3).
+    // SettingsRepository still owns *what* the weekend is -- which days, and
+    // the start/end of the quiet window -- because that describes the user's
+    // week, not any one reminder; this flag decides whether this reminder is
+    // shifted by it. Both the global toggle and this flag must be on.
+    //
+    // Ported deliberately *unlike* the reference: medTimer's SchedulingFactory
+    // wraps every scheduler it builds in WeekendModeSchedulingDecorator with no
+    // per-reminder gate, so the setting there is all-or-nothing across every
+    // medicine. That is the wrong default for a schedule that mixes a
+    // lie-in-friendly supplement with a drug that has to be taken on time: the
+    // global switch made sleeping in on Saturday cost a dose of the second to
+    // buy a lie-in on the first. Defaults to false, so nothing is shifted
+    // until it is asked for.
+    //
+    // @ColumnInfo(defaultValue = "0") is load-bearing, not decoration. A
+    // Kotlin default only affects object construction; without this
+    // annotation Room's generated CREATE TABLE emits `weekendModeOptIn
+    // INTEGER NOT NULL` with no DEFAULT, while MIGRATION_4_5 has to write
+    // `NOT NULL DEFAULT 0` because ALTER TABLE ADD COLUMN cannot add a NOT
+    // NULL column without one. Room compares column default values when it
+    // validates a migrated database against the schema it would have created
+    // itself, so those two spellings diverging is an IllegalStateException on
+    // the first launch after an upgrade -- and one nothing in the test suite
+    // would catch, since the migration tests drive raw SQL and never run
+    // Room's validation. Declared so a migrated table and a freshly-created
+    // one are identical.
+    @ColumnInfo(defaultValue = "0") val weekendModeOptIn: Boolean = false,
     // LOW_STOCK_ALERT / EXPIRATION_ALERT only (spec §9 #8) -- the epoch day this
     // alert last posted a notification, so Once/Daily trigger modes don't
     // re-notify on every cache recompute. Null = never notified (or, for

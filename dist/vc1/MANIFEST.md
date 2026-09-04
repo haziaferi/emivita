@@ -55,11 +55,28 @@ build directory is cleaned — R8 output is not reproducible across AGP versions
 1. `adb install dist/vc1/emivita-0.1.0-vc1-release.apk`
 2. Create real data — a medicine, a reminder, a few logged doses. The point is
    a database written by this build's own code paths, not an empty one.
-3. Build the new version with a bumped `versionCode` and `adb install -r` it.
+3. Build the new version and `adb install -r` it. A bumped `versionCode` is
+   good practice but not required — `-r` reinstalls over an equal one, which is
+   how the run recorded below was done.
 4. A `SQLiteException` or a wiped database means the migration is wrong. An
    in-place upgrade that keeps the data means it is right — which is the thing
    fixture-based tests cannot tell you.
 
-Note the release build installs alongside any `com.hazia.emivita.debug` build
-(separate applicationId, separate database). Step 2's data must be created in
-*this* app, not the debug one.
+**Any build upgrades this one now.** This section used to end with a warning
+that the release build "installs alongside any `com.hazia.emivita.debug` build
+(separate applicationId, separate database)", and that step 2's data had to be
+created in *this* app rather than the debug one. That warning described a real
+split and quietly made this artifact useless for its own stated purpose: the
+build anyone actually develops with was suffixed, so it could never upgrade
+this APK, and the only thing that could was a fresh minified release. The
+suffix is gone (see `app/build.gradle.kts`'s `debug` block and docs/SPEC.md §7
+R41) — one applicationId, so an ordinary debug build upgrades this in place,
+which is what steps 1–4 always assumed.
+
+**Exercised 2026-09-04** (OnePlus 9 Pro, OxygenOS / Android 14), the first time
+this was possible: this APK installed and launched, then a debug build carrying
+schema 5 installed over it with `-r`. No signature prompt, `libsqlcipher.so`
+loaded from `arm64-v8a`, no `IllegalStateException` from Room's schema
+validation, app alive afterwards. That is `MIGRATION_4_5` run against a
+database written by this build's own code — the check the fixture tests
+structurally cannot perform.

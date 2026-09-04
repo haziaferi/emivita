@@ -18,6 +18,12 @@ enum class ReminderType { FIXED_TIME, REPEATING_INTERVAL, DAILY_WINDOW, LOW_STOC
 enum class IntervalStartBehavior { ON_REMINDED, ON_RESOLVED }
 
 enum class LowStockTriggerMode { ONCE_WHEN_BELOW, ALWAYS_WHEN_BELOW, DAILY_WHEN_BELOW }
+
+/** Default time of day for a newly-created alert reminder. Only a default:
+ *  both alert configs carry their own [ReminderConfig.LowStockAlert.hour]/
+ *  [ReminderConfig.LowStockAlert.minute], editable per reminder. */
+const val DEFAULT_ALERT_HOUR = 9
+const val DEFAULT_ALERT_MINUTE = 0
 enum class ExpirationTriggerFrequency { ONCE, DAILY }
 
 /** How a FIXED_TIME reminder repeats across days. */
@@ -85,16 +91,34 @@ sealed interface ReminderConfig {
         val startBehavior: IntervalStartBehavior,
     ) : ReminderConfig
 
+    /** [hour]/[minute] is the time of day the alert fires on a day it is due
+     *  (spec §7 R37). Ported from medTimer, whose OUT_OF_STOCK and
+     *  EXPIRATION_DATE reminders are ordinary schedulable types carrying a
+     *  `reminder.time` that `SchedulingBase.localDateToReminderInstant` turns
+     *  into a real alarm instant. Emivita's alert configs had no time at all,
+     *  which is why they could not be scheduled and had to ride the projection
+     *  cache's recompute instead.
+     *
+     *  Defaulted rather than required, so every reminder row written before
+     *  this field existed decodes unchanged: `configJson` is a JSON blob and
+     *  kotlinx fills an absent key from the default, so there is no database
+     *  migration here. 09:00 because an alert is a chore, not a dose -- it
+     *  wants a civil hour, not the middle of the night. */
     @Serializable
     data class LowStockAlert(
         val threshold: Double,
         val triggerMode: LowStockTriggerMode,
+        val hour: Int = DEFAULT_ALERT_HOUR,
+        val minute: Int = DEFAULT_ALERT_MINUTE,
     ) : ReminderConfig
 
+    /** See [LowStockAlert] for why [hour]/[minute] are defaulted. */
     @Serializable
     data class ExpirationAlert(
         val leadDays: Int,
         val frequency: ExpirationTriggerFrequency,
+        val hour: Int = DEFAULT_ALERT_HOUR,
+        val minute: Int = DEFAULT_ALERT_MINUTE,
     ) : ReminderConfig
 
     /** Chained "following dose" reminders (spec §3/§9 #14). Note that
