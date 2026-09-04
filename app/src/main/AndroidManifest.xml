@@ -137,10 +137,22 @@
              flag, and there are credible real-world reports of
              exported="false" silently failing to deliver it on Android 12+
              despite the flag theoretically being irrelevant for protected
-             broadcasts. Verify this fires on your actual test device after
-             the first real build; flip to "false" only if you can confirm
-             delivery still works, since this is the one item in this batch
-             I could not verify by reading code alone. -->
+             broadcasts.
+
+             VERIFIED on device (2026-09-04, OnePlus 9 Pro LE2123, OxygenOS /
+             Android 14): after a real reboot, with the app never opened, the
+             alarm armed before the reboot was present again in `dumpsys
+             alarm` and the app process had been started by the boot
+             broadcast. BOOT_COMPLETED is delivered to this receiver at
+             exported="true" on an OEM skin, which is exactly what could not
+             be settled by reading code.
+
+             Left at "true". The untested half is whether "false" would be
+             delivered here too, and it is not worth a second reboot: the
+             least-privilege gain is nil either way, since both filtered
+             actions are protected broadcasts no third-party app can send and
+             onReceive() rejects any other action before touching the
+             container. -->
         <receiver
             android:name=".core.scheduling.BootRescheduleReceiver"
             android:exported="true">
