@@ -534,6 +534,82 @@ class SchedulingEngineTest {
     }
 
     @Test
+    fun `a three-step taper is three fixed-time reminders with adjacent ranges`() = runTest {
+        // Makes §4's claim executable instead of asserted. §4 says "a taper
+        // schedule is just several ordinary FixedTime reminders with adjacent,
+        // non-overlapping ranges -- no new ReminderConfig type needed, this
+        // clamp is the whole mechanism", while §9's parking lot says tapering
+        // needs "a new `Tapering` ReminderConfig variant (a list of
+        // {dateRange, dose} steps)". The spec endorsed both at once.
+        //
+        // This pins the side that turns out to be right. Note it could not have
+        // passed before §7 R30: the activeFrom clamp used to return null for a
+        // range that had not opened yet, so steps 2 and 3 below -- whose ranges
+        // begin in the future relative to the walk's start -- would each have
+        // projected nothing, and a taper would have delivered its first dose
+        // level forever. See docs/SPEC.md §7 R43.
+        val engine = engine()
+        val taper = listOf(
+            // 10mg for three days, then 7.5mg for three, then 5mg for three.
+            Triple(10.0, "2026-06-01", "2026-06-03"),
+            Triple(7.5, "2026-06-04", "2026-06-06"),
+            Triple(5.0, "2026-06-07", "2026-06-09"),
+        ).map { (dose, from, until) ->
+            fixedTimeReminder(
+                config = ReminderConfig.FixedTime(hour = 8, minute = 0, dose = dose, repeatPattern = RepeatPattern.Daily),
+                activeFromEpochDay = epochDay(from),
+                activeUntilEpochDay = epochDay(until),
+            )
+        }
+
+        // One walk per reminder over the whole taper, merged the way the
+        // projection cache merges a medicine's reminders.
+        val schedule = taper
+            .flatMap { engine.occurrencesFor(it, at("2026-06-01T00:00"), at("2026-06-15T00:00")) }
+            .sortedBy { it.epochMillis }
+            .map { it.epochMillis.asLocal().toLocalDate().toString() to it.doseAmount }
+
+        assertEquals(
+            listOf(
+                "2026-06-01" to 10.0, "2026-06-02" to 10.0, "2026-06-03" to 10.0,
+                "2026-06-04" to 7.5, "2026-06-05" to 7.5, "2026-06-06" to 7.5,
+                "2026-06-07" to 5.0, "2026-06-08" to 5.0, "2026-06-09" to 5.0,
+            ),
+            schedule,
+        )
+    }
+
+    @Test
+    fun `adjacent taper ranges neither gap nor overlap at the handover`() = runTest {
+        // The failure mode the mechanism actually has. Ranges are inclusive on
+        // both ends, so a step ending 06-03 and the next starting 06-04 hand
+        // over cleanly -- exactly one dose on each of those days, at one dose
+        // level each. Off-by-one in either direction is a missed dose or a
+        // doubled one, which is why this is pinned separately from the happy
+        // path above rather than left implicit in it.
+        val engine = engine()
+        val stepOne = fixedTimeReminder(
+            config = ReminderConfig.FixedTime(hour = 8, minute = 0, dose = 10.0, repeatPattern = RepeatPattern.Daily),
+            activeUntilEpochDay = epochDay("2026-06-03"),
+        )
+        val stepTwo = fixedTimeReminder(
+            config = ReminderConfig.FixedTime(hour = 8, minute = 0, dose = 7.5, repeatPattern = RepeatPattern.Daily),
+            activeFromEpochDay = epochDay("2026-06-04"),
+        )
+        val handover = (
+            engine.occurrencesFor(stepOne, at("2026-06-03T00:00"), at("2026-06-05T00:00")) +
+                engine.occurrencesFor(stepTwo, at("2026-06-03T00:00"), at("2026-06-05T00:00"))
+            )
+            .sortedBy { it.epochMillis }
+            .map { it.epochMillis.asLocal().toString() to it.doseAmount }
+
+        assertEquals(
+            listOf("2026-06-03T08:00" to 10.0, "2026-06-04T08:00" to 7.5),
+            handover,
+        )
+    }
+
+    @Test
     fun `occurrencesFor honours maxOccurrences`() = runTest {
         val slots = engine().occurrencesFor(
             fixedTimeReminder(),

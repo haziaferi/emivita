@@ -204,9 +204,67 @@ private fun tokensFor(palette: MedPalette, dark: Boolean): PaletteTokens = when 
  *
  * The two branches are spelled out rather than sharing one argument list via a
  * function reference: darkColorScheme and lightColorScheme differ in their
- * defaults for the slots this app doesn't override (surfaceVariant, scrim,
- * the inverse* family), so which builder runs is itself load-bearing.
+ * defaults for the slots below, so which builder runs is still load-bearing --
+ * but the slots it used to matter most for no longer take those defaults.
+ * `surfaceVariant`, the `surfaceContainer*` ladder, `outlineVariant`, `scrim`
+ * and the `inverse*` family are derived from the audited tokens by
+ * [withDerivedSurfaces]; leaving them to Material's baseline is what put a
+ * lavender navigation bar under all eight palettes (spec §7 R44).
  */
+/**
+ * Linear sRGB interpolation between two palette colours, used only to derive
+ * the M3 slots Appendix A does not audit (spec §7 R44).
+ *
+ * Computed rather than hand-picked, the same move Color.kt already makes for
+ * `onPrimary`/`onSecondary`/`onTertiary`/`onError` -- values it describes as
+ * "computed here (not spec'd directly)". Every input is an audited Appendix A
+ * token, so nothing here invents a colour; it only places new tones on the line
+ * between two that were audited.
+ */
+private fun blend(base: Color, toward: Color, fraction: Float): Color = Color(
+    red = base.red + (toward.red - base.red) * fraction,
+    green = base.green + (toward.green - base.green) * fraction,
+    blue = base.blue + (toward.blue - base.blue) * fraction,
+    alpha = 1f,
+)
+
+/**
+ * The M3 slots this app has no audited tone for, derived from the ones it does.
+ *
+ * These used to be left to `lightColorScheme`/`darkColorScheme`'s own defaults,
+ * which are Material's baseline palette -- so on every screen, in all eight
+ * palettes, the bottom navigation bar (which draws from `surfaceContainer`) and
+ * every menu surface rendered baseline lavender next to an audited amber, green,
+ * blue or pink. The file's own doc comment recorded the reliance on those
+ * defaults as deliberate; it was, and the consequence was not.
+ *
+ * The ladder blends `surface` toward `onSurface` in small steps. That direction
+ * is correct in both modes without a branch: in light mode `onSurface` is dark
+ * so containers darken, in dark mode it is light so they lighten, which is what
+ * M3's tonal elevation does in each. Every step stays on the line between two
+ * audited tokens, so a container can never leave the palette's own hue.
+ */
+private fun ColorScheme.withDerivedSurfaces(background: Color, surface: Color, onSurface: Color, outline: Color, primary: Color) = copy(
+    surfaceVariant = blend(surface, onSurface, 0.08f),
+    surfaceContainerLowest = background,
+    surfaceContainerLow = blend(surface, onSurface, 0.03f),
+    surfaceContainer = blend(surface, onSurface, 0.06f),
+    surfaceContainerHigh = blend(surface, onSurface, 0.09f),
+    surfaceContainerHighest = blend(surface, onSurface, 0.12f),
+    surfaceBright = blend(surface, onSurface, 0.02f),
+    surfaceDim = blend(surface, onSurface, 0.10f),
+    // A hairline, not a second outline: the audited `outline` is sized for
+    // borders that should be seen, and M3 uses outlineVariant for dividers that
+    // should not compete with content.
+    outlineVariant = blend(outline, surface, 0.55f),
+    // M3's inverse pair is the surface/text relationship turned over, which the
+    // audited tokens already give directly.
+    inverseSurface = onSurface,
+    inverseOnSurface = background,
+    scrim = Color.Black,
+    surfaceTint = primary,
+)
+
 private fun colorSchemeFor(palette: MedPalette, dark: Boolean): ColorScheme {
     val t = tokensFor(palette, dark)
     return if (dark) {
@@ -233,7 +291,7 @@ private fun colorSchemeFor(palette: MedPalette, dark: Boolean): ColorScheme {
             surface = t.surface,
             tertiary = t.tertiary,
             tertiaryContainer = t.tertiary,
-        )
+        ).withDerivedSurfaces(t.background, t.surface, t.onBackground, t.outline, t.primary)
     } else {
         lightColorScheme(
             background = t.background,
@@ -258,7 +316,7 @@ private fun colorSchemeFor(palette: MedPalette, dark: Boolean): ColorScheme {
             surface = t.surface,
             tertiary = t.tertiary,
             tertiaryContainer = t.tertiary,
-        )
+        ).withDerivedSurfaces(t.background, t.surface, t.onBackground, t.outline, t.primary)
     }
 }
 
