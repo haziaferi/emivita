@@ -53,6 +53,7 @@ import com.hazia.emivita.core.format.formatDoseWithUnit
 import com.hazia.emivita.ui.components.parseHexColor
 import com.hazia.emivita.ui.icons.MedicineIcons
 import com.hazia.emivita.ui.theme.NeutralMedicineAccent
+import com.hazia.emivita.ui.theme.doseCritical
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -215,9 +216,10 @@ fun HistoryScreen(
                         items(days, key = { it.date.toEpochDay() }) { day ->
                             DayHeader(day.date, today)
                             day.entries.forEach { row ->
-                                HistoryEntryRow(row, onClick = {
-                                    if (row.doseEvent.status == DoseStatus.TAKEN || row.doseEvent.status == DoseStatus.SKIPPED) editing = row
-                                })
+                                // The row itself already refuses the click for a
+                                // REFILLED entry; re-testing it here is what let
+                                // this surface and the row disagree (§7 R47).
+                                HistoryEntryRow(row, onClick = { editing = row })
                                 Spacer(Modifier.height(8.dp))
                             }
                             Spacer(Modifier.height(8.dp))
@@ -374,7 +376,7 @@ private fun AdherenceSummary(events: List<DoseEventWithMedicine>) {
                 "${counts.taken} taken, ${counts.skipped} skipped, ${counts.missed} missed, " +
                     "last $HISTORY_LOOKBACK_DAYS days",
                 style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -391,7 +393,7 @@ private fun DayHeader(date: LocalDate, today: LocalDate) {
     Text(
         label,
         style = MaterialTheme.typography.labelLarge,
-        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
         modifier = Modifier.padding(top = 8.dp, bottom = 6.dp),
     )
 }
@@ -404,7 +406,12 @@ internal fun HistoryEntryRow(row: DoseEventWithMedicine, onClick: () -> Unit) {
     val medicine = row.medicine
     val status = row.doseEvent.status
     val accent = medicine.color?.let { parseHexColor(it) } ?: NeutralMedicineAccent
-    val editable = status == DoseStatus.TAKEN || status == DoseStatus.SKIPPED
+    // Not an allow-list: a PENDING ("Missed") dose is the case §7 R46 exists to
+    // make correctable, and gating on the two resolved statuses is what kept it
+    // uncorrectable on this row after R46 shipped (§7 R47). A REFILLED row is
+    // a restock with nothing to resolve, so it stays inert -- matching
+    // HistoryTableView and HistoryCalendarView, which this row is shared with.
+    val editable = status != DoseStatus.REFILLED
     val time = remember(row.doseEvent.resolvedAtEpochMillis, row.doseEvent.scheduledEpochMillis) {
         val epochMillis = row.doseEvent.resolvedAtEpochMillis ?: row.doseEvent.scheduledEpochMillis
         Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
@@ -428,8 +435,10 @@ internal fun HistoryEntryRow(row: DoseEventWithMedicine, onClick: () -> Unit) {
                 Text(medicine.name, style = MaterialTheme.typography.titleMedium)
                 Text(
                     "${historyStatusLabel(status)} - $time - ${formatDoseWithUnit(row.doseEvent.doseAmount, medicine.doseUnit)}",
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    // A time and a dose amount together -- squarely what
+                    // Typography.doseCritical names a floor for (§7 R47).
+                    style = MaterialTheme.typography.doseCritical,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
         }

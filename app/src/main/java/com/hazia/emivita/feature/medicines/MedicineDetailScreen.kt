@@ -139,7 +139,7 @@ fun MedicineDetailScreen(
                     Column {
                         Text(currentMedicine.name, style = MaterialTheme.typography.titleLarge)
                         currentMedicine.indication?.let {
-                            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+                            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
                     }
                 }
@@ -147,7 +147,7 @@ fun MedicineDetailScreen(
                     Text(
                         "Storage: $it",
                         style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 16.dp),
                     )
                 }
@@ -163,7 +163,7 @@ fun MedicineDetailScreen(
                 Text(
                     "No reminders yet. Tap + to add one.",
                     style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(16.dp),
                 )
             } else {

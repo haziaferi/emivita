@@ -147,29 +147,30 @@ private fun CalendarSelectedDayPanel(
             selectedDate == null -> Text(
                 "Tap a day to see what happened.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             monthLoading -> Text(
                 "Loading…",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             entries.isNullOrEmpty() -> Text(
                 "Nothing recorded on ${selectedDate.format(DateTimeFormatter.ofPattern("EEE, MMM d"))}.",
                 style = MaterialTheme.typography.bodyMedium,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             else -> {
                 Text(
                     selectedDate.format(DateTimeFormatter.ofPattern("EEEE, MMM d")),
                     style = MaterialTheme.typography.labelLarge,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 6.dp),
                 )
                 entries.forEach { row ->
-                    HistoryEntryRow(row, onClick = {
-                        if (row.doseEvent.status != DoseStatus.REFILLED) onEntryClick(row) // §7 R46: a missed dose is correctable too
-                    })
+                    // Gate lives in HistoryEntryRow itself (§7 R47) -- this
+                    // callback used to repeat it, which is how the row's own
+                    // stricter allow-list went unnoticed here.
+                    HistoryEntryRow(row, onClick = { onEntryClick(row) })
                     Spacer(Modifier.height(8.dp))
                 }
             }
@@ -190,7 +191,7 @@ private fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
                 textAlign = TextAlign.Center,
                 text = dayOfWeek.getDisplayName(TextStyle.SHORT, locale),
                 style = MaterialTheme.typography.labelSmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
     }
@@ -214,6 +215,13 @@ private fun CalendarDayCell(day: CalendarDay, today: LocalDate, statuses: List<D
                 style = MaterialTheme.typography.bodyMedium,
                 fontWeight = if (day.date == today) FontWeight.Bold else FontWeight.Normal,
                 color = if (!inMonth) {
+                    // The one surviving alpha-muted colour in the app, and
+                    // deliberately not migrated to onSurfaceVariant with the
+                    // other 26 (§7 R47): an out-of-month day sits in a cell
+                    // that is not clickable (see `inMonth` above), so it is an
+                    // inactive component, which WCAG 1.4.3 exempts from the
+                    // 4.5:1 rule. Dimming it is what tells a reader the cell is
+                    // dead; onSurfaceVariant would make it look live.
                     MaterialTheme.colorScheme.onSurface.copy(alpha = 0.25f)
                 } else {
                     MaterialTheme.colorScheme.onSurface

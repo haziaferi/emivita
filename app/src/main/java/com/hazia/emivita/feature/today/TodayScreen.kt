@@ -66,6 +66,7 @@ import com.hazia.emivita.core.format.formatDoseWithUnit
 import com.hazia.emivita.ui.components.parseHexColor
 import com.hazia.emivita.ui.icons.MedicineIcons
 import com.hazia.emivita.ui.theme.NeutralMedicineAccent
+import com.hazia.emivita.ui.theme.doseCritical
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -388,12 +389,16 @@ private fun TimelineEntryRow(
                 Text(
                     entry.medicine.name,
                     style = MaterialTheme.typography.titleMedium,
-                    color = if (muted) MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f) else MaterialTheme.colorScheme.onSurface,
+                    color = if (muted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
                     statusLabel(entry) + " - " + formatDoseWithUnit(entry.doseAmount, entry.medicine.doseUnit),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    // Typography.doseCritical, not labelMedium written out: this
+                    // is a dose amount, the text the floor exists for (§7 R47).
+                    // Same 12sp today -- the point is that raising the floor is
+                    // one edit, and that the call site says which rule binds it.
+                    style = MaterialTheme.typography.doseCritical,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             when (entry.status) {
@@ -511,7 +516,7 @@ private fun LogDoseDialog(
                         Text(
                             "Logged as taken just now.",
                             style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                         saveError?.let {
                             Spacer(Modifier.height(4.dp))

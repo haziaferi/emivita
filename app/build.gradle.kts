@@ -60,6 +60,15 @@ android {
         // reached it. Only the migration and repository tests run under
         // Robolectric; the scheduling tests deliberately do not.
         unitTests.isReturnDefaultValues = true
+
+        // Required by the Compose UI tests (spec §7 R47). Without it AGP hands
+        // Robolectric a synthesised stub manifest with no resources, and
+        // createComposeRule() fails to resolve the host activity that
+        // ui-test-manifest contributes to the merged debug manifest
+        // ("Unable to resolve activity for Intent ... ComponentActivity").
+        // It also makes real resources readable from the pure-JVM tests, which
+        // the migration and repository tests neither need nor are harmed by.
+        unitTests.isIncludeAndroidResources = true
     }
 
     buildFeatures {
@@ -363,13 +372,30 @@ dependencies {
     testImplementation("io.mockk:mockk:1.13.13")
     testImplementation("app.cash.turbine:turbine:1.2.0")
     testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
-    // No androidTestImplementation entries: there is no androidTest source
-    // set. The only instrumented test was the New-Project wizard's
-    // ExampleInstrumentedTest asserting the package name, and it had never
-    // been run -- its dependencies were not even in the Gradle cache, which
-    // is what made `./gradlew --offline lintDebug` fail. Add these three back
-    // (compose-bom, androidx.test.ext:junit, ui-test-junit4) alongside the
-    // first real instrumented test.
+    // Compose UI tests live in the UNIT test source set, driven by Robolectric,
+    // not in an androidTest source set. That is deliberate and is the opposite
+    // of what this comment used to advise (spec §7 R47).
+    //
+    // An androidTest source set runs under `connectedAndroidTest`, and
+    // .github/workflows/ci.yml runs assembleDebug, testDebugUnitTest and
+    // lintDebug -- no device, no emulator, so nothing there would ever have
+    // executed an instrumented test. The `ndk.abiFilters` block above says the
+    // same thing from the other end: this project ships arm ABIs only and is
+    // never developed against an emulator. A test suite that cannot run is
+    // worse than none, because the ledger starts crediting it.
+    //
+    // Robolectric is already here for the Room tests, and
+    // ui-test-junit4 + createComposeRule() work under it, so these run inside
+    // the task CI already runs. The trade is that Robolectric draws to a
+    // shadow canvas: assertions about semantics, click handling and text are
+    // sound, and anything about real pixels, animation timing or fonts is not.
+    // Every UI test in this project is written against semantics only.
+    testImplementation(composeBom)
+    testImplementation("androidx.compose.ui:ui-test-junit4")
+    // Provides the ComposeView host activity createComposeRule() attaches to.
+    // `debugImplementation` in an app module reaches the unit test classpath
+    // for the debug variant, which is the only variant tests are compiled for.
+    debugImplementation("androidx.compose.ui:ui-test-manifest")
 }
 configurations.all {
     resolutionStrategy {

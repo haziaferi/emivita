@@ -265,7 +265,10 @@ private fun ColorScheme.withDerivedSurfaces(background: Color, surface: Color, o
     surfaceTint = primary,
 )
 
-private fun colorSchemeFor(palette: MedPalette, dark: Boolean): ColorScheme {
+// `internal`, not `private`: PaletteContrastTest reads every palette's resolved
+// scheme to assert Appendix A's audited ratios hold in the built ColorScheme
+// rather than only in the spec's tables (§7 R47).
+internal fun colorSchemeFor(palette: MedPalette, dark: Boolean): ColorScheme {
     val t = tokensFor(palette, dark)
     return if (dark) {
         darkColorScheme(
