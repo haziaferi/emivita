@@ -36,6 +36,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -71,6 +72,7 @@ fun AddMedicineScreen(
     onSaved: (medicineId: Long) -> Unit,
     onCancel: () -> Unit,
 ) {
+    val colorsInUse = rememberColorsInUse(medicineRepository, profileId)
     MedicineFormBody(
         title = "Add medicine",
         saveLabel = "Save",
@@ -83,6 +85,7 @@ fun AddMedicineScreen(
         initialStorageNote = "",
         initialDoseUnit = "",
         initialLockOverride = null,
+        colorsInUse = colorsInUse,
         onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, doseUnit, lockOverride ->
             val id = medicineRepository.create(
                 Medicine(
@@ -148,6 +151,7 @@ fun EditMedicineScreen(
     }
 
     val tagsSnapshot = existingTags
+    val colorsInUse = rememberColorsInUse(medicineRepository, current.profileId, excludeId = medicineId)
     MedicineFormBody(
         title = "Edit medicine",
         saveLabel = "Save changes",
@@ -160,6 +164,7 @@ fun EditMedicineScreen(
         initialStorageNote = current.storageNote ?: "",
         initialDoseUnit = current.doseUnit ?: "",
         initialLockOverride = current.remindersLockedUntilTaken,
+        colorsInUse = colorsInUse,
         onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, doseUnit, lockOverride ->
             medicineRepository.update(
                 current.copy(
@@ -190,6 +195,33 @@ fun EditMedicineScreen(
 /** Shared body for both Add and Edit -- see AddMedicineScreen/EditMedicineScreen
  *  above for what differs (title/button text, initial values, and what the
  *  final onSave callback actually does with the field values). */
+/**
+ * The profile's other medicines and the colours they already carry, for the
+ * picker's differentiation hint (spec §3, §7 R47).
+ *
+ * A live collector rather than the one-shot `.first()` snapshot the tag diff
+ * uses, and for the opposite reason: the tag snapshot is a baseline that must
+ * not move under a diff, whereas this is only ever read to compare against, so
+ * seeing a medicine added in another tab is right rather than dangerous.
+ * Medicines with no colour set are skipped -- they all render the same
+ * NeutralMedicineAccent, and warning that every uncoloured medicine looks like
+ * every other uncoloured medicine is noise, not news.
+ */
+@Composable
+private fun rememberColorsInUse(
+    medicineRepository: MedicineRepository,
+    profileId: Long,
+    excludeId: Long? = null,
+): List<Pair<String, Color>> {
+    val medicines by medicineRepository.observeForProfile(profileId).collectAsState(initial = emptyList())
+    return remember(medicines, excludeId) {
+        medicines
+            .map { it.medicine }
+            .filter { it.id != excludeId }
+            .mapNotNull { m -> parseHexColor(m.color ?: return@mapNotNull null)?.let { m.name to it } }
+    }
+}
+
 @Composable
 private fun MedicineFormBody(
     title: String,
@@ -203,6 +235,10 @@ private fun MedicineFormBody(
     initialStorageNote: String,
     initialDoseUnit: String,
     initialLockOverride: Boolean?,
+    /** Other medicines' accent colours, for the picker's differentiation hint
+     *  (spec §3, §7 R47). Excludes the medicine being edited -- a colour is
+     *  not "too close to" itself. */
+    colorsInUse: List<Pair<String, Color>>,
     onSave: suspend (
         name: String,
         barcodeValue: String?,
@@ -452,6 +488,7 @@ private fun MedicineFormBody(
             initialColor = color,
             onDismiss = { showColorPicker = false },
             onConfirm = { picked -> color = picked; showColorPicker = false },
+            inUse = colorsInUse,
         )
     }
 }
