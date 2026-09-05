@@ -45,6 +45,12 @@ sealed interface EmivitaRoute {
 
     @Serializable data object NotificationsAlertsSettings : EmivitaRoute
     @Serializable data object AppearanceSettings : EmivitaRoute
+
+    /** Medical ID (spec §7 R48). A real route rather than a bottom sheet,
+     *  unlike Alarms & Snooze and Weekend Mode: it is eight fields plus a SAF
+     *  export flow, which is the complexity SettingsScreen's own doc comment
+     *  says still warrants a destination. */
+    @Serializable data object MedicalIdSettings : EmivitaRoute
 }
 
 data class BottomNavItem(

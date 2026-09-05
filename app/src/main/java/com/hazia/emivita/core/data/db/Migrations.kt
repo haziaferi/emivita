@@ -243,4 +243,33 @@ object Migrations {
             db.execSQL("ALTER TABLE reminders ADD COLUMN weekendModeOptIn INTEGER NOT NULL DEFAULT 0")
         }
     }
+
+    /** v5 -> v6: adds the seven emergency/medical-card columns to `profiles`
+     *  (spec §9 parking lot, promoted in §7 R48).
+     *
+     *  The easiest migration in this file, and deliberately so: seven nullable
+     *  TEXT columns, no default, no FK, no NOT NULL. That is the case plain
+     *  `ALTER TABLE ADD COLUMN` handles outright, so this needs neither
+     *  MIGRATION_1_2's recreate-the-table dance nor MIGRATION_4_5's
+     *  `@ColumnInfo(defaultValue = ...)` pairing -- Room generates the same
+     *  nullable-no-default shape for a fresh install, so the runtime schema
+     *  validation agrees without anything being made to match.
+     *
+     *  Nullable rather than NOT NULL DEFAULT '' on purpose: an empty string
+     *  and "not filled in" are the same thing to a reader but not to a
+     *  renderer, and EmergencyCardExporter omits a whole section when its
+     *  fields are absent rather than printing an empty heading. Null is what
+     *  carries that distinction without every call site having to test for
+     *  blankness as well. */
+    val MIGRATION_5_6 = object : Migration(5, 6) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            for (column in listOf(
+                "bloodType", "allergies",
+                "doctorName", "doctorPhone", "doctorAddress",
+                "pharmacyName", "pharmacyPhone",
+            )) {
+                db.execSQL("ALTER TABLE profiles ADD COLUMN $column TEXT")
+            }
+        }
+    }
 }
