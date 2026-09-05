@@ -165,7 +165,7 @@ private fun HistoryTableRow(row: DoseEventWithMedicine, zone: ZoneId, onClick: (
             Text(
                 historyStatusLabel(row.doseEvent.status),
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(HistoryTableColumn.STATUS.weight),
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,

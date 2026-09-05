@@ -121,7 +121,7 @@ fun AlarmsSnoozeScreen(settingsRepository: SettingsRepository, onBack: () -> Uni
         Text(
             "How long a snoozed reminder waits before firing again.",
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(20.dp))
         Button(
@@ -186,7 +186,7 @@ fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit
                 Text(
                     "Pushes reminders that fall inside the window below to its end time.",
                     style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
             Switch(checked = enabled, onCheckedChange = { enabled = it })
@@ -252,7 +252,7 @@ fun NotificationsAlertsScreen(onBack: () -> Unit) {
         Text(
             "Every reminder posts to one of three channels, by the medicine's notification priority.",
             style = MaterialTheme.typography.bodyMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.7f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(16.dp))
 
@@ -268,7 +268,7 @@ fun NotificationsAlertsScreen(onBack: () -> Unit) {
             "Sound and vibration for each channel are controlled by Android itself, " +
                 "not this app -- open the system notification settings to adjust them.",
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(12.dp))
         Button(onClick = {
@@ -463,7 +463,7 @@ private fun fullScreenIntentSettings(context: Context): Intent =
 private fun NotificationTierRow(title: String, description: String) {
     Column(Modifier.fillMaxWidth().padding(vertical = 8.dp)) {
         Text(title, style = MaterialTheme.typography.bodyLarge)
-        Text(description, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f))
+        Text(description, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
     }
 }
 

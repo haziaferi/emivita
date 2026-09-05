@@ -30,6 +30,7 @@ import com.hazia.emivita.feature.reminders.AddReminderScreen
 import com.hazia.emivita.feature.reminders.EditReminderScreen
 import com.hazia.emivita.feature.settings.AppearanceScreen
 import com.hazia.emivita.feature.settings.BackupSyncScreen
+import com.hazia.emivita.feature.settings.MedicalIdScreen
 import com.hazia.emivita.feature.settings.NotificationsAlertsScreen
 import com.hazia.emivita.feature.settings.SettingsDestination
 import com.hazia.emivita.feature.settings.SettingsScreen
@@ -112,6 +113,7 @@ fun EmivitaNavHost() {
                             SettingsDestination.DataBackup -> navController.navigate(EmivitaRoute.DataBackupSettings)
                             SettingsDestination.NotificationsAlerts -> navController.navigate(EmivitaRoute.NotificationsAlertsSettings)
                             SettingsDestination.Appearance -> navController.navigate(EmivitaRoute.AppearanceSettings)
+                            SettingsDestination.MedicalId -> navController.navigate(EmivitaRoute.MedicalIdSettings)
                             else -> Unit
                         }
                     },
@@ -131,6 +133,14 @@ fun EmivitaNavHost() {
             composable<EmivitaRoute.AppearanceSettings> {
                 AppearanceScreen(
                     settingsRepository = container.settingsRepository,
+                    onBack = { navController.popBackStack() },
+                )
+            }
+            composable<EmivitaRoute.MedicalIdSettings> {
+                MedicalIdScreen(
+                    profileId = profileId,
+                    profileRepository = container.profileRepository,
+                    medicineRepository = container.medicineRepository,
                     onBack = { navController.popBackStack() },
                 )
             }
