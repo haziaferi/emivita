@@ -351,7 +351,7 @@ private fun ReminderTypePicker(onSelect: (ReminderType) -> Unit, onCancel: () ->
                             Text(
                                 option.description,
                                 style = MaterialTheme.typography.labelMedium,
-                                color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
                         }
                     }

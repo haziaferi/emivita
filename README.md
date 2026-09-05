@@ -9,8 +9,20 @@ run to completion from this directory with no Android Studio involvement.
 
     ./gradlew assembleDebug        # app/build/outputs/apk/debug/app-debug.apk
     ./gradlew assembleRelease      # app/build/outputs/apk/release/app-release.apk
-    ./gradlew testDebugUnitTest    # JVM unit + Room migration tests
+    ./gradlew testDebugUnitTest    # JVM unit, Room migration and Compose UI tests
     ./gradlew lintDebug            # gated: fails on any finding not in the baseline
+
+The Compose UI tests run in that same task, under Robolectric, rather than in
+an `androidTest` source set: `.github/workflows/ci.yml` runs the three tasks
+above and has no device attached, so an instrumented suite would never have
+executed there (docs/SPEC.md §7 R47). Two settings make that work and are
+easy to mistake for noise -- `testOptions.unitTests.isIncludeAndroidResources`
+in `app/build.gradle.kts`, without which Robolectric gets a stub manifest and
+cannot resolve the Compose host activity, and `app/src/test/resources/
+robolectric.properties`, which pins the Robolectric SDK image (4.14.1 ships
+none for this project's targetSdk 36) and the stock `Application` (the real
+one loads a SQLCipher native library that cannot load on the JVM). Each file
+says the same in its own comments.
 
 `lintDebug` is a gate, not a report: `app/build.gradle.kts`'s `lint` block sets
 `warningsAsErrors` against `app/lint-baseline.xml`, so a new warning fails the

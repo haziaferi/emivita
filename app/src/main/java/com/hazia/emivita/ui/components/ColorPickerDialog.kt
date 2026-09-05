@@ -71,6 +71,15 @@ fun ColorPickerDialog(
     initialColor: Color?,
     onDismiss: () -> Unit,
     onConfirm: (Color) -> Unit,
+    /**
+     * Colours already assigned to the profile's other medicines, as
+     * (name, colour). Drives the live differentiation hint spec §3 left open
+     * and §7 R47 settled -- see ColorDistinguishability.kt for why the test is
+     * perceptual distance rather than the contrast ratio §3 named. Empty by
+     * default so the profile picker, which has nothing to collide with, need
+     * not pass anything.
+     */
+    inUse: List<Pair<String, Color>> = emptyList(),
 ) {
     val hsv = remember {
         val initial = initialColor ?: NeutralMedicineAccent
@@ -210,6 +219,20 @@ fun ColorPickerDialog(
                         "Not a valid hex color (e.g. #4B7A6B)",
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.error,
+                    )
+                }
+                // Live differentiation hint (spec §3, settled in §7 R47).
+                // Recomputed as the user drags rather than checked on Ok, so
+                // it reads as guidance while choosing rather than a rejection
+                // after choosing -- and it never disables "Use color": two
+                // medicines the user wants in similar colours is a real case.
+                val conflict = nearestColorConflict(currentColor(), inUse)
+                if (conflict != null) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(
+                        "Close to ${conflict.otherName}'s color -- they may be hard to tell apart.",
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
             }
