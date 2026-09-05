@@ -54,10 +54,16 @@ import androidx.compose.ui.graphics.Color
 // Hex values are copied verbatim from the spec's Appendix A palette reference
 // (WCAG contrast ratios computed there, not re-derived here). On* colors are
 // auto-picked black/white, whichever clears more contrast against their base
-// (same rule as §6's selected/active state-token formula). Error is
-// computed per §6's rule: Accent hue +158° (within the spec's
-// 150-165° range), S60/L45 -- not an audited Appendix A value, since the
-// spec defines Error as a formula, not a fixed hex.
+// (same rule as §6's selected/active state-token formula).
+//
+// Error is NOT computed. It is a fixed #B8322E shared by all eight palettes
+// (§7 R42). This comment used to describe the rule R42 removed -- "Accent hue
+// +158°, S60/L45" -- directly above the literal that replaced it, which is
+// the kind of drift §7 R47 was opened to clear. Rotating each accent produced
+// green in four palettes for the role AdherenceChart paints missed doses with;
+// a hue chosen to harmonise with the accent cannot also mean "something is
+// wrong". The rotation rule still governs the three accent roles, where it
+// belongs. PaletteContrastTest asserts onError clears AA against it.
 object GoldenHourPalette {
     // Light
     val LightBackground = Color(0xFFFBF3E6)

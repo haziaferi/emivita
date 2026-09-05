@@ -212,7 +212,7 @@ fun BackupSyncScreen(
         Text(
             "Export a full snapshot for a new phone, sharing with someone, or before a risky change. Separate from the History screen's PDF/CSV export.",
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(12.dp))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
@@ -250,7 +250,7 @@ fun BackupSyncScreen(
         Text(
             "Replaces everything currently on this device with the contents of the chosen file.",
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = { openDocumentLauncher.launch(arrayOf("application/zip", "application/octet-stream")) }) {
@@ -269,7 +269,7 @@ fun BackupSyncScreen(
         Text(
             "Keeps a password-protected zip current in a folder of your choice, so a sync tool you already run (e.g. a Syncthing fork) can mirror it. Not a sync mechanism itself -- distinct from the manual export above.",
             style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurface.copy(alpha = 0.6f),
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(12.dp))
         if (syncFolderLoaded) {
