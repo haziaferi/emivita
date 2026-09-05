@@ -261,6 +261,7 @@ fun HistoryScreen(
             originalStatus = row.doseEvent.status,
             originalDoseAmount = row.doseEvent.doseAmount,
             originalResolvedAtEpochMillis = row.doseEvent.resolvedAtEpochMillis,
+            scheduledEpochMillis = row.doseEvent.scheduledEpochMillis,
             doseEventRepository = doseEventRepository,
             onDismiss = { editing = null },
             doseUnit = row.medicine.doseUnit,

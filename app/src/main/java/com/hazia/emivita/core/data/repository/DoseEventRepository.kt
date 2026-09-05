@@ -72,6 +72,24 @@ class DoseEventRepository(
     }
 
     /** The single entry point for Taken / Skipped from any screen or receiver.
+     *
+     *  [resolvedAtEpochMillis] defaults to now, which is right for every live
+     *  path -- a notification action, the alarm screen, Today's chips -- where
+     *  answering and acting are the same moment. It is passed explicitly only
+     *  when correcting the record after the fact, where they are not: a dose
+     *  taken on Tuesday and only recorded on Friday happened on Tuesday, and
+     *  the History this app exists to hand a clinician should say so (spec §7
+     *  R46).
+     *
+     *  That parameter is also what makes retroactive resolution safe for
+     *  scheduling, which is the reason it is a parameter rather than a second
+     *  method that stamps now. `DoseEventDao.getLastResolved` picks a
+     *  reminder's ON_RESOLVED anchor with `ORDER BY resolvedAtEpochMillis
+     *  DESC`, so a truthful backdated resolution cannot displace a genuinely
+     *  newer one -- and where it *is* the newest, it is also the truth about
+     *  when the medicine was last taken, which is exactly what that anchor
+     *  means. Stamping now instead would silently re-anchor a live interval
+     *  reminder to the moment someone tidied up their history.
      *  Resolvable from three independent surfaces (notification action,
      *  full-screen alarm, Today's inline buttons), so a second call for an
      *  event that's already been resolved has to be a safe no-op rather than
@@ -79,7 +97,11 @@ class DoseEventRepository(
      *  PENDING check below is read and enforced inside the same transaction
      *  as the write, not against a snapshot taken before it opens, so two
      *  near-simultaneous calls can't both pass it. */
-    suspend fun resolve(doseEventId: Long, status: DoseStatus) {
+    suspend fun resolve(
+        doseEventId: Long,
+        status: DoseStatus,
+        resolvedAtEpochMillis: Long = System.currentTimeMillis(),
+    ) {
         require(status != DoseStatus.PENDING) { "resolve() is for Taken/Skipped, not re-setting Pending" }
 
         val resolvedEvent = database.withTransaction {
@@ -87,7 +109,7 @@ class DoseEventRepository(
                 ?: error("No DoseEvent with id=$doseEventId")
             if (event.status != DoseStatus.PENDING) return@withTransaction null
 
-            doseEventDao.updateStatus(doseEventId, status, System.currentTimeMillis())
+            doseEventDao.updateStatus(doseEventId, status, resolvedAtEpochMillis)
             // Denormalized medicineId (spec §3) -- works for both scheduled
             // events (kept in sync with reminder.medicineId at materialization
             // time) and PRN events, which have no reminder to derive it from.
