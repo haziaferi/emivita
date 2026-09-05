@@ -90,7 +90,7 @@ fun HistoryTableView(
         LazyColumn(contentPadding = PaddingValues(bottom = 8.dp)) {
             items(sorted, key = { it.doseEvent.id }) { row ->
                 HistoryTableRow(row, zone, onClick = {
-                    if (row.doseEvent.status == DoseStatus.TAKEN || row.doseEvent.status == DoseStatus.SKIPPED) onRowClick(row)
+                    if (row.doseEvent.status != DoseStatus.REFILLED) onRowClick(row) // §7 R46
                 })
                 HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
             }
@@ -131,7 +131,7 @@ private fun HistoryTableHeader(sortColumn: HistoryTableColumn, descending: Boole
 private fun HistoryTableRow(row: DoseEventWithMedicine, zone: ZoneId, onClick: () -> Unit) {
     val medicine = row.medicine
     val accent = medicine.color?.let { parseHexColor(it) } ?: NeutralMedicineAccent
-    val editable = row.doseEvent.status == DoseStatus.TAKEN || row.doseEvent.status == DoseStatus.SKIPPED
+    val editable = row.doseEvent.status != DoseStatus.REFILLED
     val time = remember(row.doseEvent.resolvedAtEpochMillis, row.doseEvent.scheduledEpochMillis) {
         val epochMillis = row.doseEvent.resolvedAtEpochMillis ?: row.doseEvent.scheduledEpochMillis
         Instant.ofEpochMilli(epochMillis).atZone(zone).format(DateTimeFormatter.ofPattern("MMM d, HH:mm"))

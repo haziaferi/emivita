@@ -41,8 +41,22 @@ import java.time.ZoneId
  * Tap-to-open rather than a literal swipe gesture -- functionally
  * equivalent (every field spec calls out is editable), and a modal step
  * before changing a medication record reads safer for this app's purpose
- * than a gesture that's easy to trigger by accident. Only ever opened for an
- * already-resolved (Taken/Skipped) event -- callers gate on that themselves.
+ * than a gesture that's easy to trigger by accident.
+ *
+ * Also opens for an unresolved (PENDING) event, which History labels
+ * "Missed" -- spec §7 R46. That case used to be excluded by every caller,
+ * which meant a dose you took but did not tap was wrong in the record
+ * permanently and wrong in the PDF export with it. Two differences when
+ * [originalStatus] is PENDING: neither status radio starts selected, so
+ * resolving is a deliberate choice rather than a default the dialog picked
+ * for you; and the recorded time starts at the dose's own
+ * [scheduledEpochMillis] rather than now, because a dose taken on Tuesday and
+ * recorded on Friday happened on Tuesday.
+ *
+ * A locked medicine (`Medicine.remindersLockedUntilTaken`) is deliberately
+ * not gated here, on the same reasoning §7 R32 used for the resolved case:
+ * that lock stops a *live* dose being dismissed without being taken, and
+ * correcting a past record is not a dismissal.
  */
 @Composable
 fun DoseEditDialog(
@@ -51,16 +65,23 @@ fun DoseEditDialog(
     originalStatus: DoseStatus,
     originalDoseAmount: Double,
     originalResolvedAtEpochMillis: Long?,
+    scheduledEpochMillis: Long,
     doseEventRepository: DoseEventRepository,
     onDismiss: () -> Unit,
     doseUnit: String? = null,
 ) {
     val zone = remember { ZoneId.systemDefault() }
-    val originalZoned = remember(originalResolvedAtEpochMillis) {
-        Instant.ofEpochMilli(originalResolvedAtEpochMillis ?: System.currentTimeMillis()).atZone(zone)
+    // Falls back to the dose's own scheduled slot, not to now: for a PENDING
+    // ("Missed") event there is no recorded time yet, and the scheduled time is
+    // the closest thing to the truth the app knows.
+    val originalZoned = remember(originalResolvedAtEpochMillis, scheduledEpochMillis) {
+        Instant.ofEpochMilli(originalResolvedAtEpochMillis ?: scheduledEpochMillis).atZone(zone)
     }
 
-    var status by remember { mutableStateOf(originalStatus) }
+    val wasUnresolved = originalStatus == DoseStatus.PENDING
+    // Null until chosen when the dose was never resolved -- see the doc comment
+    // on why this dialog refuses to guess Taken for a missed dose.
+    var status by remember { mutableStateOf(originalStatus.takeIf { !wasUnresolved }) }
     var hour by remember { mutableIntStateOf(originalZoned.hour) }
     var minute by remember { mutableIntStateOf(originalZoned.minute) }
     var doseAmount by remember { mutableStateOf(formatDecimal(originalDoseAmount)) }
@@ -74,6 +95,15 @@ fun DoseEditDialog(
         title = { Text(medicineName) },
         text = {
             Column {
+                if (wasUnresolved) {
+                    Text(
+                        "This dose was never answered. Recording it now keeps the history and " +
+                            "the exported report accurate.",
+                        style = MaterialTheme.typography.labelMedium,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                    Spacer(Modifier.height(12.dp))
+                }
                 Text("Status", style = MaterialTheme.typography.labelLarge)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(selected = status == DoseStatus.TAKEN, onClick = { status = DoseStatus.TAKEN })
@@ -102,16 +132,26 @@ fun DoseEditDialog(
         },
         confirmButton = {
             TextButton(
-                enabled = doseValue != null && doseValue > 0 && !saving,
+                enabled = doseValue != null && doseValue > 0 && !saving && status != null,
                 onClick = {
                     val amount = doseValue ?: return@TextButton
+                    val chosenStatus = status ?: return@TextButton
                     saving = true
                     saveError = null
                     scope.launch {
                         try {
                             val newResolvedAt = originalZoned.withHour(hour).withMinute(minute).toInstant().toEpochMilli()
-                            if (status != originalStatus) doseEventRepository.switchStatus(doseEventId, status)
-                            if (newResolvedAt != originalResolvedAtEpochMillis) doseEventRepository.editRecordedTime(doseEventId, newResolvedAt)
+                            if (wasUnresolved) {
+                                // resolve(), not switchStatus(): the latter requires an
+                                // already-resolved event, and this one never was. It
+                                // also applies the stock change, which is right --
+                                // the pill left the bottle when it was taken, and the
+                                // count has been one too high ever since.
+                                doseEventRepository.resolve(doseEventId, chosenStatus, newResolvedAt)
+                            } else {
+                                if (chosenStatus != originalStatus) doseEventRepository.switchStatus(doseEventId, chosenStatus)
+                                if (newResolvedAt != originalResolvedAtEpochMillis) doseEventRepository.editRecordedTime(doseEventId, newResolvedAt)
+                            }
                             if (amount != originalDoseAmount) doseEventRepository.editDoseAmount(doseEventId, amount)
                             onDismiss()
                         } catch (e: Exception) {

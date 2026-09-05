@@ -347,6 +347,10 @@ private fun TimelineNodeItem(
                 originalStatus = if (entry.status == TimelineStatus.TAKEN) DoseStatus.TAKEN else DoseStatus.SKIPPED,
                 originalDoseAmount = entry.doseAmount,
                 originalResolvedAtEpochMillis = entry.resolvedAtEpochMillis,
+                // Today never opens this for a PENDING entry -- those carry inline
+                // Take/Skip chips -- so this is only ever the already-resolved
+                // fallback. Passed because the dialog requires it, not relied on.
+                scheduledEpochMillis = node.epochMillis,
                 doseEventRepository = doseEventRepository,
                 onDismiss = { editing = null },
                 doseUnit = entry.medicine.doseUnit,
