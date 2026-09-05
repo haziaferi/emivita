@@ -848,6 +848,12 @@ merely related reading.
 | R46 | A "Missed" dose could never be corrected. All four surfaces gated editing on `status == TAKEN || status == SKIPPED`, and `switchStatus` refuses anything not already resolved, so a dose that was taken but never tapped stayed wrong in History and in the PDF export permanently — in an app whose §1 purpose is an adherence record and whose export exists to be handed to a clinician. R34 made it worse by surfacing the missed count in the summary and the report, so the defect became more visible without becoming fixable. It was not a UI gate to lift, which is why it was deferred twice: `resolve()` stamped `System.currentTimeMillis()`, and `DoseEventDao.getLastResolved` picks a reminder's ON_RESOLVED anchor with `ORDER BY resolvedAtEpochMillis DESC` — so retroactively resolving Tuesday's dose on Friday would have re-anchored a live interval reminder to Friday and silently shifted every subsequent dose | ✅ **Resolved this pass.** The two questions that looked like product decisions answer themselves once the record is required to be truthful. `resolve()` takes `resolvedAtEpochMillis`, defaulted to now so every live path — notification action, alarm screen, Today's chips — is unchanged, and passed explicitly only when correcting the past. Recording the true time is also what makes rescheduling *safe* rather than dangerous: a backdated resolution cannot displace a genuinely newer one in that `DESC` ordering, and where it is the newest it is also the truth about when the medicine was last taken, which is what the anchor means. `DoseEditDialog` opens for PENDING with neither status radio preselected (resolving is a choice, not a default it picks for you) and the time defaulting to the dose's own scheduled slot; History's three surfaces now gate on `!= REFILLED` rather than an allow-list, since a refill is a restock with nothing to resolve. Today is unchanged: its PENDING rows already carry inline Take/Skip. Lock-until-taken is deliberately not gated, on R32's own reasoning — that lock stops a *live* dose being dismissed, and correcting a past record is not a dismissal. Three tests pin the repository behaviour, including both halves of the anchor property. **Not device-verified**, unlike the rest of this batch: setting up a genuinely missed past dose needs an alarm to fire and go unanswered, and partway through that the phone turned out to be shared with another session driving a different app — blind input landed in it. The device work was abandoned rather than fought for, that app was restored, and Emivita's test data was cleared without the UI. The repository logic is covered; the History tap-through and the dialog's PENDING rendering are not |  |
 | R47 | Spec-versus-code audit, run against the whole tree rather than a section. Three findings, and the first two share a shape: a ledger row marked resolved because the *mechanism* shipped, while the call sites that were the actual defect were never migrated. **R46 reached one of History's three surfaces.** `HistoryEntryRow` -- shared by the List and by Calendar's day-detail list -- still gated `editable` on a `TAKEN || SKIPPED` allow-list, so the List never opened the dialog for a missed dose, and Calendar passed a correctly-gated `!= REFILLED` callback into a row that was not clickable at all, making its fix dead code. Only `HistoryTableView` worked. R46's own note records the History tap-through as the half it could not device-verify, and that is precisely the half that was wrong. **T2 shipped the muted-text token and not its use.** All eight palettes carry a real audited `mutedText` at 4.60-4.64:1, and 27 call sites still wrote `onSurface.copy(alpha = 0.6f/0.7f)`. Measured over each palette's own surface, the alpha technique lands at **3.18-4.12:1 in all eight light palettes** -- below the 4.5:1 AA floor, on Today's dose line and History's dose line among others, in an app whose §1 purpose is a clinical adherence record. Appendix C's action item #2 called for exactly this fix; the token half of it was done and marked resolved. **Third, a comment contradicting the line beneath it:** `Color.kt`'s header still described `error` as computed from "Accent hue +158°" directly above the fixed `#B8322E` R42 replaced it with. Also found, and fixed by populating the column that exists for it rather than by editing an append-only row: T6 and R40 both still read ❓ Open although R42 and R44 closed them | ✅ **Resolved this pass, with the test infrastructure that would have caught the first one.** The gate now lives in `HistoryEntryRow` alone as `!= REFILLED`; both callers stopped re-testing it, since duplicating the condition is what let them disagree. All 26 muted-text sites read `onSurfaceVariant`; the one deliberate holdout is Calendar's out-of-month day number, whose cell is not clickable, so WCAG 1.4.3 exempts it and dimming is what says so. `Typography.doseCritical` gained its first two call sites -- R42 named the floor and nothing used it. **The infrastructure is the durable half.** `HistoryEntryRowTest` failed on exactly `missedDoseIsClickable` before the fix, and `PaletteContrastTest` makes Appendix A's audit executable against the `ColorScheme` the app really builds -- body text, muted text, outline against both surface and background, R42's error hue and R44's derived container ladder -- so a ratio computed once by hand into a table is now asserted every build. One assertion pins the alpha technique as *still failing*, so it cannot return by habit. These are the project's first Compose tests and they live in the **unit** source set under Robolectric, not in `androidTest`: `.github/workflows/ci.yml` runs `assembleDebug`, `testDebugUnitTest` and `lintDebug` and has no device, so an instrumented suite would never have run -- which is how R46 shipped half-done. `app/build.gradle.kts`'s own closing comment advised the opposite and is corrected. That needed `isIncludeAndroidResources`, which makes Robolectric read the merged manifest, so `robolectric.properties` pins SDK 35 (4.14.1 ships no 36 image) and the stock `Application` -- which is what every existing test was already getting from the synthesised manifest, `EmivitaApplication` loading a SQLCipher native library the JVM cannot. **Also settled here:** §3's open colour-picker question ("whether the picker surfaces a live differentiation hint ... or is left entirely to the user's judgment"). It does both: a hint that names the nearest medicine and never disables Ok. §3 specifies the test as *contrast* dropping too low and that is not implemented, deliberately -- contrast ratio is defined on relative luminance alone, so a pure red and a mid green score about 1:1 while being unmistakable, and two greys one step apart score comfortably while being genuinely confusable. It is the right metric for text on a background, which is what §6 and Appendix A use it for, and the wrong one for two adjacent fills. The question is perceptual distance, so this is CIELAB ΔE*ab (CIE76), threshold 15 -- far above the ~1.0 just-noticeable difference, because these are cards seen in passing, in bad light, by someone who is unwell |  |
 | R48 | §9's parking lot, acted on rather than corrected again. R43 downgraded **doctor/pharmacy contact info + allergies + blood type** from "Blocked" to unscoped by finding the blocker's own question already answered in the tree, and left it there. The entry itself was never updated to say so -- it still read "**Blocked**, not just unscoped" -- and neither was the **tapering** entry R45 overturned, which still described work R45 proved unnecessary. Both rows claimed the parking lot "is corrected to say so"; neither correction was made | ✅ **Resolved this pass.** Doctor/pharmacy is promoted and built: seven nullable `profiles` columns behind `MIGRATION_5_6`, a Medical ID screen under Settings, and a one-page PDF card. The entry's two boundaries are kept exactly -- deliberately not a lock-screen widget, because Android's own Emergency Information is readable without unlocking the phone and this app cannot beat that, while a page to hand a new doctor is something the OS feature cannot produce; and nothing is ever algorithmically checked, which the screen states in as many words and a test pins. Two things the entry did not anticipate: it lists "pharmacy phone" alone, and a number printed with nothing naming whose it is cannot be used by the person holding the card, so the name comes with it. And it **invalidates a premise this file relies on elsewhere**: `EmivitaApp` creates the single profile silently as "Me", justified in its own doc comment because "a profile's name is never displayed anywhere in the UI outside creation". A card headed with the user's name displays it, and would have read "Me". So Name is the screen's first field, the placeholder is presented as the absence it is rather than a name the user chose, and export is the one action that refuses to run without a real one. That comment now records where its premise stops holding instead of being left to look true; onboarding is *not* coming back for a name one screen needs. Tapering stays unpromoted on R45's own still-valid grounds, and its entry is now corrected to describe the mechanism that works rather than the variant R45 retired |  |
+| R49 | The palettes were rebuilt from `design-lexicon.md` on the user's instruction, ignoring the shipped colours entirely, and the rebuild kept producing accents with **no visible relationship to their palette** — Golden Hour's amber drawing a magenta accent, Forest Floor's moss drawing a pink one. Four accents sat at no named harmonic interval at all (offsets 92°, 133°, 43°, 163°, each 12–13° from any template), and saturation was pinned near 46% for six of eight palettes whether the palette's own roles were 22% (Sage Clinical) or 71% (Cobalt Porcelain). The cause was not tuning. The accent search **maximised perceptual distance from the palette**, carried an explicit rule excluding the palette's own hue band, and ran a global scheduler forcing the eight accents apart — so each accent was a function of what the *other* palettes had taken rather than of its own. An objective shaped that way cannot produce coherence at any parameter setting | ✅ **Resolved.** Objective inverted: harmony is maximised, distinguishability is a floor. Hue is `base + a named interval` from the lexicon's own vocabulary (Mossland pulls its accent "~50° left into warm clay"; Terracotta & Slate is "near-complementary"), saturation inherits the palette's own envelope, and the global scheduler is deleted — with each accent derived from its own base, the eight differ as a consequence of their palettes rather than by imposition. designkit's pairwise-harmony score moved from **0.441 to 0.72–0.99** |  |
+| R50 | **Every fitness number this project has quoted from designkit was computed with the constraint set switched off.** `dk status` reported `optimizer engine not found — local-search fallback`: `optimization-engines` was never reachable, so `--optimize` ran a 4-restart hill climb that scores only the weighted components and never evaluates `constraints`. That is why a Golden Hour whose accent had drifted to a red at hue 1° returned fitness 0.902 — nothing was checking, and nothing was zeroing | ✅ **Resolved.** designkit's discovery walks up for a sibling `engine/` directory and scans `~/.claude/plugins`, but this machine's plugins live under `…/rpm/`, which it never enumerates. Setting `OPTIMIZATION_ENGINES_HOME` to the optimization-engines plugin's `engine/` directory flips it to `mode: portfolio` (DE/CHA/CMA). The first real run failed immediately where the fallback had been silent — see R51. **This is an environment fix, not a code one:** it has to be set wherever designkit is invoked, or the fallback silently returns |  |
+| R51 | With the portfolio actually running, **6 of 16 seed/mode combinations were infeasible** — all six on one constraint, `color.accent_distinct` ("accent hue must sit at least 20 degrees from primary"). The hue-spread column is the whole diagnosis: blocked seeds spread 0.1–2.8°, feasible ones 13–54°. Five of the eight source entries are monochromatic or two-colour *by their own rule* — Cozy Cocoa "monochromatic, H≈20–30°", Ming "rigorously two-color, nothing else", Navy Scholastic and Clinical Teal both "monochromatic" — so designkit's colour domain, which assumes a hue-distinct accent, structurally cannot refine them. Forcing a template did not help: when the *seed* violates a constraint, fitness is 0 everywhere nearby and the search has no gradient to climb | ✅ **Resolved at the user's direction** that the palettes need not stay monochromatic. Route switched from refine (`--from`) to generative (`--mood`, seeded from each entry's own language) with `primary.hue` anchored to the entry's measured band, so identity survives while the template is free. All 16 combinations now feasible with zero violations. Recorded because the constraint was right and the seed was wrong — a monochromatic source is not a defect to patch around |  |
+| R52 | Two further defects in the method, both invisible in the fitness numbers. **(a)** The role envelopes were left at the domain's defaults, of which `accent.sat [70, 95]` is the one that mattered: designkit's colour domain is built for brand palettes where the accent is *meant* to pop, the exact inverse of this app's eye-comfort brief, and the `muted` mood cue does not reach it. **(b)** Templates were swept and the best **fitness** taken — but fitness is not comparable across templates. A perfect triadic and a perfect analogous both score ~1.0 on `harmony_template_match`, so "highest fitness" systematically selects the widely-spaced ones. That is why Golden Hour kept returning amber + mint + purple at fitness 0.970: formally harmonious, visually incoherent | ✅ **Resolved.** (a) Envelopes retuned through `dk spec`, which exists for exactly this — accent and primary saturation into a calm band, and `surface.light`/`text.light` pulled off 96/5 so nothing sits near pure white or black. Cobalt Porcelain keeps a higher ceiling because the Ming entry is deliberately S72 to separate it from Scholastic and Clinical; honouring the entry beats flattening every palette alike. (b) The template is a **decision, not a search dimension** — the sweep is restricted to the coherent families (analogous, monochromatic, near-complementary). That this is right rather than merely preferred is confirmed by the engine then rediscovering the lexicon's own answer unprompted: Golden Hour came back as amber with a slate partner, which is Cozy's documented *Terracotta & Slate* pair |  |
+| R53 | ❓ **The one dispute that does not resolve.** Coherence and distinguishability are in direct opposition here, and no parameter setting satisfies both. An analogous palette is coherent *because* its hues are close, and close hues yield low ΔE; the earlier method reached ΔE 60–100 by making the accent unrelated, and this one reaches harmony 0.9+ by making it related. Measured on the chosen set, `attention` vs `primary` lands at Sunlit Focus dark dE 5.3; Golden Hour light dE 7.5; Forest Floor light dE 7.8 — under the ΔE 10 categorical floor (Okabe–Ito calibrated, §7 R47) in three registers, and Rose Petal dark's `attention`/`tertiary` pair sits at 9.0. Everything else passes: **183 of 184 checks** | ❓ **Open, and deliberately not tuned away.** That floor governs colours told apart *by colour alone*, and WCAG 1.4.1 forbids dose state resting on colour alone regardless — Today and History already carry a per-state icon and label, so colour is the second channel, not the only one. The judgement recorded here is that a coherent palette with an iconographic state channel serves this app better than a discordant palette carrying state chromatically. **What would overturn it:** any surface conveying state by colour with no icon or label beside it. `AdherenceChart` is the live candidate — stacked bars read through a legend, where hue does the work — and it must be re-examined against these ΔE figures before the new palettes ship |  |
+| R54 | R53 named `AdherenceChart` as the surface that would overturn its judgement and said it must be re-examined before the new palettes ship. Re-examined, and **it does overturn it, for four registers of sixteen.** The chart paints taken/skipped/missed as stacked bars read through a legend, so hue carries the state with no icon or label beside it — the exact condition R53 set. Measured across all eight palettes, both modes, and normal/deuteranopic/protanopic vision, the failing pair is always **taken vs missed**: Golden Hour light ΔE 7.3, Sunlit Focus dark 5.6, Forest Floor light 7.9, Rose Petal dark 9.0, against the categorical floor of 10. The other twelve registers clear it, several comfortably (Velvet Ribbon 26.3, Sunlit Focus light 30.4). Note this is not the old failure returning: the shipped `#B8322E` scheme's worst pair was 8.0 **in normal vision** (§7 R47), where every failure here is colour-vision-only | ❓ **Open — the palettes are not blocked, the chart is.** Two ways out, and this is a design decision rather than a defect: give the chart a second channel so hue stops being load-bearing (a fill pattern per series, or direct per-series labels — the same fix WCAG 1.4.1 asks for and the one that leaves the palettes coherent), or exempt the chart's `missed` series from the palette and give it a reserved hue, which restores separation and costs the coherence R49–R52 was spent buying. The first is recommended: it fixes the channel rather than the colour, and it holds for any future palette. Until one is chosen, `Color.kt` should not be rewritten — the ten-role values are settled and verified (183/184), and wiring them while the chart still reads state by hue alone would ship a known regression for colour-blind users in four registers |  |
 
 ---
 
@@ -2175,3 +2181,178 @@ arbitrary ordering. Coherent as written.
    (AAA) and traceable to vetted `design-lexicon.md` entries. Playful's
    looser harmony score (~0.6–0.7) is a deliberate, documented trade-off
    in the lexicon itself, not a defect.
+
+## Appendix D — Candidate palettes (§7 R49–R54) 🚧
+
+Ten roles per palette, light and dark, rebuilt from `design-lexicon.md` through the
+optimizer portfolio. **Candidates, not shipped tokens** — `Color.kt` still carries the
+Appendix A set, and R54 gives the condition that gates replacing it. They are inlined
+here rather than kept in a `docs/palettes/` file for the reason Appendix A states about
+itself: a second document holding hex values is how the last one went stale.
+
+Method, in one line: `dk spec palette --mood <entry mood> --template <T> --mode <m>
+--device mobile`, role envelopes retuned for the eye-comfort brief, `primary.hue`
+anchored to the entry's measured hue band, run through the DE/CHA/CMA portfolio, best
+of the coherent templates only. 183 of 184 verification checks pass; the exception is
+Rose Petal dark's `attention`/`tertiary` pair at ΔE 9.0 (R53).
+
+### Golden Hour
+
+From **Cozy -> Cozy Cocoa** · mood `warm cozy muted` · primary hue band [18, 38] · template analogous (light) / analogous (dark) · fitness 0.904 / 0.994
+
+| Role | Light | Dark |
+|---|---|---|
+| `background` | `#F1F1EE` | `#130C0C` |
+| `surface` | `#EEEDEA` | `#2E1D1D` |
+| `surfaceContainer` | `#E2E1DE` | `#392929` |
+| `outline` | `#B77947` | `#BD7A38` |
+| `text` | `#252322` | `#ECE7E7` |
+| `mutedText` | `#5B5654` | `#B09B9B` |
+| `primary` | `#B77947` | `#C37E3A` |
+| `secondary` | `#958744` | `#BE6A68` |
+| `tertiary` | `#524A25` | `#D8A6A5` |
+| `attention` | `#63883A` | `#B0B039` |
+
+Light: text/surface 13.36:1 · mutedText/surface 6.18:1 · outline/surface 3.07:1 · attention/surface 3.51:1  
+Dark: text/surface 13.10:1 · mutedText/surface 6.11:1 · outline/surface 4.58:1 · attention/surface 6.96:1
+
+### Sunlit Focus
+
+From **Extroverted-sunny** · mood `warm light airy faded` · primary hue band [30, 49] · template near-complementary (light) / monochromatic (dark) · fitness 0.998 / 1.000
+
+| Role | Light | Dark |
+|---|---|---|
+| `background` | `#EBF0F2` | `#0E0F10` |
+| `surface` | `#E0E8EB` | `#1B1D1F` |
+| `surfaceContainer` | `#D4DCDF` | `#27292B` |
+| `outline` | `#7E6242` | `#938261` |
+| `text` | `#1D1B20` | `#E5E3E6` |
+| `mutedText` | `#575160` | `#9F9BA3` |
+| `primary` | `#7A5F40` | `#938261` |
+| `secondary` | `#65809B` | `#6C8A8A` |
+| `tertiary` | `#394858` | `#9CB1B1` |
+| `attention` | `#4B5194` | `#4DA561` |
+
+Light: text/surface 13.75:1 · mutedText/surface 6.15:1 · outline/surface 4.55:1 · attention/surface 5.82:1  
+Dark: text/surface 13.25:1 · mutedText/surface 6.19:1 · outline/surface 4.51:1 · attention/surface 5.53:1
+
+### Forest Floor
+
+From **Naturecore -> Mossland** · mood `natural earthy growth muted` · primary hue band [66, 90] · template analogous (light) / analogous (dark) · fitness 0.901 / 0.926
+
+| Role | Light | Dark |
+|---|---|---|
+| `background` | `#EBEDEB` | `#0E120D` |
+| `surface` | `#E0E3E0` | `#1F261C` |
+| `surfaceContainer` | `#D3D7D4` | `#2B3228` |
+| `outline` | `#628330` | `#71962B` |
+| `text` | `#151518` | `#E4E9E2` |
+| `mutedText` | `#50505C` | `#96A98E` |
+| `primary` | `#628330` | `#8EBD36` |
+| `secondary` | `#52824C` | `#76BA5F` |
+| `tertiary` | `#2F4A2B` | `#579842` |
+| `attention` | `#878148` | `#46C566` |
+
+Light: text/surface 14.09:1 · mutedText/surface 6.14:1 · outline/surface 3.38:1 · attention/surface 3.08:1  
+Dark: text/surface 12.61:1 · mutedText/surface 6.18:1 · outline/surface 4.51:1 · attention/surface 6.98:1
+
+### Sage Clinical
+
+From **Clinical/Medical -> Clinical Teal** · mood `cool calm clean professional muted` · primary hue band [161, 199] · template near-complementary (light) / analogous (dark) · fitness 0.970 / 0.978
+
+| Role | Light | Dark |
+|---|---|---|
+| `background` | `#ECE9ED` | `#0B1310` |
+| `surface` | `#E2DDE4` | `#111D18` |
+| `surfaceContainer` | `#D6D1D8` | `#1D2924` |
+| `outline` | `#3E7575` | `#2C9092` |
+| `text` | `#141715` | `#DCE0DF` |
+| `mutedText` | `#46514A` | `#909D9A` |
+| `primary` | `#3E7575` | `#34AAAC` |
+| `secondary` | `#5D7C52` | `#5C8ABC` |
+| `tertiary` | `#35472F` | `#5484B9` |
+| `attention` | `#7E5944` | `#44B789` |
+
+Light: text/surface 13.50:1 · mutedText/surface 6.19:1 · outline/surface 3.92:1 · attention/surface 4.62:1  
+Dark: text/surface 13.00:1 · mutedText/surface 6.16:1 · outline/surface 4.54:1 · attention/surface 6.91:1
+
+### Ink & Ledger
+
+From **Scholastic -> Navy Scholastic** · mood `cool professional trustworthy muted` · primary hue band [210, 240] · template near-complementary (light) / analogous (dark) · fitness 0.993 / 0.889
+
+| Role | Light | Dark |
+|---|---|---|
+| `background` | `#EFF0F1` | `#0E1011` |
+| `surface` | `#ECEDEE` | `#1B1F22` |
+| `surfaceContainer` | `#DFE1E2` | `#272B2E` |
+| `outline` | `#5A67A7` | `#497FB6` |
+| `text` | `#1C1E1A` | `#E2E6E9` |
+| `mutedText` | `#53594D` | `#91A0AB` |
+| `primary` | `#434D7D` | `#497FB6` |
+| `secondary` | `#558062` | `#5F8DBA` |
+| `tertiary` | `#35503D` | `#93B2D0` |
+| `attention` | `#826146` | `#6868C0` |
+
+Light: text/surface 14.33:1 · mutedText/surface 6.17:1 · outline/surface 4.56:1 · attention/surface 4.78:1  
+Dark: text/surface 13.22:1 · mutedText/surface 6.18:1 · outline/surface 3.95:1 · attention/surface 3.42:1
+
+### Cobalt Porcelain
+
+From **Ming Dynasty Porcelain** · mood `cool professional trustworthy` · primary hue band [205, 225] · template analogous (light) / analogous (dark) · fitness 0.958 / 0.915
+
+| Role | Light | Dark |
+|---|---|---|
+| `background` | `#EDF0F2` | `#0D0F12` |
+| `surface` | `#E8EBEE` | `#1C2126` |
+| `surfaceContainer` | `#DBDEE1` | `#282D32` |
+| `outline` | `#236CB7` | `#236DB8` |
+| `text` | `#16191D` | `#E2E6E9` |
+| `mutedText` | `#4C5765` | `#93A2AD` |
+| `primary` | `#236CB7` | `#236DB8` |
+| `secondary` | `#3E80C3` | `#4786C6` |
+| `tertiary` | `#234B72` | `#8EB5DC` |
+| `attention` | `#4A4AD5` | `#5B5BD8` |
+
+Light: text/surface 14.74:1 · mutedText/surface 6.14:1 · outline/surface 4.50:1 · attention/surface 5.43:1  
+Dark: text/surface 12.92:1 · mutedText/surface 6.19:1 · outline/surface 3.05:1 · attention/surface 3.04:1
+
+### Rose Petal
+
+From **Coquette/Girly -> Rose Petal** · mood `creative soft gentle dreamy muted` · primary hue band [325, 355] · template analogous (light) / near-complementary (dark) · fitness 0.967 / 0.827
+
+| Role | Light | Dark |
+|---|---|---|
+| `background` | `#ECEAEA` | `#0D1212` |
+| `surface` | `#E2DFDF` | `#1A2323` |
+| `surfaceContainer` | `#D6D2D2` | `#262F2F` |
+| `outline` | `#AC3664` | `#B2486C` |
+| `text` | `#161413` | `#DEE5E5` |
+| `mutedText` | `#564E4A` | `#8DA5A5` |
+| `primary` | `#AB3664` | `#B2486C` |
+| `secondary` | `#5E5886` | `#60ABAB` |
+| `tertiary` | `#655E90` | `#4D9292` |
+| `attention` | `#994D3D` | `#48ADAD` |
+
+Light: text/surface 13.86:1 · mutedText/surface 6.13:1 · outline/surface 4.57:1 · attention/surface 4.55:1  
+Dark: text/surface 12.57:1 · mutedText/surface 6.16:1 · outline/surface 3.08:1 · attention/surface 6.00:1
+
+### Velvet Ribbon
+
+From **Coquette/Girly -> Velvet Ribbon** · mood `creative luxurious deep rich` · primary hue band [340, 359] · template analogous (light) / analogous (dark) · fitness 0.965 / 0.885
+
+| Role | Light | Dark |
+|---|---|---|
+| `background` | `#F2EEF2` | `#120C12` |
+| `surface` | `#EDE8ED` | `#1D131D` |
+| `surfaceContainer` | `#E0DBE0` | `#291F29` |
+| `outline` | `#BE373E` | `#B6353B` |
+| `text` | `#1C171C` | `#DFD6DF` |
+| `mutedText` | `#615061` | `#A88FA8` |
+| `primary` | `#8D292E` | `#B6353B` |
+| `secondary` | `#913B91` | `#A443A4` |
+| `tertiary` | `#A443A4` | `#A443A4` |
+| `attention` | `#AE3773` | `#CA5790` |
+
+Light: text/surface 14.61:1 · mutedText/surface 6.14:1 · outline/surface 4.56:1 · attention/surface 4.83:1  
+Dark: text/surface 12.74:1 · mutedText/surface 6.16:1 · outline/surface 3.06:1 · attention/surface 4.54:1
+
