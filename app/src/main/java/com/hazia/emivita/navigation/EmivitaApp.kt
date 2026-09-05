@@ -34,7 +34,17 @@ import kotlinx.coroutines.launch
  *  anywhere in the UI (confirmed by search: only the profile's `id`, via
  *  [LocalCurrentProfileId], is ever read outside creation), so any fixed
  *  string is safe here. Matches the single-profile, personal-use framing
- *  (spec §1) -- there's no name to actually ask for. */
+ *  (spec §1) -- there's no name to actually ask for.
+ *
+ *  That premise stopped being universally true with Medical ID (§7 R48),
+ *  which prints the profile's name at the top of an emergency card handed to
+ *  a clinician. It is still true of every *other* surface, so this stays a
+ *  silent default rather than becoming onboarding again -- the deleted
+ *  onboarding screen is not coming back to ask for a name that only one
+ *  screen needs. MedicalIdScreen holds the other half of the deal: it treats
+ *  this exact string as an empty field rather than a chosen name, and refuses
+ *  to export a card until a real one is entered. Change this constant and
+ *  change PLACEHOLDER_PROFILE_NAME there with it. */
 private const val DEFAULT_PROFILE_NAME = "Me"
 
 /**

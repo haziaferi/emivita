@@ -20,6 +20,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Alarm
 import androidx.compose.material.icons.filled.CalendarViewWeek
 import androidx.compose.material.icons.filled.CloudUpload
+import androidx.compose.material.icons.filled.MedicalInformation
 import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.Notifications
 import androidx.compose.material.icons.filled.Palette
@@ -54,7 +55,7 @@ import kotlinx.coroutines.launch
  *  to a tap is [RowKind]'s concern, not this enum's -- only the NAVIGATE rows
  *  correspond to an actual EmivitaRoute. */
 enum class SettingsDestination {
-    NotificationsAlerts, AlarmsSnooze, WeekendMode, Appearance, PrivacySecurity, DataBackup,
+    NotificationsAlerts, AlarmsSnooze, WeekendMode, Appearance, PrivacySecurity, DataBackup, MedicalId,
 }
 
 /** How a row responds to a tap -- optimizes navigation depth to match each
@@ -137,6 +138,13 @@ private val settingsGroups = listOf(
                 Icons.Filled.CloudUpload,
                 "Data & Backup",
                 "Auto-backup, restore, PDF/CSV export",
+                RowKind.NAVIGATE,
+            ),
+            SettingsRow(
+                SettingsDestination.MedicalId,
+                Icons.Filled.MedicalInformation,
+                "Medical ID",
+                "Blood type, allergies, doctor and pharmacy - printable card",
                 RowKind.NAVIGATE,
             ),
         ),
