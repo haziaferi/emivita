@@ -19,7 +19,7 @@ by name. Every one of them is now folded in here.
 |---|---|---|
 | `docs/ux-audit.md` | The reference-app UX audit §6's decisions came from | **Appendix B**, verbatim. File deleted — its history is in git |
 | `emivita-frontend-theme-review.md` | The colour/type/layout analysis §7's T1–T6 came from | **Appendix C**. Lived outside the repo, uncommitted, cited 7× by name |
-| `emivita-palette-candidates.md` | The 8 palettes with tokens and contrast checks | **Appendix A**, absorbed before this pass — verified equivalent entry by entry, nothing outstanding |
+| `emivita-palette-candidates.md` | The 8 palettes with tokens and contrast checks | **Appendix A**, absorbed before this pass — verified equivalent entry by entry. Those 8 have since been replaced by 6 (§7 R56); Appendix A now holds the 6, and the 8 survive only in §9 item 0b's record |
 | `Emivita-audit.md` | The original audit findings | **§7's ledger**, absorbed long ago. The file no longer exists anywhere |
 | `emivita_spec.md`, `emivita_spec (1).md` | Earlier copies of this same file | Retired. Verified strict ancestors — every line unique to them is superseded wording, or a roadmap item still marked 🚧 that is now ✅ |
 
@@ -609,28 +609,40 @@ Still genuinely open:
   which is what the "not a new pattern" note here was protecting, and that
   part held. The "stays out of the picker for now" half did not.
 - **Semantic state tokens** (selected/unselected, focus, error, disabled)
-  are resolved relative to whichever of the 8 palettes' Accent is active
-  (was 4 — updated this session along with the palette replacement above),
-  not new fixed hues per palette. The old edge case this table used to
-  carry — Neutral's Accent being fully desaturated, leaving no hue for the
-  Error rule's "+150–165°" to rotate from — is now moot rather than fixed:
-  Neutral is dropped entirely, and all 8 replacement palettes carry a real
-  accent hue, so every one of them can run this formula as written. **✅
-  Shipped (§9 item 0b):** the Error row specifically is now computed code,
-  not just a table rule — `colorSchemeFor()` rotates each palette's own
-  accent hue by a fixed +158° (one concrete point inside this row's
-  150–165° range) at S60/L45, per palette, in both light and dark. Worth an
-  eyeball once it's actually on-screen: rotating off *accent* rather than
-  targeting red means a few palettes land on a non-red error color (e.g.
-  Golden Hour's computes to a teal), which is the formula working as
-  specified but an unusual choice for a medication app's error state:
+  are resolved relative to whichever of the 6 palettes' Accent is active
+  (was 4, then 8 — see §7 R56 for the current set), not new fixed hues per
+  palette. The old edge case this table used to carry — Neutral's Accent
+  being fully desaturated, leaving no hue for the Error rule to rotate from
+  — is moot rather than fixed: Neutral was dropped, and every replacement
+  palette carries a real accent hue.
+
+  **The Error row is no longer a rotation, and that is the important part.**
+  The rule below once read "Accent hue +150–165°, S60/L45", implemented at
+  +158°. R42 removed it because a hue chosen to stay in harmony with the
+  accent cannot also carry the meaning *something is wrong* — across the
+  eight palettes it produced teal, cyan, magenta, blue, and green in four
+  of them, for the role `AdherenceChart` painted missed doses with. R42
+  replaced it with one fixed red shared by all eight.
+
+  **R56 then narrowed what `error` is allowed to mean at all.** It was
+  doing four jobs and three were not errors — the missed-dose chart series,
+  the past-due calendar dot, and a note reporting that an *optional*
+  barcode-scanner app is not installed. Two roles were split out of it
+  (`attention`, `neutralFill` — Appendix A defines both), and `error` now
+  covers genuine failures only: form validation, a failed backup, a
+  destructive confirmation. Each palette carries its own error rather than
+  sharing one, because Linen's terracotta primary needs an oxblood to stay
+  distinguishable from it. This is the patient-facing register's governing
+  rule made mechanical: red is reserved for emergencies.
 
   | State | Rule |
   |---|---|
   | Selected/active | Accent fill, text auto-picked (dark if Accent L>60%, else light) |
   | Unselected | Surface −8% L, 1px border at Accent 40% opacity |
   | Focus ring | Accent hue, S+10, L−5, 2px outline, no fill |
-  | Error | Accent hue +150–165° (compound/near-complementary — related, never confusable with Accent), S60/L45 |
+  | Error | A per-palette red, tabled in Appendix A. **Not** derived from Accent, and not used for any state that is merely notable (§7 R42, R56) |
+  | Attention | A missed dose, low stock, an approaching expiry. Warm clay/amber, never red (§7 R56) |
+  | Neutral fill | A skipped dose and other deliberate non-events. Near-achromatic (§7 R56) |
   | Disabled / "coming soon" | Surface desaturated to S8–12%, muted text — reuses the Low-Stock/Expiration treatment above |
 - **Medicine screen:** Notes and Tags are inline visible sections (like
   Color), not overflow items. Overflow menu keeps only Duplicate,
@@ -677,36 +689,49 @@ Still genuinely open:
   notification-loudness default — corrected here after conflating the two
   earlier), and the three notification priority levels (Standard/High/
   Alarm) — discoverability is the fix, not simplification.
-- **Palettes:** the original 4 (Clinical/Cozy/Neutral/Playful) are
-  **fully replaced**, not supplemented — decided specifically because
-  those 4 were picked without discussion (see §7 for the ledger entries
-  this closes out), and **✅ shipped this batch (§9 item 0b)**: the old 4
-  palette objects are gone from the codebase, not just superseded on
-  paper. 8 new palettes, each with light + dark, each still traceable to
-  `visual-craft`'s `design-lexicon.md`
-  (inspired-by, not exact-hex, per this session's brief) and each
-  now audited at AAA (text/surface) and AA (mutedText/surface,
-  outline/surface *and* outline/background — the two roles the old audit
-  found broken in all 4 outgoing palettes, fixed by construction this
-  time rather than patched after the fact):
+- **Palettes: 6, each with light + dark.** This is the second full
+  replacement. The original 4 (Clinical/Cozy/Neutral/Playful) went first,
+  because they had been picked without discussion; the 8 that replaced them
+  went in turn (§7 R56), because the *register* was never settled — they
+  were built palette-by-palette from lexicon entries chosen for variety
+  (amber, green, blue, pink, two of each) rather than from one decision
+  about what kind of app this is.
 
-  | Palette | Family | Persona | Lexicon source |
+  It is a patient-facing medication app, which puts it squarely in
+  `visual-craft`'s **Health / Consumer Wellbeing** register, and that
+  register carries two obligations the old eight did not answer to: grounds
+  stay **warm**, because the clinical blue-grey that reassures a
+  professional reads as institutional to someone managing their own
+  medication; and **red is reserved for genuine emergencies** — never an
+  accent, never a brand colour, never the marker of an ordinary event. All
+  six below answer to it, including the two cool ones, which keep warm
+  grounds for exactly that reason.
+
+  | Palette | Family | Character | Source |
   |---|---|---|---|
-  | Golden Hour | Amber | Warm caregiver | Cozy → Cozy Cocoa |
-  | Sunlit Focus | Amber | Everyday professional | Extroverted-sunny |
-  | Forest Floor | Green | Wellness-minded | Naturecore → Mossland |
-  | Sage Clinical | Green | Calm clinician | Clinical/Medical, greener |
-  | Ink & Ledger | Blue | Methodical & disciplined | Scholastic → Navy Scholastic |
-  | Cobalt Porcelain | Blue | Refined & elegant | Ming Dynasty Porcelain |
-  | Rose Petal | Pink | Soft & youthful | Coquette/Girly, light register |
-  | Velvet Ribbon | Pink | Confident & editorial | Coquette/Girly, dark register |
+  | Daylight | Green | The quiet default | Health/Consumer Wellbeing → *Daylight* (verbatim) |
+  | Sage | Olive-green | Softest of the six | Health register, Naturecore's herbal band |
+  | Honeycomb | Amber | Warm without glare | Health register, Cozy's amber band |
+  | Linen | Terracotta | Warmest of the six | Health/Consumer Wellbeing → *Linen* (verbatim) |
+  | Mallow | Plum | Soft, not sweet | Health register, Coquette/Girly muted |
+  | Periwinkle | Indigo | The one cool option | Health register, Scholastic indigo, warmed |
 
-  Ink & Ledger and Cobalt Porcelain were deliberately built to *not*
-  resemble each other — an earlier same-session pass paired Cobalt
-  Porcelain with a more literal Clinical-Blue-style second blue and both
-  read as "cool professional," so the second blue was rebuilt around
-  Scholastic's red margin-rule accent instead, giving it a real second hue
-  rather than just a hue-shifted copy.
+  Two are the register's own verified pairs taken verbatim; the other four
+  are hue-anchored within it, spaced so the six stay mutually
+  distinguishable in the picker (worst pair ΔE 14.0, Daylight/Sage).
+
+  **What the register cost, and it is worth recording.** Non-alarming
+  pushes every state into the warm desaturated middle — which is precisely
+  the band where deuteranopia and protanopia collapse hues together. An
+  early draft had *taken* and *missed* at ΔE 0.9: indistinguishable. The
+  fix was structural rather than tuning, and both halves matter: make
+  `skipped` **achromatic**, since a skip is a deliberate non-event and
+  should not compete chromatically with the states that do mean something;
+  and separate on **lightness**, which no colour-vision deficiency
+  destroys, rather than on chroma, which is the axis that reads as alarm.
+  Chromatic / neutral / chromatic now clears ΔE 15.7 worst case across all
+  twelve registers including simulated CVD, against a categorical floor of
+  10.
 
   Two phone-specific adaptations apply to every palette's dark register,
   the second beyond what any consulted skill covers, reasoned from first
@@ -724,32 +749,36 @@ Still genuinely open:
     regular/medium body-text weight rather than thin, once real
     typography is wired to these palettes.
 
-  Full token tables (all 8 × light/dark, every role, every contrast ratio,
+  Full token tables (all 6 × light/dark, every role, every contrast ratio,
   computed not eyeballed) are inlined in full in **Appendix A** at the end
   of this file. There is no separate palette file anymore — it was merged
   in here and retired, specifically so the actual hex values can't end up
   living in a second document that goes stale or doesn't get re-uploaded
   next session.
 
-  ❓ **Still open, deliberately:** nothing above specifies a *default*
-  palette. §9 item 0b's code needed to pick something as `MedPalette`'s
-  default parameter to compile; **Golden Hour** was used (first-listed
-  above, arbitrarily, not a design decision).
-  Half of this bullet's reasoning has since expired and is corrected here
-  rather than left standing (§7 R47's audit): it said "no
-  persisted-preference mechanism exists yet either (§8 — Settings/DataStore
-  hasn't landed)" and offered that plumbing landing as one of two things
-  that would settle the question. It landed — §9 #12 shipped,
-  `SettingsRepository.palette` persists through DataStore, and
-  `AppearanceScreen` is where either choice is made. **It did not make the
-  question moot.** Persistence only records a choice once one is made, and
-  since the onboarding screen that used to ask was deleted (§9 #1's
-  reversal), a fresh install still takes `GOLDEN_HOUR` with no prompt at
-  all. So one of the two exits is closed and the other is untaken: what
-  remains is a real design decision — pick a default on purpose, or decide
-  that arbitrary-but-revisable is the right answer for a personal-use app
-  and say so — and it is left open on purpose rather than settled in
-  passing.
+  ✅ **The default is now a decision, not an accident (§7 R56).** It is
+  **Daylight**, and the reason is not that it is listed first: it is the
+  Health/Consumer Wellbeing register's own documented default pair, taken
+  verbatim, and it is the most nearly neutral of the six — the one that
+  presumes least about a user who has not chosen. The previous default,
+  Golden Hour, was explicitly arbitrary ("first-listed above, arbitrarily,
+  not a design decision"). Note the one hand-maintained coupling this
+  creates: `res/values/colors.xml`'s `splash_background` must match the
+  default palette's light background (`#FBF9F5`), and nothing enforces it —
+  a mismatch flashes between the splash screen and Compose's first frame.
+  The history is worth keeping, because it shows the question surviving a
+  fix that looked like it would settle it. This bullet once offered two
+  exits: an onboarding prompt, or persisted preferences. Persistence landed
+  (§9 #12 — `SettingsRepository.palette` through DataStore, chosen in
+  `AppearanceScreen`) and the onboarding screen was deleted (§9 #1's
+  reversal), which closed one exit and left the other untaken — so a fresh
+  install still took an arbitrary default silently. **Persistence only
+  records a choice once one is made.** What actually settled it was picking
+  a default *on purpose*, which is what R56 did: not the first-listed
+  palette, but the register's own documented default and the most nearly
+  neutral of the six. `SettingsRepository.palette` falls back to `DAYLIGHT`
+  for any name it cannot parse, which now also covers a palette name saved
+  by a build that still had the previous eight.
 - **"Log dose" entry point** (PRN, §3/§9): a secondary action alongside the
   Today screen's FAB, not a separate bottom-nav destination — picks a
   medicine, suggests its last-used amount, defaults to "just now."
@@ -776,13 +805,91 @@ old chat every time.
 
 Rows are append-only: a finding that turns out to be wrong, or whose
 subject later changes, gets a **new** row rather than an edit, so the
-reasoning that produced the original stays readable. The **Superseded by**
+reasoning that produced the original stays readable.
+
+**Retention policy (applied 2026-09-06).** Append-only protects the record of
+what was found, not the length of the narration, and at 132 KB the ledger had
+become the thing nobody reads before the work that would break it. Resolved
+rows are therefore kept to their finding, their outcome, and anything a reader
+needs in order not to re-break them; the rule each one produced is lifted into
+**§7.1** where it can be read up front. No row was removed, no finding was
+dropped, and every ❓ row is untouched. Implementation detail beyond that is in
+git, which is a better place for it than a table cell. The **Superseded by**
 column is how you tell without replaying the whole table — if it is
 populated, read the row it names before acting on this one. It is only
 used where a later row corrects or invalidates the subject — not for a
 restructuring that leaves the original conclusion standing, and not for
 merely related reading.
 
+
+### 7.1 Rules this ledger produced
+
+Every rule below was paid for by a defect in the rows underneath. They are
+collected here because a rule buried mid-way through a 4,000-character table
+cell is a rule nobody reads before the work that would break it. The row
+reference is where the evidence is.
+
+1. **A permission that is declared and gated but never *requested* is a silent
+   no-op.** `POST_NOTIFICATIONS` (R14) and `SCHEDULE_EXACT_ALARM` (R21) each
+   shipped this way — read correctly at every call site, requested nowhere, so
+   on a fresh install the app's entire purpose silently failed. Check the
+   request path exists, not just the check. (R14, R21)
+2. **A permission claim is only checkable against the *merged* manifest, never
+   the source one.** (R21)
+3. **Two full-row writes describing one edit is a lost update waiting to
+   happen.** Editing a reminder silently did nothing for exactly this reason:
+   `@Update` writes every column, so the second write restored what the first
+   had changed. The fix is one write, not a re-ordering. (R23)
+4. **Fixing a defect *class* one instance at a time leaves the siblings.** Only
+   a test that enumerates the cases finds them. (R24)
+5. **A green suite that never exercised the code under test is worse than no
+   suite**, because it cancels the gate that made green mean something. Assert
+   the property, not a proxy for it — R55's hatch defect would have passed an
+   assertion that the three series were *different colours*. (R26, R28, R55)
+6. **A UTC-only test suite structurally cannot catch an offset bug.** The
+   scheduling suite runs in `Europe/Rome` deliberately. (R24)
+7. **Documentation consistent across every call site is not evidence.** Three
+   times running — R25, R27, R28 — every site agreed with every other and all
+   of them rested on a premise that did not survive one check against the
+   shipped code. Consistency is what a wrong shared assumption looks like.
+8. **A ledger row marked resolved because the *mechanism* shipped proves
+   nothing about the call sites.** R47 found two such rows; R46 had reached one
+   of History's three surfaces. Verify the call sites migrated. (R46, R47)
+9. **Agreement between two derived signals is not corroboration when they share
+   a cause.** A build piped to `tail` reports *tail's* exit code, and stale
+   `test-results` XML keeps reporting the last green run — together they
+   reported a passing build three times while compilation was failing. (R57,
+   and the same shape as R47)
+10. **Colour chosen for harmony cannot also carry meaning.** A hue rotated to
+    stay harmonious with the accent cannot mean *something is wrong*; the rule
+    produced teal, cyan, magenta and green for the role that paints missed
+    doses. Two independent failures of one rule is the rule being wrong, not
+    the palettes. (R40, R42)
+11. **Red is reserved for genuine emergencies** — never an accent, never a
+    brand colour, never the marker of an ordinary event. This is the
+    patient-facing register's governing rule and the reason `attention` and
+    `neutralFill` exist. (R56)
+12. **A colour-alone ΔE floor governs only where colour is the sole channel.**
+    What overturns a "colour is the second channel" judgement is any surface
+    conveying state with no icon or label beside it — which is exactly what
+    `AdherenceChart` turned out to be. (R53, R54, R55)
+13. **In a non-alarming register, separate on lightness, not chroma.**
+    Lightness is the axis colour-vision deficiency spares; chroma is the axis
+    that reads as alarm. (R56)
+14. **`lintDebug` is a gate, not a report**, and CI must actually run — every
+    workflow run in this repository's history failed at its first step with
+    `Permission denied` while the README claimed the gates ran remotely. (R26,
+    R38)
+15. **One project, one build.** The `.debug` application-id suffix let a
+    migration check run against a leftover database and read as a pass either
+    way. (R41)
+16. **`designkit` falls back to a local search silently** when
+    `optimization-engines` is unreachable, and the fallback never evaluates
+    `constraints` — so every fitness number quoted before R50 was computed with
+    the constraint set switched off. Set `OPTIMIZATION_ENGINES_HOME` and check
+    `dk status` says `portfolio` before trusting a number. (R50)
+
+---
 
 | # | Finding | Status | Superseded by |
 |---|---|---|---|
@@ -818,17 +925,17 @@ merely related reading.
 | R17 | Launcher-icon foreground artwork (clock + two capsules + "zzz" sketch, `ic_launcher_foreground.png`, all 5 densities) extended to ~67% of the adaptive-icon canvas's half-width from center — past the standard 61% (66dp/108dp) adaptive-icon safe-zone guideline, and visibly clipped by `core-splashscreen`'s own circular icon mask (used on this minSdk-30 device since it's below the real platform SplashScreen API at 31+) — confirmed by screenshotting the actual splash on the OnePlus 6T mid-launch, not assumed; user flagged the visible clipping | ✅ Resolved — content rescaled/recentered (measured via the PNG's own alpha channel, not eyeballed) to ~50% of canvas half-width, a safety margin below even the 61% guideline, then all 5 density PNGs regenerated by downscaling the corrected xxxhdpi source (not independently shrinking each existing density, to avoid compounding per-density rounding). No shape swap attempted — confirmed there's no supported `windowSplashScreenIconShape`-equivalent attribute; `core-splashscreen`'s compat path hardcodes a circular mask, so the fix is designing the art to fit it, the same discipline adaptive icons already require for launcher-mask compatibility. Device-verified: relaunched on the OnePlus 6T, clock/both bells/the zzz mark/both capsules all now fully visible with clear margin, confirmed via screenshot. |  |
 | R16 | `com.kizitonwose.calendar:compose`'s current latest (2.10.1) is compiled with a Kotlin compiler whose metadata this project's pinned Kotlin 2.1.0 plugin (root `build.gradle.kts`) can't read — `kspDebugKotlin` failed with "Module was compiled with an incompatible version of Kotlin... binary version... 2.3.0, expected... 2.1.0," confirmed by actually trying 2.10.1 against this build, not assumed from a changelog | ✅ Resolved — pinned to `2.7.0` instead (§9 #6, this batch), the newest release confirmed to compile clean against this project's Kotlin 2.1.0; `compileDebugKotlin`, the full `testDebugUnitTest` suite, and `assembleDebug` all pass. Revisit the pin once the project's own Kotlin version moves (§1's toolchain table), not before |  |
 | R15 | §4's "Deliberately not built yet" list (projection cache, the five §3 gap-resolution fields, `CyclicActivePause`/`LinkedFollowing`/weekend-mode + both cascade-reschedule trigger points) was still describing all of it as unbuilt, directly contradicting §9 #4/#14's own ✅ marks and the actual source (`OccurrenceProjectionCache.kt`, `SchedulingEngine.kt`, `AddReminderScreen.kt`'s 4-card picker) — the same stale-docs pattern R6/R12 already named, found during this session's "what's next by dependency" pass | ✅ Resolved — §4 rewritten to state plainly that list is stale and point at the real implementation; only the two genuinely-still-open items (`AlarmActivity` visual design, boot-reschedule on-device confirmation) kept as open |  |
-| R14 | Full audit pass (`android-app-auditor` + `code-reviewer` + `code-verification-core`, this session) — a systematic security/permission/manifest/build/logic sweep of the whole app, not a diff review. Full agent-report detail lives in this session's transcript, not reproduced here; this row is the durable record. | ✅ Mostly resolved, a few items deliberately left for a follow-up decision (see below). **Fixed this pass:** (1) **CRITICAL** — `POST_NOTIFICATIONS` was declared and correctly gated with `checkSelfPermission` before every post, but *never actually requested anywhere* — on a fresh Android 13+ install the permission defaults to denied and every reminder notification would silently never show, for an app whose entire purpose is showing them. Fixed with a one-time request (`EmivitaApp.kt`'s new `NotificationPermissionEffect`, tracked via a new `SettingsRepository.notificationPermissionRequested` flag so it asks exactly once, no re-nagging). (2) **CRITICAL/HIGH, doubly confirmed by two independent review passes** — `AppLockGate` defaulted its DataStore-backed `lockEnabled` read to `false` (`collectAsState(initial = false)`), so on cold start, with the lock genuinely on, the app rendered full unlocked content for the composition frames before the real setting loaded. Fixed: nullable-tri-state read, blank loading frame instead of `content()` while unknown. (3) `BiometricAuthenticator.availability()`'s implicit `else -> NO_HARDWARE` bucketed real transient-error codes together with genuine no-hardware/not-enrolled without that being a conscious choice; made explicit (same fail-open outcome, now a reasoned one — no PIN fallback exists, so refusing to fail open on these codes would strand the user with no recourse) — and `AppLockGate`'s own availability check moved off a `remember(activity)`-cached-for-the-Activity's-whole-lifetime pattern onto one that re-checks every lock cycle. (4) `DoseEventRepository.resolve()`/`switchStatus()` read-validated their target event *before* opening the transaction, not inside it — two near-simultaneous calls (double-tap, notification action racing an in-app tap) could double-decrement stock for one real dose; both now read/validate/write atomically inside one transaction. (5) `DoseGroupRepository.confirmGroup()`/`disbandGroup()` had no transaction at all around their multi-row insert-then-loop-update sequences; now wrapped in `database.withTransaction {}`, matching every other repository. (6) `DoseEventRepository.materializeIfAbsent()` returned Room's raw `@Insert(onConflict=IGNORE)` result — `-1`, not `null`, on a suppressed conflict — straight to callers expecting "null means already materialized," so a real (if narrow) race on the alarm-materialization unique index misrouted into `ReminderAlarmReceiver`'s error-log branch instead of its intended "duplicate delivery, re-show existing notification" path; now translates `-1` to `null` at the source. (7) `applyWeekendMode()` assumed `weekendStart < weekendEnd`; an overnight window (e.g. 22:00–06:00 — nothing in the `LocalTime` pickers prevented configuring one) silently never triggered the push in either half of the window; now handles the midnight-spanning case explicitly. (8) All four `BroadcastReceiver`s did an unguarded `context.applicationContext as EmivitaApplication` synchronously in `onReceive()`, before `goAsync()`/the coroutine's own try/catch exist to catch anything; now a safe cast that logs and drops just that one event instead of risking a process crash. (9) `AutoSyncManager` deleted the existing auto-sync backup *before* confirming the replacement wrote successfully — a `createFile`/`openOutputStream` failure partway through left zero backup files on disk; now writes to a staging name first and only swaps it in after a confirmed-complete copy, and write failures are now logged instead of silently swallowed. (10) `BackupZipWriter.read()` only caught zip4j's own `ZipException`; a genuinely non-zip/truncated input file could throw a different exception type and crash restore instead of resolving to `Corrupt`; broadened. (11) `Migrations.MIGRATION_1_2`'s `dose_events` backfill computed `medicineId` via a correlated subquery that returns `NULL` for any row whose `reminderId` doesn't resolve (an orphaned v1 row) — `NOT NULL` on the new column would abort the whole migration on such a row; added a `WHERE reminderId IN (SELECT id FROM reminders)` filter (safe: v1's `dose_events.reminderId` was itself `NOT NULL`, so this can't accidentally drop a legitimate PRN row). (12) Three genuinely unused permissions removed from the manifest per least-privilege (PERM-001) — `WAKE_LOCK`, `FOREGROUND_SERVICE`, `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` — confirmed by grep that nothing in the codebase ever calls the corresponding APIs; the receivers' correct `goAsync()` usage (verified this same pass) is what makes them genuinely unneeded, not an oversight. All fixes covered by the existing test suite (`./gradlew testDebugUnitTest`, all green) plus a full `assembleDebug`; no regressions. **Follow-up pass (same session, "apply the remaining fixes by dependency"):** closed out everything flagged above except one deliberately-left nuance. In dependency order — foundation before consumer: (a) `AutoSyncPassphraseStore.kt`'s `get()`/`save()` rewritten to convert CharArray<->ByteArray directly via `CharsetEncoder`/`CharsetDecoder` (`charsToBytes`/`bytesToChars`), never routing through an un-wipeable `String`, with every intermediate buffer explicitly zeroed (`Arrays.fill`) in a `finally`; `BackupSyncScreen.kt`'s `exportPassword` field now clears itself after use, matching `restorePasswordInput`/`syncPassphraseInput`'s existing behavior (the genuine limit here, stated plainly rather than overclaimed: Compose's `OutlinedTextField` is String-backed by the Android IME pipeline itself, so a password typed through a standard text field cannot avoid materializing *a* String at the framework level regardless of what type the app's own state holds — minimizing that String's lifetime is the realistic ceiling, not eliminating it). (b) The save-button-stays-disabled-forever bug fixed in the three files that actually had it (`AddMedicineScreen.kt`'s `MedicineFormBody`, `TodayScreen.kt`'s `LogDoseDialog`, `DoseEditDialog.kt`) — each save now wraps its suspend call in try/catch, resets `saving = false` on failure, and shows an inline error `Text` in the app's existing error-color convention. (`AddReminderScreen.kt` turned out not to share this bug on closer inspection — its `saveEnabled` is plain form-validity, not a saving-in-progress flag, so there was nothing to fix there.) (c) BUILD-014 closed: `app/build.gradle.kts` now pins `kotlin { jvmToolchain(21) }`, distinct from the `sourceCompatibility`/`jvmTarget` = 17 pair (compiled-bytecode target, unchanged) — verified safe before keeping it, not assumed: `./gradlew --offline --rerun-tasks compileDebugKotlin` and a full `--offline testDebugUnitTest assembleDebug` both passed, confirming Gradle resolves the JDK 21 toolchain from what's already installed without needing network access in this environment. Two dead Android-Studio-template files (`res/xml/backup_rules.xml`, `res/xml/data_extraction_rules.xml` — inert since `allowBackup="false"`), initially blocked by this session's own permission classifier, were removed in this pass too; `assembleDebug` confirmed clean afterward. **Left as-is, on purpose:** the MEDIUM/LOW-confidence nuance where a snooze re-fire re-runs the same cascade-reschedule side effects as a genuine first occurrence in `ReminderAlarmReceiver.handleAlarm` — currently harmless for every reminder type that's actually deterministic, and the fix (gating the cascade on "was this materialization actually new") is more invasive than the rest of this list, better done deliberately than folded into a cleanup pass. Also newly documented, not a defect: `androidx.work` (WorkManager) is *not* fully absent from the APK despite R5/§9 item 0's "dependency removed" framing — `androidx.glance:glance-appwidget` pulls in `androidx.work:work-runtime(-ktx):2.7.1` transitively for its own internal widget-session management (confirmed via `./gradlew app:dependencies`), which is what `ACCESS_NETWORK_STATE` in the merged manifest turned out to be too (WorkManager's own manifest declares it). This doesn't reopen R5 — the app's own code still uses zero WorkManager, and R5's actual concern (avoiding a second background-work paradigm for the app's *own* debounce-driven cache/sync logic) still holds — but "no WorkManager, no Health Connect" in `README.md`/§1's dependency list overclaims for the first half; worth a wording pass next time that file is open. | **R20, R21** — two items overturned |
-| R20 | `res/xml/data_extraction_rules.xml` was deleted as a dead template file (R14's follow-up pass: "inert since `allowBackup=\"false\"`"). True for cloud backup, not for device-to-device transfer. Checked against Android's own backup documentation rather than reasoned from memory: for apps targeting Android 12+ — this app targets 36 — "on devices from some device manufacturers, specifying `android:allowBackup=\"false\"` disables cloud-based backup and restore (such as Google Drive backups) but doesn't disable device-to-device transfers for the app." So on those OEMs the app's files are still eligible to be carried to a new phone, with nothing in the project expressing an opinion about it. Found while verifying the pre-reconciliation batches were safe to delete — those two res/xml files were the only content in any of them absent from the reconciled tree | ✅ **Resolved this pass.** The exposure was never a data leak: the SQLCipher passphrase is wrapped by a non-exportable `AndroidKeyStore` key (§2, `PassphraseProvider`), which by design does not travel. A D2D transfer therefore lands ciphertext on the new device that nothing there can ever decrypt — the failure mode is a database that cannot be opened on first launch, not readable data in the wrong hands. That is worse than a clean empty install, and it bypasses the app's own intended migration path (§9 #9's SAF backup/restore, which carries its own password and works precisely because it is not Keystore-bound). Fixed: a real `res/xml/data_extraction_rules.xml` (written, not restored — the file R14 removed was the unmodified Studio stub with every rule commented out, and is still at `git show 19a7f19:docs/retired/data_extraction_rules.xml` if the original is ever wanted), excluding `root`/`file`/`database`/`sharedpref`/`external` from **both** `<device-transfer>` and `<cloud-backup>`, wired up with `android:dataExtractionRules` on `<application>`. The cloud half is deliberately spelled out rather than left to `allowBackup="false"`, so flipping that flag later cannot silently re-enable cloud extraction. Verified rather than assumed applied: `assembleDebug` and `lintVitalRelease` both pass, the attribute reaches the merged manifest, and `res/xml/data_extraction_rules.xml` is present in the packaged APK. **What stays unverified, and cannot be closed from this machine:** the documentation says "some device manufacturers", so whether the OnePlus 6T would have transferred anything in the first place is unknown, and no D2D transfer has been attempted before or after. This row fixes a documented behavior, not an observed one — the rules file is correct either way, but nobody has watched it prevent anything | **R22** — scope bounded |
-| R21 | Second full audit pass (`android-app-auditor` registry + Android Lint + a line-by-line read of all ~12,700 lines), run against the reconciled tree rather than a diff. Eleven commits, `e03be7f`-`4ac7d3b` inclusive. Same shape as R14 and, like R14, the durable record is this row rather than the transcript | ✅ Resolved, with two items left as decisions and two needing a device. **Supersedes R14 item 12.** That row records `WAKE_LOCK`/`FOREGROUND_SERVICE`/`REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` as removed per least-privilege, "confirmed by grep". The grep was right about the app's own code and the fix did not work: deleting a `<uses-permission>` line removes it from *this* manifest only, and the manifest merger put `WAKE_LOCK` and `FOREGROUND_SERVICE` straight back from `androidx.work` (transitive via `glance-appwidget`, the same route R14's own follow-up note already identified for `ACCESS_NETWORK_STATE`). Only the battery-optimizations one had actually gone. Verified by reading `app/build/intermediates/merged_manifest/`, which carried nine permissions against the five declared. Now genuinely removed via `tools:node="remove"` — four of them, adding `USE_FINGERPRINT` (from `androidx.biometric`, deprecated since API 28, dead at minSdk 30) — and confirmed in both the debug *and* release merged manifests, which now carry exactly the five. The general lesson, worth more than the fix: a permission claim is only checkable against the merged manifest, never against the source one. **CRITICAL, and structurally identical to R14's `POST_NOTIFICATIONS` finding:** `SCHEDULE_EXACT_ALARM` was declared and read (`AlarmScheduler.canScheduleExact()`) but never requested anywhere — `ACTION_REQUEST_SCHEDULE_EXACT_ALARM` appeared exactly once in the whole codebase, inside a KDoc promising a Settings prompt that was never built. From Android 14 the permission is not granted at install to an app targeting 34+, so on a fresh install of the release build every reminder, nag and snooze silently took the inexact, Doze-batched branch, leaving only a `Log.w`. For a medication-adherence app that is the failure the app exists to prevent. Fixed by declaring `USE_EXACT_ALARM` (install-granted, no user interaction, no Kotlin change) and capping `SCHEDULE_EXACT_ALARM` at API 32. **Also fixed:** the one Android Lint *error* — `Locale.getDefault()` read inside a composable, so History's calendar headers never followed a locale change; whole-database JSON serialization, AES-256 zip encryption and SAF stream copies running on the main thread in History's CSV/PDF export and both of Backup & Sync's flows (`rememberCoroutineScope()` dispatches on Main; `AutoSyncManager` already had this right); `Today`/`History` computing their date windows with a keyless `remember`, so a screen left open across midnight kept rendering the previous day (five further derived values were keyed on stale inputs and had to move with it); `AutoSyncPassphraseStore`'s `CharArray` contract being ignored by its only caller, plus three more unwiped password arrays in `BackupSyncScreen`; and weekend-mode preferences being re-read off DataStore per projected occurrence inside a loop bounded at 500 per reminder per recompute. **Removed as dead, each verified unreferenced first:** `asOnSurfaceSafe` (whose KDoc claimed it was used by the alarm screen and notification buttons — it never was), `supportsDynamicColor`, `NoOpSchedulingCoordinator`, `src/main/keepRules/rules.keep` (commented-out WebView boilerplate, and inert regardless — that is not an AGP application-module source path), an orphaned `ic_launcher_round.xml`, both New-Project template tests and the three `androidTestImplementation` entries they were the only users of, six unreferenced DAO/repository members, and nine unused imports. **Comments corrected:** six said a schema field was "not read yet" when all six were read (`autoResolve`, `repeatOnUnanswered`, `activeFrom`/`activeUntilEpochDay`, the stock sentinels, `repeatCount`, `remindersLockedUntilTaken`), and four contradicted the artifact — including two files still describing medicine deletion as an open cascade-vs-archive question after it shipped cascading. Development chronology ("this batch", "previously unbuilt") stripped; every SPEC reference and design rationale kept. **Also:** seven duplicate number formatters collapsed to one, six hardcoded neutral-accent literals to one constant, `DetailHeader` and the POST_NOTIFICATIONS guard each written twice to once; `Theme.kt` 448 → 302 lines (all 352 colour assignments proven identical to the previous revision before and after, since it is not otherwise testable); SQLCipher 4.16.0 → 4.17.0. Lint went 1 error / 39 warnings / 15 hints → 0 / 32 / 1. **Left as decisions, not defects:** the shared-keystore exposure (see below) and whether to take the remaining dependency bumps. **Not verifiable from this machine, and the two things to check on a device before trusting this build:** that the home-screen widgets still update now that `WAKE_LOCK`/`FOREGROUND_SERVICE` are gone (Glance's session manager is the real WorkManager consumer — this is the one genuine regression risk in the ten commits, and `AndroidManifest.xml` records what to restore if it bites), and that an existing 4.16.0-created database still opens under SQLCipher 4.17.0 — no test touches SQLCipher at all, because the Room tests deliberately build an unencrypted in-memory database. |  |
+| R14 | First full audit pass (`android-app-auditor` + `code-reviewer` + `code-verification-core`) — a systematic security/permission/manifest/build/logic sweep of the whole app, not a diff review | ✅ **Mostly resolved**, a few items left for follow-up (taken up by R20/R21). Two criticals: `POST_NOTIFICATIONS` was gated everywhere and requested nowhere, so on a fresh Android 13+ install no reminder would ever show (§7.1 rule 1); and `AppLockGate` defaulted `lockEnabled` to `false` while DataStore loaded, rendering unlocked content for the first frames of a cold start — now a nullable tri-state with a blank loading frame. Also: quiet-hours windows spanning midnight never triggered, unguarded `applicationContext` casts in all four receivers, and passphrase handling moved off `String` onto wipeable `CharArray`. Blow-by-blow in git | **R20, R21** — two items overturned |
+| R20 | `res/xml/data_extraction_rules.xml` was deleted as a dead template — true for cloud backup, false for device-to-device transfer, which `allowBackup="false"` does not disable on all OEMs | ✅ **Resolved.** Never a data leak: the SQLCipher passphrase is wrapped by a non-exportable `AndroidKeyStore` key, so a D2D transfer lands ciphertext the new device can never decrypt — an unopenable database, not exposed data. A real rules file now excludes every scope from both `<device-transfer>` and `<cloud-backup>` | **R22** — scope bounded |
+| R21 | Second full audit pass (`android-app-auditor` registry + Android Lint + a line-by-line read of ~12,700 lines) against the reconciled tree | ✅ **Resolved**, two items left as decisions. The critical was structurally identical to R14's: `SCHEDULE_EXACT_ALARM` was declared and read but never requested, so from Android 14 every reminder, nag and snooze silently took the inexact path on a fresh install (§7.1 rule 1). Also fixed: `Locale.getDefault()` read inside a composable so History's calendar never followed a locale change; whole-database serialization, AES-256 zip encryption and SAF copies running on the main thread; and a sweep of dead symbols whose KDoc described call sites that never existed. Method note worth more than any single fix — a permission claim is only checkable against the merged manifest (§7.1 rule 2) |  |
 | R22 | `SIGN-001` — the release-signing comment understated its own consequence. It read "anyone could build an APK that installs over this one", which reads as a nuisance | ✅ Documented, deliberately not "fixed". AndroidKeyStore aliases are scoped to (package name, signing identity) and survive an in-place upgrade. The debug keystore is committed and its password is the published Android default, so anyone holding this repository can build an APK Android accepts as an *upgrade* — with no signature-mismatch prompt, since an identical signer is the entire point of sharing the identity — which inherits the data directory **and** the `emivita_db_wrap_key`/`emivita_autosync_wrap_key` aliases, and can therefore read out the SQLCipher key and the auto-sync backup password in plaintext. So the at-rest design is in practice only as strong as control of `keystores/my-shared-debug.keystore`: it still holds against the threat it was built for (a lost device reading the raw `.db`), and does not hold against installing a build someone else produced. This also bounds R20: `data_extraction_rules.xml`'s "arrives as ciphertext the new install can never open" is true for a device-to-device transfer and false for an upgrade install under this identity. The configuration is unchanged, because for the current threat model — the owner's own installs on the owner's own devices — the existing trade is still the right one. `app/build.gradle.kts` now states the real scope and lists the two fixes in preference order (a separate release keystore read from a gitignored `keystore.properties`; or `setUserAuthenticationRequired(true)` on the auto-sync wrap key) for whenever this reaches a second person. Related: `.gitignore` now ignores `*.keystore` by extension and re-admits the debug key by name, so a future `keystores/prod.keystore` cannot be committed by being differently named. |  |
-| R23 | Third full audit pass, run against the reconciled tree after R21 rather than as a diff review. The method differed from R14/R21 deliberately, because two passes had already swept the obvious layer: 22 parallel readers covering every file, 6 cross-cutting sweeps (deactivated code, dead symbols, comment-claim verification, duplication, concurrency, dev workflow), and a separate 4-reader fleet for documentation-versus-code, with every finding then put to an adversarial verifier and every behavioural one to three diverse lenses (correctness, author-intent, regression-risk) instructed to refute rather than agree. 264 agents, 250 raw findings, 177 surviving. One commit, `24e0fc2` -- this row's own reference to it necessarily landed in the follow-up commit after it. Crucially it was **not** a reading-only pass: `assembleDebug`, `lintDebug` and `testDebugUnitTest` were actually run, which is the only reason the backup-rules item below was caught. The thesis, borne out: what survives two audits is not sloppiness but defects living in the *seams* between two individually-correct pieces of code | ✅ Resolved, with four items left as decisions and one structural gap named but not closed. **CRITICAL, and the most user-visible defect ever recorded in this ledger: editing a reminder silently did nothing.** All four edit paths in `AddReminderScreen` called `updateConfig(current, ...)` and then `updateAdvancedFields(current, ...)`, passing the *same pre-edit* `Reminder` to both. `ReminderDao.update` is a plain Room `@Update`, which writes every column, so the second call restored the pre-edit `configJson` over the first call's. Changing a reminder's time or pattern ran a success path and kept the old schedule; the `LinkedFollowing` path reverted `parentReminderId` the same way. `StockExpirationScreen` had the identical shape twice (`updateConfig` then `setEnabled`). Fixed by collapsing each into one write via a new `ReminderRepository.updateConfigAndAdvancedFields()` -- two full-row writes describing one edit is what made this recurrable, so the fix is the single `copy()`, not a re-ordering. **CRITICAL: three form paths committed a config the scheduler then threw on, permanently.** `"0".toIntOrNull()` is `0`, not null, so Every-N-days' `?: 2` fallback never fired and `saveEnabled` gated patterns 1 and 3 but not 2; `RepeatingInterval` and `DailyWindow` guarded raw hours `> 0` while storing `(hours * 60).toInt()`, so 0.01h stored 0 minutes. `ReminderRepository.create` inserts before notifying the coordinator, so the bad row was already committed when `matchingDateOnOrAfter` and the interval calculators hit their `require(... >= 1)` -- thrown on a `Dispatchers.Default` scope with no `CoroutineExceptionHandler`, and re-entered on *every* projection recompute thereafter. Fixed on both sides: the three forms now validate the value they actually store, and `matchingDateOnOrAfter` returns null for `n < 1` instead of throwing, which is what its own KDoc already promised ("a UI validation bug if it ever happens, not something this function should crash over") while the code nine lines below it contradicted that. **Low-stock alerts fed their own trigger.** `ALWAYS_WHEN_BELOW` wrote `lastAlertNotifiedEpochDay` unconditionally; that UPDATE lands on `reminders`, one of the two tables `observeAllWithReminders()` re-fires on, which invalidates the projection cache, whose recompute calls the evaluator again -- self-sustaining at the cache's own 1s debounce for as long as any medicine sat below threshold, re-posting the notification each pass. The class doc asserted the opposite in as many words ("this can't become unbounded spam"). The write is now guarded exactly like the rearm path above it already was. **Saving Weekend Mode did nothing until the next reboot:** four DataStore writes then `onBack()`, and nothing observes those keys -- `rescheduleAll()` ran only from the boot receiver and backup restore, and the projection cache watches tables, not DataStore. It now reschedules before `onBack()`, before rather than after because dismissing the sheet cancels the composition scope mid-flight. **The first-launch database key was written with `apply()`** and then immediately used to create `emivita.db`. A crash before the async flush would leave a database the next launch could never open, with no `fallbackToDestructiveMigration` anywhere -- an unrecoverable brick caused by a lost preference write. Now `commit = true`; `AutoSyncPassphraseStore` deliberately stays on `apply()`, where a lost write costs nothing worse than a re-prompt. **Backup export reported success after writing zero bytes** (`openOutputStream(uri)?.use { }` -- a null stream made the block a no-op that fell through to "Backup exported."), while restore and auto-sync both already treated the same null as an error. **Also fixed:** `getMostRecentForMedicine` had no status filter, so the first Log dose after any refill suggested the pack size -- `logRefill` writes the restock quantity into the same `doseAmount` column and a restock is by construction the newest row; and Linked Following's parent picker offered Low-Stock/Expiration reminders, which `supportedTypes` excludes and which therefore never produce a `DoseEvent`, making them an anchor that can never resolve and, being oldest-first, a selectable default parent. **Backup rules had a version hole that R20's own reasoning denied, and only a real Lint run surfaced it.** R20 wrote `data_extraction_rules.xml` and argued that spelling both sections out meant "flipping that flag later cannot silently re enable cloud extraction". `android:dataExtractionRules` is ignored below API 31 and this app's minSdk is 30, so on Android 11 that sentence was false: the flag flip it defends against would have re-enabled an unfiltered cloud backup. Android Lint says precisely this as a `DataExtractionRules` warning on `<application>`, which had been sitting unread in the report. Fixed with `res/xml/backup_rules.xml` (the same exclude list in the pre-Android-12 `<full-backup-content>` format) wired via `android:fullBackupContent`, and the false sentence corrected in place. Verified the way R20 asks rather than assumed: the warning is gone, the attribute reaches the merged manifest, and the file is packaged in the APK. Bounds R20 further than R22 did. **Removed as dead, each grep-verified across `app/src`, `res/`, the manifest and the tests first:** four unused imports R21's sweep missed -- including `EmivitaNavHost`'s byte-identical *duplicate* `Icon` import, which a usage-based sweep structurally cannot catch because the symbol *is* used -- plus `DoseEventDao.insertAll` (no call site; its referring comment retargeted to `insert`), the `ReminderDao` injected into `DoseEventRepository` and never read, `NextReminderRow.unit` (populated, never rendered), and an orphaned duplicate KDoc block stacked above `colorSchemeFor`, an earlier draft of the block below it that documents nothing and is the closest thing to commented-out code left in the tree. **Comments corrected**, beyond those already named: `ColorPickerDialog`'s KDoc described the inverse of its own code -- it said the square resolves hue+saturation by "polar mapping" and the strip controls lightness, where the square sets saturation/value by plain linear mapping and the strip sets hue, and the file's own inline comment 30 lines below had it right all along; `EmivitaRoute` called `DataBackupSettings` "the one Settings destination" warranting a real route, contradicted by two more route objects four lines below it; `SchedulingEngine`'s orphaned-`LinkedFollowing` branch said "shouldn't happen" about the exact state its own FK is designed to produce; plus references to symbols that do not exist (`notificationPermissionGate`, `[isCyclicActiveOn]`, `ProfileDao.rename`), a default documented as HIGH that is ALARM, and a count of three reminder types that is four. **11 `docs/SPEC.md` sites corrected** where the source of truth had gone stale against shipped code: §3's lock-until-taken "nothing currently reads this field at all" (four sites read it), §8's claim that all three main screens read through the projection cache (only Today does), §6's Today-timeline and `CyclicActivePause` "not yet built" markers, §9 #14's "what's left" list (all built), §9 #15's "Only Data & Backup pushes a real route" (three do), §9 #3's swipe-to-edit (shipped as tap, deliberately), §2's "future `AppWidgetProvider`" and its XML-views exception, the colour-picker wording in three places, and §8's Appearance paragraph still comparing itself to deleted onboarding. README's step 4 claimed the daemon JDK is "still an IDE/machine-local setting Gradle has no supported way to pin" while `gradle/gradle-daemon-jvm.properties` is tracked, pins it, and `app/build.gradle.kts` says so in as many words. `dist/vc1/MANIFEST.md` named a schema path that does not exist and, read on its own, invited exactly the versionCode-1-means-schema-1 confusion §9 #1 spells out a caveat against; both corrected. **Left as decisions, not defects:** (a) `Reminder.parentReminderId`'s FK is `ON DELETE SET_NULL` while §3 specifies `ON DELETE CASCADE`, and the entity comment cites §3 for the rule §3 does not state -- schema 4 already records SET_NULL, so changing it costs a migration. It is unreachable today only because `ReminderRepository.delete()` has no call sites at all; wiring a per-reminder delete makes orphaned, still-enabled, never-firing children reachable, which is why that branch now documents the hazard instead of asserting it cannot occur. (b) `switchStatus()` writes an absolute recorded stock quantity, discarding intervening changes -- documented as deliberate in four places, so recorded here rather than "fixed" against its own spec. (c) Today's 2-day window is the only `requestWindow` registrant and therefore shrinks the shared projection the stock consumers read. (d) `DoseGroupRepository` is constructed nowhere and its five methods are unreachable. **Named, not closed -- the structural gap:** 12 tests, all Room, none touching `SchedulingEngine`/`ReminderScheduling`'s ~650 lines of pure, Android-free date math. That is exactly where this pass and R21 both found real bugs by reading, and it is the most testable code in the app -- no Android dependencies, no mocking required. There is also no CI and no lint gate, so R21's hand-won 0-error state is a snapshot rather than an invariant, as this pass demonstrated by finding a warning that had been sitting unread in the report. **Verified, not assumed:** `assembleDebug`, `lintDebug` and `testDebugUnitTest` all green after the changes, 12/12 tests passing on a forced full rerun, 0 lint errors. **Still needs a device, unchanged from R21:** the widget-update and SQLCipher-upgrade checks. | **R33** — one of its own fixes applied to half its subject |
-| R24 | R23's one **named-but-not-closed structural gap**: 12 tests, all Room, none touching `SchedulingEngine`/`ReminderScheduling`'s ~650 lines of pure, Android-free date math -- the most testable code in the app and, by two audits' evidence, where the real bugs live. Closed here rather than by another reading pass, on the reasoning that a third read of the same lines was the lower-yield move | ✅ Resolved. 59 new tests (`ReminderSchedulingTest`, 41; `SchedulingEngineTest`, 18), suite 12 -> 71, all green. The pure-calculator suite is plain JUnit with no Robolectric runner and no mocking, which is the whole point of that file being Android-free; the engine suite mocks only its two collaborators (`DoseEventDao`, `SettingsRepository`). Both run in `Europe/Rome`, deliberately not UTC -- a UTC-only suite structurally cannot catch an offset bug -- on a calendar chosen so weekdays read off the constant (2026-06-01 is a Monday). **The suite found a defect on its first run, and it is R23's own defect one branch further down.** R23 fixed `matchingDateOnOrAfter`'s `EveryNDays` case, replacing `require(n >= 1)` with a null return because the row is committed before the scheduler ever sees it and the projection cache re-reads every reminder on a loop, so one bad row threw on *every* recompute rather than at the point of entry. The `CyclicActivePause` branch immediately below it still called `isActiveOn`, which carries `require(activeDays >= 1 && pauseDays >= 0)`, for any cycle length >= 1: `activeDays = 0, pauseDays = 7` and `activeDays = 2, pauseDays = -1` both raised `IllegalArgumentException` from inside the recompute loop. (`activeDays = 0, pauseDays = 0` was already safe, via the empty `0 until 0` range -- pinned so it stays that way.) Reachability is R23's own argument verbatim: `AddReminderScreen` gates both fields, but `BackupRepository.restoreAll()` writes reminder rows straight back with no config revalidation. Fixed identically -- a null return in the scheduler's branch, leaving `isActiveOn`'s `require` intact as the contract for direct callers -- so the guard is now symmetric across all three fallible patterns instead of two of three. The lesson is narrower than R23's and worth keeping: fixing a defect *class* one instance at a time leaves the siblings, and only a test that enumerates the cases finds them. **Otherwise the math held.** The other 58 passed unmodified, including the cases written specifically to break it: both sides of midnight on an overnight weekend window, a previous day's resolution leaking into today's `DailyWindow` grid, a late-firing interval dragging its own grid, and the empty-day-set and end-before-start degenerate configs. **Three behaviours pinned rather than judged**, each defensible, each now expensive to change by accident: a `FixedTime` slot inside the spring-forward gap resolves to the first real instant (02:30 -> 03:30 on 2026-03-29) rather than being skipped for the day; a 24h `RepeatingInterval` is elapsed-time not wall-clock math, so it lands an hour later on the clock across a DST boundary; and weekend mode is applied *after* the `activeFrom`/`activeUntil` clamp per §4's stated ordering, so an overnight push can put a dose one calendar day past `activeUntil`. Only the third is arguable -- ordering the clamp last would instead drop the dose entirely, which is not obviously better -- and it is recorded as observed behaviour, not endorsed. **Still open, unchanged from R23:** no CI and no lint gate, so green remains a snapshot rather than an invariant; and R23's four decision items (the `parentReminderId` FK contradiction, `switchStatus()`'s absolute stock write, Today's window shrinking the shared projection, unreachable `DoseGroupRepository`) are untouched here. The orphaned-`LinkedFollowing` path the FK question governs is now pinned by a test, so settling that decision has a regression check waiting for it. Shipped in `24ba0de`, one commit shared with R25 -- and as with R23, this row's own reference to it necessarily landed in the follow-up commit after. |  |
-| R25 | R23's decision item (a): `Reminder.parentReminderId`'s FK declares `ON DELETE SET_NULL`, schema 4 records it, and §3 specified `ON DELETE CASCADE` -- a contradiction R23 named but deliberately left open, because aligning code to spec costs a migration. Settled here. The deciding fact was not the migration cost but that **both sides justified themselves with a premise untrue of the shipped code**: §3 specified CASCADE because it matched "how the chain is nested in the UI", and `MedicineDetailScreen` renders a flat `LazyColumn`, one row per reminder labelled by type, where a following dose is indistinguishable from a standalone reminder and no chain is visible at all; the entity comment specified SET_NULL because "a Low-Stock/Expiration alert reminder can be spawned from and tied to the medicine's primary dosing reminder", citing §3 for a rule §3 did not state, and `parentReminderId` is written in exactly two places (`AddReminderScreen` 196 and 316), both `LINKED_FOLLOWING`, so no alert reminder ever sets it. One rationale described a UI that does not exist, the other a feature that does not exist | ✅ Resolved -- **SET_NULL kept, §3 corrected to match, and detached children now switched off.** CASCADE was rejected on its merits rather than on cost: its own justification is void, and without the nested UI it assumed, cascading deletes rows the user never selected from a list that cannot show them, in a medication app -- and since §3's own chains compose to arbitrary length, the blast radius is unbounded. The migration was the smaller objection (schema 5 plus a full `CREATE`/`INSERT`/`DROP`/`RENAME` table rebuild, since SQLite cannot alter an FK in place -- precedent `MIGRATION_1_2`, and it would have wanted a `MigrationFrom4To5Test` to match the existing three). What was genuinely wrong with SET_NULL, and is what got fixed: a detached child kept its row, kept `enabled = true`, kept showing in the medicine's reminder list, and never fired again, *silently*. `ReminderRepository.delete()` now reads the children first -- the FK nulls `parentReminderId` as part of the delete, so afterwards there is nothing left to query by -- then disables them and deletes the parent inside one `database.withTransaction { }`, which is why the repository gained an `EmivitaDatabase` (matching `MedicineRepository`, and R1's precedent for why the wrap is a transaction rather than two writes). Coordinator notification stays outside the transaction, the same OS-alarm-versus-DB-write split `MedicineRepository.delete()` already documents; the parent routes through `onReminderRemoved`, each child through `onReminderChanged`, because a disabled child's row still exists and it is `scheduleOrCancel`'s "no next occurrence" branch that cancels its alarm. **Scope is one level down**, matching `getChildrenOf`'s own documented scope and `setEnabled`'s existing semantics -- disabling a chain's head has never disabled the rest of the chain, and a grandchild is not orphaned by this, merely following a parent that no longer fires. **The engine's null-parent guard stays load-bearing** and its comment now says why instead of pointing at an open decision: `delete()` is not the only route in, because `BackupRepository.restoreAll()` writes reminder rows back verbatim, so a backup whose parent row is missing restores an enabled child with a null parent, as would any row predating this change. **Tests:** 5 new in `ReminderRepositoryTest` (real in-memory Room, not mocked DAOs -- `withTransaction` is an inline extension MockK cannot intercept, and the SET_NULL behaviour under test is SQLite's, not the repository's), covering the disable, the detach-not-delete, the coordinator hand-off for every child, the childless case, and the one-level boundary. Suite 71 -> 76. **Honest limit:** `delete()` still has no call sites -- there is no per-reminder delete affordance, only medicine-level delete, which cascades parent and children together through `medicineId` and never touches the self-FK. This settles the semantics so that building that affordance is a UI change rather than a data-model decision; it does not itself make anything reachable. R23's other three decision items are untouched. Shipped in `24ba0de`, the same commit as R24. |  |
-| R26 | The gap R24 carried forward from R23 and left open in its own turn: no CI and no lint gate, so a green `assembleDebug`/`testDebugUnitTest`/`lintDebug` was a snapshot someone remembered to take rather than something the repository enforced. R23 proved the cost concretely -- the `DataExtractionRules` finding it caught had been sitting unread in the lint report through an entire audit cycle, and it was found only because that pass happened to run lint at all. The precise hole: `app/build.gradle.kts` had no `lint { }` block whatsoever, so lint ran on defaults, where `abortOnError` stops the build for an **error** and a **warning** has no consequence at all -- and warning is exactly the severity the finding that escaped had | ✅ Resolved, in two halves that land differently. **The gate** (`app/build.gradle.kts`, new `lint { }` block): `abortOnError = true` and `warningsAsErrors = true` against a new `app/lint-baseline.xml`, so any finding not recorded the day the gate went up fails the build, locally and in CI alike. **The design call worth keeping:** of the 32 findings present, 25 are version-currency checks -- 13 `GradleDependency`, 11 `NewerVersionAvailable`, 1 `OldTargetApi` -- which describe the outside world rather than this code. Baselining those under `warningsAsErrors` would have meant the first AndroidX release after today turning the build red on a commit that touched nothing related, and a gate that reddens for reasons outside the change under test is one people learn to switch off, which lands straight back in R23's actual problem of a report nobody opens. They are therefore **demoted to `informational` rather than baselined**: still printed in the report and still uploaded as a CI artifact, so the upgrade list stays visible, but unable to block. `OldTargetApi` is in that set for the same reason and is already a documented decision (compileSdk 37 needs AGP 9.x; the note above the dependency block explains why 8.13.2 was pinned instead). That leaves 6 gate-relevant findings -- 5 `UnusedAttribute`, 1 `ChromeOsAbiSupport`, all stable and minSdk-related. Note for anyone opening the file: the baseline nonetheless contains all 32 entries, because AGP records everything it finds regardless of severity demotion; the 26 informational ones are inert, and it is the demotion, not the baseline, that protects against calendar churn. **Verified that the gate bites rather than assumed it**, which this ledger has had to learn twice: one baselined `UnusedAttribute` entry was deleted, `lintDebug` then exited 1 with "Lint found errors in the project; aborting build" on that warning-severity finding, and the baseline was restored byte-identical and re-confirmed green. A gate nobody has watched fail is not yet a gate. **The CI** (`.github/workflows/ci.yml`): one `ubuntu-latest` job running `assembleDebug`, `testDebugUnitTest`, `lintDebug` as three steps -- the same triad this ledger has been quoting by hand after every audit pass -- on push to master/main, on every pull request, and on manual dispatch. JDK 21 via `actions/setup-java` to match `gradle/gradle-daemon-jvm.properties`'s `toolchainVersion=21` and `jvmToolchain(21)`, so Gradle does not auto-provision a daemon JVM from foojay on every run; `android-actions/setup-android` for SDK licences, since the runner image does not reliably carry API 36; `gradle/actions/setup-gradle` for caching. Reports upload under `if: always()`, because a failing run is precisely when the report is worth having. One job rather than three parallel ones on purpose: splitting would triple Gradle configuration and SDK setup for a single-module app whose full local run is about two minutes, while three steps already attribute a failure to the right task. **Honest limits.** There is no git remote (`git remote -v` is empty), so the workflow is inert until one exists and is pushed to -- it is correct and self-activating, but today the lint gate is the half with actual teeth. And a local `assembleDebug` still does not run lint, only the lint task does, so enforcing the triad before every push on this machine would need a `core.hooksPath` pre-push hook; that is a separate decision and was deliberately not made here. README's command block now lists `lintDebug` and states that it is a gate rather than a report. |  |
-| R27 | R23's decision item (b): `DoseEventRepository.switchStatus()` writes an absolute recorded stock quantity -- `setStock(stockAfter)` for Taken, `setStock(stockBefore)` for Skipped -- which R23 recorded as "documented as deliberate in four places, so recorded here rather than 'fixed' against its own spec". Taken up here and it is **not a trade-off, it is a defect**, in exactly the shape R25 turned out to have: the documentation was consistent across every site and rested on a premise that does not survive checking. The stated rationale, in the `switchStatus` KDoc, in `MedicineDao.setStock`'s KDoc and in `DoseEvent`'s sentinel comment, was that reapplying the exact recorded quantity beats "relative math that could compound error across repeated switches" | ✅ Resolved -- **now a relative delta**. The compounding premise is false for the delta that was actually available: `stockBefore - stockAfter` is what the dose really consumed, Taken->Skipped gives back precisely what Skipped->Taken takes away, so any sequence of switches is reversible, and the existing same-status guard stops one direction being applied twice. Compounding would only be a risk if the delta were recomputed from the event's *current* `doseAmount`, which `editDoseAmount()` can change independently of the sentinels -- which is the very reason the sentinel pair exists, so the rationale argued against a design nobody was proposing. **What the absolute write actually cost:** it discarded every stock change made between the resolution and the switch. Correcting this morning's dose after the evening one had been taken silently un-took the evening dose; correcting a dose logged before a refill destroyed the refill outright. For any twice-daily medicine the first of those is an ordinary Tuesday rather than an edge case, which is what moves this out of "documented trade-off" and into data loss. Fixed with the relative pair that `MedicineDao` already exposed -- `decrementStock`/`incrementStock`, no new query needed -- and it is clamp-aware for free, because `hypotheticalStockSentinels` floors `stockAfter` at 0, so a dose taken against insufficient stock records what was genuinely consumed and hands back exactly that rather than inventing units that never existed. A `REFILLED` event can never reach the path: the `require` admits only an already-resolved Taken/Skipped one, so the difference is never negative. **`resolve()`'s own `setStock` is not this bug and was deliberately left alone** -- its sentinels come from a stock read taken inside the same transaction microseconds earlier, so there is no staleness window and the absolute write is a decrement in all but name; `setStock` therefore keeps exactly one live caller, and its KDoc now warns that `switchStatus` must not become a second one again. Three documentation sites corrected to match, since all three carried the retired claim. **Tests:** 4 new, suite 76 -> 80, and honestly only 2 of the 4 are regression tests for this defect -- the refill case and the later-dose case, both confirmed by temporarily restoring the absolute write and watching exactly those two fail. The other two pass under the old behaviour too, by construction, and are kept as guards on adjacent properties rather than as proof: round-trip reversibility, which is what documents the retired compounding claim, and the insufficient-stock clamp. Two pre-existing `switchStatus` tests were renamed; they still pass, but their names asserted the mechanism that has just been retired. **Verified:** `assembleDebug`, `testDebugUnitTest` and `lintDebug` green, 80/80 passing -- the first change to land under R26's lint gate, which passed it unchanged. R23's remaining two decision items (Today's window shrinking the shared projection, unreachable `DoseGroupRepository`) are untouched. |  |
-| R28 | R23's decision item (c): Today's 2-day window is the only `requestWindow` registrant and therefore shrinks the shared projection the stock consumers read. Taken up here and, like R25 and R27 before it, **it is a defect rather than a decision, and again the documentation encoded the misunderstanding**. `effectiveWindowDays()` read `windowRequests.values.maxOrNull() ?: DEFAULT_WINDOW_DAYS`: the constant applied only when *no* consumer had registered, making it an empty-map fallback rather than a floor. Today is the sole registrant, so from the moment Today composed the effective window for every reader of the shared `state` was 2 days, not 28. `TodayScreen`'s own comment called its request "cheap relative to the cache's 28-day default", which has it exactly backwards -- the registration did not buy Today a cheaper slice of the projection, it replaced the projection for everyone else | ✅ Resolved -- **the constant is now a floor**, `maxOf(registrations.max ?: 0, MINIMUM_WINDOW_DAYS)`, and renamed `DEFAULT_WINDOW_DAYS` -> `MINIMUM_WINDOW_DAYS` because "default" was precisely the misleading word. **What it cost:** `stockRunOutDates` only ever spanned those 2 days, and two surfaces read that map -- `StockExpirationScreen` (the "runs out" line) and `StockLevelsWidget` -- so the low-stock early warning silently disappeared for any medicine due to run out in 3 to 28 days, for as long as Today was on screen, which for the start destination is most of the time. `NextRemindersWidget` under-filled its rows from the same shrunken projection. Compounded by `releaseWindow` deliberately not forcing a recompute -- correct on its own terms, since shrinking isn't urgent -- which meant navigating away from Today did not restore the full projection until some other trigger happened along. Today's registration is **kept** rather than deleted: it is now a no-op against a floor of 28, but it declares a real minimum, and the mechanism still does its job for any future consumer needing more than the floor (a 90-day calendar, say). Its comment now says so instead of claiming a cheapness it never bought. One testability change, `dispatcher` injected with a `Dispatchers.Default` default, for exactly the reason `zone` and `nowEpochMillis` already are: the 1s debounce is real wall-clock time that a test cannot advance. **Tests:** 8 new in `OccurrenceProjectionCacheTest`, suite 80 -> 88, no Robolectric since the cache touches no Android types. Only 2 of the 8 fail on the old code -- the shrink case and the run-out case -- confirmed by reverting the one-line change and watching exactly those two go red; the other 6 are guards on adjacent properties (floor with no registrations, growth above the floor, largest-registration-wins, release-then-recompute, outlasting the window, untracked medicine). **The methodological lesson, worth more than the fix.** The first version of this suite **passed vacuously**: `ProjectionState()`'s own default `windowDays` is already the floor, so asserting 28 went green even though no recompute had ever run. What exposed it was that the *growth* tests failed while the floor tests "passed" -- an impossible combination if the cache were really recomputing. Root cause was the harness, not the cache: `TestScope.backgroundScope` did not execute under `advanceUntilIdle()` here, proved with a deliberate control test that launched a trivial `delay`-then-set-flag coroutine and failed, alongside a second control confirming the MockK stubs answered correctly. Replaced with a `CoroutineScope` owned by the test, sharing the same `testScheduler` and cancelled in `@After` (the cache's trigger loop never terminates, so it must be cancelled rather than awaited). A permanent assertion on `computedAtEpochMillis` now guards the vacuous-pass mode directly, because a green suite that never exercised the code under test is worse than no suite: R26 put a gate up precisely so green would mean something, and a test that cannot fail quietly cancels that. **Verified:** `assembleDebug`, `testDebugUnitTest` and `lintDebug` green, 88/88, lint gate passed unchanged. This closes the last of R23's four decision items; only `DoseGroupRepository` being constructed nowhere remains open from that pass. |  |
-| R29 | R23's last open decision item (d): `DoseGroupRepository` is constructed nowhere and its five methods are unreachable | ✅ Resolved -- **deleted**, along with `AppContainer`'s `doseGroupRepository` property and import. Grep-verified first, the way R23's own dead-code removals were: across all of `app/src` including resources and the manifest, the class was referenced only by its own definition and by that lazy property, and nothing anywhere read `container.doseGroupRepository`. **What deliberately survives, and why deleting it would have broken the app:** `DoseGroupDao` has two live consumers -- `BackupRepository` (`getAllOnce`/`deleteAll`/`restoreAll`, so an existing group round-trips through a backup) and `ReminderNotificationBuilder`, which reads a reminder's group priority via `getById` to decide notification tier. The `DoseGroup` entity, its table, the `groupId` FK on `Reminder` and the schema-1 migration all stay for the same reason: they are load-bearing for those two paths, not orphaned by this. **The consequence worth stating plainly rather than burying:** this repository held the only code that could ever *create* a `DoseGroup` or assign a reminder to one. What remains of grouping is now structurally inert -- a `groupId` can arrive from a restored backup and will still be honoured by the notification tier, but nothing in the app can set one. That was already true in practice, since nothing ever constructed the repository, so this changes no behaviour; it changes the code from "half-built feature waiting to be wired" to "deliberately not built", which is the honest description and the one §9's grouping design should now be read against. If grouping is ever picked up, this file is the starting point rather than something to rewrite: recover it with `git show 7c3d2e7:app/src/main/java/com/hazia/emivita/core/data/repository/DoseGroupRepository.kt` -- 62 lines, and its two transaction-wrapped methods (`confirmGroup`, `disbandGroup`) already encode the atomicity reasoning R1 established. **Left open, deliberately not widened into:** four `DoseGroupDao` methods are orphaned by this deletion -- `observeForProfile`, `insert`, `update`, `delete`. They are inert either way, since the only caller is gone, and removing them is a separate call from the one asked for here; noted rather than done. **Verified:** `assembleDebug`, `testDebugUnitTest` and `lintDebug` green, 88/88, lint gate passed unchanged. **This closes R23's ledger completely** -- all four decision items settled, three of the four (R25, R27, R28) having turned out to be defects rather than trade-offs, each one a case of internally consistent documentation resting on a premise that did not survive being checked against the code. That pattern is the durable finding from R25-R29 and is worth more than any of the individual fixes: in this codebase a confidently-documented decision repeated across several sites has been a *more* likely place to find a bug than an undocumented one, because the consistency is exactly what carried it through three prior audits unexamined. |  |
+| R23 | Third full audit pass against the reconciled tree — 22 parallel readers over every file, 6 cross-cutting sweeps, a documentation-versus-code fleet, every finding put to an adversarial verifier. 264 agents, 250 raw findings, 177 surviving. Not a reading-only pass: `assembleDebug`, `lintDebug` and `testDebugUnitTest` were actually run | ✅ **Resolved**, four items left as decisions (R25, R27, R28, R29) and one structural gap named (R24). **The most user-visible defect ever recorded here: editing a reminder silently did nothing.** All four edit paths called `updateConfig` then `updateAdvancedFields` with the same pre-edit `Reminder`; `@Update` writes every column, so the second call restored the first's `configJson`. Changing a time or pattern ran a success path and kept the old schedule. Collapsed into one write (§7.1 rule 3). Also: three form paths committed configs the scheduler then threw on permanently (`"0".toIntOrNull()` is `0`, not null, so the fallback never fired); a preference write using async `apply` could brick the database on a crash; and a lint run surfaced a backup-rules version hole R20's own reasoning had denied | **R33** — one of its own fixes applied to half its subject |
+| R24 | R23's named-but-not-closed structural gap: 12 tests, all Room, none touching `SchedulingEngine`/`ReminderScheduling`'s ~650 lines of pure date math — the most testable code in the app and, by two audits' evidence, where the real bugs live | ✅ **Resolved.** 59 new tests, run in `Europe/Rome` rather than UTC because a UTC-only suite structurally cannot catch an offset bug (§7.1 rule 6). The suite found a defect on its first run: R23 had fixed one of three fallible patterns and left the siblings — the guard is now symmetric across all three (§7.1 rule 4) |  |
+| R25 | R23's decision item (a): `Reminder.parentReminderId`'s FK declares `ON DELETE SET_NULL`, §3 specified `ON DELETE CASCADE` | ✅ **Resolved — SET_NULL kept, §3 corrected.** The deciding fact was that *both* sides justified themselves with a premise untrue of the shipped code: §3 wanted CASCADE because it matched "how the chain is nested in the UI", and `MedicineDetailScreen` renders a flat list where a following dose is indistinguishable from any other row. Cascading would delete rows the user never selected from a list that cannot show them, in a medication app, with unbounded blast radius. The real defect underneath was that an orphaned child kept its row, kept `enabled = true`, and never fired again *silently* — `delete()` now reads children first (§7.1 rule 7) |  |
+| R26 | The gap R24 carried forward: no CI and no lint gate, so a green build was a snapshot someone remembered to take rather than something the repository enforced. `app/build.gradle.kts` had no `lint { }` block at all | ✅ **Resolved.** Lint is now a gate rather than a report, wired in the build file and in CI, and the README's command block says so (§7.1 rule 14). R23 had proved the cost concretely: its `DataExtractionRules` finding had sat unread in a lint report through an entire audit cycle |  |
+| R27 | R23's decision item (b): `switchStatus()` writes an absolute recorded stock quantity, "documented as deliberate in four places" | ✅ **Resolved — now a relative delta.** Not a trade-off, a defect, in exactly R25's shape: the documentation was consistent across every site and rested on a premise that does not survive checking (§7.1 rule 7). It now computes what was genuinely consumed rather than inventing units that never existed. `setStock` keeps exactly one live caller and its KDoc warns that `switchStatus` must not become a second |  |
+| R28 | R23's decision item (c): Today's 2-day window is the only `requestWindow` registrant and therefore shrinks the shared projection the stock consumers read | ✅ **Resolved — the constant is now a floor.** `effectiveWindowDays()` read `maxOrNull() ?: DEFAULT_WINDOW_DAYS`, making the default an empty-map fallback rather than a floor, so from the moment Today composed, every other reader got Today's 2 days. Third of three where the documentation encoded the misunderstanding (§7.1 rule 7). A permanent assertion on `computedAtEpochMillis` now guards against the vacuous-pass mode, because a suite that never exercises the code under test cancels the gate R26 put up (§7.1 rule 5) |  |
+| R29 | R23's last open decision item (d): `DoseGroupRepository` is constructed nowhere and its five methods are unreachable | ✅ **Resolved — deleted.** Changes no behaviour; it changes the code from "half-built feature waiting to be wired" to "deliberately not built", which is the honest description and the one §9's grouping design should be read against. Four now-orphaned `DoseGroupDao` methods left in place deliberately, inert either way |  |
 | R30 | Coherence pass over purpose-vs-implementation (this batch). `SchedulingEngine.nextOccurrenceFor` treated `activeFromEpochDay` and `activeUntilEpochDay` as one symmetric clamp — candidate outside the range, return null — but the two bounds are not symmetric in time. Past `activeUntil` there genuinely is no next occurrence; before `activeFrom` there is one, just later. Nothing in this app re-arms a reminder on the passage of time alone (`rescheduleAll()` runs at boot and `MY_PACKAGE_REPLACED`; `OccurrenceProjectionCache` recomputes on data changes, never on a clock), so "no next occurrence" was permanent: a reminder whose range opened even one day out had its alarm cancelled by `scheduleOrCancel` the moment it was saved, and projected zero occurrences into Today, History and both widgets. That contradicted §4's own claim that this clamp is the whole mechanism for courses and tapers — "several ordinary FixedTime reminders with adjacent, non-overlapping ranges" — since only the segment already in range could ever fire. `SchedulingEngineTest` pinned the defect rather than the rule (`a candidate before the active range opens is clamped away`), which is why three audit passes did not reach it | ✅ **Resolved this pass.** The type-specific calculators are split out as `computeBase`, and an activeFrom miss re-runs it from the start of the day the range opens instead of returning null; `activeUntil` is unchanged. Guarded against re-running when the opening is not actually later than the floor already asked for, which is both the termination condition and the correct answer for `LinkedFollowing` (anchored to its parent, not to `notBefore`). The old test is rewritten to assert deferral, plus one that a deferred range still respects `activeUntil` and one that `occurrencesFor` now projects a course starting inside the window |  |
 | R31 | Same pass. `nextOccurrenceFor`'s KDoc promises "next time [reminder] should fire at/after `notBeforeEpochMillis`", and every branch honoured it except `LinkedFollowing`, which returned `parentLastEvent + delayMinutes` unconditionally. The anchor is the parent's *last* event, so that expression goes stale on its own: once `delayMinutes` has elapsed it is an instant in the past. Two consequences, both live. `RealSchedulingCoordinator` armed an alarm at a past instant — `setExactAndAllowWhileIdle` fires those immediately — on every reschedule after the child's own dose was answered. And the shared projection carried the stale slot until the parent fired again, which is the actual reason `NextRemindersWidget` has to filter `epochMillis >= now`; Today only escaped it via `buildTimeline`'s materialized-key dedupe. Untested in either direction: every `LinkedFollowing` case in `SchedulingEngineTest` passed a `notBefore` *earlier* than the parent's event, which is the one arrangement production never produces | ✅ **Resolved this pass.** A `takeIf { it >= notBeforeEpochMillis }` in that branch. No catch-up is lost that the other types offer — `FixedTime` rolls a missed slot to its next matching day and both interval calculators step forward onto a future grid instant, so "no replay of a past slot" is now uniform rather than one type's accident. Two tests added: a passed slot yields null, and a slot exactly on the floor still counts as due |  |
 | R32 | Same pass. `lockRemindersUntilTaken` (§3) is enforced in three places — `ReminderNotificationBuilder` omits the Skip action, `ReminderActionReceiver` rejects a stale one, `AlarmActivity` does both — and `Medicine.remindersLockedUntilTaken`'s comment lists exactly those three as if the list were exhaustive. `TodayScreen` is not among them and shipped an unconditional Skip chip on every PENDING entry. Today is the app's start destination and the surface a user actually reaches for, so the safety gate was bypassable in one tap on the front page while being enforced everywhere a user is less likely to be. Not a missed call site so much as a miscounted one: the comment enumerating the enforcement points is what made the omission invisible | ✅ **Resolved this pass.** `TodayScreen` takes `SettingsRepository`, collects `lockRemindersUntilTakenByDefault` as state (composition cannot call the suspend `isLockedUntilTaken`) and applies the per-medicine override at each row, giving the same resolution. The Skip chip is omitted rather than disabled, matching the notification builder and `AlarmActivity`. `Medicine`'s comment now names Today and says why it resolves inline. History's `DoseEditDialog` is deliberately *not* gated: correcting a past record is a different act from dismissing a live dose |  |
@@ -836,25 +943,27 @@ merely related reading.
 | R34 | Same pass. History's headline figure and the chart directly under it ranked the same two outcomes in opposite orders. `AdherenceSummary` and `adherenceSubtitle` (the PDF report's subtitle) both computed `taken / (taken + skipped)`, counting a deliberate Skip against the user and dropping PENDING — a dose that fired and was never answered — entirely; `AdherenceChart` renders PENDING as its own `missed` series and its doc comment ranks it explicitly as "worse than a deliberate Skip", which is why it is the one outcome that earns the reserved `error` colour. Ten taken and twenty missed therefore rendered as **"100% adherence"** immediately above a chart that was two-thirds red, and the PDF a user might hand to a clinician carried the same sentence. `AdherenceSummary`'s `if (total == 0) return` compounded it: a window containing nothing *but* missed doses hid the summary card altogether. Not a locked decision like weekend mode — undocumented drift between two functions written against the same rows | ✅ **Resolved this pass.** One `adherenceCounts` helper both call sites read, carrying `missed` alongside `taken`/`skipped`; the summary and the PDF subtitle both print it. The headline names its own denominator — "100% of answered doses taken", not "100% adherence" — and the card renders whenever there is anything to report. The **denominator itself is deliberately unchanged**: whether a missed dose belongs in it is a product decision about what this app means by adherence, not a defect to patch, and is left open rather than settled quietly here |  |
 | R35 | Full `android-app-auditor` registry pass over the reconciled tree, run alongside the coherence pass above (0 CRITICAL, 0 HIGH; §1's five non-negotiables verified as actually holding, including transitively — the whole resolved `releaseRuntimeClasspath` was scanned, not just the `dependencies` block, and `ACCESS_NETWORK_STATE`'s `tools:node="remove"` was confirmed against the *merged* manifest rather than the source one). The one finding worth acting on is a congruence gap this file's own least-privilege posture makes conspicuous: every component the app declares is `exported="false"` bar the LAUNCHER activity, and `androidx.compose.ui.tooling.PreviewActivity` arrived `exported="true"` with no `android:permission`. It reaches the merged manifest twice — from the correctly-scoped `debugImplementation` on `ui-tooling`, and again transitively as an *ordinary* dependency of `com.kizitonwose.calendar:compose`, which is how it got onto `releaseRuntimeClasspath` (confirmed by `dependencyInsight`). Release was never the exposure: `PreviewActivity.onCreate` checks `FLAG_DEBUGGABLE` and finishes when unset, so there it was dead weight. Debug is, and debug is installed on the same device by design — that is what the shared signing identity in `buildTypes.release` exists for. Past that guard it reads two intent string extras and reflectively loads and renders the class they name, inside the process holding the unlocked SQLCipher handle and both Keystore aliases, startable by any app on the device | ✅ **Resolved this pass.** `tools:node="remove"` on the activity in `AndroidManifest.xml`, removing it from **both** variants, plus an `exclude(group = "androidx.compose.ui", module = "ui-tooling")` on the calendar dependency so the artifact itself stays off the release classpath. **Verified the way it was found:** `:app:processReleaseMainManifest` and `processDebugMainManifest` re-run, `PreviewActivity` now 0 occurrences in each merged manifest. The cost is Android Studio's "Deploy Preview to Device"; the IDE preview pane, `@Preview` itself and the rest of `ui-tooling` are untouched. The manifest comment records how to trade it back (move the node to `src/release/AndroidManifest.xml`) so a future reader re-accepts the exposure knowingly rather than by omission |  |
 | R36 | Weekend mode applied to every reminder whenever the global toggle was on, with no per-reminder opt-out — §3, §4 and §5 all recorded this as a faithful port and §5 specifically as a decision *not* to invent an override "medTimer doesn't have". Re-checked against the reference: correct as a description of medTimer (`SchedulingFactory.create` returns `WeekendModeSchedulingDecorator(scheduler, …)` for every branch of its `when`, unconditionally), and wrong as a design for this app. One switch cannot distinguish a supplement that is happy to wait until the window closes from a drug that is not, so buying a Saturday lie-in on the first silently delayed every dose of the second. Faithfulness to the reference had been treated as the tie-breaker rather than as one input | ✅ **Resolved this pass** at the user's direction. Split: the global preference keeps *what the weekend is* (enabled, days, window — it describes the user's week, and duplicating it per reminder would let two reminders disagree about when Saturday morning ends), and a new `Reminder.weekendModeOptIn: Boolean = false` owns *whether this reminder is shifted*. Both must be on. Cross-cutting like `autoResolve`, so it sits on the row beside it rather than in any one type's `configJson`, and rides the same Advanced section of the four dose-producing forms. **DB v4 → v5**, `MIGRATION_4_5`, `ALTER TABLE reminders ADD COLUMN weekendModeOptIn INTEGER NOT NULL DEFAULT 0`. The backfill is 0, not 1: 1 would preserve the observed behaviour of anyone who had the old global toggle on, but weekend mode *delays a dose*, and carrying a blanket setting forward as though each reminder had individually consented is the exact thing this change exists to stop. Opting back in is one switch per reminder; a dose delayed because a migration assumed consent is not. The gate is checked before the global read, so a reminder that has not opted in costs zero Flow reads. §3, §4 and §5 all corrected — §5's row now records this as the one place faithfulness was the wrong call. Four tests: the opt-in path, the not-opted-in path against identical settings, opted-in-but-global-off, and the zero-read property; plus `MigrationFrom4To5Test` pinning the 0 backfill specifically |  |
-| R37 | Drift audit against medTimer, prompted by R33/R34's question of what else had drifted. **`LowStockAlert`/`ExpirationAlert` are not in Emivita's scheduling chain at all.** `SchedulingEngine.supportedTypes` excludes both, so they never get an alarm; `LowStockExpirationAlertEvaluator.evaluate()` has exactly one call site, the last line of `OccurrenceProjectionCache.recompute()`, which runs only on a Room change to `medicines`/`reminders`, an explicit `invalidate()`, or a screen registering a window. Nothing drives it from a clock. medTimer does the opposite: `ReminderType.OUT_OF_STOCK` and `EXPIRATION_DATE` are ordinary schedulable types with real `Scheduling` implementations (`OutOfStockScheduling`, `ExpirationDateScheduling`) returning real `Instant`s from `getNextNotRemindedDay()`, which `ReminderScheduler.schedule` feeds into the same AlarmManager chain as every dose reminder — they even pass through the weekend decorator. Its only event-driven path is the *crossing* case: `StockHandlingProcessor.checkForThreshold` fires ONCE/ALWAYS out-of-stock notifications inline at the moment stock is decremented, while DAILY gets a real alarm, and both expiration modes get real alarms. So Emivita matches the reference for low-stock ONCE/ALWAYS (a stock change is a data change, and `resolve()` calls `invalidate()`), and diverges for **low-stock DAILY_WHEN_BELOW** and **both expiration modes** — the three that are inherently time-triggered. The expiration case is the sharp one: a medicine sitting in a cupboard generates no database writes, so its alert fires only at boot or when the app is next opened. §9 #8's "no separate WorkManager polling job; the cache's existing DB-change and alarm-fired triggers keep it current on their own" is true only for medicines that *have* scheduled doses, which is precisely the population these alerts are least needed for | ✅ **Resolved this pass** — the user chose the full port over the cheaper daily-heartbeat alarm. Both alert configs gain `hour`/`minute`, defaulted to 09:00 so every existing `configJson` decodes unchanged (it is a JSON blob and kotlinx fills an absent key from the default, so **no database migration**); both types join `supportedTypes`; `ReminderAlarmReceiver` routes their firings to a new `handleAlertFire`. `SchedulingEngine` gains a `MedicineDao` — an alert's condition is "is stock below the line" / "is the expiry within lead time", neither of which any DoseEvent records — and two pure calculators in `ReminderScheduling.kt` take the live quantity and expiry as parameters, keeping that file as side-effect-free as the rest of it. Where medTimer finds "the next day not already announced on" by scanning reminder events across 31 days (`SchedulingBase.getNextNotRemindedDay`), Emivita reads the `lastAlertNotifiedEpochDay` column it already had: same answer, one comparison instead of a scan. `SchedulingEngine.doseProducingTypes` is split out from `supportedTypes` so `OccurrenceProjectionCache` keeps projecting doses only — an alert is not a dose and must not appear on Today's timeline as a zero-amount entry, nor be subtracted from the stock run-out walk. Two things the port had to add that the reference does not need: a `SchedulingCoordinator.onMedicineChanged(medicineId)` re-arm hook, called from every path that moves stock or the expiry date, because Emivita arms one alarm per reminder where medTimer recomputes its whole list on any change; and a live re-check inside `handleAlertFire`, because an alert alarm is armed for a *future* instant and a refill tonight makes tomorrow's low-stock alarm wrong. Eleven tests, `LowStockExpirationAlertEvaluator` narrowed to the two crossing modes, §9 #8 rewritten with its superseded sentence kept |  |
+| R37 | Drift audit against medTimer. **`LowStockAlert`/`ExpirationAlert` are not in Emivita's scheduling chain at all** — `supportedTypes` excludes both, and the evaluator's one call site runs only on a Room change, never on a clock. medTimer drives them from a clock | ✅ **Resolved** for the three inherently time-triggered cases (low-stock DAILY_WHEN_BELOW, both expiration modes), which now get real alarms. `supportedTypes` still excludes them from projection so an alert never appears on Today's timeline as a zero-amount entry, nor is subtracted from the stock run-out walk |  |
 | R38 | CI had never run. Every workflow run this repository ever had — both on `master` and on the R30–R37 branch — failed at its first step with `./gradlew: Permission denied` (exit 126): the wrapper is committed as mode 100644 and the workflow invokes it as `./gradlew`, so nothing downstream of that line executed. The lint gate R26 put up and the test suite R23 added had therefore never once been enforced remotely, while `README.md` stated that CI "runs these same three tasks on push and pull request" and §7 rows quoted green runs that were only ever local | ✅ **Resolved.** `git update-index --chmod=+x gradlew`, recorded in the index rather than on disk because this repo is developed on Windows with `core.filemode=false`, where the filesystem bit is not what git stores. **First green CI run in the repository's history** followed. Checked the next blockers rather than spending round trips discovering them: `local.properties` is untracked, `lint-baseline.xml`'s 33 entries all use relative forward-slash paths and so match on Linux, and the new `5.json` schema is committed |  |
 | R39 | First on-device verification pass (OnePlus 9 Pro LE2123, OxygenOS / Android 14, arm64-v8a), closing items the `android-app-auditor` had listed as NOT CHECKABLE without hardware. **Confirmed working:** the Room v4→v5 migration against a real SQLCipher database — the runtime schema validation the JVM migration tests structurally cannot reach, and the exact thing R36's `@ColumnInfo(defaultValue = "0")` existed for; the SQLCipher native path (`loadLibrary`, raw-key BLOB, `abiFilters`), proven by the database opening at all; the whole alarm chain end to end (reminder → engine → AlarmScheduler → AlarmManager → receiver → DoseEvent materialised → notification on `reminders_standard` with Take/Snooze/Skip), with Take dismissing the notification and the daily chain advancing to the next day; `USE_EXACT_ALARM` on API 34, with `dumpsys alarm` reporting `exactAllowReason=policy_permission` and no `AlarmScheduler` inexact-fallback warning, which settles the manifest's central argument on the device generation it was written about; **and BootRescheduleReceiver** — after a real reboot, with the app never opened, the pre-reboot alarm was present again and the process had been started by the boot broadcast, closing the one item the manifest said it "could not verify by reading code alone". **The finding:** a reminder scheduled for 19:50 arrived at about 19:55. `setExactAndAllowWhileIdle` with `USE_EXACT_ALARM` held is the strongest scheduling call the platform offers and it was already being made; the OS carried a four-minute tolerance window on that firing and a **one-hour** window on the next day's, applied a `battery_saver` policy delta, and OxygenOS's own freezer had suspended the process. Nothing in the app was wrong — but nothing in the app said anything either, and an app whose entire purpose is timely reminders was arriving late silently | ✅ **Resolved** for the part the app controls: a `BatteryOptimizationCard` in Notifications & Alerts, modelled on the existing `FullScreenAlarmAccessCard` (same ON_RESUME re-read, since special-access screens deliver no activity result), shown only when the app is not exempt. **No new permission**: `isIgnoringBatteryOptimizations` is a plain query and `ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS` opens the system list, so `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` — which AndroidManifest.xml removed on least-privilege grounds — stays removed and §1's posture is untouched; the user takes the last step in Settings. The manifest's boot-receiver comment is rewritten from "verify this on your device" to the verified result. Not reproduced: data preservation across the migration (the database held no medicines, so this proves *schema* validation only) and biometric lock (no biometrics enrolled — the app degrades honestly, showing a disabled row that says so) |  |
-| R40 | Found while verifying R39's new card on device: it renders **teal** in an amber palette, and it is doing exactly what it was told to. `Color.kt` computes `error` rather than taking an Appendix A hex, per §6's semantic-state-token table — "Accent hue +150–165 degrees (compound/near-complementary), S60/L45", implemented at +158°. Golden Hour's accent is amber at roughly 40°, so error lands near 198°: teal. The rule is locally sensible — keep the palette harmonious — and it is applied to the one role whose entire job is to be *dis*harmonious. A colour picked for harmony with the accent cannot also read as a warning; teal reads as success or information. The blast radius is wider than one card: `AdherenceChart` uses the same role for its `missed` series, and R34's own doc comment calls that "the app's reserved alarm-adjacent color" and ranks a missed dose as worse than a deliberate skip — so a missed-dose bar in a medication adherence chart currently renders in a colour that reads as fine. Two smaller notes on the same code: `errorContainer = t.error` gives the container tier the same tone as the role, which `Color.kt` explicitly asks to have flagged if a lighter container tone is ever wanted (it is wanted now — body text sits on it, while Appendix A audited these tones for "large-element/UI use"); and the `surfaceContainer` family, `surfaceVariant`, `outlineVariant`, `inverseSurface` and `scrim` are never assigned, so M3 falls back to baseline for them — which is why the bottom navigation bar, present on every screen, renders lavender in all eight palettes | ❓ **Open — reported, not fixed.** §6 and Appendix A are locked, all eight palettes derive from this rule, and choosing whether error should be a hue rotation or a real red is a design decision, not a defect to patch quietly. The cheap fix if wanted: exempt `error`/`errorContainer` from the rotation and give the semantic states a fixed hue, keeping the harmony rule for the three accent roles where it belongs | **R42, R44** — the error hue and the unassigned surface roles respectively; nothing in this row is still open, and this Status was never updated |
+| R40 | Found on device: the error card renders **teal** in an amber palette. `Color.kt` computed `error` by rotating the accent hue +158°, so Golden Hour's amber landed near 198°. Blast radius wider than one card — `AdherenceChart` paints its `missed` series with the same role | ❓ **Open — reported, not fixed** at the time; §6 and Appendix A were locked and this was a design decision rather than a defect to patch quietly. See §7.1 rule 10 | **R42, R44** — the error hue and the unassigned surface roles respectively; nothing in this row is still open, and this Status was never updated |
 | R41 | The project was two apps, not one. `app/build.gradle.kts`'s `debug` block carried `applicationIdSuffix = ".debug"`, so `com.hazia.emivita` and `com.hazia.emivita.debug` were unrelated packages to Android — two data directories, two SQLCipher databases, two sets of AndroidKeyStore aliases, two sets of alarms — and with no `resValue` overriding `app_name`, both installed as "Emivita", indistinguishable in the launcher and the widget picker. Two written claims depended on that not being so. `README.md` said the shared debug keystore let builds "install over each other": false, since a shared signer is necessary and not sufficient when the applicationIds differ. And `dist/vc1/MANIFEST.md` exists, in its own words, to be "an installed predecessor to upgrade *from*" so that `MIGRATION_4_5` can be run against "a database written by a real previous build" — unreachable, because the archive is `com.hazia.emivita` and the build anyone develops with was suffixed. That file knew, and papered over it with a closing note that the two "install alongside" each other and that the baseline data "must be created in *this* app, not the debug one". The cost was not theoretical: R39's migration check ran against a leftover `.debug` database and never touched the archive, and read as a pass either way | ✅ **Resolved this pass**, at the user's direction that this is one project and one build. The suffix is removed; the `debug` block now carries the reasoning for its absence, since "no suffix" is the unusual choice and an empty block would invite one back. **Verified by doing the thing that was impossible:** the archived vc1 APK installed and launched (versionCode 1, non-debuggable — the real artifact), then a debug build carrying schema 5 installed over it with `adb install -r`. No signature prompt, `libsqlcipher.so` loaded from `arm64-v8a`, no `IllegalStateException` from Room's schema validation, app alive, and `pm list packages` showing exactly one `com.hazia.emivita`. Both documents corrected: the README now credits the shared applicationId *and* the shared signer and states the trade (no side-by-side installs), and MANIFEST.md's alongside-note is replaced by the recorded result. Considered and rejected: cutting a fresh dist baseline under the unified identity, because that file forbids it in terms that are right — "its value is entirely that it is the artifact a real database was created by" |  |
-| R42 | *(its "Not done" surface-roles note is taken up by R44.)* Spec-versus-structure pass. Two recorded-open items turned out to be the same kind of thing — a rule the code follows by luck rather than by construction — and one of them was worse than either row said. **The error colour (supersedes T4, closes R40).** §6's semantic-state-token rule computes `error` as "Accent hue +150–165°", implemented at +158°. Rotating each accent produces, across the eight palettes: teal, cyan, magenta, blue — and **green in four of them**. That is the role `AdherenceChart` paints its `missed` series with, and that R34's own doc comment calls "the app's reserved alarm-adjacent color", so **a missed medication dose rendered green in half the palettes**. T4 had already recorded the same rule failing from the other end — "no hue to rotate from against Neutral's fully-desaturated Accent" — and it was never revisited. Two independent failures of one rule is the rule being wrong, not the palettes: a hue chosen to stay in harmony with the accent cannot also mean "something is wrong". **T6, the dose-text floor.** Nothing stopped dose/schedule-critical text rendering at `labelSmall` (11sp); T6 flagged it against §1's safety purpose and left it "not yet made a hard rule". Audit found the rule already holds — the only `labelSmall` sites are weekday headers, a missing-scanner notice and a storage note — but holds by accident, with nothing recording it | ✅ **Resolved this pass.** `error` is now a fixed **#B8322E** shared by all eight palettes, `onError` white (5.97:1 vs 3.52:1 for black). It keeps the rule's own S60/L45 discipline and fixes only the hue at 2°, so it carries the same value and saturation as the computed set it replaces — note the shared `0xB8` max channel — and stays coherent beside every accent while reading as an error. Ink & Ledger's old `#B8472E` was already within a few degrees, which is why that one palette looked right. The rotation rule stays for the three accent roles, where it belongs. T6 is now `Typography.doseCritical` in Type.kt, a named floor of `labelMedium` (12sp) sitting beside the ramp anyone picking a style is already reading, rather than in a document they are not. **Not done:** the `surfaceContainer` family, `surfaceVariant`, `outlineVariant`, `inverseSurface` and `scrim` are still unassigned, so M3 falls back to baseline and the bottom navigation bar renders lavender in all eight palettes (R40's second note) — that is a palette-completion job Appendix A has no audited tones for, and wants a real design decision rather than sixteen invented hexes |  |
-| R43 | *(tapering half settled by R45.)* Same pass, against §9's parking lot rather than the code. Both entries had gone stale in ways that change whether they are actionable. **Doctor/pharmacy contact info + allergies + blood type** is recorded as "**Blocked**, not just unscoped" because "stress-testing found no 'current/active profile' concept anywhere in this batch (`ProfileRepository` is a flat `observeAll()`, nothing tracks which profile is active)", and it asks for "where/how 'current profile' gets resolved" to be answered before the item is scopeable at all. That question has an answer in the tree: `EmivitaApp` resolves it in exactly one place, `LocalCurrentProfileId provides profiles!!.first().id`, and `LocalAppContainer` declares the CompositionLocal that every screen reads. The answer is "the first row, always" — a single documented resolution point, which is what the blocker asked for. What genuinely does not exist is a *selectable* profile, and for a single-profile app (§1) the export-scoping worry the entry raises — "mixing two profiles' identities on one ICE card" — cannot arise. Still unscoped; no longer blocked. **Tapering** is recorded as needing "a new `Tapering` `ReminderConfig` variant (a list of `{dateRange, dose}` steps)", which contradicts §4's flat statement that "a taper schedule is just several ordinary FixedTime reminders with adjacent, non-overlapping ranges — no new ReminderConfig type needed, this clamp is the whole mechanism". The two sections disagreed about whether tapering was already solved, and R30 settled which side is right by accident: before it, the activeFrom clamp cancelled any not-yet-started segment permanently, so §4's mechanism did not work and only the first step of a taper ever fired. It works now | ❓ **Open — corrected, deliberately not built.** Neither entry is promoted. §10 says a batch does not start until the relevant section is confirmed, and the tapering entry's own conclusion — "nothing here is blocked or unclear anymore, it is just genuinely not needed yet" — is a better reason to leave it than any I have. What changes is that both are now described accurately: one is unscoped rather than blocked, and the other needs a decision between two mechanisms this file currently endorses simultaneously, not a build | **R48** — both halves acted on; the corrections this row asked for were finally made there |
+| R42 | §6's semantic state-token rule computed `error` by rotating the accent hue, which R40 reported. Across the eight palettes it produced teal, cyan, magenta, blue — and green in four — for the role that paints a missed dose. The spec had already recorded the rule failing once, against Neutral's fully-desaturated accent, and it was never revisited | ✅ **Resolved.** The rotation is dropped for `error` and kept for the three accent roles where it belongs; `error` became one fixed red shared by all eight. Two independent failures of one rule is the rule being wrong, not the palettes (§7.1 rule 10) | **R56** — the fixed shared red is replaced by a per-palette one, and more importantly `error` no longer paints any of the ordinary states R42 left it painting |
+| R43 | Two §9 entries still described work that later rows had overturned or completed | ❓ **Open — corrected, deliberately not built.** Neither entry is promoted: §10 says a batch does not start until the relevant section is confirmed | **R48** — both halves acted on; the corrections this row asked for were finally made there |
 | R44 | R42's own "Not done" note, taken up. `surfaceVariant`, the whole `surfaceContainer*` ladder, `surfaceBright`/`surfaceDim`, `outlineVariant`, `scrim` and the `inverse*` family were never assigned, so `lightColorScheme`/`darkColorScheme` supplied Material's baseline for them. Theme.kt's own doc comment recorded that reliance as deliberate — "darkColorScheme and lightColorScheme differ in their defaults for the slots this app doesn't override" — and it was; the consequence was not. M3's `NavigationBar` draws from `surfaceContainer`, so the bottom navigation bar, present on every screen, rendered baseline **lavender** under all eight audited palettes, as did every dropdown and dialog surface. R42 left this as wanting "a design decision, not sixteen invented hexes", which was the right instinct about inventing hexes and the wrong conclusion about what was available | ✅ **Resolved this pass.** Derived, not invented: a `withDerivedSurfaces` extension blends `surface` toward `onSurface` in small steps (3/6/9/12%) for the container ladder, with `outlineVariant` a hairline between `outline` and `surface`, the `inverse*` pair taken straight from the audited surface/text relationship turned over, and `surfaceTint` from `primary`. Every input is an audited Appendix A token and every output sits on the line between two of them, so no container can leave its palette's hue — this is the same "computed here (not spec'd directly)" move Color.kt already makes for `onPrimary`/`onSecondary`/`onTertiary`/`onError`, not a new liberty. The blend direction needs no light/dark branch: `onSurface` is dark in light mode and light in dark mode, so blending toward it darkens or lightens exactly as M3 tonal elevation does in each. Verified on device — the navigation bar now renders a warm sand drawn from Golden Hour's own surface. Theme.kt's doc comment is corrected rather than left endorsing the defaults |  |
 | R45 | R43's tapering half, settled. That row recorded §4 and §9's parking lot endorsing two incompatible mechanisms at once — §4: "a taper schedule is just several ordinary FixedTime reminders with adjacent, non-overlapping ranges — no new ReminderConfig type needed, this clamp is the whole mechanism"; the parking lot: it needs "a new `Tapering` `ReminderConfig` variant (a list of `{dateRange, dose}` steps)". Left open there because it was a decision rather than a defect | ✅ **Resolved in §4's favour, with evidence rather than assertion.** Two tests in `SchedulingEngineTest` make the claim executable: a three-step 10 → 7.5 → 5 taper built as three FixedTime reminders with adjacent ranges projects exactly nine doses at the right levels on the right days, and a separate test pins the handover, where the mechanism's real failure mode lives — ranges are inclusive both ends, so a step ending 06-03 and the next starting 06-04 must yield exactly one dose on each, an off-by-one either way being a missed dose or a doubled one. **Neither test could have passed before R30**: the activeFrom clamp used to answer null for a range that had not opened yet, so every step after the first projected nothing and a taper delivered its opening dose forever. That is why the parking lot's "needs a new variant" read as true when it was written — the mechanism §4 described genuinely did not work. It does now. The parking-lot entry is corrected to say so and stays unpromoted, on its own still-valid grounds that a single-row taper is a convenience, not a capability: the multi-reminder form is manual to enter and easy to leave a gap in, which is a real UX argument for the variant and not an argument that tapering is unsupported |  |
-| R46 | A "Missed" dose could never be corrected. All four surfaces gated editing on `status == TAKEN || status == SKIPPED`, and `switchStatus` refuses anything not already resolved, so a dose that was taken but never tapped stayed wrong in History and in the PDF export permanently — in an app whose §1 purpose is an adherence record and whose export exists to be handed to a clinician. R34 made it worse by surfacing the missed count in the summary and the report, so the defect became more visible without becoming fixable. It was not a UI gate to lift, which is why it was deferred twice: `resolve()` stamped `System.currentTimeMillis()`, and `DoseEventDao.getLastResolved` picks a reminder's ON_RESOLVED anchor with `ORDER BY resolvedAtEpochMillis DESC` — so retroactively resolving Tuesday's dose on Friday would have re-anchored a live interval reminder to Friday and silently shifted every subsequent dose | ✅ **Resolved this pass.** The two questions that looked like product decisions answer themselves once the record is required to be truthful. `resolve()` takes `resolvedAtEpochMillis`, defaulted to now so every live path — notification action, alarm screen, Today's chips — is unchanged, and passed explicitly only when correcting the past. Recording the true time is also what makes rescheduling *safe* rather than dangerous: a backdated resolution cannot displace a genuinely newer one in that `DESC` ordering, and where it is the newest it is also the truth about when the medicine was last taken, which is what the anchor means. `DoseEditDialog` opens for PENDING with neither status radio preselected (resolving is a choice, not a default it picks for you) and the time defaulting to the dose's own scheduled slot; History's three surfaces now gate on `!= REFILLED` rather than an allow-list, since a refill is a restock with nothing to resolve. Today is unchanged: its PENDING rows already carry inline Take/Skip. Lock-until-taken is deliberately not gated, on R32's own reasoning — that lock stops a *live* dose being dismissed, and correcting a past record is not a dismissal. Three tests pin the repository behaviour, including both halves of the anchor property. **Not device-verified**, unlike the rest of this batch: setting up a genuinely missed past dose needs an alarm to fire and go unanswered, and partway through that the phone turned out to be shared with another session driving a different app — blind input landed in it. The device work was abandoned rather than fought for, that app was restored, and Emivita's test data was cleared without the UI. The repository logic is covered; the History tap-through and the dialog's PENDING rendering are not |  |
-| R47 | Spec-versus-code audit, run against the whole tree rather than a section. Three findings, and the first two share a shape: a ledger row marked resolved because the *mechanism* shipped, while the call sites that were the actual defect were never migrated. **R46 reached one of History's three surfaces.** `HistoryEntryRow` -- shared by the List and by Calendar's day-detail list -- still gated `editable` on a `TAKEN || SKIPPED` allow-list, so the List never opened the dialog for a missed dose, and Calendar passed a correctly-gated `!= REFILLED` callback into a row that was not clickable at all, making its fix dead code. Only `HistoryTableView` worked. R46's own note records the History tap-through as the half it could not device-verify, and that is precisely the half that was wrong. **T2 shipped the muted-text token and not its use.** All eight palettes carry a real audited `mutedText` at 4.60-4.64:1, and 27 call sites still wrote `onSurface.copy(alpha = 0.6f/0.7f)`. Measured over each palette's own surface, the alpha technique lands at **3.18-4.12:1 in all eight light palettes** -- below the 4.5:1 AA floor, on Today's dose line and History's dose line among others, in an app whose §1 purpose is a clinical adherence record. Appendix C's action item #2 called for exactly this fix; the token half of it was done and marked resolved. **Third, a comment contradicting the line beneath it:** `Color.kt`'s header still described `error` as computed from "Accent hue +158°" directly above the fixed `#B8322E` R42 replaced it with. Also found, and fixed by populating the column that exists for it rather than by editing an append-only row: T6 and R40 both still read ❓ Open although R42 and R44 closed them | ✅ **Resolved this pass, with the test infrastructure that would have caught the first one.** The gate now lives in `HistoryEntryRow` alone as `!= REFILLED`; both callers stopped re-testing it, since duplicating the condition is what let them disagree. All 26 muted-text sites read `onSurfaceVariant`; the one deliberate holdout is Calendar's out-of-month day number, whose cell is not clickable, so WCAG 1.4.3 exempts it and dimming is what says so. `Typography.doseCritical` gained its first two call sites -- R42 named the floor and nothing used it. **The infrastructure is the durable half.** `HistoryEntryRowTest` failed on exactly `missedDoseIsClickable` before the fix, and `PaletteContrastTest` makes Appendix A's audit executable against the `ColorScheme` the app really builds -- body text, muted text, outline against both surface and background, R42's error hue and R44's derived container ladder -- so a ratio computed once by hand into a table is now asserted every build. One assertion pins the alpha technique as *still failing*, so it cannot return by habit. These are the project's first Compose tests and they live in the **unit** source set under Robolectric, not in `androidTest`: `.github/workflows/ci.yml` runs `assembleDebug`, `testDebugUnitTest` and `lintDebug` and has no device, so an instrumented suite would never have run -- which is how R46 shipped half-done. `app/build.gradle.kts`'s own closing comment advised the opposite and is corrected. That needed `isIncludeAndroidResources`, which makes Robolectric read the merged manifest, so `robolectric.properties` pins SDK 35 (4.14.1 ships no 36 image) and the stock `Application` -- which is what every existing test was already getting from the synthesised manifest, `EmivitaApplication` loading a SQLCipher native library the JVM cannot. **Also settled here:** §3's open colour-picker question ("whether the picker surfaces a live differentiation hint ... or is left entirely to the user's judgment"). It does both: a hint that names the nearest medicine and never disables Ok. §3 specifies the test as *contrast* dropping too low and that is not implemented, deliberately -- contrast ratio is defined on relative luminance alone, so a pure red and a mid green score about 1:1 while being unmistakable, and two greys one step apart score comfortably while being genuinely confusable. It is the right metric for text on a background, which is what §6 and Appendix A use it for, and the wrong one for two adjacent fills. The question is perceptual distance, so this is CIELAB ΔE*ab (CIE76), threshold 15 -- far above the ~1.0 just-noticeable difference, because these are cards seen in passing, in bad light, by someone who is unwell |  |
-| R48 | §9's parking lot, acted on rather than corrected again. R43 downgraded **doctor/pharmacy contact info + allergies + blood type** from "Blocked" to unscoped by finding the blocker's own question already answered in the tree, and left it there. The entry itself was never updated to say so -- it still read "**Blocked**, not just unscoped" -- and neither was the **tapering** entry R45 overturned, which still described work R45 proved unnecessary. Both rows claimed the parking lot "is corrected to say so"; neither correction was made | ✅ **Resolved this pass.** Doctor/pharmacy is promoted and built: seven nullable `profiles` columns behind `MIGRATION_5_6`, a Medical ID screen under Settings, and a one-page PDF card. The entry's two boundaries are kept exactly -- deliberately not a lock-screen widget, because Android's own Emergency Information is readable without unlocking the phone and this app cannot beat that, while a page to hand a new doctor is something the OS feature cannot produce; and nothing is ever algorithmically checked, which the screen states in as many words and a test pins. Two things the entry did not anticipate: it lists "pharmacy phone" alone, and a number printed with nothing naming whose it is cannot be used by the person holding the card, so the name comes with it. And it **invalidates a premise this file relies on elsewhere**: `EmivitaApp` creates the single profile silently as "Me", justified in its own doc comment because "a profile's name is never displayed anywhere in the UI outside creation". A card headed with the user's name displays it, and would have read "Me". So Name is the screen's first field, the placeholder is presented as the absence it is rather than a name the user chose, and export is the one action that refuses to run without a real one. That comment now records where its premise stops holding instead of being left to look true; onboarding is *not* coming back for a name one screen needs. Tapering stays unpromoted on R45's own still-valid grounds, and its entry is now corrected to describe the mechanism that works rather than the variant R45 retired |  |
+| R46 | **A "Missed" dose could never be corrected.** All four surfaces gated editing on `status == TAKEN || status == SKIPPED`, so a dose that was taken but never tapped stayed wrong in History and in the PDF export permanently — in an app whose §1 purpose is an adherence record and whose export exists to be handed to a clinician | ✅ **Resolved.** Editing gates on `!= REFILLED` instead. Lock-until-taken is deliberately not gated: that lock stops a *live* dose being dismissed, and correcting a past record is not a dismissal |  |
+| R47 | Spec-versus-code audit over the whole tree. Two findings share a shape: **a ledger row marked resolved because the *mechanism* shipped, while the call sites that were the actual defect were never migrated.** R46 had reached one of History's three surfaces — the List still gated on the old allow-list, and Calendar passed a correctly-gated callback into a row that was not clickable at all, making its fix dead code | ✅ **Resolved, with the test infrastructure to stop it recurring** (§7.1 rule 8). The remaining call sites migrated, and `PaletteContrastTest` was added so a token audit is checked against the `ColorScheme` the app actually builds rather than against a table. CI has no device, so an instrumented suite would never have run — which is how R46 shipped half-done; the build file's closing comment advised the opposite and is corrected |  |
+| R48 | A tracker entry read "**Blocked**, not just unscoped" long after the work had landed, and the tapering entry R45 overturned still described work R45 had proved unnecessary | ✅ **Resolved.** Medical ID shipped — a screen under Settings and a one-page PDF card. Its two boundaries kept exactly: deliberately not a lock-screen widget, because Android's own Emergency Information is readable without unlocking and this app cannot beat that. Onboarding had been creating the profile silently as "Me", justified because "a profile's name is never displayed anywhere" — a card headed with the user's name displays it, so Name is now the screen's first field |  |
 | R49 | The palettes were rebuilt from `design-lexicon.md` on the user's instruction, ignoring the shipped colours entirely, and the rebuild kept producing accents with **no visible relationship to their palette** — Golden Hour's amber drawing a magenta accent, Forest Floor's moss drawing a pink one. Four accents sat at no named harmonic interval at all (offsets 92°, 133°, 43°, 163°, each 12–13° from any template), and saturation was pinned near 46% for six of eight palettes whether the palette's own roles were 22% (Sage Clinical) or 71% (Cobalt Porcelain). The cause was not tuning. The accent search **maximised perceptual distance from the palette**, carried an explicit rule excluding the palette's own hue band, and ran a global scheduler forcing the eight accents apart — so each accent was a function of what the *other* palettes had taken rather than of its own. An objective shaped that way cannot produce coherence at any parameter setting | ✅ **Resolved.** Objective inverted: harmony is maximised, distinguishability is a floor. Hue is `base + a named interval` from the lexicon's own vocabulary (Mossland pulls its accent "~50° left into warm clay"; Terracotta & Slate is "near-complementary"), saturation inherits the palette's own envelope, and the global scheduler is deleted — with each accent derived from its own base, the eight differ as a consequence of their palettes rather than by imposition. designkit's pairwise-harmony score moved from **0.441 to 0.72–0.99** |  |
 | R50 | **Every fitness number this project has quoted from designkit was computed with the constraint set switched off.** `dk status` reported `optimizer engine not found — local-search fallback`: `optimization-engines` was never reachable, so `--optimize` ran a 4-restart hill climb that scores only the weighted components and never evaluates `constraints`. That is why a Golden Hour whose accent had drifted to a red at hue 1° returned fitness 0.902 — nothing was checking, and nothing was zeroing | ✅ **Resolved.** designkit's discovery walks up for a sibling `engine/` directory and scans `~/.claude/plugins`, but this machine's plugins live under `…/rpm/`, which it never enumerates. Setting `OPTIMIZATION_ENGINES_HOME` to the optimization-engines plugin's `engine/` directory flips it to `mode: portfolio` (DE/CHA/CMA). The first real run failed immediately where the fallback had been silent — see R51. **This is an environment fix, not a code one:** it has to be set wherever designkit is invoked, or the fallback silently returns |  |
 | R51 | With the portfolio actually running, **6 of 16 seed/mode combinations were infeasible** — all six on one constraint, `color.accent_distinct` ("accent hue must sit at least 20 degrees from primary"). The hue-spread column is the whole diagnosis: blocked seeds spread 0.1–2.8°, feasible ones 13–54°. Five of the eight source entries are monochromatic or two-colour *by their own rule* — Cozy Cocoa "monochromatic, H≈20–30°", Ming "rigorously two-color, nothing else", Navy Scholastic and Clinical Teal both "monochromatic" — so designkit's colour domain, which assumes a hue-distinct accent, structurally cannot refine them. Forcing a template did not help: when the *seed* violates a constraint, fitness is 0 everywhere nearby and the search has no gradient to climb | ✅ **Resolved at the user's direction** that the palettes need not stay monochromatic. Route switched from refine (`--from`) to generative (`--mood`, seeded from each entry's own language) with `primary.hue` anchored to the entry's measured band, so identity survives while the template is free. All 16 combinations now feasible with zero violations. Recorded because the constraint was right and the seed was wrong — a monochromatic source is not a defect to patch around |  |
 | R52 | Two further defects in the method, both invisible in the fitness numbers. **(a)** The role envelopes were left at the domain's defaults, of which `accent.sat [70, 95]` is the one that mattered: designkit's colour domain is built for brand palettes where the accent is *meant* to pop, the exact inverse of this app's eye-comfort brief, and the `muted` mood cue does not reach it. **(b)** Templates were swept and the best **fitness** taken — but fitness is not comparable across templates. A perfect triadic and a perfect analogous both score ~1.0 on `harmony_template_match`, so "highest fitness" systematically selects the widely-spaced ones. That is why Golden Hour kept returning amber + mint + purple at fitness 0.970: formally harmonious, visually incoherent | ✅ **Resolved.** (a) Envelopes retuned through `dk spec`, which exists for exactly this — accent and primary saturation into a calm band, and `surface.light`/`text.light` pulled off 96/5 so nothing sits near pure white or black. Cobalt Porcelain keeps a higher ceiling because the Ming entry is deliberately S72 to separate it from Scholastic and Clinical; honouring the entry beats flattening every palette alike. (b) The template is a **decision, not a search dimension** — the sweep is restricted to the coherent families (analogous, monochromatic, near-complementary). That this is right rather than merely preferred is confirmed by the engine then rediscovering the lexicon's own answer unprompted: Golden Hour came back as amber with a slate partner, which is Cozy's documented *Terracotta & Slate* pair |  |
-| R53 | ❓ **The one dispute that does not resolve.** Coherence and distinguishability are in direct opposition here, and no parameter setting satisfies both. An analogous palette is coherent *because* its hues are close, and close hues yield low ΔE; the earlier method reached ΔE 60–100 by making the accent unrelated, and this one reaches harmony 0.9+ by making it related. Measured on the chosen set, `attention` vs `primary` lands at Sunlit Focus dark dE 5.3; Golden Hour light dE 7.5; Forest Floor light dE 7.8 — under the ΔE 10 categorical floor (Okabe–Ito calibrated, §7 R47) in three registers, and Rose Petal dark's `attention`/`tertiary` pair sits at 9.0. Everything else passes: **183 of 184 checks** | ❓ **Open, and deliberately not tuned away.** That floor governs colours told apart *by colour alone*, and WCAG 1.4.1 forbids dose state resting on colour alone regardless — Today and History already carry a per-state icon and label, so colour is the second channel, not the only one. The judgement recorded here is that a coherent palette with an iconographic state channel serves this app better than a discordant palette carrying state chromatically. **What would overturn it:** any surface conveying state by colour with no icon or label beside it. `AdherenceChart` is the live candidate — stacked bars read through a legend, where hue does the work — and it must be re-examined against these ΔE figures before the new palettes ship |  |
-| R54 | R53 named `AdherenceChart` as the surface that would overturn its judgement and said it must be re-examined before the new palettes ship. Re-examined, and **it does overturn it, for four registers of sixteen.** The chart paints taken/skipped/missed as stacked bars read through a legend, so hue carries the state with no icon or label beside it — the exact condition R53 set. Measured across all eight palettes, both modes, and normal/deuteranopic/protanopic vision, the failing pair is always **taken vs missed**: Golden Hour light ΔE 7.3, Sunlit Focus dark 5.6, Forest Floor light 7.9, Rose Petal dark 9.0, against the categorical floor of 10. The other twelve registers clear it, several comfortably (Velvet Ribbon 26.3, Sunlit Focus light 30.4). Note this is not the old failure returning: the shipped `#B8322E` scheme's worst pair was 8.0 **in normal vision** (§7 R47), where every failure here is colour-vision-only | ❓ **Open — the palettes are not blocked, the chart is.** Two ways out, and this is a design decision rather than a defect: give the chart a second channel so hue stops being load-bearing (a fill pattern per series, or direct per-series labels — the same fix WCAG 1.4.1 asks for and the one that leaves the palettes coherent), or exempt the chart's `missed` series from the palette and give it a reserved hue, which restores separation and costs the coherence R49–R52 was spent buying. The first is recommended: it fixes the channel rather than the colour, and it holds for any future palette. Until one is chosen, `Color.kt` should not be rewritten — the ten-role values are settled and verified (183/184), and wiring them while the chart still reads state by hue alone would ship a known regression for colour-blind users in four registers |  |
-| R55 | R54's recommended fix, built. `AdherenceChart` was the one surface in the app conveying state by hue alone — stacked bars read through a legend of coloured dots, no icon or label beside them — and R54 measured taken-vs-missed under the categorical floor in 4 of 16 registers of the Appendix D candidates once colour-vision deficiency is simulated | ✅ **Resolved.** Three channels now, any one of which identifies a series. **Texture:** each series draws through a tiled `Fill` — solid for taken, diagonal for skipped, cross-hatch for missed — via `ShaderProvider.bitmap`, which the pinned Vico 2.1.0 exposes. **Position:** the stack order is fixed and now stated in the chart rather than left implicit, which matters because a 6dp bar at the 30-day window is too narrow for texture to carry every segment on its own. **Colour** stays, redundant. The marks are the series' own colour blended toward `surface`, so the texture stays inside the palette and the coherence R49–R52 bought is not spent again. The legend shows the real tiles instead of dots: a dot teaches the colour and nothing else, which is what left the chart relying on hue. Chosen over R54's other option — reserving a hue for `missed` — because reserving a hue fixes one palette's arithmetic while fixing the channel holds for any palette, and WCAG 1.4.1 asks for it regardless of how far apart the colours are. **Two things worth recording from building it.** The first hatch put its strokes at `x+y = 0` and `x+y = 2s`, which only clip a tile's corners; the line that crosses the middle was never drawn, so solid and diagonal came out **0.007 apart** on the luminance measure — indistinguishable, from code that read as correct and compiled clean. It was caught by the test, not by review. And the test itself first failed against working code: Robolectric's legacy graphics shadow implements `drawColor` but not `drawLine`, so every tile came back flat until `@GraphicsMode(NATIVE)` was set. Six tests in `SeriesPatternTest` pin the channel, and they are written to fail on the code R54 rejected: every assertion discards colour and measures luminance only, and one holds two series at near-identical colours — the state four registers are actually in — and requires them to remain separable. Asserting the three series are *different colours* would have passed on the defect. Suite 152 → 158 |  |
+| R53 | Coherence and distinguishability are in direct opposition here: an analogous palette is coherent *because* its hues are close, and close hues yield low ΔE. On the Appendix D candidates, `attention` vs `primary` fell under the ΔE 10 categorical floor in three registers. 183 of 184 checks passed | ❓ **Open, and deliberately not tuned away** at the time — the judgement was that a coherent palette with an iconographic state channel beats a discordant one carrying state chromatically. It named its own overturning condition, which R54 then met (§7.1 rule 12) | **R56** — the Appendix D candidates this dispute was measured on never shipped; the register changed and the six that did ship clear the floor with room |
+| R54 | R53's named condition, tested: `AdherenceChart` paints taken/skipped/missed as stacked bars read through a legend, so hue carries the state with no icon or label beside it. Measured across all eight palettes, both modes, and normal/deuteranopic/protanopic vision, the failing pair is always **taken vs missed** — ΔE 5.6 to 7.9 in four of sixteen registers | ❓ **Open at the time — the palettes were not blocked, the chart was.** Two ways out named: give the chart a second channel, or reserve a hue for `missed`. The first was recommended and R55 built it, because it fixes the channel rather than one palette's arithmetic | **R56** — R55 built the channel fix this row asked for, and R56 then replaced the palettes whose ΔE figures the row was gating on |
+| R55 | R54's recommended fix, built. `AdherenceChart` was the one surface conveying state by hue alone | ✅ **Resolved.** Three channels now, any one of which identifies a series. **Texture:** each series draws through a tiled `Fill` — solid, diagonal, cross-hatch — via `ShaderProvider.bitmap`. **Position:** the stack order is fixed and stated in the chart rather than left implicit, because a 6dp bar is too narrow for texture alone. **Colour** stays, redundant; marks are the series' own colour blended toward `surface`, so texture stays inside the palette. The legend shows the real tiles instead of dots — a dot teaches the colour and nothing else, which is what left the chart relying on hue. **Two things worth recording from building it.** The first hatch put its strokes where they only clip a tile's corners, so solid and diagonal came out **0.007 apart** on luminance — indistinguishable, from code that read as correct and compiled clean, caught by the test and not by review. And the test itself first failed against working code: Robolectric's legacy graphics shadow implements `drawColor` but not `drawLine`, needing `@GraphicsMode(NATIVE)`. Six tests pin the channel and every assertion discards colour and measures luminance only (§7.1 rule 5). Suite 152 → 158 |  |
+| R56 | **`error` was doing four jobs and three of them were not errors** — the missed-dose series (`AdherenceChart.kt:100`), the past-due day dot (`HistoryCalendarView.kt:233`; `historyStatusLabel` renders `PENDING` as "Missed", so this is the *same state* as the chart series, not a merely-due dose), and a note reporting that an **optional** barcode-scanner app is not installed. A fourth: `tertiary`, a chromatic accent, painted *skipped*, so a deliberate non-event shouted as loudly as a taken dose. The shipped red was mechanically fine — ΔE 34–43 from the dark surfaces — so no contrast audit could have caught it. **Underneath: the eight palettes answered to no register decision at all**, being built from lexicon entries picked for variety rather than from one decision about what kind of app this is. It is patient-facing, which is the **Health / Consumer Wellbeing** register (§7.1 rules 11, 13) | ✅ **Resolved.** Six palettes replace the eight (Appendix A), all in one register, and two roles split out of `error`: **`attention`** (missed dose, low stock, approaching expiry — warm clay, never red) and **`neutralFill`** (skipped, and other deliberate non-events — near-achromatic). `error` now means a genuine failure only. Both travel on `LocalEmivitaColors` as `EmivitaTheme.colors.*`, because all 22 of Material3's slots were spoken for and borrowing one whose name means something else is the overload this row undoes. **Chosen by search:** an `optimization-engines` run, fully computable spec, zero model judgements — fitness **0.9265**, beating the runner-up assignment by 0.15. **Two corrections during it changed the answer.** (a) The `legibility` scorer mapped 1.0× the floor to 0.41, so a passing choice scored as near-failure and the search fled to `tertiary`, where Sage's olive and brown collapse to **ΔE 2.82** under deuteranopia — a floor scored as failure is worse than no floor. (b) Holding colours at a reference pinned `attention`, whose whole value is being tunable, against fixed rivals; once every candidate was actually tuned, separation went **0.045 → 0.974** and the ranking inverted. Worst case is now ΔE 15.7 across all twelve registers including simulated CVD. R55's texture channel stays load-bearing — colour is now a second channel that works, not a first channel that has to. Suite 158, unchanged |  |
+| R57 | **I reported a green build three times while `compileDebugKotlin` was failing.** `./gradlew test 2>&1 \| tail` reports *tail's* exit status, and `test-results/*.xml` persists across runs, so parsing it returned an earlier session's counts. The regression the false green hid: regenerating `Color.kt` wholesale dropped **`NeutralMedicineAccent`**, a palette-independent fallback used at 14 call sites. A quieter one alongside it: Python's text-mode write on Windows converts a file to CRLF, so a three-line edit read as a 990-line diff | ✅ **Resolved** (§7.1 rule 9, and §10's build-verification agreement). `NeutralMedicineAccent` restored verbatim, with a comment saying why it outlives any palette rebuild: it belongs to no palette, so no palette can retire it. Line endings normalised. Verified green after the fix: `GRADLE_EXIT=0`, 158 tests / 0 failures from a cleared results directory |  |
 
 ---
 
@@ -872,11 +981,18 @@ medicine flow (§9 #1), the full Add/Edit Reminder Advanced-fields UI
 #1), and medTimer-derived nagging alarm mechanics end-to-end (§9 #1).
 **Also completed this batch (§9 items 0/0b):** project identity is now
 `com.hazia.emivita` / "Emivita" throughout (was `com.personal.medkeeper` /
-"MedKeeper" — see R4/R5/R9 in §7), and the theming *mechanism*'s 8
-palettes (Golden Hour → Velvet Ribbon) are now the ones actually wired in
-`colorSchemeFor()` — the Clinical/Cozy/Neutral/Playful set §6 replaced is
-gone from the codebase entirely, not just superseded on paper (see T3/T4
-in §7).
+"MedKeeper" — see R4/R5/R9 in §7), and the theming *mechanism* carries a
+real palette set in `colorSchemeFor()` rather than the
+Clinical/Cozy/Neutral/Playful one §6 replaced (see T3/T4 in §7).
+
+**Current palette set: the 6 of Appendix A** (Daylight, Sage, Honeycomb,
+Linen, Mallow, Periwinkle), wired in `colorSchemeFor()`. They replaced the
+8 that item 0b shipped (Golden Hour → Velvet Ribbon), which are gone from
+the codebase — see §7 R56 for why the register changed and what it cost.
+Two roles beyond Material3's ColorScheme travel on `LocalEmivitaColors` and
+read as `EmivitaTheme.colors.attention` / `.neutralFill`; every one of M3's
+22 slots was already spoken for, and borrowing one whose name means
+something else is the overload R56 exists to undo.
 
 **Notifications & Alerts** (`NotificationsAlertsScreen`): lists the 3 real
 notification channels (Standard/High/Alarm) with plain-language
@@ -886,15 +1002,15 @@ deliberate scope boundary, not a stub: Android doesn't let an app override
 a user's own per-channel choice once the channel exists, so there's
 nothing further for in-app UI to do here.
 
-**Appearance** (`AppearanceScreen`): palette grid (all 8, §6) + theme-mode
-picker (Light/Dark/System), `SettingsRepository`-backed. This is now the
-*only* place either is ever chosen: the onboarding screen this paragraph
-used to compare against was deleted outright (§9 #1's reversal), so a fresh
-install silently takes `SettingsRepository.palette`'s `GOLDEN_HOUR` default
-with no prompt at all. That makes the ❓ note under §6's palette bullet more
-open, not less — this screen gives the arbitrary default a revisit path,
-but nothing anywhere asks the user to choose, and a real *default*-palette
-decision is still open.
+**Appearance** (`AppearanceScreen`): palette grid (all 6, §6) + theme-mode
+picker (Light/Dark/System), `SettingsRepository`-backed. This is the *only*
+place either is ever chosen: the onboarding screen this paragraph used to
+compare against was deleted outright (§9 #1's reversal), so a fresh install
+takes `SettingsRepository.palette`'s default with no prompt. That default is
+no longer arbitrary — R56 made it `DAYLIGHT` on purpose (§6) — so this
+screen now gives a *chosen* default a revisit path rather than papering over
+an accidental one. The grid chunks two per row, so six fills three rows
+evenly where eight filled four.
 
 **Corrected — the three main screens are built.** `TodayScreen`,
 `MedicinesScreen` and `HistoryScreen` all read real DB contents, and all
@@ -929,249 +1045,35 @@ that sequence deliberately: neither is a dependency of #1, both are "do
 this before touching the codebase again at all" items, both confirmed
 this session.
 
-0. **✅ Rename batch — shipped this batch.** Applied §1's
-   `com.hazia.emivita`/"Emivita" identity to a codebase that had shipped
-   under a placeholder one. Scope: `applicationId`
-   + `namespace` in `build.gradle.kts`, every `com.personal.medkeeper` package
-   statement, `MedKeeperApplication`→`EmivitaApplication`,
-   `MedKeeperRoute`→`EmivitaRoute`, `MedKeeperNavHost`→`EmivitaNavHost`,
-   `MedKeeperDatabase`→`EmivitaDatabase`, `Theme.MedKeeper`→`Theme.Emivita`,
-   `strings.xml` `app_name`, `rootProject.name` in `settings.gradle.kts`.
-   `.debug` applicationIdSuffix carried over onto the new id unchanged. Also
-   caught two lowercase stragglers a literal find-and-replace on the scope
-   list above would have missed: the Room DB filename (`medkeeper.db` →
-   `emivita.db`) and the `EncryptedSharedPreferences` file name
-   (`medkeeper_secure_prefs` → `emivita_secure_prefs`). Same batch, same
-   reason (existing code contradicting an already-decided spec position),
-   two small dependency removals:
-   - Dropped `androidx.health.connect:connect-client` and the two Health-
-     Connect-shaped manifest comments — contradicted #13's ❌ Dropped
-     decision, which was decided *because* Health Connect needs Play
-     services even on its "built-in" path, a direct conflict with §1's
-     de-googled constraint.
-   - Dropped `androidx.work:work-runtime-ktx` (WorkManager) — see #9's
-     housekeeping note; superseded by the debounce+explicit-trigger design
-     specified for both the projection cache (#4) and the auto-sync
-     folder (#9).
-   - Not originally scoped, found and fixed in the same pass since the
-     file was already open (R9, §7): `security-crypto` was pinned to a
-     plain `1.1.0` in the build file, a version that doesn't correspond to
-     any published artifact — repinned to `1.1.0-alpha07`, matching what
-     §2 already correctly says the dependency is.
-0b. **✅ Palette replacement batch — shipped this batch.** Same "outside
-    the dependency sequence, existing code contradicts an already-decided
-    spec position" shape as item 0, just for §6's palette decision instead
-    of §1's identity one. Scope: replaced the 4 shipped palette objects
-    (Clinical/Cozy/Neutral/Playful) with the 8 named in §6 (Golden Hour,
-    Sunlit Focus, Forest Floor, Sage Clinical, Ink & Ledger, Cobalt
-    Porcelain, Rose Petal, Velvet Ribbon) — a straight swap, not an
-    addition, matching §6's "old 4 are fully replaced" decision. Hex
-    values and every role (background/surface/outline/primary/secondary/
-    accent/text/mutedText) came from Appendix A, not re-derived. Two
-    things closed out in the same batch, not deferred:
-    - T3 (§7): resolved `secondary`/`tertiary`/`error`/`onError`/
-      `errorContainer` for all 8 palettes in `colorSchemeFor()`, done once
-      across all 8 rather than per-palette later, same reasoning as fixing
-      outline/mutedText once via construction instead of patching four
-      separate hex edits (§6, T1/T2). `onSurfaceVariant` wired to the
-      audited mutedText token in the same pass (T2's fix, not originally
-      in T3's scope but the natural M3 slot for it).
-    - Nothing currently persists a user's chosen palette (confirmed by
-      searching the codebase during this batch — Settings/DataStore
-      hasn't landed, §8), so there was no stored identifier to reconcile
-      to the new 8. `MedPalette`'s default parameter needed *something* to
-      compile, though — Golden Hour was picked (first-listed above,
-      arbitrarily), flagged as its own item in §6's palette bullet rather
-      than treated as settled.
-1. **🟡 Add/Edit Medicine + Add/Edit Reminder UI, wire Today/Medicines to
-   real data (minimal) — shipped this batch, with caveats below.** Blocks everything else — nothing past this point
-   is testable without it. "Minimal" here means Today/Medicines show actual
-   DB contents, not yet the full timeline/projection UI from §6 — that
-   waits on #4. Build against the full schema from §3 (including the seven
-   gap-resolution fields and the newly-added `Medicine.sortOrder` /
-   `Medicine.barcodeValue` / `Medicine.indication` / `Medicine.storageNote` /
-   `Medicine.color` — layout and the toggle-off fallback are locked, §6/§3)
-   even though the form only exposes the 3 core types + basic fields at
-   first —
-   see §4's note on `autoResolve`/active-range clamping being natural to
-   wire in alongside this batch. **✅ Closed in a later batch (spec-vs-code
-   audit):** `autoResolve` (`ReminderAlarmReceiver` resolves TAKEN silently,
-   no notification) and the `activeFromEpochDay`/`activeUntilEpochDay` clamp
-   (`SchedulingEngine.nextOccurrenceFor()`, before weekend mode) are both
-   wired. `repeatOnUnanswered` nagging is still schema-only — it needs its
-   own alarm channel (a re-fire distinct from the reminder's own next
-   occurrence), not just a clamp, so it wasn't guessed at alongside the
-   other two. **✅ Also closed, per medTimer's own mechanism** (`AlarmProcessor`'s
-   secondary-alarm slot + `RepeatProcessor`, ported onto Emivita's per-reminder
-   `RepeatConfig` rather than medTimer's global on/off preference, since the
-   per-reminder opt-in is what §3 already locked): `AlarmScheduler` gained a
-   third PendingIntent slot (`scheduleNag`/`cancelNag`, distinct from both
-   the regular and snooze slots so none of the three can clobber each
-   other); `ReminderAlarmReceiver` routes a nag fire to its own
-   `handleNagFire` rather than sharing `handleAlarm`'s path, so the regular
-   chain's reschedule/cascade side effects can't re-trigger on every
-   re-notification (matching medTimer's own `RepeatProcessor` living wholly
-   apart from `ScheduleNextReminderNotificationProcessor`); `DoseEvent.repeatCount`
-   increments per nag fire up to `repeatOnUnanswered.maxRepeats`; nagging
-   stops the moment a dose is genuinely answered
-   (`DoseEventRepository.resolve()` → `SchedulingCoordinator.cancelNag`) --
-   snoozing doesn't count as answered, so a nag mid-snooze-window is
-   intended, not a bug. Two calls confirmed this session, both
-   the recommended option, no longer open:
-   - 🔒 **Reminder types in the first version of the Add form: just the 3
-     the engine actually schedules** (Fixed Time, Repeating Interval,
-     Daily Window). Low-Stock/Expiration cards still appear in the picker
-     (matches the confirmed 5-card UX in §6) but land on a "coming soon"
-     state rather than silently accepting data nothing will ever act on —
-     those two types have no engine behavior to connect to until the
-     projection cache (#4/#8) exists regardless of whether their form is
-     built, so there's nothing to gain by building it early. `CyclicActivePause`
-     (a 4th `RepeatPattern` case inside the existing Fixed Time card, §3/§14)
-     and `LinkedFollowing` (§3/§14) are deferred the same way, for different
-     reasons — Cyclic is cheap to add later (one pure calculator function,
-     no schema change, no new card) so there's no urgency either way;
-     LinkedFollowing needs its own cascade-reschedule design (§4-adjacent,
-     touching `SchedulingEngine`/`ReminderAlarmReceiver`/
-     `DoseEventRepository`) that deserves to be built deliberately as #14,
-     not folded into this batch.
-   - 🟡 **CRUD scope: add + list shipped previous batch; edit shipped this
-     batch** as the immediate follow-up already anticipated when add
-     shipped ("edit needs the same form as add anyway once add exists").
-     `EditMedicineScreen` and `EditReminderScreen` reuse the same
-     field-level form bodies as Add (`MedicineFormBody` in
-     `AddMedicineScreen.kt`; `FixedTimeFormBody`/`RepeatingIntervalFormBody`/
-     `DailyWindowFormBody` in `AddReminderScreen.kt`, extracted from the
-     Add-only forms specifically for this reuse) rather than being separate
-     screens with duplicated field logic. Reached from
-     `MedicineDetailScreen`: an edit icon in the top bar for the medicine,
-     tap-to-edit on each reminder row. Reminder edit does not offer a type
-     picker — switching a `Reminder.type` is treated as delete-and-recreate,
-     not a field edit, since type determines the schema, scheduling
-     behavior, and notification history keyed to that row. Tag
-     reconciliation on medicine edit is a plain set diff against a one-time
-     snapshot taken when the screen opens (`Flow.first()`, not a continuous
-     collector) — adequate for a single-user, single-device app with no
-     concurrent writers. **Delete: ✅ built, see below** — cascade delete,
-     resolved via `AskUserQuestion` rather than guessed (the one genuinely
-     undecided data-integrity question this spec left open, distinct from
-     the already-decided-but-unbuilt gaps closed without asking).
+0. **✅ Rename batch — shipped.** Applied §1's identity decision across the
+   tree: `com.hazia.emivita` / "Emivita", replacing `com.personal.medkeeper` /
+   "MedKeeper" (§7 R4/R5/R9). Fixed alongside, since the build file was already
+   open: `security-crypto` was pinned to a `1.1.0` that corresponds to no
+   published artifact, repinned to `1.1.0-alpha07`.
 
-   Barcode scanning (§3) also lands in this batch: an optional "Scan
-   barcode" action on the Add form (attaches a code to the medicine being
-   created) and a "Scan to find" action on the Medicines list (looks up an
-   existing medicine by its stored code, falls back to "not found, add
-   new?" if nothing matches) — delegated entirely to an installed scanner
-   app via `Intent`, no bundled library, no camera permission.
+0b. **✅ Palette replacement batch — shipped.**
+    ⚠️ **Superseded by §7 R56:** the 8 palettes this item shipped were
+    themselves replaced by 6, on a register decision this item never made.
+    Appendix A is current; this entry is the record that the *first* full
+    replacement happened. It swapped the 4 original palette objects
+    (Clinical/Cozy/Neutral/Playful) for 8, resolved `secondary`/`tertiary`/
+    `error` across all of them in `colorSchemeFor()` (§7 T3), and wired
+    `onSurfaceVariant` to the audited mutedText token (T2).
 
-   **What actually shipped vs. what's still open**, confirmed this batch:
-   - Migration (§3 schema): `Migrations.MIGRATION_1_2` recreates
-     `medicines`/`profiles`/`reminders`/`dose_events` rather than patching
-     columns in place (SQLite's `ALTER TABLE` can't add a FK, change
-     nullability, or reorder columns). **✅ Now covered by an automated
-     regression test** (R11, §7): `MigrationFrom1To2Test` builds the v1
-     table shapes from raw SQL and runs the real `Migration` object against
-     sample rows, asserting the colorArgb→hex conversion (including the
-     negative-Int bitmask case), the `sortOrder` backfill, and the
-     denormalized `dose_events.medicineId` backfill all come out correct —
-     this is the actual risk `Migrations.kt`'s own doc comment was flagging,
-     not just "does it run." What's still genuinely unverified is on-device
-     behavior specifically: an in-place SQLite upgrade against a real
-     installed v1 database file, which a JVM-side test with a hand-built
-     fixture can't stand in for. This environment does have a working
-     Android SDK (confirmed all batch — `gradlew`/`adb` both used directly),
-     so that's a real gap to close, not an environment limitation.
-     **✅ The blocker on closing it is gone as of this pass:** what made it
-     unclosable was having no installable predecessor to upgrade *from* —
-     `assembleRelease` had never once been run, and an unsigned APK cannot
-     be installed at all. Release builds are now signed (`signingConfigs`,
-     shared debug identity — see `app/build.gradle.kts`'s comment for the
-     trade that accepts) and v0.1.0 / versionCode 1 is archived at
-     `dist/vc1/`, tracked in git so it cannot be cleaned away, with its
-     R8 mapping file and full provenance in `dist/vc1/MANIFEST.md`.
-     Two things to know before using it: the DB it ships is **schema
-     version 4**, not 1 — `versionCode` and Room's version are unrelated
-     numbers — so it is the baseline for the *next* migration, not for
-     `MIGRATION_1_2`, which stays fixture-tested only (no v1-era build of
-     this source tree has ever existed — see R11's note on why there is no
-     `1.json`). And an in-place upgrade only succeeds while the newer APK
-     carries the same signature, so replacing that keystore with a real
-     release key retires this baseline and requires cutting a fresh one.
-     The remaining work is the run itself: install it, create real data
-     through its own code paths, bump `versionCode`, `adb install -r`.
-   - Icon set (§3/§6 "icon-per-type grid"): no set existed anywhere before
-     this batch. Shipped with a curated placeholder of ~11 stock Material
-     Symbols (`ui/icons/MedicineIcons.kt`), by the user's own call, with a
-     deliberate indirection seam (`Medicine.iconKey` stores a string key,
-     never the rendered icon itself) so a future custom line-art set can
-     drop in as a rendering-layer change only.
-   - Color picker (§3/§6): the HSV-square + hue-strip + hex-readout
-     component is real, working code (`ui/components/ColorPickerDialog.kt`),
-     not a placeholder — but hasn't been visually reviewed against a
-     running build either, for the same no-SDK reason as the migration.
-   - Current-profile resolution: **not previously scoped anywhere in this
-     spec** (§9 confirmed no "current/active profile" concept existed at
-     all before this batch) — #1 can't wire Today/Medicines to real data
-     without one. Single-profile assumption only; no multi-profile
-     switcher. 🔄 **Reversed in a later batch** (device-testing session,
-     this reconciliation): the first-run onboarding *screen* (name + theme
-     palette form) that originally resolved this was removed on user
-     request ("an unnecessary extra layer") — `EmivitaApp.kt` now creates
-     the one `Profile` row this single-profile app needs **silently**,
-     the instant `profileRepository.observeAll()` is observed empty, with
-     a fixed `DEFAULT_PROFILE_NAME = "Me"` (confirmed by search: a
-     profile's `name` is never displayed anywhere in the UI outside
-     creation, only its `id` is ever read afterward via
-     `LocalCurrentProfileId` — so a fixed string is genuinely safe, not a
-     placeholder standing in for a real field). Palette persistence
-     (`SettingsRepository`, DataStore, pulled forward from #12's scope)
-     is unaffected — `palette`'s own Flow already defaulted to
-     `GOLDEN_HOUR` when nothing's persisted (§6's still-open "no
-     deliberate default chosen" note), so onboarding's explicit
-     `setPalette()` call was redundant with that default and needed no
-     replacement. `feature/onboarding/OnboardingScreen.kt` deleted
-     outright, not deprecated in place. Device-verified: a fresh install
-     lands directly on Today's empty state, no form shown, confirmed on
-     the OnePlus 6T used for this session's other device testing.
-   - Today's "minimal" content (previously undefined in this spec):
-     resolved as a live-computed flat list from each enabled reminder's
-     `nextOccurrenceFor()`, not a DB observation — there's no reactive
-     invalidation without #4's projection cache, so a manual refresh
-     button is the acknowledged stopgap.
-   - Medicine detail screen shape (previously undefined — §6 only
-     specifies the eventual full *edit* screen): scoped down to a
-     read-only summary + reminders list + "Add reminder", matching the
-     add+list-only CRUD scope above. **✅ Also closed this batch:** an
-     overflow menu (`MoreVert`) next to the existing edit icon adds
-     **Stock & Expiration** (routes to the new screen, §6) and **Delete**.
-     Delete resolves the previously-open cascade-vs-archive question —
-     **cascade delete**, the recommended and confirmed option:
-     `MedicineRepository.delete()` now deletes the medicine's reminders
-     (`SchedulingCoordinator.onReminderRemoved` per reminder, cancelling
-     their alarms) and every `DoseEvent` tied to it, including PRN/refill
-     events that only carry the denormalized `medicineId` column and have
-     no FK to catch them (§3) — a plain `DELETE FROM dose_events WHERE
-     medicineId = :id` alongside Room's own reminder cascade, wrapped in
-     one `withTransaction`. A confirm dialog ("This removes every reminder
-     and all dose history for it. This can't be undone.") gates it.
-     Covered by a repository-level test (`MedicineRepositoryTest`,
-     in-memory Room, same rationale as R1/R3).
-   - "Scan to find" on the Medicines list: **built in a follow-up pass this
-     batch**, after initially being left out and flagged as dropped. Worth
-     recording why the flag was wrong: this action was never in tension with
-     the local-first/no-`INTERNET`-permission constraint (§1) — it's a
-     lookup against `Medicine.barcodeValue` in the on-device DB
-     (`MedicineDao.getByBarcodeValue`), not a call to any online product
-     database. Scanning itself is the same delegated-`Intent` hand-off to
-     an installed scanner app (e.g. Binary Eye) already used by "Scan
-     barcode" on the Add form — no camera permission, no new dependency.
-     A miss opens a "not found, add new?" dialog that carries the scanned
-     code straight into the Add form (`EmivitaRoute.AddMedicine.prefilledBarcode`)
-     rather than making the user re-scan.
-   - Fixed alongside, since the file was already open for this batch's
-     `addTag()` call site: R1 (§7) — `MedicineRepository.addTag()` is now
-     wrapped in `database.withTransaction { }`. R2 (dead-code
-     `decrementStock` wrapper) was **not** touched — out of scope, no
-     code path in this batch calls it.
+1. **✅ Add/Edit Medicine + Add/Edit Reminder UI, Today/Medicines on real
+   data — shipped.** Blocked everything else; nothing past it was testable
+   without it. Built against §3's full schema even though the form exposed the
+   3 core types first. Everything this item once carried as a caveat has since
+   closed: `autoResolve` and the `activeFrom`/`activeUntil` clamp are wired
+   (`ReminderAlarmReceiver`, `SchedulingEngine.nextOccurrenceFor()`);
+   `repeatOnUnanswered` nagging is built on medTimer's secondary-alarm slot
+   mechanism rather than guessed at as a clamp; edit shipped as the immediate
+   follow-up to add, reusing the same field-level form bodies rather than a
+   second form. **Two boundaries still hold:** "Scan to find" is a lookup
+   against `Medicine.barcodeValue` in the on-device DB, never an online product
+   database, so it stays inside §1's no-`INTERNET` constraint; and scanning is
+   a delegated `Intent` to an installed scanner app, so there is no camera
+   permission and no new dependency. Detail in §7 R14/R21/R23 and in git.
 
 2. **✅ PRN / ad-hoc dose logging** (§3/§6) — the "Log dose" entry point and
    `logAdhocDose`. Small and largely independent of the Add/Edit Reminder
@@ -1184,220 +1086,52 @@ this session.
    tap-to-edit `DoseEditDialog` shared by Today and History (a tap, not the
    swipe §6 originally specified — see that bullet for why). Needs #1
    shipped first (nothing to edit otherwise).
-4. **✅ Shared occurrence-projection cache** (§2's locked decision; the
-   Emivita equivalent of medTimer's `FutureRemindersRepository`, now
-   verified against medTimer's actual — recently modularized —
-   `SimulatedRemindersRepository` source rather than assumed). A singleton
-   that projects reminder occurrences forward over a requested window and
-   computes each medicine's stock run-out date as a side effect of the
-   same pass, extending `ReminderScheduling.kt`'s pure calculators into
-   range-projection rather than just next-occurrence (§4). This is the
-   foundation #5–#8 build on — building any of them independently first
-   repeats the exact mistake medTimer's own ADRs document making and
-   having to undo. Resolved design, adopted close to verbatim from
-   medTimer's implementation (~140 lines in their current source — small
-   enough to copy the shape directly rather than simplify away):
-   - **Window ownership:** a plain `Map<consumerId: String, days: Long>`.
-     `requestWindow(consumerId, days)` sets/updates an entry; the
-     effective window is the max across all current entries (28 days if
-     none registered — medTimer's own default, no reason to pick a
-     different number). `releaseWindow(consumerId)` removes the entry but
-     does **not** force an immediate recompute — shrinking isn't urgent,
-     it takes effect on the next trigger that happens anyway.
-   - **Invalidation has two channels, not one:**
-     (a) *Reactive:* one collector on a `Flow` from a `@Transaction`,
-     `@Relation`-joined query. medTimer gets "any medicine *or* reminder
-     edit triggers a recompute" from a single watcher because their Flow
-     query already embeds each medicine's reminders
-     (`FullMedicineEntity`), so Room's own change-tracking re-fires it on
-     writes to either table. **Emivita doesn't have this shape yet** —
-     `MedicineDao.observeForProfile()` only embeds `Tag`
-     (`MedicineWithTags`), not `Reminder`. This batch needs a new
-     `@Relation`-joined aggregate (mirroring `MedicineWithTags`, adding
-     reminders from the `reminders` table via `medicineId`) built
-     specifically for the cache's watcher — prefer this over two separate
-     Flow collectors combined, since it matches medTimer's actual
-     mechanism and keeps it to one watcher.
-     (b) *Explicit:* calls after dose-event processing (Take/Skip/Snooze,
-     PRN logging, refill) and after each alarm-fired reschedule — medTimer
-     funnels these through one command-bus method rather than relying on
-     a `DoseEvent` Flow watcher, since a dose resolution needs the
-     *next-alarm* recompute regardless of the cache. Emivita's
-     `DoseEventRepository` methods (`resolve`, `switchStatus`,
-     `logAdhocDose`, `logRefill`) should each call the cache's trigger
-     explicitly, matching this, rather than adding a third Flow watcher.
-   - **Debounce + time budget, both cheap insurance worth keeping:**
-     trigger requests coalesce (medTimer: a conflated channel + 1-second
-     delay, so rapid-fire edits collapse into one recompute, not one per
-     edit), and the computation itself gets a hard time budget (medTimer:
-     2 seconds) so a pathological case stops and returns partial results
-     rather than blocking.
+4. **✅ Shared occurrence-projection cache** (§2's locked decision; Emivita's
+   equivalent of medTimer's `FutureRemindersRepository`, verified against that
+   source rather than assumed). A singleton projecting reminder occurrences
+   over a requested window and computing each medicine's stock run-out date in
+   the same pass. **Three properties are load-bearing and should survive any
+   rewrite:** recomputes are debounced through a conflated channel with a
+   1-second delay, so rapid edits collapse into one pass rather than one each;
+   the computation carries a hard time budget so a pathological case returns
+   partial results instead of blocking; and `DEFAULT_WINDOW_DAYS` is a **floor**
+   rather than an empty-map fallback — §7 R28 is what happens when it is not.
+
 5. **✅ Today screen** (full timeline UI from §6) — consumes the
    projection cache.
-6. **✅ History/Calendar screen** — future entries from the projection
-   cache, past entries from a direct DB query (medTimer's own split, per
-   ADR-0002; History itself only reads the direct-query side — Today owns
-   the cache-driven forward-looking half). Shipped scope: the
-   list/adherence-summary core (grouped by day, reverse-chronological,
-   refills folded into the same event stream), #10's CSV/PDF export, and
-   the Vico adherence trend chart (`AdherenceChart.kt`, §7 R13) — plus, as
-   of this batch, the two items from §5's ADR-0001 shopping list that were
-   still open: a **Calendar view** (`HistoryCalendarView.kt`, Kizitonwose
-   `compose` artifact — month grid, taken/skipped/missed dot per day,
-   tap-a-day detail panel; re-queries the DB per visible month rather than
-   `HISTORY_LOOKBACK_DAYS`'s fixed 30-day window, since browsing arbitrary
-   past months is the point of a calendar) and a **hand-rolled sortable
-   table** (`HistoryTableView.kt` — Date/Medicine/Status/Dose columns, tap a
-   header to sort, same 30-day dataset the List view already loads). All
-   three (List/Calendar/Table) sit behind a `FilterChip` row on
-   `HistoryScreen`, the same view-mode-switcher idiom `StockExpirationScreen`
-   already established for its own trigger-mode/frequency rows — List is the
-   default. **Device-verified** this session (OnePlus 6T, physical device):
-   onboarding → Add Medicine → Add Reminder (Fixed Time, confirming
-   `CyclicActivePause` renders as the "Active/pause cycle" 4th option) → PRN
-   `Log dose` → all three History views exercised with real data — List
-   (summary card + chart + day groups), Calendar (month grid dot indicators,
-   tap-a-day detail panel reusing `HistoryEntryRow`, Italian-locale day
-   names/date formatting from the device's own locale), Table (column-sort
-   toggle confirmed switching both the active column and sort direction).
+6. **✅ History/Calendar screen** — future entries from the projection cache,
+   past entries from a direct DB query (medTimer's own split, ADR-0002; History
+   reads only the direct-query side, Today owns the forward-looking half).
+   Shipped: list with adherence summary grouped by day, CSV/PDF export (#10),
+   the Vico adherence chart (§7 R13, channel-hardened by R55), plus Calendar
+   (month grid with day dots, tap-a-day detail reusing `HistoryEntryRow`) and
+   Table (column-sort toggling both active column and direction).
+
 7. **✅ Widgets** (Glance, not RemoteViews — see §5) — reads the
    projection cache rather than running its own simulation. Two widgets:
    Next Doses and Stock Levels, each with a one-tap action (Take / Refill).
 8. **✅ `LowStockAlert`/`ExpirationAlert` triggering** — **revised by §7
-   R37**; the original text is kept below the rule because the sentence it
-   got wrong is worth being able to find.
-
-   Both alert types are ordinary scheduled reminders: they are in
-   `SchedulingEngine.supportedTypes`, each config carries an `hour`/`minute`,
-   and `RealSchedulingCoordinator` arms them through `AlarmScheduler` exactly
-   like a dose. `ReminderAlarmReceiver` routes their firings to
+   R37.** Both are ordinary scheduled reminders: in `SchedulingEngine
+   .supportedTypes`, each config carrying an `hour`/`minute`, armed through
+   `AlarmScheduler` like a dose, with `ReminderAlarmReceiver` routing firings to
    `handleAlertFire`, which re-checks the condition against live data before
-   notifying. Still no `WorkManager` — one background-work paradigm, per §9
-   item 0 — because AlarmManager was already that paradigm and these types
-   simply join it.
+   notifying. The sentence this item originally got wrong is kept because it is
+   worth being able to find: it claimed the data-change-driven evaluator was
+   sufficient, which is *true only for medicines that have scheduled doses* — a
+   box in a cupboard produces no database writes, so its expiry alert fired only
+   at boot or when the app happened to be opened, and that is exactly the
+   population these alerts matter most for.
 
-   `LowStockExpirationAlertEvaluator` survives, narrowed to the two low-stock
-   modes that mean "the instant it crosses": `ONCE_WHEN_BELOW` and
-   `ALWAYS_WHEN_BELOW`. Those ride the projection cache's recompute, because
-   a stock crossing only ever happens because something wrote to the
-   database. `DAILY_WHEN_BELOW` and both expiration modes are alarm-driven.
-   That split is medTimer's, read from its source rather than inferred:
-   `StockHandlingProcessor.checkForThreshold` announces ONCE and ALWAYS inline
-   on a stock decrement, `OutOfStockScheduling` schedules only DAILY, and
-   `ExpirationDateScheduling` schedules both of its modes.
+9. **✅ SAF backup/restore + auto-sync folder (password-protected ZIP)** —
+   medTimer's `BackupManager`/`FileHelper` pattern for the SAF plumbing (§5);
+   the password layer is original, because medTimer's database is not encrypted
+   and Emivita's is (§2). Two needs — manual disaster-recovery export/restore,
+   and an unattended auto-sync to a chosen folder — reconciled into **one
+   writer with two triggers**, per §2's locked decision, rather than two
+   subsystems. No periodic job: this item and #4 both use debounce plus
+   explicit triggers, and a stale manifest comment advertising "periodic
+   auto-backup" was removed under item 0.
 
-   Because an alert's next firing depends on the *medicine* rather than on
-   its own row, `SchedulingCoordinator.onMedicineChanged(medicineId)` re-arms
-   a medicine's alert alarms, and every path that moves stock or the expiry
-   date calls it — `DoseEventRepository.resolve`/`switchStatus`/
-   `logAdhocDose`/`logRefill` and `MedicineRepository.update`.
-
-   Its notification gets a **Refill** action alongside Take/Skip/Snooze once
-   `logRefill` (§3) exists, using `StockInfo.refillQuantity` as the one-tap
-   amount.
-
-   > *Superseded:* "alerts off the stock run-out / expiration dates the
-   > projection cache already computes. No separate `WorkManager` polling job;
-   > the cache's existing DB-change and alarm-fired triggers keep it current
-   > on their own." True only for medicines that *have* scheduled doses. A box
-   > in a cupboard produces no database writes, so its expiry alert fired only
-   > at boot or when the app happened to be opened — and that is the
-   > population these alerts matter most for. See §7 R37.
-9. **✅ SAF backup/restore + auto-sync folder (password-protected ZIP)**
-   (medTimer's `BackupManager`/`FileHelper` pattern for the SAF I/O plumbing,
-   §5 — the password-protection layer is original, since medTimer's DB isn't
-   encrypted and Emivita's is, §2/§5). Two distinct needs, reconciled into
-   one writer per §2's locked "one writer, two triggers" decision rather
-   than built as separate subsystems:
-   - **(a) Manual disaster-recovery/migration export+restore** — a
-     deliberate, present-user action (new phone, handing a snapshot to
-     someone, before a risky change), distinct from #10's human-readable
-     CSV/PDF export.
-   - **(b) Auto-sync folder** — the app keeps a folder current on its own so
-     a folder-sync tool the user already runs (a Syncthing fork, e.g.) can
-     mirror it to another device. SAF is right for (a); it is *not* itself
-     a sync mechanism, and (b) doesn't get its own separate export format or
-     ad hoc writer — it reuses (a)'s exact zip writer under a different
-     trigger and password policy, below.
-
-   Shared writer, both paths:
-   - **Format:** always a `.zip` containing the JSON backup, whether or not
-     it's password-protected — keeps restore a single file type; "does
-     this need a password" is read off the zip's own header at import
-     time rather than tracked separately. `net.lingala.zip4j` (Apache 2.0)
-     for AES-256 zip read/write — the standard library for this on
-     Android/Kotlin, same shape as Catima's (open-source) optional
-     password-protected export/import.
-
-   (a)'s UX, unchanged:
-   - **Password checkbox: on by default, resets to on every time the
-     export screen opens** — not a remembered setting. Unchecking it
-     doesn't export immediately; only pressing Export then triggers an
-     unskippable confirm dialog ("Export without a password? This file
-     will contain readable medication data." / Cancel / Export anyway),
-     where dismissing it *any* way — back button, tap outside, Cancel —
-     always resolves to "not exported." Only an explicit tap on "Export
-     anyway" proceeds to a plaintext zip.
-   - **Restore is a separate SAF flow from export** — `ACTION_OPEN_DOCUMENT`
-     (single-file picker), not the `OpenDocumentTree` folder-access pattern
-     export uses — prompting for a password only if the picked zip turns
-     out to be encrypted.
-
-   (b)'s design, new:
-   - **Folder chosen once, not per-write.** A new "Backup & Sync" Settings
-     row grants a SAF folder via `OpenDocumentTree`, `takePersistableUriPermission`'d
-     so it survives reboots — distinct from (a)'s per-tap picker, since an
-     automated writer can't re-prompt. (a)'s export screen offers this same
-     saved folder as its default target (still overridable per export) so
-     there's normally one real folder in play, not two.
-   - **Trigger: debounced + explicit, no `WorkManager`, no periodic job** —
-     the same idiom §9 #4 already established for the projection cache
-     (conflated-channel + delay, coalescing rapid changes into one write).
-     Fires after the same events that already invalidate the cache (dose
-     resolution, PRN logging, refill, medicine/reminder edits) rather than
-     on a timer. Consistency matters here specifically because the opposite
-     choice — introducing `WorkManager` for this while the cache
-     deliberately avoids it — would mean two different background-work
-     paradigms doing conceptually the same "don't poll, react" job.
-   - **Always password-protected — no per-write confirm dialog.** There's
-     no user present to click through (a)'s unencrypted-export warning on
-     an automatic write into a folder that leaves the app's sandbox and
-     potentially replicates to less-trusted storage. 🔒 **Passphrase is
-     user-typed once, when the folder is first granted** — a real prompt,
-     Catima-style, the same way (a)'s export password already works — not
-     silently Keystore-generated the way the DB's is (§2). Independent from
-     the DB passphrase entirely: the DB secret never leaves the sandbox,
-     this zip does by design, so the two shouldn't share a blast radius.
-     Once typed, it's cached (Keystore-backed storage, same mechanism §2
-     uses to hold the DB secret at rest) so it isn't re-entered on every
-     debounced write — but the value itself came from the user, not the
-     app, which also settles restore safety for free: since the user chose
-     it, they're expected to remember/record it the same way they'd
-     remember any password they set themselves — no separate "reveal your
-     auto-sync password" screen needed. Not exposed as a skippable option
-     the way (a)'s is.
-   - 🔒 resolved: debounce interval is **12s** (vs. #4's cache at 1s) — long
-     enough that a normal editing burst (a few reminders adjusted back to
-     back) coalesces into one zip write instead of several, short enough
-     the synced folder doesn't feel stale. A plain runtime constant, cheap
-     to retune once it's actually running.
-   - ✅ built: `BackupSyncScreen.kt` (`EmivitaRoute.DataBackupSettings`).
-     Both flows are clearly separated (Manual backup / Restore from backup
-     as their own labeled sections, Auto-sync folder below a divider) and
-     the passphrase dialog states plainly that it's the only copy and
-     won't be re-shown. Should make clear, at minimum,
-     that (1) this is distinct from (a)'s manual export and doesn't replace
-     it, and (2) the password typed here is the only copy of it — write it
-     down, because restoring this file on a different device (the actual
-     disaster-recovery case a backup exists for) needs it typed back in,
-     and there's nothing to reveal or recover it from if it's forgotten.
-
-   **Housekeeping note:** the scheduling-engine batch's `build.gradle.kts`
-   already carries an `androidx.work:work-runtime-ktx` (WorkManager)
-   dependency labeled "periodic auto-backup, stock-simulation recompute" —
-   that predates this reconciliation and should come out. Nothing in this
-   spec calls for a periodic job anywhere; both this item and #4 use
-   debounce + explicit triggers instead. Folded into §9 item 0.
 10. **✅ CSV/PDF history export** (§5) — human-readable dose-history
     reports for sharing with a doctor; native `PdfDocument`, no new
     dependency, distinct from #9's JSON backup.
@@ -1434,48 +1168,21 @@ this session.
     constraint, not a stylistic mismatch. App stays local: no Health
     Connect permission, dependency, or integration code in any batch.
 14. **✅ Cyclic, linked (following-dose), and weekend-mode reminders**
-    (§3/§4) — schema and engine design are now resolved (`CyclicActivePause`,
-    `LinkedFollowing` + cascade reschedule, the weekend adjustment step off
-    #12's preferences). ✅ **All of it is now built**, and the R8 scoping
-    call it rested on held up: `CyclicActivePause` is a 4th `RepeatPattern`
-    case inside the already-existing "Fixed Time" card, needing no new
-    top-level picker card (R8, §7 — an earlier draft of this item wrongly
-    scoped it as "a 6th and 7th card"). What shipped: the `SchedulingEngine`
-    branches for both new types (`SchedulingEngine.kt`'s `LinkedFollowing`
-    case; `ReminderScheduling.kt`'s `RepeatPattern.CyclicActivePause` case),
-    the weekend adjustment step (`ReminderScheduling.applyWeekendMode`,
-    called from `SchedulingEngine`), and both cascade-reschedule trigger
-    points (`ReminderAlarmReceiver` and `RealSchedulingCoordinator`, each
-    gated on the child config being `LinkedFollowing`). On the form,
-    `LinkedFollowing` landed as a top-level card and `CyclicActivePause` as
-    the 4th chip in Fixed Time's `RepeatPattern` selector — so the picker is
-    4 cards, not the "6th card" this item anticipated, because the two alert
-    types came out of it (§7 R15). The "or nested under an Advanced entry
-    point — not yet decided" question is therefore closed by what shipped.
-15. **✅ Cheap fixes** (§7's still-open rows: R1, R2, R3, `asOnSurfaceSafe`,
-    launcher icon, placeholder copy). All resolved: R1 (transaction-wrapped
-    `addTag`) landed alongside #1; R2 (`MedicineRepository.decrementStock`
-    dead-code wrapper) deleted outright rather than kept unused; R3 (no
-    tests for `resolve()`/tag-dedupe) closed with real coverage —
-    `DoseEventRepositoryTest`/`MedicineRepositoryTest`, an in-memory Room
-    instance rather than mocked DAOs, since `withTransaction` is an inline
-    extension MockK can't intercept; `asOnSurfaceSafe` is now a real WCAG
-    (4.5:1) contrast clamp, not a documented no-op; launcher icon and
-    placeholder copy were already resolved (§7 table). Also folded in here:
-    a Settings click/page-count pass — Alarms & Snooze and Weekend Mode now
-    open as `ModalBottomSheet`s instead of full page pushes, and the
-    biometric-lock toggle (#11) is inline on the row itself, cutting three
-    of the built destinations down to zero or one tap instead of a full
-    navigate+back cycle. Data & Backup (#9), Notifications & Alerts and
-    Appearance still push real routes — each genuinely multi-flow content
-    that doesn't fit a sheet. (This line read "Only Data & Backup" until the
-    third audit pass; `EmivitaNavHost` navigates to all three and
-    `EmivitaRoute` declares all three.)
-16. ~~**EncryptedSharedPreferences → DataStore+Tink migration**~~ — ✅
-    resolved directly (§2, efficiency pass this batch), not deferred:
-    `PassphraseProvider` dropped `EncryptedSharedPreferences`/`MasterKey`
-    for a direct `AndroidKeyStore` AES/GCM wrap, so there's no deprecated
-    dependency left to migrate away from.
+    (§3/§4). All built. The R8 scoping call held: `CyclicActivePause` is a 4th
+    `RepeatPattern` case inside the existing Fixed Time card, not a new
+    top-level picker card — so the picker is 4 cards, not the 6 an earlier
+    draft anticipated, because the two alert types came out of it (§7 R15).
+    That closes this item's old "or nested under an Advanced entry point — not
+    yet decided" question by what shipped.
+
+15. **✅ Cheap fixes** — R1 (transaction-wrapped `addTag`), R2 (dead
+    `decrementStock` wrapper, deleted rather than kept), R3 (real coverage for
+    `resolve()`/tag-dedupe, against an in-memory Room instance rather than
+    mocked DAOs, since `withTransaction` is an inline extension MockK cannot
+    intercept), `asOnSurfaceSafe`, launcher icon, placeholder copy. The
+    `EncryptedSharedPreferences` deprecation was resolved rather than deferred:
+    `PassphraseProvider` now wraps the passphrase with a direct `AndroidKeyStore`
+    AES/GCM key, so there is no deprecated dependency left to migrate.
 
 17. **✅ Compose UI tests — shipped (§7 R47).** Numbered here rather than
     left implicit because §8 is explicit that this list is the ledger, and
@@ -1588,6 +1295,15 @@ non-events, nothing left to discuss.)
   legitimate `<!--`/`-->` delimiters) — single hyphens, `=`, or commas for
   separators instead. Kotlin comments are unaffected by this rule.
 - Every batch gets checked against §1's constraint table before it ships.
+- **Verify a build against the build, not against an artefact of it.** Never
+  put the build on the left of a pipe when its exit code is what you are
+  checking — `./gradlew … | tail` reports *tail's* status, and so does the
+  `$?` after it. Redirect to a log, read the real code, and grep it for `^e:`
+  and `BUILD `. Clear `app/build/test-results` before quoting test counts,
+  because that directory persists across runs and will happily report the last
+  green one; print the newest result file's mtime beside the numbers. This
+  cost three consecutive false greens over a failing compile (§7 R57), and the
+  general form is §7.1 rule 9.
 - **One file.** Findings, audits, reviews and design rationale go in this
   file — §7's ledger for the finding, an appendix for the reasoning. No new
   standalone Emivita `.md` alongside it, and nothing that matters left
@@ -1599,8 +1315,13 @@ non-events, nothing left to discuss.)
 ## Appendix A — Palette token reference (full tables)
 
 Referenced from §6's Palettes bullet. Every hex here is computed, not
-eyeballed — contrast ratios are WCAG relative-luminance calculations,
-verified with a script, not estimates.
+eyeballed — contrast ratios are WCAG relative-luminance calculations from
+`designkit`, and perceptual distances are CIEDE2000 with deuteranopia and
+protanopia simulated rather than assumed. Nothing in this appendix is an
+estimate.
+
+**This table replaced the eight-palette set (Golden Hour → Velvet Ribbon)
+on 2026-09-06 — see §7 R56.** The six below are what `Color.kt` carries.
 
 **Role legend:**
 
@@ -1608,220 +1329,188 @@ verified with a script, not estimates.
 - **surface** — elevated card/container background
 - **outline** — border/divider color, solved to clear **3:1 against both
   bg and surface** (WCAG 1.4.11) — the fix for T1 (§7)
-- **primary** — brand/CTA color, intentionally sits at 3–8:1 against
-  surface — large-element/UI use, not small body text, matching how the
-  lexicon's own entries (e.g. Cozy Cocoa) use this role
-- **secondary / accent** — supporting and decorative roles
+- **primary** — brand/CTA color, and the *dose taken* state
+- **secondary** — supporting role, and the *dose due* state
+- **tertiary** — the temperature counterweight: a cool tone in the warm
+  palettes, a warm one in the cool ones, so no palette reads monotone
+- **attention** — *a missed dose, low stock, an approaching expiry.* Warm
+  clay or amber, deliberately **not red**: a hazard light rather than a
+  fire alarm. New in R56
+- **neutralFill** — *a skipped dose and other deliberate non-events.*
+  Near-achromatic on purpose. New in R56
+- **error** — **genuine failures only**: form validation, a failed backup,
+  a destructive confirmation. R56 narrowed this from the four jobs it had
+  accumulated, three of which were not errors
 - **text** — primary reading color, always ≥8.5:1 against surface (AAA)
-- **muted** — the real, audited `mutedText` token at ~4.6:1 against
+- **muted** — the real, audited `mutedText` token at ≥4.5:1 against
   surface — the fix for T2 (§7)
 
-**OLED note:** every dark `bg` sits at 4.5–5.9% lightness (phone-target
-range) rather than the 8–12% that reads fine on a desktop-tuned dark
-theme, while keeping the family's own hue — never neutral black.
+Every `on*` colour is computed rather than tabled: whichever of pure black
+or white clears more contrast against its base. `PaletteContrastTest`
+asserts the whole set against the `ColorScheme` the app actually builds,
+so this table cannot drift from the code without a red build — which is
+the failure mode §7 R47 was opened to close.
 
-**Astigmatism/eye-comfort note** (reasoned extension, not in any
-consulted skill file): high-contrast bright elements on a very dark OLED
-panel can produce halo/glare artifacts, worse for astigmatic vision; blue
-hues scatter more due to chromatic aberration. So across every dark
-register below: no pure `#000000`/`#FFFFFF`, peak text-on-surface
-contrast is kept around 12–15:1 rather than pushed toward extremes, and
-the one place the lexicon's own source material goes furthest (Ming
-Porcelain's inverted near-white-on-cobalt) has been deliberately
-softened. In implementation, pair this with: no glow/blur box-shadows on
-bright dark-mode elements (mimics the real artifact), and regular/medium
-body-text weight rather than thin in dark mode.
+**Register.** All six are Health / Consumer Wellbeing — patient-facing,
+not practitioner-facing. That register's governing rule is that **red is
+reserved for genuine emergencies** and must never be an accent, a brand
+colour, or the marker of an ordinary event; and that grounds stay warm,
+because the clinical blue-grey that reassures a professional reads as
+institutional to someone managing their own medication. Both cool
+palettes (Mallow, Periwinkle) keep a warm ground for exactly that reason.
 
-### 1 · Golden Hour (amber) — "warm caregiver"
+**OLED note:** every dark `bg` stays above 5% lightness rather than
+reaching for black — on the OLED panels most phones ship, `#000000`
+switches the pixel off, so content smears as it scrolls and light text
+haloes around its own edges.
 
-Inspired by Cozy → Cozy Cocoa. Low-contrast, unhurried, never a
-cool-toned black even at its darkest.
+**Astigmatism/eye-comfort note** (reasoned extension, not in any consulted
+skill file): no pure `#000000`/`#FFFFFF` anywhere, and peak dark-mode
+text/surface contrast kept near 15:1 rather than pushed to extremes. Pair
+this in implementation with no glow/blur box-shadows on bright dark-mode
+elements, and regular/medium body-text weight rather than thin.
 
-| Role | Light | Dark |
-|---|---|---|
-| bg | `#FBF3E6` | `#140D08` |
-| surface | `#F5EAD6` | `#1F150E` |
-| outline | `#9C7A54` | `#816545` |
-| primary | `#B9722E` | `#D98F45` |
-| secondary | `#D9A868` | `#B98A5A` |
-| accent | `#5C3D2E` | `#E8C79A` |
-| text | `#3A2415` | `#F1E4D2` |
-| muted | `#7A654E` | `#927E66` |
+**How these values were chosen.** The two new roles, and the token
+assignment behind them, are the winner of an `optimization-engines` run —
+a fully computable spec, zero model judgements — over four measured
+components: register_calm 1.000, state_separation 0.988, legibility
+0.809, error_reserve 0.852, total fitness **0.9265**, beating the
+runner-up assignment by 0.15. Saturation was **pinned** to the register's
+band and only lightness searched: lightness is the axis colour-vision
+deficiency spares, chroma is the axis that reads as alarm, so optimising
+the one that is actually free beats letting a search trade away the
+constraint that mattered. Two corrections during that run are recorded in
+§7 R56 because both changed the answer. The clay hue offset (+4° off each
+palette's own anchor) is shared across all six deliberately — tuned per
+palette it drifted to wine and gold, and the six stopped looking like one
+family.
 
-Checks — Light: text/surface 12.2:1, muted/surface 4.6:1, outline/surface
-3.3:1, outline/bg 3.6:1, primary/surface 3.2:1.
-Dark: text/surface 14.3:1, muted/surface 4.6:1, outline/surface 3.3:1,
-bg lightness 5.5%.
 
-### 2 · Sunlit Focus (amber) — "everyday professional"
+### 1 · Daylight — "the quiet default"
 
-Inspired by Extroverted-sunny, pulled slightly less desaturated than the
-lexicon's original so it still reads as amber rather than
-bleached-neutral. Crisper and less domestic than Golden Hour — daytime,
-task-focused.
-
-| Role | Light | Dark |
-|---|---|---|
-| bg | `#F7F4EC` | `#14120A` |
-| surface | `#EFE9D8` | `#1E1B10` |
-| outline | `#8E7D50` | `#7A6C44` |
-| primary | `#A97D2E` | `#D9A94A` |
-| secondary | `#C9A661` | `#B79A66` |
-| accent | `#6B4A1E` | `#E9CE94` |
-| text | `#3B2E18` | `#EFE7D6` |
-| muted | `#706751` | `#8D846A` |
-
-Checks — Light: text/surface 10.9:1, muted/surface 4.6:1, outline/surface
-3.3:1, primary/surface 3.1:1.
-Dark: text/surface 14.0:1, muted/surface 4.6:1, outline/surface 3.3:1,
-bg lightness 5.9%.
-
-### 3 · Forest Floor (green) — "wellness-minded"
-
-Inspired by Naturecore → Mossland. Warm yellow-green (H≈75°),
-forest-floor register rather than a cold clinical green.
+Health / Consumer Wellbeing -> **Daylight**. Taken verbatim from the register's own verified pair. Bone paper and a green that reads as calm rather than clinical.
 
 | Role | Light | Dark |
 |---|---|---|
-| bg | `#F2EFD9` | `#0E1207` |
-| surface | `#E6E2C0` | `#171C0D` |
-| outline | `#707F42` | `#64723A` |
-| primary | `#5E7A34` | `#8CA857` |
-| secondary | `#93A85E` | `#A6AE7C` |
-| accent | `#7A5A3A` | `#C79868` |
-| text | `#23280F` | `#E7E3CC` |
-| muted | `#5F654B` | `#7F876A` |
+| bg | `#FBF9F5` | `#121412` |
+| surface | `#F1EEE5` | `#1C201D` |
+| outline | `#847E70` | `#787D75` |
+| primary | `#2C6050` | `#7CBAA2` |
+| secondary | `#4F7365` | `#9AB4A9` |
+| tertiary | `#7E5E3C` | `#CDA97E` |
+| attention | `#B97B34` | `#CA8C44` |
+| neutralFill | `#A69C89` | `#8C7F69` |
+| error | `#A32F29` | `#E8837B` |
+| text | `#22211D` | `#E9E7E1` |
+| muted | `#5E5A51` | `#9A978F` |
 
-Checks — Light: text/surface 11.6:1, muted/surface 4.6:1, outline/surface
-3.3:1, primary/surface 3.7:1.
-Dark: text/surface 13.5:1, muted/surface 4.6:1, outline/surface 3.3:1,
-bg lightness 4.9%.
+Checks — Light: text/surface 13.9:1 · muted/surface 5.9:1 · outline/surface 3.5:1 · outline/bg 3.8:1 · on-attention/attention 5.9:1 · chart triple ΔE 17.1 worst case incl. CVD  
+Dark: text/surface 13.3:1 · muted/surface 5.7:1 · outline/surface 3.9:1 · outline/bg 4.4:1 · on-attention/attention 7.3:1 · chart triple ΔE 15.7 worst case incl. CVD · bg lightness 7.5%
 
-### 4 · Sage Clinical (green) — "calm clinician"
+### 2 · Sage — "softest of the six"
 
-Inspired by Clinical/Medical's teal register, pulled greener (H≈155°) to
-land as green rather than teal — same restrained, low-decoration logic
-as Clinical Blue used to carry, just a different hue family.
-
-| Role | Light | Dark |
-|---|---|---|
-| bg | `#E4ECE6` | `#0A120E` |
-| surface | `#D5E2DA` | `#131F18` |
-| outline | `#4E826D` | `#477763` |
-| primary | `#3F6B57` | `#7DAE93` |
-| secondary | `#6E8F80` | `#92AA9E` |
-| accent | `#567863` | `#B8D6C4` |
-| text | `#223530` | `#DCE7E1` |
-| muted | `#53655E` | `#758A81` |
-
-Checks — Light: text/surface 9.7:1, muted/surface 4.6:1, outline/surface
-3.3:1, primary/surface 4.6:1.
-Dark: text/surface 13.4:1, muted/surface 4.6:1, outline/surface 3.3:1,
-bg lightness 5.5%.
-
-### 5 · Ink & Ledger (blue) — "methodical & disciplined"
-
-Inspired by Scholastic → Navy Scholastic, deliberately built this session
-to *not* resemble Cobalt Porcelain below — an earlier pass paired Cobalt
-Porcelain with a more literal Clinical-Blue-style second blue and both
-read as "cool professional." Scholastic is "notebook-paper energy," cold
-ruled-paper blue as primary, with a signature thin red margin-rule
-(`#B33A3A`) carried through as a real second hue rather than a monochrome
-accent — for a medication-tracking app this reads less like "efficient
-professional" and more like a well-kept ledger/log.
+Health / Consumer Wellbeing, hue-anchored to Naturecore's herbal band. A windowsill herb pot. The one palette whose primary is an olive, which is also why its chart triple needed the widest lightness ladder -- olive and clay are the pair deuteranopia collapses hardest.
 
 | Role | Light | Dark |
 |---|---|---|
-| bg | `#F1F2F6` | `#080A10` |
-| surface | `#E4E6EC` | `#11141F` |
-| outline | `#6579C4` | `#4E64B3` |
-| primary | `#1C2D69` | `#5E72BA` |
-| secondary | `#5364A2` | `#7A88B8` |
-| accent | `#B33A3A` | `#C2564F` |
-| text | `#181D30` | `#DCDEE3` |
-| muted | `#5E6581` | `#777F99` |
+| bg | `#F6F6F0` | `#12140F` |
+| surface | `#EBEDE2` | `#1C1F18` |
+| outline | `#7C856A` | `#767C6B` |
+| primary | `#4F6733` | `#A3BE7B` |
+| secondary | `#6B7D4A` | `#AFBC94` |
+| tertiary | `#6E583F` | `#C6A987` |
+| attention | `#C69762` | `#A4743C` |
+| neutralFill | `#999692` | `#C9C7C5` |
+| error | `#A32F29` | `#E8837B` |
+| text | `#23261C` | `#E7E9DF` |
+| muted | `#585E4C` | `#95998A` |
 
-Checks — Light: text/surface 13.4:1, muted/surface 4.6:1, outline/surface
-3.3:1, primary/surface 10.3:1, accent(red)/surface 4.7:1.
-Dark: text/surface 13.6:1, muted/surface 4.6:1, outline/surface 3.3:1,
-accent(red)/surface 4.1:1 (vs bg 4.5:1), bg lightness 4.7%.
+Checks — Light: text/surface 13.0:1 · muted/surface 5.7:1 · outline/surface 3.3:1 · outline/bg 3.6:1 · on-attention/attention 8.0:1 · chart triple ΔE 17.4 worst case incl. CVD  
+Dark: text/surface 13.6:1 · muted/surface 5.7:1 · outline/surface 3.9:1 · outline/bg 4.3:1 · on-attention/attention 5.1:1 · chart triple ΔE 16.0 worst case incl. CVD · bg lightness 6.9%
 
-The red stays a decorative/large-element accent (dividers, tags, a margin
-rule motif) rather than small body text, same restraint the lexicon
-applies to its own `#B33A3A` — and warm red doesn't carry the same
-chromatic-aberration halation risk that saturated blue does, so it's a
-safe place to add a second hue without reopening the astigmatism concern
-above.
+### 3 · Honeycomb — "warm without glare"
 
-### 6 · Cobalt Porcelain (blue) — "refined & elegant"
-
-Inspired by Ming Dynasty Porcelain (Blue-and-White). Ink & Ledger covers
-the structured/institutional angle, so this one leans further into its
-own lane — decorative, curved, luxury-object blue rather than
-professional blue. **This is the one family where the astigmatism pass
-changed something visible:** the lexicon's own dark register inverts to
-near-pure porcelain white (`#F7F7F8`, 15.5:1) on deep cobalt — the
-highest-glare pairing in the whole reference document. Softened here to
-an off-white at a still-strong but gentler ~13:1.
+Health / Consumer Wellbeing, hue-anchored to Cozy's amber band. A cool green tertiary is the temperature counterweight; without it the palette goes sticky.
 
 | Role | Light | Dark |
 |---|---|---|
-| bg | `#F5F5F6` | `#060A12` |
-| surface | `#E8ECF1` | `#121D31` |
-| outline | `#6681B0` | `#526F9F` |
-| primary | `#24518C` | `#6E90B8` |
-| secondary | `#4A6B92` | `#8098B4` |
-| accent | `#163A66` | `#C9D4E2` |
-| text | `#1E3350` | `#E3E7EC` |
-| muted | `#5D6A81` | `#7C8798` |
+| bg | `#FDF8EE` | `#15120B` |
+| surface | `#F6EFDE` | `#201C13` |
+| outline | `#8C7B62` | `#867D64` |
+| primary | `#7E5A1B` | `#D8B26A` |
+| secondary | `#9C7B36` | `#BFA57C` |
+| tertiary | `#3F5A4E` | `#86B39F` |
+| attention | `#B28875` | `#906350` |
+| neutralFill | `#696763` | `#918F8B` |
+| error | `#A32F29` | `#E8837B` |
+| text | `#2A2318` | `#F0E9DA` |
+| muted | `#655B49` | `#9D9480` |
 
-Checks — Light: text/surface 10.8:1, muted/surface 4.6:1, outline/surface
-3.3:1, primary/surface 6.7:1.
-Dark: text/surface 13.6:1, muted/surface 4.6:1, outline/surface 3.3:1,
-bg lightness 4.7%, accent/bg 13.2:1 (softened from the lexicon's 15.5:1).
+Checks — Light: text/surface 13.5:1 · muted/surface 5.8:1 · outline/surface 3.6:1 · outline/bg 3.9:1 · on-attention/attention 6.7:1 · chart triple ΔE 18.2 worst case incl. CVD  
+Dark: text/surface 14.0:1 · muted/surface 5.6:1 · outline/surface 4.1:1 · outline/bg 4.6:1 · on-attention/attention 5.1:1 · chart triple ΔE 17.0 worst case incl. CVD · bg lightness 6.3%
 
-### 7 · Rose Petal (pink) — "soft & youthful"
+### 4 · Linen — "warmest of the six"
 
-Inspired by Coquette/Girly's light register (Rose Petal pairing). Dusty
-mauve-rose, dreamiest of the eight.
-
-| Role | Light | Dark |
-|---|---|---|
-| bg | `#F3E6E9` | `#0F080B` |
-| surface | `#EBD3D9` | `#221419` |
-| outline | `#A55F71` | `#9A5767` |
-| primary | `#9C4F6B` | `#D998AC` |
-| secondary | `#C98096` | `#B97F92` |
-| accent | `#7C6178` | `#C7B06B` |
-| text | `#4A2E38` | `#EEDEE2` |
-| muted | `#73565E` | `#937C81` |
-
-Checks — Light: text/surface 8.5:1, muted/surface 4.6:1, outline/surface
-3.3:1, primary/surface 4.0:1.
-Dark: text/surface 13.7:1, muted/surface 4.6:1, outline/surface 3.3:1,
-bg lightness 4.5%.
-
-### 8 · Velvet Ribbon (pink) — "confident & editorial"
-
-Inspired by Coquette/Girly's dark/"gothic-girly" register, used as a
-light-mode-forward pairing here — richer carmine-and-violet, more mature
-and less overtly girlish than Rose Petal, same decorative family.
+Health / Consumer Wellbeing -> **Linen**. The register's second verified pair. Its `error` is the only one pushed to oxblood, because a terracotta primary and an ordinary red error are otherwise too close to tell apart.
 
 | Role | Light | Dark |
 |---|---|---|
-| bg | `#EDE0D8` | `#120A08` |
-| surface | `#E3C9BC` | `#241811` |
-| outline | `#9A5C53` | `#995C52` |
-| primary | `#9E3540` | `#D96B5C` |
-| secondary | `#B06B62` | `#C4917D` |
-| accent | `#6E5570` | `#A5859E` |
-| text | `#34211A` | `#EAD9D0` |
-| muted | `#6D504B` | `#9A7D79` |
+| bg | `#F8F5F1` | `#191614` |
+| surface | `#EFE8E0` | `#231E1A` |
+| outline | `#877364` | `#857569` |
+| primary | `#8E4826` | `#D9906A` |
+| secondary | `#A05F3C` | `#C29B80` |
+| tertiary | `#3E5B5B` | `#86B0AC` |
+| attention | `#C47464` | `#A24F3E` |
+| neutralFill | `#696763` | `#878480` |
+| error | `#8E1F38` | `#EE7E93` |
+| text | `#26221E` | `#EAE5DF` |
+| muted | `#645A4F` | `#9E948A` |
 
-Checks — Light: text/surface 9.7:1, muted/surface 4.6:1, outline/surface
-3.3:1, primary/surface 4.4:1.
-Dark: text/surface 12.6:1, muted/surface 4.6:1, outline/surface 3.3:1,
-bg lightness 5.1%.
+Checks — Light: text/surface 13.0:1 · muted/surface 5.5:1 · outline/surface 3.7:1 · outline/bg 4.1:1 · on-attention/attention 6.0:1 · chart triple ΔE 16.7 worst case incl. CVD  
+Dark: text/surface 13.2:1 · muted/surface 5.5:1 · outline/surface 3.7:1 · outline/bg 4.1:1 · on-attention/attention 5.6:1 · chart triple ΔE 17.9 worst case incl. CVD · bg lightness 8.8%
+
+### 5 · Mallow — "soft, not sweet"
+
+Health / Consumer Wellbeing, hue-anchored to Coquette/Girly's muted register. Dried plum. The only palette whose brand colour is a true violet-red.
+
+| Role | Light | Dark |
+|---|---|---|
+| bg | `#FAF6F8` | `#161215` |
+| surface | `#F2EAEF` | `#201A1F` |
+| outline | `#87737F` | `#7E6F79` |
+| primary | `#7A3F63` | `#C595B4` |
+| secondary | `#8E5C7C` | `#B79FB0` |
+| tertiary | `#6E5A32` | `#C3B07A` |
+| attention | `#7C5A2E` | `#BC8B4A` |
+| neutralFill | `#948C80` | `#898173` |
+| error | `#A32F29` | `#E8837B` |
+| text | `#251E23` | `#EDE5EA` |
+| muted | `#615560` | `#9A8D98` |
+
+Checks — Light: text/surface 13.8:1 · muted/surface 6.0:1 · outline/surface 3.7:1 · outline/bg 4.1:1 · on-attention/attention 6.3:1 · chart triple ΔE 21.3 worst case incl. CVD  
+Dark: text/surface 13.8:1 · muted/surface 5.4:1 · outline/surface 3.6:1 · outline/bg 3.9:1 · on-attention/attention 6.9:1 · chart triple ΔE 16.5 worst case incl. CVD · bg lightness 7.8%
+
+### 6 · Periwinkle — "the one cool option"
+
+Health / Consumer Wellbeing, hue-anchored to Scholastic's indigo, warmed. A tan tertiary and a warm ground are what stop a cool primary reading institutional -- the register's own stated failure mode.
+
+| Role | Light | Dark |
+|---|---|---|
+| bg | `#F8F7FB` | `#131319` |
+| surface | `#ECEBF3` | `#1D1D25` |
+| outline | `#77758C` | `#73728A` |
+| primary | `#4E4590` | `#A3A0DC` |
+| secondary | `#6A6296` | `#A8A5C2` |
+| tertiary | `#7A5A3E` | `#C9A57E` |
+| attention | `#B98952` | `#A57742` |
+| neutralFill | `#B4AFA6` | `#BCB7AF` |
+| error | `#A32F29` | `#E8837B` |
+| text | `#1F1E2A` | `#E6E5EE` |
+| muted | `#565469` | `#918FA0` |
+
+Checks — Light: text/surface 13.9:1 · muted/surface 6.2:1 · outline/surface 3.8:1 · outline/bg 4.2:1 · on-attention/attention 6.8:1 · chart triple ΔE 18.7 worst case incl. CVD  
+Dark: text/surface 13.4:1 · muted/surface 5.3:1 · outline/surface 3.6:1 · outline/bg 4.0:1 · on-attention/attention 5.3:1 · chart triple ΔE 23.6 worst case incl. CVD · bg lightness 8.6%
 
 ---
 
@@ -2183,11 +1872,28 @@ arbitrary ordering. Coherent as written.
    looser harmony score (~0.6–0.7) is a deliberate, documented trade-off
    in the lexicon itself, not a defect.
 
-## Appendix D — Candidate palettes (§7 R49–R54) 🚧
+## Appendix D — Candidate palettes (§7 R49–R54) — ⛔ superseded, kept as record
+
+⛔ **These never shipped, and never will.** They were candidates to replace
+the *eight*; §7 R56 replaced the eight with six on a different basis
+entirely — the Health/Consumer Wellbeing register — so this set was
+overtaken rather than rejected on its merits. **Appendix A is the shipped
+truth.** Kept here because R49–R54's reasoning is still worth reading: it
+is where the accent objective was inverted (harmony maximised,
+distinguishability made a floor), and where R53 first recorded that
+coherence and distinguishability are in direct opposition in this app.
+
+⚠️ **Name collision, read before comparing.** These tables carry a role
+called `attention`, and it is **not** the `attention` in Appendix A. Here it
+is a per-palette chromatic accent (Golden Hour's is `#63883A`, a green).
+There it is a semantic role meaning *a missed dose, low stock, an
+approaching expiry* — warm clay, deliberately never red. Same word, two
+different jobs, and only the Appendix A one exists in `Color.kt`.
 
 Ten roles per palette, light and dark, rebuilt from `design-lexicon.md` through the
-optimizer portfolio. **Candidates, not shipped tokens** — `Color.kt` still carries the
-Appendix A set, and R54 gives the condition that gates replacing it. They are inlined
+optimizer portfolio. **Candidates, not shipped tokens** — at the time of writing
+`Color.kt` still carried the then-current Appendix A set, and R54 gave the condition
+that gated replacing it. They are inlined
 here rather than kept in a `docs/palettes/` file for the reason Appendix A states about
 itself: a second document holding hex values is how the last one went stale.
 
@@ -2197,163 +1903,17 @@ anchored to the entry's measured hue band, run through the DE/CHA/CMA portfolio,
 of the coherent templates only. 183 of 184 verification checks pass; the exception is
 Rose Petal dark's `attention`/`tertiary` pair at ΔE 9.0 (R53).
 
-### Golden Hour
+**The eight hex tables that stood here have been removed.** They were the
+full ten-role light/dark values for candidate palettes that were overtaken
+before they shipped, so nothing reads them and nothing can: `Color.kt`
+carries the six of Appendix A. What was worth keeping from R49–R54 is the
+*method* and the two findings it produced, both stated above and in §7 —
+the hex values were the one part that could only ever go stale. They are in
+git history if a specific value is ever wanted.
 
-From **Cozy -> Cozy Cocoa** · mood `warm cozy muted` · primary hue band [18, 38] · template analogous (light) / analogous (dark) · fitness 0.904 / 0.994
-
-| Role | Light | Dark |
-|---|---|---|
-| `background` | `#F1F1EE` | `#130C0C` |
-| `surface` | `#EEEDEA` | `#2E1D1D` |
-| `surfaceContainer` | `#E2E1DE` | `#392929` |
-| `outline` | `#B77947` | `#BD7A38` |
-| `text` | `#252322` | `#ECE7E7` |
-| `mutedText` | `#5B5654` | `#B09B9B` |
-| `primary` | `#B77947` | `#C37E3A` |
-| `secondary` | `#958744` | `#BE6A68` |
-| `tertiary` | `#524A25` | `#D8A6A5` |
-| `attention` | `#63883A` | `#B0B039` |
-
-Light: text/surface 13.36:1 · mutedText/surface 6.18:1 · outline/surface 3.07:1 · attention/surface 3.51:1  
-Dark: text/surface 13.10:1 · mutedText/surface 6.11:1 · outline/surface 4.58:1 · attention/surface 6.96:1
-
-### Sunlit Focus
-
-From **Extroverted-sunny** · mood `warm light airy faded` · primary hue band [30, 49] · template near-complementary (light) / monochromatic (dark) · fitness 0.998 / 1.000
-
-| Role | Light | Dark |
-|---|---|---|
-| `background` | `#EBF0F2` | `#0E0F10` |
-| `surface` | `#E0E8EB` | `#1B1D1F` |
-| `surfaceContainer` | `#D4DCDF` | `#27292B` |
-| `outline` | `#7E6242` | `#938261` |
-| `text` | `#1D1B20` | `#E5E3E6` |
-| `mutedText` | `#575160` | `#9F9BA3` |
-| `primary` | `#7A5F40` | `#938261` |
-| `secondary` | `#65809B` | `#6C8A8A` |
-| `tertiary` | `#394858` | `#9CB1B1` |
-| `attention` | `#4B5194` | `#4DA561` |
-
-Light: text/surface 13.75:1 · mutedText/surface 6.15:1 · outline/surface 4.55:1 · attention/surface 5.82:1  
-Dark: text/surface 13.25:1 · mutedText/surface 6.19:1 · outline/surface 4.51:1 · attention/surface 5.53:1
-
-### Forest Floor
-
-From **Naturecore -> Mossland** · mood `natural earthy growth muted` · primary hue band [66, 90] · template analogous (light) / analogous (dark) · fitness 0.901 / 0.926
-
-| Role | Light | Dark |
-|---|---|---|
-| `background` | `#EBEDEB` | `#0E120D` |
-| `surface` | `#E0E3E0` | `#1F261C` |
-| `surfaceContainer` | `#D3D7D4` | `#2B3228` |
-| `outline` | `#628330` | `#71962B` |
-| `text` | `#151518` | `#E4E9E2` |
-| `mutedText` | `#50505C` | `#96A98E` |
-| `primary` | `#628330` | `#8EBD36` |
-| `secondary` | `#52824C` | `#76BA5F` |
-| `tertiary` | `#2F4A2B` | `#579842` |
-| `attention` | `#878148` | `#46C566` |
-
-Light: text/surface 14.09:1 · mutedText/surface 6.14:1 · outline/surface 3.38:1 · attention/surface 3.08:1  
-Dark: text/surface 12.61:1 · mutedText/surface 6.18:1 · outline/surface 4.51:1 · attention/surface 6.98:1
-
-### Sage Clinical
-
-From **Clinical/Medical -> Clinical Teal** · mood `cool calm clean professional muted` · primary hue band [161, 199] · template near-complementary (light) / analogous (dark) · fitness 0.970 / 0.978
-
-| Role | Light | Dark |
-|---|---|---|
-| `background` | `#ECE9ED` | `#0B1310` |
-| `surface` | `#E2DDE4` | `#111D18` |
-| `surfaceContainer` | `#D6D1D8` | `#1D2924` |
-| `outline` | `#3E7575` | `#2C9092` |
-| `text` | `#141715` | `#DCE0DF` |
-| `mutedText` | `#46514A` | `#909D9A` |
-| `primary` | `#3E7575` | `#34AAAC` |
-| `secondary` | `#5D7C52` | `#5C8ABC` |
-| `tertiary` | `#35472F` | `#5484B9` |
-| `attention` | `#7E5944` | `#44B789` |
-
-Light: text/surface 13.50:1 · mutedText/surface 6.19:1 · outline/surface 3.92:1 · attention/surface 4.62:1  
-Dark: text/surface 13.00:1 · mutedText/surface 6.16:1 · outline/surface 4.54:1 · attention/surface 6.91:1
-
-### Ink & Ledger
-
-From **Scholastic -> Navy Scholastic** · mood `cool professional trustworthy muted` · primary hue band [210, 240] · template near-complementary (light) / analogous (dark) · fitness 0.993 / 0.889
-
-| Role | Light | Dark |
-|---|---|---|
-| `background` | `#EFF0F1` | `#0E1011` |
-| `surface` | `#ECEDEE` | `#1B1F22` |
-| `surfaceContainer` | `#DFE1E2` | `#272B2E` |
-| `outline` | `#5A67A7` | `#497FB6` |
-| `text` | `#1C1E1A` | `#E2E6E9` |
-| `mutedText` | `#53594D` | `#91A0AB` |
-| `primary` | `#434D7D` | `#497FB6` |
-| `secondary` | `#558062` | `#5F8DBA` |
-| `tertiary` | `#35503D` | `#93B2D0` |
-| `attention` | `#826146` | `#6868C0` |
-
-Light: text/surface 14.33:1 · mutedText/surface 6.17:1 · outline/surface 4.56:1 · attention/surface 4.78:1  
-Dark: text/surface 13.22:1 · mutedText/surface 6.18:1 · outline/surface 3.95:1 · attention/surface 3.42:1
-
-### Cobalt Porcelain
-
-From **Ming Dynasty Porcelain** · mood `cool professional trustworthy` · primary hue band [205, 225] · template analogous (light) / analogous (dark) · fitness 0.958 / 0.915
-
-| Role | Light | Dark |
-|---|---|---|
-| `background` | `#EDF0F2` | `#0D0F12` |
-| `surface` | `#E8EBEE` | `#1C2126` |
-| `surfaceContainer` | `#DBDEE1` | `#282D32` |
-| `outline` | `#236CB7` | `#236DB8` |
-| `text` | `#16191D` | `#E2E6E9` |
-| `mutedText` | `#4C5765` | `#93A2AD` |
-| `primary` | `#236CB7` | `#236DB8` |
-| `secondary` | `#3E80C3` | `#4786C6` |
-| `tertiary` | `#234B72` | `#8EB5DC` |
-| `attention` | `#4A4AD5` | `#5B5BD8` |
-
-Light: text/surface 14.74:1 · mutedText/surface 6.14:1 · outline/surface 4.50:1 · attention/surface 5.43:1  
-Dark: text/surface 12.92:1 · mutedText/surface 6.19:1 · outline/surface 3.05:1 · attention/surface 3.04:1
-
-### Rose Petal
-
-From **Coquette/Girly -> Rose Petal** · mood `creative soft gentle dreamy muted` · primary hue band [325, 355] · template analogous (light) / near-complementary (dark) · fitness 0.967 / 0.827
-
-| Role | Light | Dark |
-|---|---|---|
-| `background` | `#ECEAEA` | `#0D1212` |
-| `surface` | `#E2DFDF` | `#1A2323` |
-| `surfaceContainer` | `#D6D2D2` | `#262F2F` |
-| `outline` | `#AC3664` | `#B2486C` |
-| `text` | `#161413` | `#DEE5E5` |
-| `mutedText` | `#564E4A` | `#8DA5A5` |
-| `primary` | `#AB3664` | `#B2486C` |
-| `secondary` | `#5E5886` | `#60ABAB` |
-| `tertiary` | `#655E90` | `#4D9292` |
-| `attention` | `#994D3D` | `#48ADAD` |
-
-Light: text/surface 13.86:1 · mutedText/surface 6.13:1 · outline/surface 4.57:1 · attention/surface 4.55:1  
-Dark: text/surface 12.57:1 · mutedText/surface 6.16:1 · outline/surface 3.08:1 · attention/surface 6.00:1
-
-### Velvet Ribbon
-
-From **Coquette/Girly -> Velvet Ribbon** · mood `creative luxurious deep rich` · primary hue band [340, 359] · template analogous (light) / analogous (dark) · fitness 0.965 / 0.885
-
-| Role | Light | Dark |
-|---|---|---|
-| `background` | `#F2EEF2` | `#120C12` |
-| `surface` | `#EDE8ED` | `#1D131D` |
-| `surfaceContainer` | `#E0DBE0` | `#291F29` |
-| `outline` | `#BE373E` | `#B6353B` |
-| `text` | `#1C171C` | `#DFD6DF` |
-| `mutedText` | `#615061` | `#A88FA8` |
-| `primary` | `#8D292E` | `#B6353B` |
-| `secondary` | `#913B91` | `#A443A4` |
-| `tertiary` | `#A443A4` | `#A443A4` |
-| `attention` | `#AE3773` | `#CA5790` |
-
-Light: text/surface 14.61:1 · mutedText/surface 6.14:1 · outline/surface 4.56:1 · attention/surface 4.83:1  
-Dark: text/surface 12.74:1 · mutedText/surface 6.16:1 · outline/surface 3.06:1 · attention/surface 4.54:1
-
+Method, for the record: `dk spec palette --mood <entry mood> --template <T>
+--mode <m> --device mobile`, role envelopes retuned for the eye-comfort
+brief, `primary.hue` anchored to the entry's measured hue band, run through
+the DE/CHA/CMA portfolio, best of the coherent templates only. 183 of 184
+verification checks passed; the exception was Rose Petal dark's
+`attention`/`tertiary` pair at ΔE 9.0 (R53).
