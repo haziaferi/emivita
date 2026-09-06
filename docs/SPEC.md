@@ -1346,10 +1346,17 @@ on 2026-09-06 — see §7 R56.** The six below are what `Color.kt` carries.
   surface — the fix for T2 (§7)
 
 Every `on*` colour is computed rather than tabled: whichever of pure black
-or white clears more contrast against its base. `PaletteContrastTest`
-asserts the whole set against the `ColorScheme` the app actually builds,
-so this table cannot drift from the code without a red build — which is
-the failure mode §7 R47 was opened to close.
+or white clears more contrast against its base. Two tests hold this appendix
+to the code, which is the failure mode §7 R47 was opened to close:
+`PaletteContrastTest` asserts every ratio against the `ColorScheme` the app
+actually builds, and `PaletteSpecConsistencyTest` asserts all 132 hexes in the
+tables below against that same resolved scheme — so editing one without the
+other is a red build rather than a discrepancy someone notices later. The same
+test pins `res/values/colors.xml`'s `splash_background` to the default
+palette's light background, a coupling nothing else enforces.
+
+**`docs/palette-mockup.html`** renders all six on the app's real screens, in
+both themes, and is generated from these same values.
 
 **Register.** All six are Health / Consumer Wellbeing — patient-facing,
 not practitioner-facing. That register's governing rule is that **red is

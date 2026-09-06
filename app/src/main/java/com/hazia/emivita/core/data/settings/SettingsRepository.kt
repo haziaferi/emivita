@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.hazia.emivita.core.data.entity.Medicine
 import com.hazia.emivita.core.scheduling.DEFAULT_SNOOZE_MINUTES
+import com.hazia.emivita.ui.theme.DEFAULT_PALETTE
 import com.hazia.emivita.ui.theme.MedPalette
 import com.hazia.emivita.ui.theme.ThemeMode
 import kotlinx.coroutines.flow.Flow
@@ -60,7 +61,7 @@ class SettingsRepository(context: Context) {
 
     val palette: Flow<MedPalette> = dataStore.data.map { prefs ->
         prefs[Keys.PALETTE]?.let { runCatching { MedPalette.valueOf(it) }.getOrNull() }
-            ?: MedPalette.DAYLIGHT
+            ?: DEFAULT_PALETTE
     }
 
     val themeMode: Flow<ThemeMode> = dataStore.data.map { prefs ->

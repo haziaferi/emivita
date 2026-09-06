@@ -27,6 +27,25 @@ enum class MedPalette {
 
 enum class ThemeMode { LIGHT, DARK, SYSTEM }
 
+/**
+ * The palette a fresh install gets, named once so the three places that need it
+ * cannot drift apart -- [EmivitaTheme]'s default parameter, `SettingsRepository`'s
+ * fallback for an unparseable stored name, and the initial value `EmivitaApp`
+ * collects with before DataStore has loaded.
+ *
+ * Chosen rather than first-listed (§6, §7 R56): Daylight is the
+ * Health/Consumer-Wellbeing register's own documented default pair and the most
+ * nearly neutral of the six, so it presumes least about a user who has not
+ * chosen.
+ *
+ * **`res/values/colors.xml`'s `splash_background` must equal this palette's light
+ * background.** It is a native resource, so it cannot read a Compose token; a
+ * mismatch flashes between the splash window and Compose's first frame.
+ * `PaletteSpecConsistencyTest` asserts the two agree, which is the only thing
+ * stopping this from being a comment nobody acts on.
+ */
+val DEFAULT_PALETTE: MedPalette = MedPalette.DAYLIGHT
+
 fun MedPalette.displayName(): String = when (this) {
     MedPalette.DAYLIGHT -> "Daylight"
     MedPalette.SAGE -> "Sage"
@@ -364,7 +383,7 @@ object EmivitaTheme {
 
 @Composable
 fun EmivitaTheme(
-    palette: MedPalette = MedPalette.DAYLIGHT,
+    palette: MedPalette = DEFAULT_PALETTE,
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     content: @Composable () -> Unit,
 ) {

@@ -25,6 +25,7 @@ import com.hazia.emivita.core.di.AppContainer
 import com.hazia.emivita.core.di.LocalAppContainer
 import com.hazia.emivita.core.di.LocalCurrentProfileId
 import com.hazia.emivita.feature.lock.AppLockGate
+import com.hazia.emivita.ui.theme.DEFAULT_PALETTE
 import com.hazia.emivita.ui.theme.EmivitaTheme
 import com.hazia.emivita.ui.theme.MedPalette
 import com.hazia.emivita.ui.theme.ThemeMode
@@ -60,7 +61,7 @@ private const val DEFAULT_PROFILE_NAME = "Me"
  */
 @Composable
 fun EmivitaApp(container: AppContainer) {
-    val palette by container.settingsRepository.palette.collectAsState(initial = MedPalette.DAYLIGHT)
+    val palette by container.settingsRepository.palette.collectAsState(initial = DEFAULT_PALETTE)
     val themeMode by container.settingsRepository.themeMode.collectAsState(initial = ThemeMode.SYSTEM)
     // null = still loading the first Flow emission, distinct from "loaded, empty list".
     // produceState (not collectAsState) specifically because the initial value's type
