@@ -1,17 +1,17 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Matches GoldenHourPalette.LightBackground in ui/theme/Color.kt.
+    <!-- Matches DaylightPalette.LightBackground in ui/theme/Color.kt.
          This is a native (non-Compose) resource, so it can only ever be one
          flat value; it is what's visible for the brief window between the
          splash screen and Compose's first frame, since Compose repaints
          over it immediately with whatever palette EmivitaTheme is given.
          Update this if MainActivity's default EmivitaTheme() call ever
-         stops defaulting to GOLDEN_HOUR, or accept the brief mismatch. -->
-    <color name="splash_background">#FBF3E6</color>
+         stops defaulting to DAYLIGHT, or accept the brief mismatch. -->
+    <color name="splash_background">#FBF9F5</color>
 
     <!-- Adaptive icon background layer. Deliberately a flat, zero-hue gray
          rather than any palette's LightBackground in Color.kt; every one of
-         the 8 palettes there carries a warm or cool tint, and the launcher
+         the 6 palettes there carries a warm or cool tint, and the launcher
          icon can't follow whichever palette a user has active in-app, so it
          stays neutral instead of quietly picking one palette as the
          "default" everywhere else on the phone. -->

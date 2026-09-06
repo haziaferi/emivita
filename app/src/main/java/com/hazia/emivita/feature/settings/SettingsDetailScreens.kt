@@ -476,7 +476,7 @@ private fun NotificationTierRow(title: String, description: String) {
 @Composable
 fun AppearanceScreen(settingsRepository: SettingsRepository, onBack: () -> Unit) {
     var loaded by remember { mutableStateOf(false) }
-    var selectedPalette by remember { mutableStateOf(MedPalette.GOLDEN_HOUR) }
+    var selectedPalette by remember { mutableStateOf(MedPalette.DAYLIGHT) }
     var themeMode by remember { mutableStateOf(ThemeMode.SYSTEM) }
     val scope = rememberCoroutineScope()
 

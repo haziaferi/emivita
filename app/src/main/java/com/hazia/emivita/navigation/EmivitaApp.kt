@@ -55,12 +55,12 @@ private const val DEFAULT_PROFILE_NAME = "Me"
  * No onboarding UI (removed, spec §9 item 1 follow-up reversal) -- the first
  * Profile row is created silently the moment the list is observed empty,
  * with [DEFAULT_PROFILE_NAME] and whatever [SettingsRepository.palette]'s
- * own default already is (`GOLDEN_HOUR` -- see that Flow's definition), so
+ * own default already is (`DAYLIGHT` -- see that Flow's definition), so
  * there's nothing left for onboarding to have asked the user for.
  */
 @Composable
 fun EmivitaApp(container: AppContainer) {
-    val palette by container.settingsRepository.palette.collectAsState(initial = MedPalette.GOLDEN_HOUR)
+    val palette by container.settingsRepository.palette.collectAsState(initial = MedPalette.DAYLIGHT)
     val themeMode by container.settingsRepository.themeMode.collectAsState(initial = ThemeMode.SYSTEM)
     // null = still loading the first Flow emission, distinct from "loaded, empty list".
     // produceState (not collectAsState) specifically because the initial value's type

@@ -60,7 +60,7 @@ class SettingsRepository(context: Context) {
 
     val palette: Flow<MedPalette> = dataStore.data.map { prefs ->
         prefs[Keys.PALETTE]?.let { runCatching { MedPalette.valueOf(it) }.getOrNull() }
-            ?: MedPalette.GOLDEN_HOUR
+            ?: MedPalette.DAYLIGHT
     }
 
     val themeMode: Flow<ThemeMode> = dataStore.data.map { prefs ->
