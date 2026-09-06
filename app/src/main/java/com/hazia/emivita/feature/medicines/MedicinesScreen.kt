@@ -114,7 +114,9 @@ fun MedicinesScreen(
                 Text(
                     "No barcode scanner app installed (e.g. Binary Eye from F-Droid).",
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.error,
+                    // A note about an OPTIONAL convenience, not a failure. `error`
+                    // here told the reader something had gone wrong when nothing had.
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(16.dp),
                 )
             }

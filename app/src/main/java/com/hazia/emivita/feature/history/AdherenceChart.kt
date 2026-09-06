@@ -25,6 +25,7 @@ import androidx.compose.ui.graphics.FilterQuality
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import com.hazia.emivita.ui.theme.EmivitaTheme
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
 import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
@@ -67,10 +68,14 @@ data class DayAdherenceCounts(
  * pie layer (that existed in Vico 1.x and was dropped); confirmed by
  * inspecting the resolved AAR directly, not assumed from the library's name.
  *
- * Missed uses `error`, not `tertiary` -- a fired-and-never-resolved dose is
- * the one outcome here that's worse than a deliberate Skip, so it's the one
- * that earns the app's reserved alarm-adjacent color; Skip gets `tertiary`
- * instead of also reading as an error state.
+ * Missed uses `attention`, NOT `error`. A fired-and-never-resolved dose is
+ * worse than a deliberate Skip and should be the louder of the two, but it is
+ * a fact about last Tuesday, not an emergency, and the patient-facing register
+ * reserves red for genuine failures. `attention` is the warm clay that says
+ * "look at this" without saying "something is wrong". Skip moves off `tertiary`
+ * -- a chromatic accent made a deliberate choice shout as loudly as a taken
+ * dose -- onto the near-achromatic `neutralFill`, which is also what holds the
+ * three series apart under colour-vision deficiency (see Color.kt).
  *
  * **Colour is no longer load-bearing here (spec §7 R54/R55.)** This was the one
  * surface in the app where state was conveyed by hue alone -- stacked bars read
@@ -96,8 +101,8 @@ fun AdherenceChart(counts: List<DayAdherenceCounts>) {
     }
 
     val takenColor = MaterialTheme.colorScheme.primary
-    val skippedColor = MaterialTheme.colorScheme.tertiary
-    val missedColor = MaterialTheme.colorScheme.error
+    val skippedColor = EmivitaTheme.colors.neutralFill
+    val missedColor = EmivitaTheme.colors.attention
     val surfaceColor = MaterialTheme.colorScheme.surface
     val density = LocalDensity.current.density
     // Tiles are rebuilt only when a colour or the density actually changes --

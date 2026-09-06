@@ -36,6 +36,7 @@ import com.hazia.emivita.core.data.dao.DoseEventWithMedicine
 import com.hazia.emivita.core.data.entity.DoseStatus
 import com.hazia.emivita.core.data.repository.DoseEventRepository
 import com.hazia.emivita.ui.components.rememberCurrentDate
+import com.hazia.emivita.ui.theme.EmivitaTheme
 import com.kizitonwose.calendar.compose.CalendarState
 import com.kizitonwose.calendar.compose.HorizontalCalendar
 import com.kizitonwose.calendar.compose.rememberCalendarState
@@ -229,8 +230,12 @@ private fun CalendarDayCell(day: CalendarDay, today: LocalDate, statuses: List<D
             )
             Row(Modifier.height(6.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 if (statuses.contains(DoseStatus.TAKEN)) DayDot(MaterialTheme.colorScheme.primary)
-                if (statuses.contains(DoseStatus.SKIPPED)) DayDot(MaterialTheme.colorScheme.tertiary)
-                if (statuses.contains(DoseStatus.PENDING)) DayDot(MaterialTheme.colorScheme.error)
+                // PENDING here is what historyStatusLabel renders as "Missed" --
+                // fired and never resolved -- so it takes the same pair as
+                // AdherenceChart's series rather than a second opinion about the
+                // same two states. Neither is an error: see Color.kt.
+                if (statuses.contains(DoseStatus.SKIPPED)) DayDot(EmivitaTheme.colors.neutralFill)
+                if (statuses.contains(DoseStatus.PENDING)) DayDot(EmivitaTheme.colors.attention)
             }
         }
     }
