@@ -6,41 +6,44 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.Immutable
+import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 
-/** The 8 curated palettes from spec §6 / Appendix A. SettingsRepository
- *  persists the choice as `.name`, so this enum is the source of truth for
- *  valid values -- that Flow falls back to GOLDEN_HOUR for any name it can't
- *  parse. */
+/** The 6 curated palettes (see Color.kt). SettingsRepository persists the
+ *  choice as `.name`, so this enum is the source of truth for valid values --
+ *  that Flow falls back to DAYLIGHT for any name it can't parse, which now
+ *  also covers a name saved by a build that still had the previous eight. */
 enum class MedPalette {
-    GOLDEN_HOUR,
-    SUNLIT_FOCUS,
-    FOREST_FLOOR,
-    SAGE_CLINICAL,
-    INK_LEDGER,
-    COBALT_PORCELAIN,
-    ROSE_PETAL,
-    VELVET_RIBBON,
+    DAYLIGHT,
+    SAGE,
+    HONEYCOMB,
+    LINEN,
+    MALLOW,
+    PERIWINKLE,
 }
 
 enum class ThemeMode { LIGHT, DARK, SYSTEM }
 
 fun MedPalette.displayName(): String = when (this) {
-    MedPalette.GOLDEN_HOUR -> "Golden Hour"
-    MedPalette.SUNLIT_FOCUS -> "Sunlit Focus"
-    MedPalette.FOREST_FLOOR -> "Forest Floor"
-    MedPalette.SAGE_CLINICAL -> "Sage Clinical"
-    MedPalette.INK_LEDGER -> "Ink & Ledger"
-    MedPalette.COBALT_PORCELAIN -> "Cobalt Porcelain"
-    MedPalette.ROSE_PETAL -> "Rose Petal"
-    MedPalette.VELVET_RIBBON -> "Velvet Ribbon"
+    MedPalette.DAYLIGHT -> "Daylight"
+    MedPalette.SAGE -> "Sage"
+    MedPalette.HONEYCOMB -> "Honeycomb"
+    MedPalette.LINEN -> "Linen"
+    MedPalette.MALLOW -> "Mallow"
+    MedPalette.PERIWINKLE -> "Periwinkle"
 }
 
+
 /**
- * The 13 colours one palette actually defines for one theme mode -- the set
- * spec §6 / Appendix A audits. [colorSchemeFor] expands these into Material3's
- * 22 ColorScheme slots; the expansion is the same for every palette, so it is
- * written once here rather than eight times by hand.
+ * The 17 colours one palette defines for one theme mode. [colorSchemeFor]
+ * expands the 13 Material ones into Material3's 22 ColorScheme slots; the
+ * expansion is the same for every palette, so it is written once here rather
+ * than six times by hand. `attention` and `neutralFill` have no ColorScheme
+ * slot to go in -- Material3's are all spoken for -- so they travel separately
+ * on [LocalEmivitaColors]. See Color.kt for what they are for.
  */
 private data class PaletteTokens(
     val background: Color,
@@ -54,137 +57,133 @@ private data class PaletteTokens(
     val onSecondary: Color,
     val tertiary: Color,
     val onTertiary: Color,
+    val attention: Color,
+    val onAttention: Color,
+    val neutralFill: Color,
+    val onNeutralFill: Color,
     val error: Color,
     val onError: Color,
 )
 
 private fun tokensFor(palette: MedPalette, dark: Boolean): PaletteTokens = when (palette) {
-    MedPalette.GOLDEN_HOUR -> with(GoldenHourPalette) {
+    MedPalette.DAYLIGHT -> with(DaylightPalette) {
         if (dark) PaletteTokens(
             background = DarkBackground, surface = DarkSurface, outline = DarkOutline,
             onBackground = DarkOnBackground, onSurfaceVariant = DarkOnSurfaceVariant, primary = DarkPrimary,
             onPrimary = DarkOnPrimary, secondary = DarkSecondary, onSecondary = DarkOnSecondary,
-            tertiary = DarkTertiary, onTertiary = DarkOnTertiary, error = DarkError,
-            onError = DarkOnError,
+            tertiary = DarkTertiary, onTertiary = DarkOnTertiary,
+            attention = DarkAttention, onAttention = DarkOnAttention,
+            neutralFill = DarkNeutralFill, onNeutralFill = DarkOnNeutralFill,
+            error = DarkError, onError = DarkOnError,
         )
         else PaletteTokens(
             background = LightBackground, surface = LightSurface, outline = LightOutline,
             onBackground = LightOnBackground, onSurfaceVariant = LightOnSurfaceVariant, primary = LightPrimary,
             onPrimary = LightOnPrimary, secondary = LightSecondary, onSecondary = LightOnSecondary,
-            tertiary = LightTertiary, onTertiary = LightOnTertiary, error = LightError,
-            onError = LightOnError,
+            tertiary = LightTertiary, onTertiary = LightOnTertiary,
+            attention = LightAttention, onAttention = LightOnAttention,
+            neutralFill = LightNeutralFill, onNeutralFill = LightOnNeutralFill,
+            error = LightError, onError = LightOnError,
         )
     }
-    MedPalette.SUNLIT_FOCUS -> with(SunlitFocusPalette) {
+    MedPalette.SAGE -> with(SagePalette) {
         if (dark) PaletteTokens(
             background = DarkBackground, surface = DarkSurface, outline = DarkOutline,
             onBackground = DarkOnBackground, onSurfaceVariant = DarkOnSurfaceVariant, primary = DarkPrimary,
             onPrimary = DarkOnPrimary, secondary = DarkSecondary, onSecondary = DarkOnSecondary,
-            tertiary = DarkTertiary, onTertiary = DarkOnTertiary, error = DarkError,
-            onError = DarkOnError,
+            tertiary = DarkTertiary, onTertiary = DarkOnTertiary,
+            attention = DarkAttention, onAttention = DarkOnAttention,
+            neutralFill = DarkNeutralFill, onNeutralFill = DarkOnNeutralFill,
+            error = DarkError, onError = DarkOnError,
         )
         else PaletteTokens(
             background = LightBackground, surface = LightSurface, outline = LightOutline,
             onBackground = LightOnBackground, onSurfaceVariant = LightOnSurfaceVariant, primary = LightPrimary,
             onPrimary = LightOnPrimary, secondary = LightSecondary, onSecondary = LightOnSecondary,
-            tertiary = LightTertiary, onTertiary = LightOnTertiary, error = LightError,
-            onError = LightOnError,
+            tertiary = LightTertiary, onTertiary = LightOnTertiary,
+            attention = LightAttention, onAttention = LightOnAttention,
+            neutralFill = LightNeutralFill, onNeutralFill = LightOnNeutralFill,
+            error = LightError, onError = LightOnError,
         )
     }
-    MedPalette.FOREST_FLOOR -> with(ForestFloorPalette) {
+    MedPalette.HONEYCOMB -> with(HoneycombPalette) {
         if (dark) PaletteTokens(
             background = DarkBackground, surface = DarkSurface, outline = DarkOutline,
             onBackground = DarkOnBackground, onSurfaceVariant = DarkOnSurfaceVariant, primary = DarkPrimary,
             onPrimary = DarkOnPrimary, secondary = DarkSecondary, onSecondary = DarkOnSecondary,
-            tertiary = DarkTertiary, onTertiary = DarkOnTertiary, error = DarkError,
-            onError = DarkOnError,
+            tertiary = DarkTertiary, onTertiary = DarkOnTertiary,
+            attention = DarkAttention, onAttention = DarkOnAttention,
+            neutralFill = DarkNeutralFill, onNeutralFill = DarkOnNeutralFill,
+            error = DarkError, onError = DarkOnError,
         )
         else PaletteTokens(
             background = LightBackground, surface = LightSurface, outline = LightOutline,
             onBackground = LightOnBackground, onSurfaceVariant = LightOnSurfaceVariant, primary = LightPrimary,
             onPrimary = LightOnPrimary, secondary = LightSecondary, onSecondary = LightOnSecondary,
-            tertiary = LightTertiary, onTertiary = LightOnTertiary, error = LightError,
-            onError = LightOnError,
+            tertiary = LightTertiary, onTertiary = LightOnTertiary,
+            attention = LightAttention, onAttention = LightOnAttention,
+            neutralFill = LightNeutralFill, onNeutralFill = LightOnNeutralFill,
+            error = LightError, onError = LightOnError,
         )
     }
-    MedPalette.SAGE_CLINICAL -> with(SageClinicalPalette) {
+    MedPalette.LINEN -> with(LinenPalette) {
         if (dark) PaletteTokens(
             background = DarkBackground, surface = DarkSurface, outline = DarkOutline,
             onBackground = DarkOnBackground, onSurfaceVariant = DarkOnSurfaceVariant, primary = DarkPrimary,
             onPrimary = DarkOnPrimary, secondary = DarkSecondary, onSecondary = DarkOnSecondary,
-            tertiary = DarkTertiary, onTertiary = DarkOnTertiary, error = DarkError,
-            onError = DarkOnError,
+            tertiary = DarkTertiary, onTertiary = DarkOnTertiary,
+            attention = DarkAttention, onAttention = DarkOnAttention,
+            neutralFill = DarkNeutralFill, onNeutralFill = DarkOnNeutralFill,
+            error = DarkError, onError = DarkOnError,
         )
         else PaletteTokens(
             background = LightBackground, surface = LightSurface, outline = LightOutline,
             onBackground = LightOnBackground, onSurfaceVariant = LightOnSurfaceVariant, primary = LightPrimary,
             onPrimary = LightOnPrimary, secondary = LightSecondary, onSecondary = LightOnSecondary,
-            tertiary = LightTertiary, onTertiary = LightOnTertiary, error = LightError,
-            onError = LightOnError,
+            tertiary = LightTertiary, onTertiary = LightOnTertiary,
+            attention = LightAttention, onAttention = LightOnAttention,
+            neutralFill = LightNeutralFill, onNeutralFill = LightOnNeutralFill,
+            error = LightError, onError = LightOnError,
         )
     }
-    MedPalette.INK_LEDGER -> with(InkLedgerPalette) {
+    MedPalette.MALLOW -> with(MallowPalette) {
         if (dark) PaletteTokens(
             background = DarkBackground, surface = DarkSurface, outline = DarkOutline,
             onBackground = DarkOnBackground, onSurfaceVariant = DarkOnSurfaceVariant, primary = DarkPrimary,
             onPrimary = DarkOnPrimary, secondary = DarkSecondary, onSecondary = DarkOnSecondary,
-            tertiary = DarkTertiary, onTertiary = DarkOnTertiary, error = DarkError,
-            onError = DarkOnError,
+            tertiary = DarkTertiary, onTertiary = DarkOnTertiary,
+            attention = DarkAttention, onAttention = DarkOnAttention,
+            neutralFill = DarkNeutralFill, onNeutralFill = DarkOnNeutralFill,
+            error = DarkError, onError = DarkOnError,
         )
         else PaletteTokens(
             background = LightBackground, surface = LightSurface, outline = LightOutline,
             onBackground = LightOnBackground, onSurfaceVariant = LightOnSurfaceVariant, primary = LightPrimary,
             onPrimary = LightOnPrimary, secondary = LightSecondary, onSecondary = LightOnSecondary,
-            tertiary = LightTertiary, onTertiary = LightOnTertiary, error = LightError,
-            onError = LightOnError,
+            tertiary = LightTertiary, onTertiary = LightOnTertiary,
+            attention = LightAttention, onAttention = LightOnAttention,
+            neutralFill = LightNeutralFill, onNeutralFill = LightOnNeutralFill,
+            error = LightError, onError = LightOnError,
         )
     }
-    MedPalette.COBALT_PORCELAIN -> with(CobaltPorcelainPalette) {
+    MedPalette.PERIWINKLE -> with(PeriwinklePalette) {
         if (dark) PaletteTokens(
             background = DarkBackground, surface = DarkSurface, outline = DarkOutline,
             onBackground = DarkOnBackground, onSurfaceVariant = DarkOnSurfaceVariant, primary = DarkPrimary,
             onPrimary = DarkOnPrimary, secondary = DarkSecondary, onSecondary = DarkOnSecondary,
-            tertiary = DarkTertiary, onTertiary = DarkOnTertiary, error = DarkError,
-            onError = DarkOnError,
+            tertiary = DarkTertiary, onTertiary = DarkOnTertiary,
+            attention = DarkAttention, onAttention = DarkOnAttention,
+            neutralFill = DarkNeutralFill, onNeutralFill = DarkOnNeutralFill,
+            error = DarkError, onError = DarkOnError,
         )
         else PaletteTokens(
             background = LightBackground, surface = LightSurface, outline = LightOutline,
             onBackground = LightOnBackground, onSurfaceVariant = LightOnSurfaceVariant, primary = LightPrimary,
             onPrimary = LightOnPrimary, secondary = LightSecondary, onSecondary = LightOnSecondary,
-            tertiary = LightTertiary, onTertiary = LightOnTertiary, error = LightError,
-            onError = LightOnError,
-        )
-    }
-    MedPalette.ROSE_PETAL -> with(RosePetalPalette) {
-        if (dark) PaletteTokens(
-            background = DarkBackground, surface = DarkSurface, outline = DarkOutline,
-            onBackground = DarkOnBackground, onSurfaceVariant = DarkOnSurfaceVariant, primary = DarkPrimary,
-            onPrimary = DarkOnPrimary, secondary = DarkSecondary, onSecondary = DarkOnSecondary,
-            tertiary = DarkTertiary, onTertiary = DarkOnTertiary, error = DarkError,
-            onError = DarkOnError,
-        )
-        else PaletteTokens(
-            background = LightBackground, surface = LightSurface, outline = LightOutline,
-            onBackground = LightOnBackground, onSurfaceVariant = LightOnSurfaceVariant, primary = LightPrimary,
-            onPrimary = LightOnPrimary, secondary = LightSecondary, onSecondary = LightOnSecondary,
-            tertiary = LightTertiary, onTertiary = LightOnTertiary, error = LightError,
-            onError = LightOnError,
-        )
-    }
-    MedPalette.VELVET_RIBBON -> with(VelvetRibbonPalette) {
-        if (dark) PaletteTokens(
-            background = DarkBackground, surface = DarkSurface, outline = DarkOutline,
-            onBackground = DarkOnBackground, onSurfaceVariant = DarkOnSurfaceVariant, primary = DarkPrimary,
-            onPrimary = DarkOnPrimary, secondary = DarkSecondary, onSecondary = DarkOnSecondary,
-            tertiary = DarkTertiary, onTertiary = DarkOnTertiary, error = DarkError,
-            onError = DarkOnError,
-        )
-        else PaletteTokens(
-            background = LightBackground, surface = LightSurface, outline = LightOutline,
-            onBackground = LightOnBackground, onSurfaceVariant = LightOnSurfaceVariant, primary = LightPrimary,
-            onPrimary = LightOnPrimary, secondary = LightSecondary, onSecondary = LightOnSecondary,
-            tertiary = LightTertiary, onTertiary = LightOnTertiary, error = LightError,
-            onError = LightOnError,
+            tertiary = LightTertiary, onTertiary = LightOnTertiary,
+            attention = LightAttention, onAttention = LightOnAttention,
+            neutralFill = LightNeutralFill, onNeutralFill = LightOnNeutralFill,
+            error = LightError, onError = LightOnError,
         )
     }
 }
@@ -192,8 +191,8 @@ private fun tokensFor(palette: MedPalette, dark: Boolean): PaletteTokens = when 
 /**
  * Expands one palette's tokens into a Material3 ColorScheme.
  *
- * Two mappings here are deliberate, and were uniform across all eight
- * hand-written palettes this replaced -- they are preserved, not simplified:
+ * Two mappings here are deliberate, and were uniform across all six
+ * hand-written palettes -- they are preserved, not simplified:
  *  - `onSurface` is fed from the palette's OnBackground. Appendix A audits one
  *    text colour, not a separate on-surface tone, so there is no OnSurface
  *    token to read.
@@ -329,9 +328,43 @@ internal fun colorSchemeFor(palette: MedPalette, dark: Boolean): ColorScheme {
  *  ever shown as a small representative dot, not the real rendered surface. */
 fun swatchColorFor(palette: MedPalette): Color = colorSchemeFor(palette, dark = false).primary
 
+/**
+ * The two roles Material3's ColorScheme has no slot left for.
+ *
+ * Every one of its 22 slots is already spoken for by [colorSchemeFor], and the
+ * alternative -- borrowing a slot whose name means something else -- is exactly
+ * the overload this pair exists to undo. So they travel beside the scheme
+ * instead, read as `EmivitaTheme.colors.attention`.
+ */
+@Immutable
+data class EmivitaColors(
+    val attention: Color,
+    val onAttention: Color,
+    val neutralFill: Color,
+    val onNeutralFill: Color,
+)
+
+internal fun emivitaColorsFor(palette: MedPalette, dark: Boolean): EmivitaColors =
+    with(tokensFor(palette, dark)) {
+        EmivitaColors(attention, onAttention, neutralFill, onNeutralFill)
+    }
+
+/** Defaulted rather than left to `error()` so a preview or a test that renders a
+ *  composable outside [EmivitaTheme] still gets a coherent pair instead of a crash. */
+val LocalEmivitaColors = staticCompositionLocalOf {
+    emivitaColorsFor(MedPalette.DAYLIGHT, dark = false)
+}
+
+/** Accessor object beside the composable of the same name, the shape Material3
+ *  itself uses for `MaterialTheme.colorScheme`. */
+object EmivitaTheme {
+    val colors: EmivitaColors
+        @Composable @ReadOnlyComposable get() = LocalEmivitaColors.current
+}
+
 @Composable
 fun EmivitaTheme(
-    palette: MedPalette = MedPalette.GOLDEN_HOUR,
+    palette: MedPalette = MedPalette.DAYLIGHT,
     themeMode: ThemeMode = ThemeMode.SYSTEM,
     content: @Composable () -> Unit,
 ) {
@@ -341,10 +374,13 @@ fun EmivitaTheme(
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
     val colorScheme = colorSchemeFor(palette, useDark)
+    val extended = emivitaColorsFor(palette, useDark)
 
-    MaterialTheme(
-        colorScheme = colorScheme,
-        typography = EmivitaTypography,
-        content = content,
-    )
+    CompositionLocalProvider(LocalEmivitaColors provides extended) {
+        MaterialTheme(
+            colorScheme = colorScheme,
+            typography = EmivitaTypography,
+            content = content,
+        )
+    }
 }
