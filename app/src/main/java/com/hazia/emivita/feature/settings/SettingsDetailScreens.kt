@@ -61,6 +61,11 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.hazia.emivita.core.di.LocalAppContainer
 import com.hazia.emivita.core.data.settings.SettingsRepository
+import com.hazia.emivita.core.notification.NotificationDelivery
+import com.hazia.emivita.core.notification.ReminderNotificationChannels
+import com.hazia.emivita.core.notification.cardBody
+import com.hazia.emivita.core.notification.cardTitle
+import com.hazia.emivita.core.notification.notificationDelivery
 import com.hazia.emivita.ui.components.TimeOfDayField
 import com.hazia.emivita.ui.theme.MedPalette
 import com.hazia.emivita.ui.theme.ThemeMode
@@ -260,6 +265,11 @@ fun NotificationsAlertsScreen(onBack: () -> Unit) {
         NotificationTierRow("High", "Higher-priority reminders that shouldn't be easy to miss.")
         NotificationTierRow("Alarm", "Full-screen alarm reminders for medicines that must not be skipped.")
 
+        // First of the three on purpose: this is the only one of them that
+        // means nothing arrives at all. The other two describe a reminder
+        // that is degraded or late, which is a smaller problem and stays
+        // true underneath this one.
+        NotificationsBlockedCard()
         FullScreenAlarmAccessCard()
         BatteryOptimizationCard()
 
@@ -271,12 +281,9 @@ fun NotificationsAlertsScreen(onBack: () -> Unit) {
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(12.dp))
-        Button(onClick = {
-            val intent = Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-                putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-            }
-            context.startActivity(intent)
-        }) { Text("Open system notification settings") }
+        Button(onClick = { context.startActivity(appNotificationSettings(context)) }) {
+            Text("Open system notification settings")
+        }
     }
 }
 
@@ -442,6 +449,84 @@ private fun BatteryOptimizationCard() {
         }
     }
 }
+
+/**
+ * Shown while notifications cannot actually reach the user (spec §7 R58).
+ *
+ * The audit that opened R58 found the app already had a card for the Alarm
+ * tier arriving degraded, and a card for reminders arriving late, and nothing
+ * at all for reminders not arriving. Nothing in the tree called
+ * `areNotificationsEnabled()`. `EmivitaApp` asks for POST_NOTIFICATIONS once
+ * and never again -- correct, PERM-023/024 -- and `postIfPermitted` then
+ * drops each notification with a `Log.w` nobody reads, so the app looks
+ * entirely healthy while doing nothing.
+ *
+ * Passive, like both its siblings: it states what is happening and offers the
+ * way out. It does not re-prompt for the permission, which is the decision
+ * `EmivitaApp` already respected and this card is not here to reopen.
+ *
+ * Re-read on ON_RESUME for the same reason the other two are: the user leaves
+ * for a system settings screen that delivers no result to the caller, so
+ * `rememberLauncherForActivityResult` would never fire.
+ */
+@Composable
+private fun NotificationsBlockedCard() {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    fun read(): NotificationDelivery = notificationDelivery(
+        notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled(),
+        blockedTiers = ReminderNotificationChannels.blockedTiers(context),
+    )
+
+    var delivery by remember { mutableStateOf(read()) }
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                delivery = read()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    val title = delivery.cardTitle() ?: return
+    val body = delivery.cardBody() ?: return
+
+    Spacer(Modifier.height(16.dp))
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.errorContainer,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.titleMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Spacer(Modifier.height(4.dp))
+            Text(
+                body,
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Spacer(Modifier.height(10.dp))
+            Button(onClick = { context.startActivity(appNotificationSettings(context)) }) {
+                Text("Open notification settings")
+            }
+        }
+    }
+}
+
+/** Android's own per-app notification screen -- the only place either an
+ *  app-level block or a per-channel one can be undone, since an app cannot
+ *  override a user's channel choice once the channel exists. */
+private fun appNotificationSettings(context: Context): Intent =
+    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
+        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
+    }
 
 /** The dedicated special-access screen exists from Android 14; below that the
  *  permission is install-granted and this card shouldn't be showing at all, so

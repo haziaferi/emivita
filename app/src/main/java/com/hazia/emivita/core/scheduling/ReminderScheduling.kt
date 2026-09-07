@@ -372,14 +372,37 @@ fun nextDailyWindowOccurrence(
 
 /**
  * Weekend-mode adjustment (spec §3, ported faithfully from medTimer's
- * WeekendModeSchedulingDecorator per spec §5) -- applied as the *last* step
- * for every reminder type unconditionally, no per-reminder opt-out. If
+ * WeekendModeSchedulingDecorator per spec §5) -- applied as the *last* step,
+ * after the type-specific calculator and the activeFrom/activeUntil clamp. If
  * [occurrence]'s day-of-week is in [weekendDays] and its time-of-day falls in
  * `[weekendStart, weekendEnd)`, pushes it to [weekendEnd] on that same day;
  * otherwise leaves it untouched. An empty [weekendDays] (the default, nothing
  * configured yet) is a no-op regardless of the enabled flag -- callers only
  * need to check "is weekend mode enabled" before calling this if they want to
  * skip the work entirely, not to preserve correctness.
+ *
+ * This comment used to say the adjustment applied "for every reminder type
+ * unconditionally, no per-reminder opt-out", which stopped being true at §7
+ * R36: [SchedulingEngine.nextOccurrenceFor] now gates on
+ * `Reminder.weekendModeOptIn` *before* reading the global setting, so both
+ * must be on. The behaviour changed and this file kept stating the old
+ * contract, which is how one file ends up answering a question two opposite
+ * ways (§7 R58).
+ *
+ * **What this does on a sub-daily reminder** (§7 R58, measured rather than
+ * reasoned). "Delays a dose" describes the FixedTime case exactly: one slot a
+ * day, pushed to the end of the window. For a RepeatingInterval or DailyWindow
+ * it does something stronger, because deferral is not queueing. Every raw slot
+ * inside the window is pushed to the same instant, and both the alarm chain
+ * (`ReminderAlarmReceiver` reschedules from `fired + 60s`) and the projection
+ * walk ([SchedulingEngine.occurrencesFor], the same arithmetic) then resume
+ * *past* the window -- so the intermediate slots are never armed and never
+ * materialize a DoseEvent. A 2-hourly reminder across an 08:00-20:00 weekend
+ * window yields 7 doses that day where an ordinary day yields 13; the six in
+ * between are not stacked at 20:00, they do not happen. The projection is
+ * therefore accurate, not lossy -- it reports exactly what the device will do
+ * -- but anyone opting a sub-daily reminder into weekend mode is choosing to
+ * skip those doses, not to postpone them.
  */
 fun applyWeekendMode(
     occurrence: NextOccurrence,

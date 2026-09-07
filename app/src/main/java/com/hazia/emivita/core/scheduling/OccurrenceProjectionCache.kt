@@ -39,6 +39,23 @@ data class ProjectionState(
     val stockRunOutDates: Map<Long, LocalDate> = emptyMap(),
     val windowDays: Long = MINIMUM_WINDOW_DAYS,
     val computedAtEpochMillis: Long = 0L,
+    /**
+     * True when [COMPUTE_BUDGET_MILLIS] stopped the pass before every medicine
+     * was visited, so this state covers only some of them (spec §7 R58).
+     *
+     * The budget itself is deliberate -- a pathological config should cost one
+     * partial pass, not a blocked loop. What was wrong until this field existed
+     * is that the partial answer was indistinguishable from a complete one: a
+     * medicine absent from [stockRunOutDates] means "will not run out inside
+     * the window" *and* "was never reached", and a reader had no way to tell
+     * which. That is the same defect shape as R56's `error` token doing three
+     * jobs -- one value standing for two different facts.
+     *
+     * Consumers that draw a conclusion from an *absence* should check this
+     * first. Consumers that only read what is present can ignore it: nothing
+     * here is wrong, there is just less of it.
+     */
+    val truncated: Boolean = false,
 )
 
 /**
@@ -178,11 +195,24 @@ class OccurrenceProjectionCache(
         val occurrences = mutableListOf<ProjectedOccurrence>()
         val runOutDates = mutableMapOf<Long, LocalDate>()
 
+        var visited = 0
+        var truncated = false
         for (entry in medicines) {
             // Hard time budget -- a pathological config stops the pass here
             // rather than blocking; [state] below still gets whatever was
-            // projected for the medicines already visited.
-            if (nowEpochMillis() - start > COMPUTE_BUDGET_MILLIS) break
+            // projected for the medicines already visited, and says so via
+            // ProjectionState.truncated rather than passing a partial answer
+            // off as a whole one.
+            if (nowEpochMillis() - start > COMPUTE_BUDGET_MILLIS) {
+                Log.w(
+                    TAG,
+                    "Projection hit the ${COMPUTE_BUDGET_MILLIS}ms budget after $visited of " +
+                        "${medicines.size} medicines -- publishing a truncated state.",
+                )
+                truncated = true
+                break
+            }
+            visited++
 
             val medicineOccurrences = mutableListOf<NextOccurrence>()
             for (reminder in entry.reminders) {
@@ -219,6 +249,7 @@ class OccurrenceProjectionCache(
             stockRunOutDates = runOutDates,
             windowDays = windowDays,
             computedAtEpochMillis = start,
+            truncated = truncated,
         )
 
         // LowStockAlert/ExpirationAlert triggering (spec §9 #8) -- piggybacks on

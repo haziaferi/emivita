@@ -26,6 +26,38 @@ object ReminderNotificationChannels {
         NotificationPriority.ALARM -> CHANNEL_ALARM
     }
 
+    /** The tier's name as the Notifications & Alerts screen prints it, so a
+     *  warning about a blocked tier names the same row the user just read. */
+    fun tierNameFor(priority: NotificationPriority): String = when (priority) {
+        NotificationPriority.STANDARD -> "Standard"
+        NotificationPriority.HIGH -> "High"
+        NotificationPriority.ALARM -> "Alarm"
+    }
+
+    /**
+     * Tiers the user has blocked outright (`IMPORTANCE_NONE`) -- see
+     * [com.hazia.emivita.core.notification.NotificationDelivery.TiersBlocked]
+     * for why only `NONE` counts and a merely-quietened channel does not.
+     *
+     * Walks [NotificationPriority.entries] rather than a hand-written list of
+     * channel ids on purpose: a new tier has to add a branch to
+     * [channelIdFor] and [tierNameFor] to compile at all, and is then covered
+     * here for free. A separate list would be one more thing to remember, and
+     * forgetting it would silently shrink this check -- which is the exact
+     * defect class this function exists to report.
+     *
+     * A channel that does not exist yet reads as null, not blocked:
+     * [createAll] runs in `EmivitaApplication.onCreate`, so that only happens
+     * before the app has finished starting.
+     */
+    fun blockedTiers(context: Context): List<String> {
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
+            ?: return emptyList()
+        return NotificationPriority.entries
+            .filter { manager.getNotificationChannel(channelIdFor(it))?.importance == NotificationManager.IMPORTANCE_NONE }
+            .map { tierNameFor(it) }
+    }
+
     fun createAll(context: Context) {
         val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
 

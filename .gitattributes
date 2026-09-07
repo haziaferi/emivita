@@ -1,0 +1,42 @@
+# Line endings, enforced by git rather than by remembering.
+#
+# SPEC §7 R57 recorded what happens without this: Python's text-mode write on
+# Windows translates \n to \r\n, so a three-line edit came out as a 990-line
+# diff and a ten-file change read as 2765 insertions / 2796 deletions instead
+# of the real 393 / 415. A diff nobody can review is a change nobody has
+# reviewed. Commit b4f897a ("Restore LF line endings across this branch") is
+# the cleanup for that; this file is the prevention, and it works regardless
+# of which editor, script or agent does the writing.
+#
+# core.autocrlf is `false` on the machine this was written on, which is the
+# right setting -- but it is machine-local and travels with nobody. These
+# rules are in the repository, so they apply to every clone.
+* text=auto eol=lf
+
+# Windows shells will not run a batch file with LF endings, so gradlew.bat is
+# the one file that must keep CRLF. gradle-wrapper.properties is CRLF today
+# only because Gradle wrote it on Windows; it is pinned rather than converted
+# so `gradle wrapper` regenerating it does not show up as a whole-file diff.
+*.bat            text eol=crlf
+gradlew.bat      text eol=crlf
+gradle/wrapper/gradle-wrapper.properties text eol=crlf
+
+# Never touched. The keystore matters most: `text=auto` has to *guess* whether
+# a file is text, and a wrong guess here rewrites bytes inside the signing
+# identity that both variants share -- which would mean no build could install
+# over an existing one without an uninstall, taking the database with it (see
+# app/build.gradle.kts's signingConfigs note). Declared explicitly so the
+# guess never happens.
+*.keystore       binary
+*.jks            binary
+*.apk            binary
+*.aab            binary
+*.jar            binary
+*.gz             binary
+*.zip            binary
+*.png            binary
+*.jpg            binary
+*.webp           binary
+*.ttf            binary
+*.otf            binary
+*.pdf            binary
