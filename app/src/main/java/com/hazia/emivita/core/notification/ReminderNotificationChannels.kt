@@ -4,6 +4,8 @@ import android.app.NotificationChannel
 import android.app.NotificationManager
 import android.content.Context
 import com.hazia.emivita.core.data.entity.NotificationPriority
+import com.hazia.emivita.R
+import androidx.annotation.StringRes
 
 /**
  * One notification channel per [NotificationPriority] tier. Call
@@ -27,11 +29,15 @@ object ReminderNotificationChannels {
     }
 
     /** The tier's name as the Notifications & Alerts screen prints it, so a
-     *  warning about a blocked tier names the same row the user just read. */
-    fun tierNameFor(priority: NotificationPriority): String = when (priority) {
-        NotificationPriority.STANDARD -> "Standard"
-        NotificationPriority.HIGH -> "High"
-        NotificationPriority.ALARM -> "Alarm"
+     *  warning about a blocked tier names the same row the user just read.
+     *  @StringRes rather than String since §9 #19: the screen's tier rows
+     *  resolve these same ids, so the two cannot drift into naming the same
+     *  tier differently. */
+    @StringRes
+    fun tierNameFor(priority: NotificationPriority): Int = when (priority) {
+        NotificationPriority.STANDARD -> R.string.tier_standard
+        NotificationPriority.HIGH -> R.string.tier_high
+        NotificationPriority.ALARM -> R.string.tier_alarm
     }
 
     /**
@@ -55,7 +61,7 @@ object ReminderNotificationChannels {
             ?: return emptyList()
         return NotificationPriority.entries
             .filter { manager.getNotificationChannel(channelIdFor(it))?.importance == NotificationManager.IMPORTANCE_NONE }
-            .map { tierNameFor(it) }
+            .map { context.getString(tierNameFor(it)) }
     }
 
     fun createAll(context: Context) {
@@ -63,26 +69,26 @@ object ReminderNotificationChannels {
 
         val standard = NotificationChannel(
             CHANNEL_STANDARD,
-            "Medicine reminders",
+            context.getString(R.string.channel_standard_name),
             NotificationManager.IMPORTANCE_DEFAULT,
         ).apply {
-            description = "Regular reminders for medicines and supplements."
+            description = context.getString(R.string.channel_standard_desc)
         }
 
         val high = NotificationChannel(
             CHANNEL_HIGH,
-            "Important medicine reminders",
+            context.getString(R.string.channel_high_name),
             NotificationManager.IMPORTANCE_HIGH,
         ).apply {
-            description = "Higher-priority reminders that shouldn't be easy to miss."
+            description = context.getString(R.string.channel_high_desc)
         }
 
         val alarm = NotificationChannel(
             CHANNEL_ALARM,
-            "Alarm-style medicine reminders",
+            context.getString(R.string.channel_alarm_name),
             NotificationManager.IMPORTANCE_HIGH,
         ).apply {
-            description = "Full-screen alarm reminders for medicines that must not be skipped."
+            description = context.getString(R.string.channel_alarm_desc)
         }
 
         manager.createNotificationChannels(listOf(standard, high, alarm))

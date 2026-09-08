@@ -54,8 +54,8 @@ class ReminderNotificationBuilder(
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setOnlyAlertOnce(false)
             .setAutoCancel(false)
-            .addAction(0, "Take", actionPendingIntent(ACTION_TAKE, doseEvent.id, requestCodeSalt = 1))
-            .addAction(0, "Snooze", actionPendingIntent(ACTION_SNOOZE, doseEvent.id, requestCodeSalt = 3))
+            .addAction(0, context.getString(R.string.common_take), actionPendingIntent(ACTION_TAKE, doseEvent.id, requestCodeSalt = 1))
+            .addAction(0, context.getString(R.string.common_snooze), actionPendingIntent(ACTION_SNOOZE, doseEvent.id, requestCodeSalt = 3))
 
         // Lock-until-taken (spec §3's own bug writeup: this field was typed as
         // a plain Boolean and nothing read the resolved value at all -- both
@@ -64,7 +64,7 @@ class ReminderNotificationBuilder(
         // against surviving a later setting change (ReminderActionReceiver/
         // AlarmActivity still re-check independently regardless).
         if (!settingsRepository.isLockedUntilTaken(medicine)) {
-            builder.addAction(0, "Skip", actionPendingIntent(ACTION_SKIP, doseEvent.id, requestCodeSalt = 2))
+            builder.addAction(0, context.getString(R.string.common_skip), actionPendingIntent(ACTION_SKIP, doseEvent.id, requestCodeSalt = 2))
         }
 
         if (priority == NotificationPriority.ALARM) {
@@ -119,7 +119,7 @@ class ReminderNotificationBuilder(
             builder.setFullScreenIntent(alarmPendingIntent, true)
         } else {
             Log.i(TAG, "Full-screen intent not available (revoked or unsupported) -- falling back to a tap action.")
-            builder.addAction(0, "Show alarm", alarmPendingIntent)
+            builder.addAction(0, context.getString(R.string.action_show_alarm), alarmPendingIntent)
         }
         builder.setContentIntent(alarmPendingIntent)
     }

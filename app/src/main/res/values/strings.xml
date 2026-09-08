@@ -8,4 +8,283 @@
     <!-- Widget picker labels (android:label on each appwidget-provider). -->
     <string name="widget_next_reminders_label">Next Doses</string>
     <string name="widget_stock_levels_label">Stock Levels</string>
+
+    <!-- ==== Screen text (spec §9 #19 Stage A) ====
+         Extracted from Compose literals. `isPseudoLocalesEnabled` on the
+         debug build renders everything here accented, so anything still
+         hardcoded shows up plain on the screen. -->
+    <string name="add_medicine_add">Add</string>
+    <string name="add_medicine_add_a_tag">Add a tag</string>
+    <string name="add_medicine_always_lock">Always lock</string>
+    <string name="add_medicine_e_g_capsules_drops_tablet">e.g. capsules, drops, tablet</string>
+    <string name="add_medicine_lock_reminders_until_taken">Lock reminders until taken</string>
+    <string name="add_medicine_measurement_optional">Measurement (optional)</string>
+    <string name="add_medicine_never_lock">Never lock</string>
+    <string name="add_medicine_remove">Remove</string>
+    <string name="add_medicine_storage_note_optional">Storage note (optional)</string>
+    <string name="add_medicine_tags">Tags</string>
+    <string name="add_medicine_use_global_default">Use global default</string>
+    <string name="add_medicine_what_it_s_for_optional">What it\'s for (optional)</string>
+    <string name="add_reminder_active_date_range">Active date range</string>
+    <string name="add_reminder_active_days">Active days</string>
+    <string name="add_reminder_active_pause_cycle">Active/pause cycle</string>
+    <string name="add_reminder_advanced">Advanced</string>
+    <string name="add_reminder_alert_at">Alert at</string>
+    <string name="add_reminder_alert_when_stock_is_at_or_below">Alert when stock is at or below</string>
+    <string name="add_reminder_auto_resolve">Auto-resolve</string>
+    <string name="add_reminder_cycle_starts_today_the_anchor_date_isn_t">Cycle starts today; the anchor date isn\'t editable yet.</string>
+    <string name="add_reminder_days_before_expiration_to_start_alerting">Days before expiration to start alerting</string>
+    <string name="add_reminder_every_hours">Every ___ hours</string>
+    <string name="add_reminder_every_min">Every (min)</string>
+    <string name="add_reminder_every_n_days">Every N days</string>
+    <string name="add_reminder_every_relevant_change_while_low">Every relevant change, while low</string>
+    <string name="add_reminder_follow_weekend_mode">Follow weekend mode</string>
+    <string name="add_reminder_follows">Follows</string>
+    <string name="add_reminder_from">From</string>
+    <string name="add_reminder_interval_starts">Interval starts</string>
+    <string name="add_reminder_leave_unset_for_no_bound_a_taper_is_just">Leave unset for no bound — a taper is just several reminders with adjacent ranges.</string>
+    <string name="add_reminder_max_repeats">Max repeats</string>
+    <string name="add_reminder_minutes_after_parent_1_1440">Minutes after parent (1–1440)</string>
+    <string name="add_reminder_once_a_day">Once a day</string>
+    <string name="add_reminder_once_a_day_while_low">Once a day, while low</string>
+    <string name="add_reminder_once_until_restocked">Once, until restocked</string>
+    <string name="add_reminder_pause_days">Pause days</string>
+    <string name="add_reminder_repeat_until_answered">Repeat until answered</string>
+    <string name="add_reminder_repeats">Repeats</string>
+    <string name="add_reminder_silently_mark_taken_no_notification_for">Silently mark taken, no notification — for tracking a reminder set up for someone else.</string>
+    <string name="add_reminder_specific_days">Specific days</string>
+    <string name="add_reminder_this_medicine_needs_another_reminder_first_a">This medicine needs another reminder first — a following dose has to follow something.</string>
+    <string name="add_reminder_time">Time</string>
+    <string name="add_reminder_until">Until</string>
+    <string name="add_reminder_when_reminded">When reminded</string>
+    <string name="add_reminder_when_taken_or_skipped">When taken or skipped</string>
+    <string name="adherence_adherence_trend">Adherence trend</string>
+    <string name="adherence_each_bar_stacks_taken_at_the_bottom_then">Each bar stacks taken at the bottom, then skipped, then missed.</string>
+    <string name="alarm_close">Close</string>
+    <string name="alarm_this_reminder_is_no_longer_available">This reminder is no longer available.</string>
+    <string name="app_lock_emivita_is_locked">Emivita is locked</string>
+    <string name="backup_sync_auto_sync_folder">Auto-sync folder</string>
+    <string name="backup_sync_backup_sync">Backup &amp; Sync</string>
+    <string name="backup_sync_choose_backup_file">Choose backup file</string>
+    <string name="backup_sync_choose_sync_folder">Choose sync folder</string>
+    <string name="backup_sync_export_a_full_snapshot_for_a_new_phone">Export a full snapshot for a new phone, sharing with someone, or before a risky change. Separate from the History screen\'s PDF/CSV export.</string>
+    <string name="backup_sync_export_anyway">Export anyway</string>
+    <string name="backup_sync_export_backup">Export backup</string>
+    <string name="backup_sync_export_without_a_password">Export without a password?</string>
+    <string name="backup_sync_keeps_a_password_protected_zip_current_in_a">Keeps a password-protected zip current in a folder of your choice, so a sync tool you already run (e.g. a Syncthing fork) can mirror it. Not a sync mechanism itself — distinct from the manual export above.</string>
+    <string name="backup_sync_manual_backup">Manual backup</string>
+    <string name="backup_sync_password">Password</string>
+    <string name="backup_sync_password_protect_this_backup">Password-protect this backup</string>
+    <string name="backup_sync_password_required">Password required</string>
+    <string name="backup_sync_replaces_everything_currently_on_this_device">Replaces everything currently on this device with the contents of the chosen file.</string>
+    <string name="backup_sync_restore_from_backup">Restore from backup</string>
+    <string name="backup_sync_set_a_sync_password">Set a sync password</string>
+    <string name="backup_sync_stop_syncing">Stop syncing</string>
+    <string name="backup_sync_this_backup_is_password_protected">This backup is password-protected.</string>
+    <string name="backup_sync_this_file_will_contain_readable_medication">This file will contain readable medication data.</string>
+    <string name="backup_sync_this_is_the_only_copy_of_this_password_write">This is the only copy of this password. Write it down — restoring this file on another device needs it typed back in, and there\'s nothing to reveal or recover it from if it\'s forgotten.</string>
+    <string name="color_picker_choose_a_color">Choose a color</string>
+    <string name="color_picker_hex">Hex</string>
+    <string name="color_picker_not_a_valid_hex_color_e_g_4b7a6b">Not a valid hex color (e.g. #4B7A6B)</string>
+    <string name="color_picker_use_color">Use color</string>
+    <string name="common_add_reminder">Add reminder</string>
+    <string name="common_appearance">Appearance</string>
+    <string name="common_back">Back</string>
+    <string name="common_cancel">Cancel</string>
+    <string name="common_daily">Daily</string>
+    <string name="common_dose_amount">Dose amount</string>
+    <string name="common_loading">Loading…</string>
+    <string name="common_name">Name</string>
+    <string name="common_no_barcode_scanner_app_installed_e_g_binary">No barcode scanner app installed (e.g. Binary Eye from F-Droid).</string>
+    <string name="common_notify">Notify</string>
+    <string name="common_ok">OK</string>
+    <string name="common_once">Once</string>
+    <string name="common_save">Save</string>
+    <string name="common_skip">Skip</string>
+    <string name="common_stock_expiration">Stock &amp; Expiration</string>
+    <string name="common_take">Take</string>
+    <string name="common_unlock">Unlock</string>
+    <string name="common_window_end">Window end</string>
+    <string name="common_window_start">Window start</string>
+    <string name="dose_edit_recorded_time">Recorded time</string>
+    <string name="dose_edit_skipped">Skipped</string>
+    <string name="dose_edit_status">Status</string>
+    <string name="dose_edit_taken">Taken</string>
+    <string name="history_calendar_loading">Loading…</string>
+    <string name="history_calendar_tap_a_day_to_see_what_happened">Tap a day to see what happened.</string>
+    <string name="history_export">Export</string>
+    <string name="history_export_as_csv">Export as CSV</string>
+    <string name="history_export_as_pdf">Export as PDF</string>
+    <string name="history_history">History</string>
+    <string name="history_nothing_recorded_yet_taken_skipped_and">Nothing recorded yet. Taken, skipped, and refilled doses will show up here.</string>
+    <string name="medical_id_add_a_name_before_exporting_the_card_is">Add a name before exporting – the card is printed with it at the top.</string>
+    <string name="medical_id_allergies">Allergies</string>
+    <string name="medical_id_blood_type">Blood type</string>
+    <string name="medical_id_doctor">Doctor</string>
+    <string name="medical_id_doctor_address">Doctor address</string>
+    <string name="medical_id_doctor_name">Doctor name</string>
+    <string name="medical_id_doctor_phone">Doctor phone</string>
+    <string name="medical_id_export_card_pdf">Export card (PDF)</string>
+    <string name="medical_id_medical_id">Medical ID</string>
+    <string name="medical_id_pharmacy">Pharmacy</string>
+    <string name="medical_id_pharmacy_name">Pharmacy name</string>
+    <string name="medical_id_pharmacy_phone">Pharmacy phone</string>
+    <string name="medical_id_profile_not_found">Profile not found.</string>
+    <string name="medicine_detail_delete">Delete</string>
+    <string name="medicine_detail_edit_medicine">Edit medicine</string>
+    <string name="medicine_detail_more">More</string>
+    <string name="medicine_detail_no_reminders_yet_tap_to_add_one">No reminders yet. Tap + to add one.</string>
+    <string name="medicine_detail_reminders">Reminders</string>
+    <string name="medicine_detail_this_removes_every_reminder_and_all_dose">This removes every reminder and all dose history for it. This can\'t be undone.</string>
+    <string name="medicines_add_medicine">Add medicine</string>
+    <string name="medicines_add_new">Add new</string>
+    <string name="medicines_medicines">Medicines</string>
+    <string name="medicines_no_medicine_matches_that_code_yet_add_it_as">No medicine matches that code yet. Add it as a new one?</string>
+    <string name="medicines_no_medicines_yet_tap_to_add_your_first_one">No medicines yet. Tap + to add your first one.</string>
+    <string name="medicines_not_found">Not found</string>
+    <string name="medicines_scan_to_find">Scan to find</string>
+    <string name="settings_detail_alarm_reminders_can_t_take_over_the_screen">Alarm reminders can\'t take over the screen</string>
+    <string name="settings_detail_alarms_snooze">Alarms &amp; Snooze</string>
+    <string name="settings_detail_allow_full_screen_alarms">Allow full-screen alarms</string>
+    <string name="settings_detail_days">Days</string>
+    <string name="settings_detail_delay_reminders_on_chosen_days">Delay reminders on chosen days</string>
+    <string name="settings_detail_every_reminder_posts_to_one_of_three">Every reminder posts to one of three channels, by the medicine\'s notification priority.</string>
+    <string name="settings_detail_find_emivita_in_the_list_and_set_it_to_not">Find Emivita in the list and set it to not optimised.</string>
+    <string name="settings_detail_how_long_a_snoozed_reminder_waits_before">How long a snoozed reminder waits before firing again.</string>
+    <string name="settings_detail_notifications_alerts">Notifications &amp; Alerts</string>
+    <string name="settings_detail_open_battery_settings">Open battery settings</string>
+    <string name="settings_detail_open_notification_settings">Open notification settings</string>
+    <string name="settings_detail_open_system_notification_settings">Open system notification settings</string>
+    <string name="settings_detail_palette">Palette</string>
+    <string name="settings_detail_pushes_reminders_that_fall_inside_the_window">Pushes reminders that fall inside the window below to its end time.</string>
+    <string name="settings_detail_reminders_can_arrive_late">Reminders can arrive late</string>
+    <string name="settings_detail_selected">Selected</string>
+    <string name="settings_detail_snooze_duration_minutes">Snooze duration (minutes)</string>
+    <string name="settings_detail_theme_mode">Theme mode</string>
+    <string name="settings_detail_weekend_mode">Weekend Mode</string>
+    <string name="settings_settings">Settings</string>
+    <string name="stock_expiration_always">Always</string>
+    <string name="stock_expiration_expiration_date">Expiration date</string>
+    <string name="stock_expiration_lead_days_notify_this_many_days_before">Lead days (notify this many days before)</string>
+    <string name="stock_expiration_notify_as_expiration_nears">Notify as expiration nears</string>
+    <string name="stock_expiration_notify_when_stock_runs_low">Notify when stock runs low</string>
+    <string name="stock_expiration_quantity">Quantity</string>
+    <string name="stock_expiration_refill_amount_one_tap_restock">Refill amount (one-tap restock)</string>
+    <string name="stock_expiration_threshold">Threshold</string>
+    <string name="stock_expiration_unit_e_g_tablet_ml">Unit (e.g. tablet, mL)</string>
+    <string name="today_log">Log</string>
+    <string name="today_log_dose">Log dose</string>
+    <string name="today_logged_as_taken_just_now">Logged as taken just now.</string>
+    <string name="today_medicine">Medicine</string>
+    <string name="today_no_medicines_yet_add_one_first">No medicines yet — add one first.</string>
+    <string name="today_nothing_scheduled_yet_add_a_medicine_and_a">Nothing scheduled yet. Add a medicine and a reminder to see it here.</string>
+    <string name="today_today">Today</string>
+
+    <!-- ==== Screen text (spec §9 #19 Stage A) ====
+         Extracted from Compose literals. `isPseudoLocalesEnabled` on the
+         debug build renders everything here accented, so anything still
+         hardcoded shows up plain on the screen. -->
+    <string name="add_reminder_push_this_reminder_to_the_end_of_the_weekend">Push this reminder to the end of the weekend window on weekend days. Set the days and window in Settings.</string>
+    <string name="dose_edit_this_dose_was_never_answered_recording_it">This dose was never answered. Recording it now keeps the history and the exported report accurate.</string>
+    <string name="medical_id_printed_onto_an_emergency_card_you_can_hand">Printed onto an emergency card you can hand to a doctor or keep in a wallet. Emivita never checks any of it against your medicines – it writes down what you type.</string>
+    <string name="settings_detail_battery_optimisation_lets_the_system_hold">Battery optimisation lets the system hold this app\'s alarms back, so a dose can be announced minutes after it was due — measured at about five on one phone, and the system reserves the right to defer a daily reminder by up to an hour. Excluding Emivita from optimisation is the only remaining way to stop that.</string>
+    <string name="settings_detail_right_now_an_alarm_tier_reminder_arrives_as">Right now an Alarm-tier reminder arrives as an ordinary notification you have to notice and tap, instead of waking the screen. Allow full-screen notifications to restore it.</string>
+    <string name="settings_detail_sound_and_vibration_for_each_channel_are">Sound and vibration for each channel are controlled by Android itself, not this app — open the system notification settings to adjust them.</string>
+    <!-- Bottom navigation. -->
+    <string name="nav_today">Today</string>
+    <string name="nav_medicines">Medicines</string>
+    <string name="nav_history">History</string>
+    <string name="nav_settings">Settings</string>
+    <!-- History view modes and table column headers. -->
+    <string name="history_view_list">List</string>
+    <string name="history_view_calendar">Calendar</string>
+    <string name="history_view_table">Table</string>
+    <string name="history_table_date">Date</string>
+    <string name="history_table_medicine">Medicine</string>
+    <string name="history_table_status">Status</string>
+    <string name="history_table_dose">Dose</string>
+    <!-- Medicine icon labels. The icon KEY is never translated: it is
+         persisted in Medicine.iconKey. -->
+    <string name="icon_tablet">Tablet</string>
+    <string name="icon_capsule">Capsule</string>
+    <string name="icon_liquid">Liquid / Syrup</string>
+    <string name="icon_injection">Injection</string>
+    <string name="icon_drops">Drops</string>
+    <string name="icon_inhaler">Inhaler</string>
+    <string name="icon_topical">Topical / Bandage</string>
+    <string name="icon_cardiac">Cardiac</string>
+    <string name="icon_supplement">Supplement</string>
+    <string name="icon_pharmacy">Rx Bottle</string>
+    <string name="icon_other">Other</string>
+
+    <!-- Notification channels. Android shows these names and descriptions in
+         its own per-app settings, so they are as user-facing as any screen. -->
+    <string name="channel_standard_name">Medicine reminders</string>
+    <string name="channel_standard_desc">Regular reminders for medicines and supplements.</string>
+    <string name="channel_high_name">Important medicine reminders</string>
+    <string name="channel_high_desc">Higher-priority reminders that shouldn\'t be easy to miss.</string>
+    <string name="channel_alarm_name">Alarm-style medicine reminders</string>
+    <string name="channel_alarm_desc">Full-screen alarm reminders for medicines that must not be skipped.</string>
+
+    <!-- Tier names. Read by BOTH the Notifications &amp; Alerts rows and the
+         blocked-tier warning, so the two cannot name a tier differently. -->
+    <string name="tier_standard">Standard</string>
+    <string name="tier_high">High</string>
+    <string name="tier_alarm">Alarm</string>
+
+    <!-- Notification actions. -->
+    <string name="common_snooze">Snooze</string>
+    <string name="action_show_alarm">Show alarm</string>
+    <string name="action_refill">Refill</string>
+
+    <!-- Stock and expiry alerts. %1$s is the medicine name / the amount. -->
+    <string name="alert_low_stock_title">%1$s is running low</string>
+    <string name="alert_low_stock_text">%1$s left</string>
+    <string name="alert_expiring_title">%1$s is expiring</string>
+    <string name="alert_expiring_text">Expires %1$s</string>
+
+    <string name="biometric_unlock_title">Unlock Emivita</string>
+
+    <!-- Dose-history PDF. The CSV export deliberately keeps English headers:
+         it is data for a spreadsheet, not a document for a person. -->
+    <string name="pdf_title">Emivita — Dose History</string>
+    <string name="pdf_col_date">Date</string>
+    <string name="pdf_col_time">Time</string>
+    <string name="pdf_col_medicine">Medicine</string>
+    <string name="pdf_col_status">Status</string>
+    <string name="pdf_col_dose">Dose</string>
+    <!-- Home-screen widgets. The two *_label strings above are the widget
+         PICKER names from the manifest; these are the in-widget headers. -->
+    <string name="widget_next_doses_header">Next doses</string>
+    <string name="widget_all_caught_up">All caught up</string>
+    <string name="widget_stock_levels_header">Stock levels</string>
+    <string name="widget_no_tracked_stock">No tracked stock</string>
+    <string name="widget_stock_row">%1$s • %2$s</string>
+    
+    <!-- Format strings. Positional args (%1$s) so a translation can reorder
+         the sentence; %% is a literal percent sign. -->
+    <string name="alarm_snooze_minutes">Snooze %1$d min</string>
+    <string name="history_nothing_recorded_on">Nothing recorded on %1$s.</string>
+    <string name="history_no_doses_answered">No doses answered</string>
+    <string name="history_percent_taken">%1$d%% of answered doses taken</string>
+    <string name="history_entry_summary">%1$s – %2$s – %3$s</string>
+    <string name="medicine_detail_storage">Storage: %1$s</string>
+    <string name="medicine_detail_delete_title">Delete %1$s?</string>
+    <string name="medicine_detail_this_medicine">this medicine</string>
+    <string name="stock_refill_now">Refill now (+%1$s)</string>
+    <string name="backup_syncing_to">Syncing to: %1$s</string>
+    <string name="color_picker_close_to">Close to %1$s\'s color — they may be hard to tell apart.</string>
+    <string name="field_label_value">%1$s: %2$s</string>
+    <string name="common_not_set">Not set</string>
+    <!-- A real <plurals>, not a <string>: "last 1 day" is a case this can
+         actually hit, and lint's PluralsCandidate was right to say so. The
+         quantity is the day count; the three dose counts ride along as
+         ordinary args, since "3 taken" does not inflect in English but may
+         in a language this is later translated into. -->
+    <plurals name="history_counts_summary">
+        <item quantity="one">%1$d taken, %2$d skipped, %3$d missed, last %4$d day</item>
+        <item quantity="other">%1$d taken, %2$d skipped, %3$d missed, last %4$d days</item>
+    </plurals>
+    <string name="history_today">Today</string>
+    <string name="history_yesterday">Yesterday</string>
 </resources>

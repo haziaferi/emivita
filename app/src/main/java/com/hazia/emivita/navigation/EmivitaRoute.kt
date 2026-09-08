@@ -7,6 +7,8 @@ import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.ui.graphics.vector.ImageVector
 import kotlinx.serialization.Serializable
+import androidx.annotation.StringRes
+import com.hazia.emivita.R
 
 /** Type-safe Navigation-Compose routes. Each top-level destination is a plain
  *  object (no args); anything needing an argument (e.g. a specific medicine
@@ -55,13 +57,17 @@ sealed interface EmivitaRoute {
 
 data class BottomNavItem(
     val route: EmivitaRoute,
-    val label: String,
+    /** @StringRes: `bottomNavItems` below is a top-level val, not a
+     *  composable. These four are the app's most-read strings and were the
+     *  ones a sink-based scan missed, because they reach Text() through a
+     *  data class rather than as a literal argument (spec §9 #19). */
+    @StringRes val label: Int,
     val icon: ImageVector,
 )
 
 val bottomNavItems = listOf(
-    BottomNavItem(EmivitaRoute.Today, "Today", Icons.Filled.CalendarToday),
-    BottomNavItem(EmivitaRoute.Medicines, "Medicines", Icons.Filled.Medication),
-    BottomNavItem(EmivitaRoute.History, "History", Icons.Filled.BarChart),
-    BottomNavItem(EmivitaRoute.Settings, "Settings", Icons.Filled.Settings),
+    BottomNavItem(EmivitaRoute.Today, R.string.nav_today, Icons.Filled.CalendarToday),
+    BottomNavItem(EmivitaRoute.Medicines, R.string.nav_medicines, Icons.Filled.Medication),
+    BottomNavItem(EmivitaRoute.History, R.string.nav_history, Icons.Filled.BarChart),
+    BottomNavItem(EmivitaRoute.Settings, R.string.nav_settings, Icons.Filled.Settings),
 )

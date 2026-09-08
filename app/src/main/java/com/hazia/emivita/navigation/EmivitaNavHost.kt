@@ -35,6 +35,7 @@ import com.hazia.emivita.feature.settings.NotificationsAlertsScreen
 import com.hazia.emivita.feature.settings.SettingsDestination
 import com.hazia.emivita.feature.settings.SettingsScreen
 import com.hazia.emivita.feature.today.TodayScreen
+import androidx.compose.ui.res.stringResource
 
 @Composable
 fun EmivitaNavHost() {
@@ -64,8 +65,8 @@ fun EmivitaNavHost() {
                                 restoreState = true
                             }
                         },
-                        icon = { Icon(item.icon, contentDescription = item.label) },
-                        label = { Text(item.label) },
+                        icon = { Icon(item.icon, contentDescription = stringResource(item.label)) },
+                        label = { Text(stringResource(item.label)) },
                     )
                 }
             }

@@ -8,6 +8,7 @@ import androidx.core.content.ContextCompat
 import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
+import com.hazia.emivita.R
 
 enum class BiometricAvailability { AVAILABLE, NO_HARDWARE, NOT_ENROLLED }
 
@@ -55,9 +56,9 @@ object BiometricAuthenticator {
             },
         )
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
-            .setTitle("Unlock Emivita")
+            .setTitle(activity.getString(R.string.biometric_unlock_title))
             .setAllowedAuthenticators(BIOMETRIC_STRONG)
-            .setNegativeButtonText("Cancel")
+            .setNegativeButtonText(activity.getString(R.string.common_cancel))
             .build()
         continuation.invokeOnCancellation { prompt.cancelAuthentication() }
         prompt.authenticate(promptInfo)

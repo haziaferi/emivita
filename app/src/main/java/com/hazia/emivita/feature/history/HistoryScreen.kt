@@ -62,6 +62,10 @@ import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import com.hazia.emivita.R
+import androidx.annotation.StringRes
 
 private const val HISTORY_LOOKBACK_DAYS = 30L
 
@@ -73,10 +77,13 @@ private data class HistoryDay(
 /** The three readings of the same history. Only LIST carries the summary
  *  card and trend chart; CALENDAR and TABLE are denser alternate views, not
  *  copies of the same content. */
-private enum class HistoryViewMode(val label: String) {
-    LIST("List"),
-    CALENDAR("Calendar"),
-    TABLE("Table"),
+// @StringRes rather than a String: this enum is a top-level declaration,
+// not a composable, so stringResource() cannot be called here. The id
+// travels and the call site resolves it (spec §9 #19 Stage A).
+private enum class HistoryViewMode(@StringRes val label: Int) {
+    LIST(R.string.history_view_list),
+    CALENDAR(R.string.history_view_calendar),
+    TABLE(R.string.history_view_table),
 }
 
 /**
@@ -142,7 +149,7 @@ fun HistoryScreen(
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
             withContext(Dispatchers.IO) {
-                val document = HistoryExporter.buildPdf(exportRows, adherenceSubtitle(exportRows), zone)
+                val document = HistoryExporter.buildPdf(context, exportRows, adherenceSubtitle(exportRows), zone)
                 context.contentResolver.openOutputStream(uri)?.use { HistoryExporter.writePdf(document, it) }
             }
         }
@@ -154,22 +161,22 @@ fun HistoryScreen(
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            Text("History", style = MaterialTheme.typography.headlineSmall)
+            Text(stringResource(R.string.history_history), style = MaterialTheme.typography.headlineSmall)
             if (exportRows.isNotEmpty()) {
                 Box {
                     IconButton(onClick = { showExportMenu = true }) {
-                        Icon(Icons.Filled.MoreVert, contentDescription = "Export")
+                        Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.history_export))
                     }
                     DropdownMenu(expanded = showExportMenu, onDismissRequest = { showExportMenu = false }) {
                         DropdownMenuItem(
-                            text = { Text("Export as CSV") },
+                            text = { Text(stringResource(R.string.history_export_as_csv)) },
                             onClick = {
                                 showExportMenu = false
                                 exportCsvLauncher.launch(defaultExportFileName("csv"))
                             },
                         )
                         DropdownMenuItem(
-                            text = { Text("Export as PDF") },
+                            text = { Text(stringResource(R.string.history_export_as_pdf)) },
                             onClick = {
                                 showExportMenu = false
                                 exportPdfLauncher.launch(defaultExportFileName("pdf"))
@@ -188,7 +195,7 @@ fun HistoryScreen(
                 FilterChip(
                     selected = viewMode == mode,
                     onClick = { viewMode = mode },
-                    label = { Text(mode.label) },
+                    label = { Text(stringResource(mode.label)) },
                 )
             }
         }
@@ -201,7 +208,7 @@ fun HistoryScreen(
                 }
                 days.isEmpty() -> Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                     Text(
-                        "Nothing recorded yet. Taken, skipped, and refilled doses will show up here.",
+                        stringResource(R.string.history_nothing_recorded_yet_taken_skipped_and),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -243,7 +250,7 @@ fun HistoryScreen(
                 }
                 exportRows.isEmpty() -> Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                     Text(
-                        "Nothing recorded yet. Taken, skipped, and refilled doses will show up here.",
+                        stringResource(R.string.history_nothing_recorded_yet_taken_skipped_and),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -369,12 +376,21 @@ private fun AdherenceSummary(events: List<DoseEventWithMedicine>) {
     ) {
         Column(Modifier.padding(14.dp)) {
             Text(
-                if (counts.answered == 0) "No doses answered" else "${counts.percent}% of answered doses taken",
+                if (counts.answered == 0) stringResource(R.string.history_no_doses_answered)
+                else stringResource(R.string.history_percent_taken, counts.percent),
                 style = MaterialTheme.typography.titleMedium,
             )
             Text(
-                "${counts.taken} taken, ${counts.skipped} skipped, ${counts.missed} missed, " +
-                    "last $HISTORY_LOOKBACK_DAYS days",
+                pluralStringResource(
+                    R.plurals.history_counts_summary,
+                    // Long constant, Int quantity: the plural selector and the
+                    // format arg both want an Int.
+                    HISTORY_LOOKBACK_DAYS.toInt(),
+                    counts.taken,
+                    counts.skipped,
+                    counts.missed,
+                    HISTORY_LOOKBACK_DAYS.toInt(),
+                ),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -386,8 +402,11 @@ private fun AdherenceSummary(events: List<DoseEventWithMedicine>) {
 @Composable
 private fun DayHeader(date: LocalDate, today: LocalDate) {
     val label = when {
-        date == today -> "Today"
-        date == today.minusDays(1) -> "Yesterday"
+        // Assigned to a val before reaching Text(), which is exactly the
+        // shape a sink-based scan cannot see -- found by reading, not by the
+        // gate (§9 #19 Stage A, and the gate's own KDoc says so).
+        date == today -> stringResource(R.string.history_today)
+        date == today.minusDays(1) -> stringResource(R.string.history_yesterday)
         else -> date.format(DateTimeFormatter.ofPattern("EEE, MMM d"))
     }
     Text(
@@ -434,7 +453,12 @@ internal fun HistoryEntryRow(row: DoseEventWithMedicine, onClick: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text(medicine.name, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    "${historyStatusLabel(status)} - $time - ${formatDoseWithUnit(row.doseEvent.doseAmount, medicine.doseUnit)}",
+                    stringResource(
+                        R.string.history_entry_summary,
+                        historyStatusLabel(status),
+                        time,
+                        formatDoseWithUnit(row.doseEvent.doseAmount, medicine.doseUnit),
+                    ),
                     // A time and a dose amount together -- squarely what
                     // Typography.doseCritical names a floor for (§7 R47).
                     style = MaterialTheme.typography.doseCritical,

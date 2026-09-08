@@ -28,6 +28,8 @@ import com.hazia.emivita.core.data.repository.DoseEventRepository
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
+import androidx.compose.ui.res.stringResource
+import com.hazia.emivita.R
 
 /**
  * Event editing (spec §3/§9 #3) -- shared between Today and History, since
@@ -97,29 +99,28 @@ fun DoseEditDialog(
             Column {
                 if (wasUnresolved) {
                     Text(
-                        "This dose was never answered. Recording it now keeps the history and " +
-                            "the exported report accurate.",
+                        stringResource(R.string.dose_edit_this_dose_was_never_answered_recording_it),
                         style = MaterialTheme.typography.labelMedium,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                     Spacer(Modifier.height(12.dp))
                 }
-                Text("Status", style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.dose_edit_status), style = MaterialTheme.typography.labelLarge)
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(selected = status == DoseStatus.TAKEN, onClick = { status = DoseStatus.TAKEN })
-                    Text("Taken", Modifier.clickable { status = DoseStatus.TAKEN })
+                    Text(stringResource(R.string.dose_edit_taken), Modifier.clickable { status = DoseStatus.TAKEN })
                 }
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     RadioButton(selected = status == DoseStatus.SKIPPED, onClick = { status = DoseStatus.SKIPPED })
-                    Text("Skipped", Modifier.clickable { status = DoseStatus.SKIPPED })
+                    Text(stringResource(R.string.dose_edit_skipped), Modifier.clickable { status = DoseStatus.SKIPPED })
                 }
                 Spacer(Modifier.height(12.dp))
-                TimeOfDayField("Recorded time", hour, minute) { h, m -> hour = h; minute = m }
+                TimeOfDayField(stringResource(R.string.dose_edit_recorded_time), hour, minute) { h, m -> hour = h; minute = m }
                 Spacer(Modifier.height(12.dp))
                 OutlinedTextField(
                     value = doseAmount,
                     onValueChange = { doseAmount = it },
-                    label = { Text("Dose amount") },
+                    label = { Text(stringResource(R.string.common_dose_amount)) },
                     suffix = doseUnit?.let { unit -> { Text(unit) } },
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
@@ -160,10 +161,10 @@ fun DoseEditDialog(
                         }
                     }
                 },
-            ) { Text("Save") }
+            ) { Text(stringResource(R.string.common_save)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
         },
     )
 }

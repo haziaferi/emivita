@@ -38,8 +38,8 @@ class AlertNotificationBuilder(private val context: Context) {
         val unit = medicine.stockInfo.unit?.let { " $it" } ?: ""
         val builder = NotificationCompat.Builder(context, ReminderNotificationChannels.channelIdFor(medicine.notificationPriority))
             .setSmallIcon(R.drawable.ic_notification_reminder)
-            .setContentTitle("${medicine.name} is running low")
-            .setContentText("${formatDecimal(medicine.stockInfo.quantity)}$unit left")
+            .setContentTitle(context.getString(R.string.alert_low_stock_title, medicine.name))
+            .setContentText(context.getString(R.string.alert_low_stock_text, formatDecimal(medicine.stockInfo.quantity) + unit))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
@@ -49,7 +49,7 @@ class AlertNotificationBuilder(private val context: Context) {
         // without asking the user a question a notification action can't ask.
         val refillAmount = medicine.stockInfo.refillQuantity
         if (refillAmount != null && refillAmount > 0.0) {
-            builder.addAction(0, "Refill", refillPendingIntent(medicine.id, refillAmount, notificationId))
+            builder.addAction(0, context.getString(R.string.action_refill), refillPendingIntent(medicine.id, refillAmount, notificationId))
         }
 
         postIfPermitted(context, TAG, notificationId, builder.build())
@@ -60,8 +60,8 @@ class AlertNotificationBuilder(private val context: Context) {
         val expirationDate = LocalDate.ofEpochDay(expirationEpochDay)
         val builder = NotificationCompat.Builder(context, ReminderNotificationChannels.channelIdFor(medicine.notificationPriority))
             .setSmallIcon(R.drawable.ic_notification_reminder)
-            .setContentTitle("${medicine.name} is expiring")
-            .setContentText("Expires $expirationDate")
+            .setContentTitle(context.getString(R.string.alert_expiring_title, medicine.name))
+            .setContentText(context.getString(R.string.alert_expiring_text, expirationDate.toString()))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)

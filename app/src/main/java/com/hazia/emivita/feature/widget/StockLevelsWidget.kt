@@ -34,6 +34,8 @@ import com.hazia.emivita.core.format.formatDecimal
 import com.hazia.emivita.MainActivity
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import androidx.glance.LocalContext
+import com.hazia.emivita.R
 
 private const val MAX_ROWS = 4
 
@@ -97,13 +99,13 @@ private fun StockLevelsContent(rows: List<StockRow>) {
             .clickable(actionStartActivity<MainActivity>()),
     ) {
         Text(
-            "Stock levels",
+            LocalContext.current.getString(R.string.widget_stock_levels_header),
             style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = GlanceTheme.colors.onBackground),
         )
         Spacer(modifier = GlanceModifier.height(4.dp))
         if (rows.isEmpty()) {
             Text(
-                "No tracked stock",
+                LocalContext.current.getString(R.string.widget_no_tracked_stock),
                 style = TextStyle(fontSize = 13.sp, color = GlanceTheme.colors.onSurfaceVariant),
             )
         } else {
@@ -125,13 +127,17 @@ private fun StockRowItem(row: StockRow, showRefillAction: Boolean) {
         Column(modifier = GlanceModifier.defaultWeight()) {
             Text(row.medicineName, style = TextStyle(fontSize = 13.sp, color = GlanceTheme.colors.onSurface))
             Text(
-                "${formatDecimal(row.quantity)} ${row.unit} • $subtitle",
+                LocalContext.current.getString(
+                    R.string.widget_stock_row,
+                    "${formatDecimal(row.quantity)} ${row.unit}",
+                    subtitle,
+                ),
                 style = TextStyle(fontSize = 11.sp, color = GlanceTheme.colors.onSurfaceVariant),
             )
         }
         if (showRefillAction) {
             Text(
-                "Refill",
+                LocalContext.current.getString(R.string.action_refill),
                 modifier = GlanceModifier
                     .background(GlanceTheme.colors.primary)
                     .cornerRadius(8.dp)

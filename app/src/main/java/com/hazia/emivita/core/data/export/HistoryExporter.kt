@@ -10,6 +10,8 @@ import java.io.OutputStream
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import android.content.Context
+import com.hazia.emivita.R
 
 private val DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 private val TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm")
@@ -69,7 +71,16 @@ object HistoryExporter {
      *  computes (e.g. "82% adherence -- 41 taken, 9 skipped, last 30 days")
      *  so the report doesn't recompute it independently and risk drifting
      *  from what the screen shows for the same window. */
-    fun buildPdf(rows: List<DoseEventWithMedicine>, subtitle: String, zone: ZoneId = ZoneId.systemDefault()): PdfDocument {
+    //  [context] is here only to resolve the title and column headers. This
+    //  is a document handed to a person, so its headers are translated;
+    //  [buildCsv]'s deliberately are not, because a CSV is data for a
+    //  spreadsheet and a renamed column breaks whatever reads it (§9 #19).
+    fun buildPdf(
+        context: Context,
+        rows: List<DoseEventWithMedicine>,
+        subtitle: String,
+        zone: ZoneId = ZoneId.systemDefault(),
+    ): PdfDocument {
         val pageWidth = 595 // A4 at 72dpi
         val pageHeight = 842
         val marginX = 40f
@@ -97,16 +108,16 @@ object HistoryExporter {
             canvas = page!!.canvas
             y = 50f
             if (pageNumber == 1) {
-                canvas!!.drawText("Emivita -- Dose History", marginX, y, titlePaint)
+                canvas!!.drawText(context.getString(R.string.pdf_title), marginX, y, titlePaint)
                 y += 22f
                 canvas!!.drawText(subtitle, marginX, y, subtitlePaint)
                 y += 24f
             }
-            canvas!!.drawText("Date", colDate, y, headerPaint)
-            canvas!!.drawText("Time", colTime, y, headerPaint)
-            canvas!!.drawText("Medicine", colMedicine, y, headerPaint)
-            canvas!!.drawText("Status", colStatus, y, headerPaint)
-            canvas!!.drawText("Dose", colDose, y, headerPaint)
+            canvas!!.drawText(context.getString(R.string.pdf_col_date), colDate, y, headerPaint)
+            canvas!!.drawText(context.getString(R.string.pdf_col_time), colTime, y, headerPaint)
+            canvas!!.drawText(context.getString(R.string.pdf_col_medicine), colMedicine, y, headerPaint)
+            canvas!!.drawText(context.getString(R.string.pdf_col_status), colStatus, y, headerPaint)
+            canvas!!.drawText(context.getString(R.string.pdf_col_dose), colDose, y, headerPaint)
             y += rowHeight
         }
 

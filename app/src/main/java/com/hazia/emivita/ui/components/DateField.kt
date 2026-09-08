@@ -15,6 +15,8 @@ import androidx.compose.runtime.setValue
 import java.time.LocalDate
 import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
+import androidx.compose.ui.res.stringResource
+import com.hazia.emivita.R
 
 private val DATE_LABEL_FORMAT = DateTimeFormatter.ofPattern("MMM d, yyyy")
 
@@ -31,8 +33,8 @@ fun DateField(label: String, epochDay: Long?, onChange: (Long?) -> Unit) {
     var showDialog by remember { mutableStateOf(false) }
 
     OutlinedButton(onClick = { showDialog = true }) {
-        val display = epochDay?.let { LocalDate.ofEpochDay(it).format(DATE_LABEL_FORMAT) } ?: "Not set"
-        Text("$label: $display")
+        val display = epochDay?.let { LocalDate.ofEpochDay(it).format(DATE_LABEL_FORMAT) } ?: stringResource(R.string.common_not_set)
+        Text(stringResource(R.string.field_label_value, label, display))
     }
 
     if (showDialog) {
@@ -50,9 +52,9 @@ fun DateField(label: String, epochDay: Long?, onChange: (Long?) -> Unit) {
                     val millis = state.selectedDateMillis
                     onChange(millis?.let { it / 86_400_000L })
                     showDialog = false
-                }) { Text("OK") }
+                }) { Text(stringResource(R.string.common_ok)) }
             },
-            dismissButton = { TextButton(onClick = { showDialog = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { showDialog = false }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
 }

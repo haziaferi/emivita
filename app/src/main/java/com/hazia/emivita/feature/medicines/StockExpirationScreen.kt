@@ -57,6 +57,8 @@ import com.hazia.emivita.ui.components.DateField
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
+import androidx.compose.ui.res.stringResource
+import com.hazia.emivita.R
 
 private val RUN_OUT_FORMAT = DateTimeFormatter.ofPattern("MMM d, yyyy")
 
@@ -144,10 +146,10 @@ fun StockExpirationScreen(
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             IconButton(onClick = onBack) {
-                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
             }
             Spacer(Modifier.width(4.dp))
-            Text("Stock & Expiration", style = MaterialTheme.typography.headlineSmall)
+            Text(stringResource(R.string.common_stock_expiration), style = MaterialTheme.typography.headlineSmall)
         }
         Spacer(Modifier.height(20.dp))
 
@@ -161,7 +163,7 @@ fun StockExpirationScreen(
             OutlinedTextField(
                 value = quantity,
                 onValueChange = { quantity = it },
-                label = { Text("Quantity") },
+                label = { Text(stringResource(R.string.stock_expiration_quantity)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -170,7 +172,7 @@ fun StockExpirationScreen(
             OutlinedTextField(
                 value = unit,
                 onValueChange = { unit = it },
-                label = { Text("Unit (e.g. tablet, mL)") },
+                label = { Text(stringResource(R.string.stock_expiration_unit_e_g_tablet_ml)) },
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
             )
@@ -178,7 +180,7 @@ fun StockExpirationScreen(
             OutlinedTextField(
                 value = refillQuantity,
                 onValueChange = { refillQuantity = it },
-                label = { Text("Refill amount (one-tap restock)") },
+                label = { Text(stringResource(R.string.stock_expiration_refill_amount_one_tap_restock)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -201,7 +203,7 @@ fun StockExpirationScreen(
                         saveStatus = "Refilled."
                     }
                 },
-            ) { Text("Refill now (+$refillQuantity)") }
+            ) { Text(stringResource(R.string.stock_refill_now, refillQuantity.toString())) }
         }
 
         Spacer(Modifier.height(16.dp))
@@ -213,7 +215,7 @@ fun StockExpirationScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Notify when stock runs low", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.stock_expiration_notify_when_stock_runs_low), style = MaterialTheme.typography.bodyMedium)
                 Switch(checked = lowStockEnabled, onCheckedChange = { lowStockEnabled = it })
             }
             if (lowStockEnabled) {
@@ -221,28 +223,28 @@ fun StockExpirationScreen(
                 OutlinedTextField(
                     value = threshold,
                     onValueChange = { threshold = it },
-                    label = { Text("Threshold") },
+                    label = { Text(stringResource(R.string.stock_expiration_threshold)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(8.dp))
-                Text("Notify", style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.common_notify), style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
                         selected = triggerMode == LowStockTriggerMode.ONCE_WHEN_BELOW,
                         onClick = { triggerMode = LowStockTriggerMode.ONCE_WHEN_BELOW },
-                        label = { Text("Once") },
+                        label = { Text(stringResource(R.string.common_once)) },
                     )
                     FilterChip(
                         selected = triggerMode == LowStockTriggerMode.DAILY_WHEN_BELOW,
                         onClick = { triggerMode = LowStockTriggerMode.DAILY_WHEN_BELOW },
-                        label = { Text("Daily") },
+                        label = { Text(stringResource(R.string.common_daily)) },
                     )
                     FilterChip(
                         selected = triggerMode == LowStockTriggerMode.ALWAYS_WHEN_BELOW,
                         onClick = { triggerMode = LowStockTriggerMode.ALWAYS_WHEN_BELOW },
-                        label = { Text("Always") },
+                        label = { Text(stringResource(R.string.stock_expiration_always)) },
                     )
                 }
             }
@@ -257,33 +259,33 @@ fun StockExpirationScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
-                Text("Notify as expiration nears", style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(R.string.stock_expiration_notify_as_expiration_nears), style = MaterialTheme.typography.bodyMedium)
                 Switch(checked = expirationEnabled, onCheckedChange = { expirationEnabled = it })
             }
             Spacer(Modifier.height(8.dp))
-            DateField("Expiration date", expirationDateEpochDay) { expirationDateEpochDay = it }
+            DateField(stringResource(R.string.stock_expiration_expiration_date), expirationDateEpochDay) { expirationDateEpochDay = it }
             if (expirationEnabled) {
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
                     value = leadDays,
                     onValueChange = { leadDays = it },
-                    label = { Text("Lead days (notify this many days before)") },
+                    label = { Text(stringResource(R.string.stock_expiration_lead_days_notify_this_many_days_before)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
                 Spacer(Modifier.height(8.dp))
-                Text("Notify", style = MaterialTheme.typography.labelLarge)
+                Text(stringResource(R.string.common_notify), style = MaterialTheme.typography.labelLarge)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
                         selected = frequency == ExpirationTriggerFrequency.ONCE,
                         onClick = { frequency = ExpirationTriggerFrequency.ONCE },
-                        label = { Text("Once") },
+                        label = { Text(stringResource(R.string.common_once)) },
                     )
                     FilterChip(
                         selected = frequency == ExpirationTriggerFrequency.DAILY,
                         onClick = { frequency = ExpirationTriggerFrequency.DAILY },
-                        label = { Text("Daily") },
+                        label = { Text(stringResource(R.string.common_daily)) },
                     )
                 }
             }
@@ -378,7 +380,7 @@ fun StockExpirationScreen(
 
                 onBack()
             }
-        }) { Text("Save") }
+        }) { Text(stringResource(R.string.common_save)) }
         saveStatus?.let {
             Spacer(Modifier.height(4.dp))
             Text(it, style = MaterialTheme.typography.labelMedium)

@@ -57,6 +57,8 @@ import com.hazia.emivita.ui.icons.MedicineIcons
 import com.hazia.emivita.ui.theme.NeutralMedicineAccent
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
+import com.hazia.emivita.R
 
 /**
  * Add Medicine (spec §6 field order: name + barcode -> appearance (icon +
@@ -291,7 +293,7 @@ private fun MedicineFormBody(
         OutlinedTextField(
             value = name,
             onValueChange = { name = it },
-            label = { Text("Name") },
+            label = { Text(stringResource(R.string.common_name)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -304,8 +306,8 @@ private fun MedicineFormBody(
         OutlinedTextField(
             value = doseUnit,
             onValueChange = { doseUnit = it },
-            label = { Text("Measurement (optional)") },
-            placeholder = { Text("e.g. capsules, drops, tablet") },
+            label = { Text(stringResource(R.string.add_medicine_measurement_optional)) },
+            placeholder = { Text(stringResource(R.string.add_medicine_e_g_capsules_drops_tablet)) },
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
@@ -327,7 +329,7 @@ private fun MedicineFormBody(
         }
         if (scanUnavailable) {
             Text(
-                "No barcode scanner app installed (e.g. Binary Eye from F-Droid).",
+                stringResource(R.string.common_no_barcode_scanner_app_installed_e_g_binary),
                 style = MaterialTheme.typography.labelSmall,
                 // A note about an OPTIONAL convenience, not a failure. `error`
                 // here told the reader something had gone wrong when nothing had.
@@ -336,7 +338,7 @@ private fun MedicineFormBody(
         }
 
         Spacer(Modifier.height(20.dp))
-        Text("Appearance", style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.common_appearance), style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.height(8.dp))
         LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
             items(MedicineIcons.options) { option ->
@@ -351,7 +353,7 @@ private fun MedicineFormBody(
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         Icon(
                             option.icon,
-                            contentDescription = option.label,
+                            contentDescription = stringResource(option.label),
                             tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
                         )
                     }
@@ -371,13 +373,13 @@ private fun MedicineFormBody(
         }
 
         Spacer(Modifier.height(20.dp))
-        Text("Tags", style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.add_medicine_tags), style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.height(8.dp))
         Row(verticalAlignment = Alignment.CenterVertically) {
             OutlinedTextField(
                 value = tagInput,
                 onValueChange = { tagInput = it },
-                label = { Text("Add a tag") },
+                label = { Text(stringResource(R.string.add_medicine_add_a_tag)) },
                 singleLine = true,
                 modifier = Modifier.weight(1f),
             )
@@ -388,7 +390,7 @@ private fun MedicineFormBody(
                     pendingTags = pendingTags + trimmed
                 }
                 tagInput = ""
-            }) { Text("Add") }
+            }) { Text(stringResource(R.string.add_medicine_add)) }
         }
         if (pendingTags.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
@@ -401,7 +403,7 @@ private fun MedicineFormBody(
                         trailingIcon = {
                             Icon(
                                 Icons.Filled.Close,
-                                contentDescription = "Remove",
+                                contentDescription = stringResource(R.string.add_medicine_remove),
                                 modifier = Modifier
                                     .size(16.dp)
                                     .clickable { pendingTags = pendingTags - tag },
@@ -416,7 +418,7 @@ private fun MedicineFormBody(
         OutlinedTextField(
             value = indication,
             onValueChange = { indication = it },
-            label = { Text("What it's for (optional)") },
+            label = { Text(stringResource(R.string.add_medicine_what_it_s_for_optional)) },
             singleLine = true,
             textStyle = MaterialTheme.typography.bodySmall,
             modifier = Modifier.fillMaxWidth(),
@@ -425,25 +427,25 @@ private fun MedicineFormBody(
         OutlinedTextField(
             value = storageNote,
             onValueChange = { storageNote = it },
-            label = { Text("Storage note (optional)") },
+            label = { Text(stringResource(R.string.add_medicine_storage_note_optional)) },
             singleLine = true,
             textStyle = MaterialTheme.typography.bodySmall,
             modifier = Modifier.fillMaxWidth(),
         )
 
         Spacer(Modifier.height(20.dp))
-        Text("Lock reminders until taken", style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.add_medicine_lock_reminders_until_taken), style = MaterialTheme.typography.labelLarge)
         Row(verticalAlignment = Alignment.CenterVertically) {
             RadioButton(selected = lockOverride == null, onClick = { lockOverride = null })
-            Text("Use global default")
+            Text(stringResource(R.string.add_medicine_use_global_default))
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             RadioButton(selected = lockOverride == true, onClick = { lockOverride = true })
-            Text("Always lock")
+            Text(stringResource(R.string.add_medicine_always_lock))
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             RadioButton(selected = lockOverride == false, onClick = { lockOverride = false })
-            Text("Never lock")
+            Text(stringResource(R.string.add_medicine_never_lock))
         }
 
         Spacer(Modifier.height(24.dp))
@@ -477,7 +479,7 @@ private fun MedicineFormBody(
                     }
                 },
             ) { Text(saveLabel) }
-            Button(onClick = onCancel) { Text("Cancel") }
+            Button(onClick = onCancel) { Text(stringResource(R.string.common_cancel)) }
         }
         saveError?.let {
             Spacer(Modifier.height(8.dp))

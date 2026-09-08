@@ -68,6 +68,8 @@ import com.hazia.emivita.ui.components.DateField
 import com.hazia.emivita.ui.components.TimeOfDayField
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import androidx.compose.ui.res.stringResource
+import com.hazia.emivita.R
 
 private data class ReminderTypeOption(
     val type: ReminderType,
@@ -332,7 +334,7 @@ fun EditReminderScreen(
 @Composable
 private fun ReminderTypePicker(onSelect: (ReminderType) -> Unit, onCancel: () -> Unit) {
     Column(Modifier.fillMaxWidth()) {
-        TopAppBar(title = { Text("Add reminder") })
+        TopAppBar(title = { Text(stringResource(R.string.common_add_reminder)) })
         LazyColumn(contentPadding = PaddingValues(16.dp)) {
             items(reminderTypeOptions) { option ->
                 Surface(
@@ -382,7 +384,7 @@ private fun ReminderFormScaffold(
         Spacer(Modifier.height(24.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(onClick = onSave, enabled = saveEnabled) { Text(saveLabel) }
-            Button(onClick = onCancel) { Text("Cancel") }
+            Button(onClick = onCancel) { Text(stringResource(R.string.common_cancel)) }
         }
     }
 }
@@ -392,7 +394,7 @@ private fun DoseField(dose: String, doseUnit: String? = null, onChange: (String)
     OutlinedTextField(
         value = dose,
         onValueChange = onChange,
-        label = { Text("Dose amount") },
+        label = { Text(stringResource(R.string.common_dose_amount)) },
         suffix = doseUnit?.let { unit -> { Text(unit) } },
         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
         singleLine = true,
@@ -458,7 +460,7 @@ private fun AdvancedReminderFieldsSection(state: AdvancedReminderFieldsState) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("Advanced", style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.add_reminder_advanced), style = MaterialTheme.typography.labelLarge)
         Text(if (expanded) "▲" else "▼", style = MaterialTheme.typography.labelLarge)
     }
 
@@ -471,9 +473,9 @@ private fun AdvancedReminderFieldsSection(state: AdvancedReminderFieldsState) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text("Auto-resolve", style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.add_reminder_auto_resolve), style = MaterialTheme.typography.bodyMedium)
             Text(
-                "Silently mark taken, no notification -- for tracking a reminder set up for someone else.",
+                stringResource(R.string.add_reminder_silently_mark_taken_no_notification_for),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -482,16 +484,16 @@ private fun AdvancedReminderFieldsSection(state: AdvancedReminderFieldsState) {
     }
 
     Spacer(Modifier.height(12.dp))
-    Text("Active date range", style = MaterialTheme.typography.labelLarge)
+    Text(stringResource(R.string.add_reminder_active_date_range), style = MaterialTheme.typography.labelLarge)
     Text(
-        "Leave unset for no bound -- a taper is just several reminders with adjacent ranges.",
+        stringResource(R.string.add_reminder_leave_unset_for_no_bound_a_taper_is_just),
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
     )
     Spacer(Modifier.height(6.dp))
     Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-        DateField("From", state.activeFromEpochDay) { state.activeFromEpochDay = it }
-        DateField("Until", state.activeUntilEpochDay) { state.activeUntilEpochDay = it }
+        DateField(stringResource(R.string.add_reminder_from), state.activeFromEpochDay) { state.activeFromEpochDay = it }
+        DateField(stringResource(R.string.add_reminder_until), state.activeUntilEpochDay) { state.activeUntilEpochDay = it }
     }
 
     Spacer(Modifier.height(12.dp))
@@ -500,7 +502,7 @@ private fun AdvancedReminderFieldsSection(state: AdvancedReminderFieldsState) {
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text("Repeat until answered", style = MaterialTheme.typography.bodyMedium)
+        Text(stringResource(R.string.add_reminder_repeat_until_answered), style = MaterialTheme.typography.bodyMedium)
         Switch(checked = state.nagEnabled, onCheckedChange = { state.nagEnabled = it })
     }
     if (state.nagEnabled) {
@@ -509,7 +511,7 @@ private fun AdvancedReminderFieldsSection(state: AdvancedReminderFieldsState) {
             OutlinedTextField(
                 value = state.nagDelayMinutes,
                 onValueChange = { state.nagDelayMinutes = it },
-                label = { Text("Every (min)") },
+                label = { Text(stringResource(R.string.add_reminder_every_min)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
                 modifier = Modifier.weight(1f),
@@ -517,7 +519,7 @@ private fun AdvancedReminderFieldsSection(state: AdvancedReminderFieldsState) {
             OutlinedTextField(
                 value = state.nagMaxRepeats,
                 onValueChange = { state.nagMaxRepeats = it },
-                label = { Text("Max repeats") },
+                label = { Text(stringResource(R.string.add_reminder_max_repeats)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
                 modifier = Modifier.weight(1f),
@@ -532,14 +534,13 @@ private fun AdvancedReminderFieldsSection(state: AdvancedReminderFieldsState) {
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text("Follow weekend mode", style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.add_reminder_follow_weekend_mode), style = MaterialTheme.typography.bodyMedium)
             // Says what it costs, not just what it does: this switch delays a
             // dose, and which days and how late are set once in Settings >
             // Weekend mode rather than per reminder. Off by default -- see
             // Reminder.weekendModeOptIn and docs/SPEC.md §7 R36.
             Text(
-                "Push this reminder to the end of the weekend window on weekend days. " +
-                    "Set the days and window in Settings.",
+                stringResource(R.string.add_reminder_push_this_reminder_to_the_end_of_the_weekend),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -551,14 +552,14 @@ private fun AdvancedReminderFieldsSection(state: AdvancedReminderFieldsState) {
 @Composable
 private fun StartBehaviorPicker(value: IntervalStartBehavior, onChange: (IntervalStartBehavior) -> Unit) {
     Column {
-        Text("Interval starts", style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.add_reminder_interval_starts), style = MaterialTheme.typography.labelLarge)
         Row(verticalAlignment = Alignment.CenterVertically) {
             RadioButton(selected = value == IntervalStartBehavior.ON_REMINDED, onClick = { onChange(IntervalStartBehavior.ON_REMINDED) })
-            Text("When reminded", Modifier.clickable { onChange(IntervalStartBehavior.ON_REMINDED) })
+            Text(stringResource(R.string.add_reminder_when_reminded), Modifier.clickable { onChange(IntervalStartBehavior.ON_REMINDED) })
         }
         Row(verticalAlignment = Alignment.CenterVertically) {
             RadioButton(selected = value == IntervalStartBehavior.ON_RESOLVED, onClick = { onChange(IntervalStartBehavior.ON_RESOLVED) })
-            Text("When taken or skipped", Modifier.clickable { onChange(IntervalStartBehavior.ON_RESOLVED) })
+            Text(stringResource(R.string.add_reminder_when_taken_or_skipped), Modifier.clickable { onChange(IntervalStartBehavior.ON_RESOLVED) })
         }
     }
 }
@@ -633,16 +634,16 @@ private fun FixedTimeFormBody(
         },
         onCancel = onCancel,
     ) {
-        TimeOfDayField("Time", hour, minute) { h, m -> hour = h; minute = m }
+        TimeOfDayField(stringResource(R.string.add_reminder_time), hour, minute) { h, m -> hour = h; minute = m }
         Spacer(Modifier.height(12.dp))
         DoseField(dose, doseUnit) { dose = it }
         Spacer(Modifier.height(16.dp))
-        Text("Repeats", style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.add_reminder_repeats), style = MaterialTheme.typography.labelLarge)
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = patternKind == 0, onClick = { patternKind = 0 }, label = { Text("Daily") })
-            FilterChip(selected = patternKind == 1, onClick = { patternKind = 1 }, label = { Text("Specific days") })
-            FilterChip(selected = patternKind == 2, onClick = { patternKind = 2 }, label = { Text("Every N days") })
-            FilterChip(selected = patternKind == 3, onClick = { patternKind = 3 }, label = { Text("Active/pause cycle") })
+            FilterChip(selected = patternKind == 0, onClick = { patternKind = 0 }, label = { Text(stringResource(R.string.common_daily)) })
+            FilterChip(selected = patternKind == 1, onClick = { patternKind = 1 }, label = { Text(stringResource(R.string.add_reminder_specific_days)) })
+            FilterChip(selected = patternKind == 2, onClick = { patternKind = 2 }, label = { Text(stringResource(R.string.add_reminder_every_n_days)) })
+            FilterChip(selected = patternKind == 3, onClick = { patternKind = 3 }, label = { Text(stringResource(R.string.add_reminder_active_pause_cycle)) })
         }
         if (patternKind == 1) {
             Spacer(Modifier.height(8.dp))
@@ -667,7 +668,7 @@ private fun FixedTimeFormBody(
             OutlinedTextField(
                 value = everyN,
                 onValueChange = { everyN = it },
-                label = { Text("Every N days") },
+                label = { Text(stringResource(R.string.add_reminder_every_n_days)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
             )
@@ -677,7 +678,7 @@ private fun FixedTimeFormBody(
             OutlinedTextField(
                 value = activeDays,
                 onValueChange = { activeDays = it },
-                label = { Text("Active days") },
+                label = { Text(stringResource(R.string.add_reminder_active_days)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
             )
@@ -685,13 +686,13 @@ private fun FixedTimeFormBody(
             OutlinedTextField(
                 value = pauseDays,
                 onValueChange = { pauseDays = it },
-                label = { Text("Pause days") },
+                label = { Text(stringResource(R.string.add_reminder_pause_days)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 singleLine = true,
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                "Cycle starts today; the anchor date isn't editable yet.",
+                stringResource(R.string.add_reminder_cycle_starts_today_the_anchor_date_isn_t),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -756,7 +757,7 @@ private fun RepeatingIntervalFormBody(
         OutlinedTextField(
             value = intervalHours,
             onValueChange = { intervalHours = it },
-            label = { Text("Every ___ hours") },
+            label = { Text(stringResource(R.string.add_reminder_every_hours)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -829,7 +830,7 @@ private fun DailyWindowFormBody(
         OutlinedTextField(
             value = intervalHours,
             onValueChange = { intervalHours = it },
-            label = { Text("Every ___ hours") },
+            label = { Text(stringResource(R.string.add_reminder_every_hours)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
@@ -838,8 +839,8 @@ private fun DailyWindowFormBody(
         DoseField(dose, doseUnit) { dose = it }
         Spacer(Modifier.height(16.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            TimeOfDayField("Window start", startHour, startMinute) { h, m -> startHour = h; startMinute = m }
-            TimeOfDayField("Window end", endHour, endMinute) { h, m -> endHour = h; endMinute = m }
+            TimeOfDayField(stringResource(R.string.common_window_start), startHour, startMinute) { h, m -> startHour = h; startMinute = m }
+            TimeOfDayField(stringResource(R.string.common_window_end), endHour, endMinute) { h, m -> endHour = h; endMinute = m }
         }
         Spacer(Modifier.height(16.dp))
         StartBehaviorPicker(startBehavior) { startBehavior = it }
@@ -879,25 +880,25 @@ private fun LowStockAlertFormBody(
         OutlinedTextField(
             value = threshold,
             onValueChange = { threshold = it },
-            label = { Text("Alert when stock is at or below") },
+            label = { Text(stringResource(R.string.add_reminder_alert_when_stock_is_at_or_below)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(16.dp))
-        Text("Notify", style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.common_notify), style = MaterialTheme.typography.labelLarge)
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(selected = triggerMode == LowStockTriggerMode.ONCE_WHEN_BELOW, onClick = { triggerMode = LowStockTriggerMode.ONCE_WHEN_BELOW })
-                Text("Once, until restocked", Modifier.clickable { triggerMode = LowStockTriggerMode.ONCE_WHEN_BELOW })
+                Text(stringResource(R.string.add_reminder_once_until_restocked), Modifier.clickable { triggerMode = LowStockTriggerMode.ONCE_WHEN_BELOW })
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(selected = triggerMode == LowStockTriggerMode.DAILY_WHEN_BELOW, onClick = { triggerMode = LowStockTriggerMode.DAILY_WHEN_BELOW })
-                Text("Once a day, while low", Modifier.clickable { triggerMode = LowStockTriggerMode.DAILY_WHEN_BELOW })
+                Text(stringResource(R.string.add_reminder_once_a_day_while_low), Modifier.clickable { triggerMode = LowStockTriggerMode.DAILY_WHEN_BELOW })
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(selected = triggerMode == LowStockTriggerMode.ALWAYS_WHEN_BELOW, onClick = { triggerMode = LowStockTriggerMode.ALWAYS_WHEN_BELOW })
-                Text("Every relevant change, while low", Modifier.clickable { triggerMode = LowStockTriggerMode.ALWAYS_WHEN_BELOW })
+                Text(stringResource(R.string.add_reminder_every_relevant_change_while_low), Modifier.clickable { triggerMode = LowStockTriggerMode.ALWAYS_WHEN_BELOW })
             }
         }
 
@@ -906,7 +907,7 @@ private fun LowStockAlertFormBody(
         // alarm rings. Last in the form on purpose: the threshold or lead
         // time is what the user came here to set; the hour is a detail with
         // a sensible default.
-        TimeOfDayField("Alert at", hour, minute) { h, m -> hour = h; minute = m }
+        TimeOfDayField(stringResource(R.string.add_reminder_alert_at), hour, minute) { h, m -> hour = h; minute = m }
     }
 }
 
@@ -941,27 +942,27 @@ private fun ExpirationAlertFormBody(
         OutlinedTextField(
             value = leadDays,
             onValueChange = { leadDays = it },
-            label = { Text("Days before expiration to start alerting") },
+            label = { Text(stringResource(R.string.add_reminder_days_before_expiration_to_start_alerting)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(16.dp))
-        Text("Notify", style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.common_notify), style = MaterialTheme.typography.labelLarge)
         Column {
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(selected = frequency == ExpirationTriggerFrequency.ONCE, onClick = { frequency = ExpirationTriggerFrequency.ONCE })
-                Text("Once", Modifier.clickable { frequency = ExpirationTriggerFrequency.ONCE })
+                Text(stringResource(R.string.common_once), Modifier.clickable { frequency = ExpirationTriggerFrequency.ONCE })
             }
             Row(verticalAlignment = Alignment.CenterVertically) {
                 RadioButton(selected = frequency == ExpirationTriggerFrequency.DAILY, onClick = { frequency = ExpirationTriggerFrequency.DAILY })
-                Text("Once a day", Modifier.clickable { frequency = ExpirationTriggerFrequency.DAILY })
+                Text(stringResource(R.string.add_reminder_once_a_day), Modifier.clickable { frequency = ExpirationTriggerFrequency.DAILY })
             }
         }
 
         // See LowStockAlertFormBody's note: alert reminders own a real
         // alarm since spec §7 R37, so they need a time to ring at.
-        TimeOfDayField("Alert at", hour, minute) { h, m -> hour = h; minute = m }
+        TimeOfDayField(stringResource(R.string.add_reminder_alert_at), hour, minute) { h, m -> hour = h; minute = m }
     }
 }
 
@@ -1038,9 +1039,9 @@ private fun LinkedFollowingFormBody(
         onCancel = onCancel,
     ) {
         when {
-            currentSiblings == null -> Text("Loading...", style = MaterialTheme.typography.bodyMedium)
+            currentSiblings == null -> Text(stringResource(R.string.common_loading), style = MaterialTheme.typography.bodyMedium)
             currentSiblings.isEmpty() -> Text(
-                "This medicine needs another reminder first -- a following dose has to follow something.",
+                stringResource(R.string.add_reminder_this_medicine_needs_another_reminder_first_a),
                 style = MaterialTheme.typography.bodyMedium,
             )
             else -> {
@@ -1049,7 +1050,7 @@ private fun LinkedFollowingFormBody(
                         value = selectedParent?.let { reminderLabel(it) } ?: "",
                         onValueChange = {},
                         readOnly = true,
-                        label = { Text("Follows") },
+                        label = { Text(stringResource(R.string.add_reminder_follows)) },
                         trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = menuExpanded) },
                         modifier = Modifier
                             .fillMaxWidth()
@@ -1071,7 +1072,7 @@ private fun LinkedFollowingFormBody(
                 OutlinedTextField(
                     value = delayMinutes,
                     onValueChange = { delayMinutes = it },
-                    label = { Text("Minutes after parent (1-1440)") },
+                    label = { Text(stringResource(R.string.add_reminder_minutes_after_parent_1_1440)) },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),

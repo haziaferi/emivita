@@ -54,6 +54,8 @@ import java.time.YearMonth
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
+import androidx.compose.ui.res.stringResource
+import com.hazia.emivita.R
 
 /**
  * Calendar view for History (spec §5 ADR-0001 shopping list, §9 #6).
@@ -146,17 +148,20 @@ private fun CalendarSelectedDayPanel(
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
         when {
             selectedDate == null -> Text(
-                "Tap a day to see what happened.",
+                stringResource(R.string.history_calendar_tap_a_day_to_see_what_happened),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             monthLoading -> Text(
-                "Loading…",
+                stringResource(R.string.history_calendar_loading),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             entries.isNullOrEmpty() -> Text(
-                "Nothing recorded on ${selectedDate.format(DateTimeFormatter.ofPattern("EEE, MMM d"))}.",
+                stringResource(
+                    R.string.history_nothing_recorded_on,
+                    selectedDate.format(DateTimeFormatter.ofPattern("EEE, MMM d")),
+                ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

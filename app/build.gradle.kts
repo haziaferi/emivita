@@ -166,6 +166,24 @@ android {
         debug {
             isDebuggable = true
             isMinifyEnabled = false
+
+            // Pseudolocalization (spec §9 #19 Stage A). Builds `en-XA`, which
+            // renders every string that actually came from a resource as
+            // [Ácçéñtéd Ténnnxt ...] with ~30% padding, and `ar-XB`, which is
+            // right-to-left. Both are generated from the default strings at
+            // build time; nothing is translated and no locale is shipped.
+            //
+            // This is the instrument that makes the extraction checkable
+            // *while* it happens rather than afterwards: switch the device to
+            // en-XA and any string still hardcoded in Kotlin renders plain
+            // English amid accented text, so an incomplete extraction is
+            // visible on the screen instead of being a claim about the source.
+            // The padding also surfaces layouts that only fit English, which
+            // is the other half of what a translation breaks.
+            //
+            // Debug only. It costs two generated resource sets in the debug
+            // APK and nothing in release.
+            isPseudoLocalesEnabled = true
             // No applicationIdSuffix, deliberately. The usual reason for one is
             // to run debug and release side by side; here that is the thing to
             // avoid. A suffix makes them two unrelated apps to Android -- two

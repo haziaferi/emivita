@@ -34,6 +34,8 @@ import com.hazia.emivita.core.data.repository.MedicineRepository
 import com.hazia.emivita.core.data.repository.ProfileRepository
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
+import com.hazia.emivita.R
 
 /**
  * Medical ID (spec section 9's parking lot, promoted in section 7 R48).
@@ -136,7 +138,7 @@ fun MedicalIdScreen(
     }
 
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
-        DetailHeader("Medical ID", onBack)
+        DetailHeader(stringResource(R.string.medical_id_medical_id), onBack)
 
         if (!loaded) {
             CircularProgressIndicator()
@@ -144,22 +146,21 @@ fun MedicalIdScreen(
         }
         val base = profile
         if (base == null) {
-            Text("Profile not found.", style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(R.string.medical_id_profile_not_found), style = MaterialTheme.typography.bodyMedium)
             return@Column
         }
 
         Text(
-            "Printed onto an emergency card you can hand to a doctor or keep in a wallet. " +
-                "Emivita never checks any of it against your medicines - it writes down what you type.",
+            stringResource(R.string.medical_id_printed_onto_an_emergency_card_you_can_hand),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(16.dp))
 
-        Field("Name", name, { name = it }, "Printed at the top of the card")
-        Field("Blood type", bloodType, { bloodType = it }, "For example O+, AB-")
+        Field(stringResource(R.string.common_name), name, { name = it }, "Printed at the top of the card")
+        Field(stringResource(R.string.medical_id_blood_type), bloodType, { bloodType = it }, "For example O+, AB-")
         Field(
-            "Allergies",
+            stringResource(R.string.medical_id_allergies),
             allergies,
             { allergies = it },
             "Free text. Listed on the card exactly as written here",
@@ -167,17 +168,17 @@ fun MedicalIdScreen(
         )
 
         Spacer(Modifier.height(8.dp))
-        Text("Doctor", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.medical_id_doctor), style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(8.dp))
-        Field("Doctor name", doctorName, { doctorName = it })
-        Field("Doctor phone", doctorPhone, { doctorPhone = it })
-        Field("Doctor address", doctorAddress, { doctorAddress = it }, singleLine = false)
+        Field(stringResource(R.string.medical_id_doctor_name), doctorName, { doctorName = it })
+        Field(stringResource(R.string.medical_id_doctor_phone), doctorPhone, { doctorPhone = it })
+        Field(stringResource(R.string.medical_id_doctor_address), doctorAddress, { doctorAddress = it }, singleLine = false)
 
         Spacer(Modifier.height(8.dp))
-        Text("Pharmacy", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.medical_id_pharmacy), style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(8.dp))
-        Field("Pharmacy name", pharmacyName, { pharmacyName = it })
-        Field("Pharmacy phone", pharmacyPhone, { pharmacyPhone = it })
+        Field(stringResource(R.string.medical_id_pharmacy_name), pharmacyName, { pharmacyName = it })
+        Field(stringResource(R.string.medical_id_pharmacy_phone), pharmacyPhone, { pharmacyPhone = it })
 
         Spacer(Modifier.height(20.dp))
         Row {
@@ -192,7 +193,7 @@ fun MedicalIdScreen(
                         saveError = "Couldn't save: " + (e.message ?: "unknown error")
                     }
                 }
-            }) { Text("Save") }
+            }) { Text(stringResource(R.string.common_save)) }
             OutlinedButton(
                 // A card headed with a placeholder is worse than no card, so
                 // this is the one field the export insists on. Every other
@@ -201,12 +202,12 @@ fun MedicalIdScreen(
                 enabled = name.isNotBlank(),
                 onClick = { exportLauncher.launch("emivita-emergency-card.pdf") },
                 modifier = Modifier.padding(start = 12.dp),
-            ) { Text("Export card (PDF)") }
+            ) { Text(stringResource(R.string.medical_id_export_card_pdf)) }
         }
         if (name.isBlank()) {
             Spacer(Modifier.height(6.dp))
             Text(
-                "Add a name before exporting - the card is printed with it at the top.",
+                stringResource(R.string.medical_id_add_a_name_before_exporting_the_card_is),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

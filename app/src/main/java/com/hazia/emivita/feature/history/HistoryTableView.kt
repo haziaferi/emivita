@@ -39,6 +39,9 @@ import com.hazia.emivita.ui.theme.NeutralMedicineAccent
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import androidx.annotation.StringRes
+import androidx.compose.ui.res.stringResource
+import com.hazia.emivita.R
 
 /** Sortable columns for [HistoryTableView] -- hand-rolled per spec §5's
  *  ADR-0001 shopping list ("hand-rolled `SortableTable`"), §9 #6.
@@ -46,11 +49,13 @@ import java.time.format.DateTimeFormatter
  *  a table earns its place specifically when someone wants to sort by
  *  medicine or status across the whole window rather than read
  *  chronologically. */
-private enum class HistoryTableColumn(val label: String, val weight: Float) {
-    DATE("Date", 1.15f),
-    MEDICINE("Medicine", 1.3f),
-    STATUS("Status", 0.85f),
-    DOSE("Dose", 0.7f),
+// @StringRes for the same reason as HistoryViewMode: an enum body is not a
+// composable scope. `weight` stays a plain Float -- it is layout, not text.
+private enum class HistoryTableColumn(@StringRes val label: Int, val weight: Float) {
+    DATE(R.string.history_table_date, 1.15f),
+    MEDICINE(R.string.history_table_medicine, 1.3f),
+    STATUS(R.string.history_table_status, 0.85f),
+    DOSE(R.string.history_table_dose, 0.7f),
 }
 
 @Composable
@@ -110,7 +115,7 @@ private fun HistoryTableHeader(sortColumn: HistoryTableColumn, descending: Boole
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
-                    column.label,
+                    stringResource(column.label),
                     style = MaterialTheme.typography.labelLarge,
                     color = if (column == sortColumn) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurface,
                 )

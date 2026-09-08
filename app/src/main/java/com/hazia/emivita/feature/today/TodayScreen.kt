@@ -72,6 +72,8 @@ import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import androidx.compose.ui.res.stringResource
+import com.hazia.emivita.R
 
 private enum class TimelineStatus { PENDING, TAKEN, SKIPPED, UPCOMING }
 
@@ -191,7 +193,7 @@ fun TodayScreen(
                 Modifier.fillMaxWidth().padding(16.dp),
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
-                Text("Today", style = MaterialTheme.typography.headlineSmall)
+                Text(stringResource(R.string.today_today), style = MaterialTheme.typography.headlineSmall)
             }
 
             when {
@@ -200,7 +202,7 @@ fun TodayScreen(
                 }
                 nodes.isEmpty() -> Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                     Text(
-                        "Nothing scheduled yet. Add a medicine and a reminder to see it here.",
+                        stringResource(R.string.today_nothing_scheduled_yet_add_a_medicine_and_a),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -217,7 +219,7 @@ fun TodayScreen(
         // medicine, suggests its last-used amount, defaults to "just now".
         // Not a bottom-nav destination.
         ExtendedFloatingActionButton(
-            text = { Text("Log dose") },
+            text = { Text(stringResource(R.string.today_log_dose)) },
             icon = { Icon(Icons.Filled.Add, contentDescription = null) },
             onClick = { showLogDose = true },
             modifier = Modifier
@@ -405,7 +407,7 @@ private fun TimelineEntryRow(
                 TimelineStatus.PENDING -> {
                     AssistChip(
                         onClick = { onResolve(DoseStatus.TAKEN) },
-                        label = { Text("Take") },
+                        label = { Text(stringResource(R.string.common_take)) },
                         leadingIcon = { Icon(Icons.Filled.Check, contentDescription = null) },
                     )
                     // Omitted rather than disabled, matching how
@@ -417,7 +419,7 @@ private fun TimelineEntryRow(
                         Spacer(Modifier.width(6.dp))
                         AssistChip(
                             onClick = { onResolve(DoseStatus.SKIPPED) },
-                            label = { Text("Skip") },
+                            label = { Text(stringResource(R.string.common_skip)) },
                             leadingIcon = { Icon(Icons.Filled.Close, contentDescription = null) },
                         )
                     }
@@ -467,13 +469,13 @@ private fun LogDoseDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Log dose") },
+        title = { Text(stringResource(R.string.today_log_dose)) },
         text = {
             Column {
                 when {
-                    medicines == null -> Text("Loading...", style = MaterialTheme.typography.bodyMedium)
+                    medicines == null -> Text(stringResource(R.string.common_loading), style = MaterialTheme.typography.bodyMedium)
                     medicines!!.isEmpty() -> Text(
-                        "No medicines yet -- add one first.",
+                        stringResource(R.string.today_no_medicines_yet_add_one_first),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                     else -> {
@@ -485,7 +487,7 @@ private fun LogDoseDialog(
                                 value = selected?.name ?: "",
                                 onValueChange = {},
                                 readOnly = true,
-                                label = { Text("Medicine") },
+                                label = { Text(stringResource(R.string.today_medicine)) },
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = menuExpanded) },
                                 modifier = Modifier
                                     .fillMaxWidth()
@@ -507,14 +509,14 @@ private fun LogDoseDialog(
                         OutlinedTextField(
                             value = doseAmount,
                             onValueChange = { doseAmount = it },
-                            label = { Text("Dose amount") },
+                            label = { Text(stringResource(R.string.common_dose_amount)) },
                             suffix = selected?.doseUnit?.let { unit -> { Text(unit) } },
                             singleLine = true,
                             modifier = Modifier.fillMaxWidth(),
                         )
                         Spacer(Modifier.height(4.dp))
                         Text(
-                            "Logged as taken just now.",
+                            stringResource(R.string.today_logged_as_taken_just_now),
                             style = MaterialTheme.typography.labelMedium,
                             color = MaterialTheme.colorScheme.onSurfaceVariant,
                         )
@@ -544,10 +546,10 @@ private fun LogDoseDialog(
                         }
                     }
                 },
-            ) { Text("Log") }
+            ) { Text(stringResource(R.string.today_log)) }
         },
         dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancel") }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
         },
     )
 }

@@ -41,6 +41,8 @@ import com.hazia.emivita.core.scheduling.EXTRA_REMINDER_ID
 import com.hazia.emivita.ui.theme.EmivitaTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
+import com.hazia.emivita.R
 
 /**
  * Full-screen target for ALARM-priority reminders (see
@@ -111,9 +113,9 @@ private fun AlarmScreen(reminderId: Long, doseEventId: Long, onFinished: () -> U
             verticalArrangement = Arrangement.Center,
         ) {
             if (loadFailed) {
-                Text("This reminder is no longer available.")
+                Text(stringResource(R.string.alarm_this_reminder_is_no_longer_available))
                 Spacer(Modifier.height(16.dp))
-                Button(onClick = onFinished) { Text("Close") }
+                Button(onClick = onFinished) { Text(stringResource(R.string.alarm_close)) }
                 return@Column
             }
 
@@ -131,7 +133,7 @@ private fun AlarmScreen(reminderId: Long, doseEventId: Long, onFinished: () -> U
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("Take") }
+            ) { Text(stringResource(R.string.common_take)) }
 
             // Lock-until-taken (spec §3): omit Skip entirely when locked --
             // same "no button at all" choice ReminderNotificationBuilder makes,
@@ -146,7 +148,7 @@ private fun AlarmScreen(reminderId: Long, doseEventId: Long, onFinished: () -> U
                         }
                     },
                     modifier = Modifier.fillMaxWidth(),
-                ) { Text("Skip") }
+                ) { Text(stringResource(R.string.common_skip)) }
             }
 
             Spacer(Modifier.height(12.dp))
@@ -159,7 +161,7 @@ private fun AlarmScreen(reminderId: Long, doseEventId: Long, onFinished: () -> U
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
-            ) { Text("Snooze $snoozeMinutes min") }
+            ) { Text(stringResource(R.string.alarm_snooze_minutes, snoozeMinutes)) }
         }
     }
 }

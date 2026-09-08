@@ -45,6 +45,8 @@ import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
 import com.patrykandpatrick.vico.core.cartesian.layer.ColumnCartesianLayer
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import androidx.compose.ui.res.stringResource
+import com.hazia.emivita.R
 
 /** One calendar day's worth of resolved-dose counts, feeding [AdherenceChart].
  *  Refills are excluded entirely -- a restock isn't a dose outcome, same
@@ -126,7 +128,7 @@ fun AdherenceChart(counts: List<DayAdherenceCounts>) {
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
     ) {
         Column(Modifier.padding(14.dp)) {
-            Text("Adherence trend", style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.adherence_adherence_trend), style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(8.dp))
             CartesianChartHost(
                 chart = rememberCartesianChart(
@@ -162,7 +164,7 @@ fun AdherenceChart(counts: List<DayAdherenceCounts>) {
             // position identifies a series even where a 6dp bar is too narrow
             // for its texture to read.
             Text(
-                "Each bar stacks taken at the bottom, then skipped, then missed.",
+                stringResource(R.string.adherence_each_bar_stacks_taken_at_the_bottom_then),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )

@@ -54,6 +54,8 @@ import java.util.Arrays
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import androidx.compose.ui.res.stringResource
+import com.hazia.emivita.R
 
 private val EXPORT_FILE_STAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
@@ -206,24 +208,24 @@ fun BackupSyncScreen(
     }
 
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
-        DetailHeader("Backup & Sync", onBack)
+        DetailHeader(stringResource(R.string.backup_sync_backup_sync), onBack)
 
-        Text("Manual backup", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.backup_sync_manual_backup), style = MaterialTheme.typography.titleMedium)
         Text(
-            "Export a full snapshot for a new phone, sharing with someone, or before a risky change. Separate from the History screen's PDF/CSV export.",
+            stringResource(R.string.backup_sync_export_a_full_snapshot_for_a_new_phone),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(12.dp))
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = passwordProtectExport, onCheckedChange = { passwordProtectExport = it })
-            Text("Password-protect this backup")
+            Text(stringResource(R.string.backup_sync_password_protect_this_backup))
         }
         if (passwordProtectExport) {
             OutlinedTextField(
                 value = exportPassword,
                 onValueChange = { exportPassword = it },
-                label = { Text("Password") },
+                label = { Text(stringResource(R.string.backup_sync_password)) },
                 visualTransformation = PasswordVisualTransformation(),
                 singleLine = true,
                 modifier = Modifier.fillMaxWidth(),
@@ -239,22 +241,22 @@ fun BackupSyncScreen(
                     showUnencryptedConfirm = true
                 }
             },
-        ) { Text("Export backup") }
+        ) { Text(stringResource(R.string.backup_sync_export_backup)) }
         exportStatus?.let {
             Spacer(Modifier.height(4.dp))
             Text(it, style = MaterialTheme.typography.labelMedium)
         }
 
         Spacer(Modifier.height(24.dp))
-        Text("Restore from backup", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.backup_sync_restore_from_backup), style = MaterialTheme.typography.titleMedium)
         Text(
-            "Replaces everything currently on this device with the contents of the chosen file.",
+            stringResource(R.string.backup_sync_replaces_everything_currently_on_this_device),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(8.dp))
         OutlinedButton(onClick = { openDocumentLauncher.launch(arrayOf("application/zip", "application/octet-stream")) }) {
-            Text("Choose backup file")
+            Text(stringResource(R.string.backup_sync_choose_backup_file))
         }
         restoreStatus?.let {
             Spacer(Modifier.height(4.dp))
@@ -265,9 +267,9 @@ fun BackupSyncScreen(
         HorizontalDivider()
         Spacer(Modifier.height(24.dp))
 
-        Text("Auto-sync folder", style = MaterialTheme.typography.titleMedium)
+        Text(stringResource(R.string.backup_sync_auto_sync_folder), style = MaterialTheme.typography.titleMedium)
         Text(
-            "Keeps a password-protected zip current in a folder of your choice, so a sync tool you already run (e.g. a Syncthing fork) can mirror it. Not a sync mechanism itself -- distinct from the manual export above.",
+            stringResource(R.string.backup_sync_keeps_a_password_protected_zip_current_in_a),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -275,9 +277,12 @@ fun BackupSyncScreen(
         if (syncFolderLoaded) {
             val folder = syncFolderUri
             if (folder == null) {
-                Button(onClick = { openTreeLauncher.launch(null) }) { Text("Choose sync folder") }
+                Button(onClick = { openTreeLauncher.launch(null) }) { Text(stringResource(R.string.backup_sync_choose_sync_folder)) }
             } else {
-                Text("Syncing to: ${folder.toUri().lastPathSegment ?: folder}", style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    stringResource(R.string.backup_syncing_to, folder.toUri().lastPathSegment ?: folder.toString()),
+                    style = MaterialTheme.typography.bodyMedium,
+                )
                 Spacer(Modifier.height(8.dp))
                 OutlinedButton(onClick = {
                     scope.launch {
@@ -291,7 +296,7 @@ fun BackupSyncScreen(
                         AutoSyncPassphraseStore.clear(context)
                         syncFolderUri = null
                     }
-                }) { Text("Stop syncing") }
+                }) { Text(stringResource(R.string.backup_sync_stop_syncing)) }
             }
         }
     }
@@ -299,16 +304,16 @@ fun BackupSyncScreen(
     if (showUnencryptedConfirm) {
         AlertDialog(
             onDismissRequest = { showUnencryptedConfirm = false }, // any dismissal = not exported (spec)
-            title = { Text("Export without a password?") },
-            text = { Text("This file will contain readable medication data.") },
+            title = { Text(stringResource(R.string.backup_sync_export_without_a_password)) },
+            text = { Text(stringResource(R.string.backup_sync_this_file_will_contain_readable_medication)) },
             confirmButton = {
                 TextButton(onClick = {
                     showUnencryptedConfirm = false
                     launchExport(null)
-                }) { Text("Export anyway") }
+                }) { Text(stringResource(R.string.backup_sync_export_anyway)) }
             },
             dismissButton = {
-                TextButton(onClick = { showUnencryptedConfirm = false }) { Text("Cancel") }
+                TextButton(onClick = { showUnencryptedConfirm = false }) { Text(stringResource(R.string.common_cancel)) }
             },
         )
     }
@@ -316,10 +321,10 @@ fun BackupSyncScreen(
     if (showRestorePasswordDialog) {
         AlertDialog(
             onDismissRequest = { showRestorePasswordDialog = false },
-            title = { Text("Password required") },
+            title = { Text(stringResource(R.string.backup_sync_password_required)) },
             text = {
                 Column {
-                    Text("This backup is password-protected.")
+                    Text(stringResource(R.string.backup_sync_this_backup_is_password_protected))
                     restorePasswordError?.let {
                         Spacer(Modifier.height(4.dp))
                         Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
@@ -328,7 +333,7 @@ fun BackupSyncScreen(
                     OutlinedTextField(
                         value = restorePasswordInput,
                         onValueChange = { restorePasswordInput = it },
-                        label = { Text("Password") },
+                        label = { Text(stringResource(R.string.backup_sync_password)) },
                         visualTransformation = PasswordVisualTransformation(),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -349,10 +354,10 @@ fun BackupSyncScreen(
                             }
                         }
                     },
-                ) { Text("Unlock") }
+                ) { Text(stringResource(R.string.common_unlock)) }
             },
             dismissButton = {
-                TextButton(onClick = { showRestorePasswordDialog = false; restorePasswordInput = "" }) { Text("Cancel") }
+                TextButton(onClick = { showRestorePasswordDialog = false; restorePasswordInput = "" }) { Text(stringResource(R.string.common_cancel)) }
             },
         )
     }
@@ -360,18 +365,18 @@ fun BackupSyncScreen(
     if (showSyncPassphraseDialog) {
         AlertDialog(
             onDismissRequest = { }, // no skippable-dismiss: folder is already granted, needs a password to be usable
-            title = { Text("Set a sync password") },
+            title = { Text(stringResource(R.string.backup_sync_set_a_sync_password)) },
             text = {
                 Column {
                     Text(
-                        "This is the only copy of this password. Write it down -- restoring this file on another device needs it typed back in, and there's nothing to reveal or recover it from if it's forgotten.",
+                        stringResource(R.string.backup_sync_this_is_the_only_copy_of_this_password_write),
                         style = MaterialTheme.typography.labelMedium,
                     )
                     Spacer(Modifier.height(8.dp))
                     OutlinedTextField(
                         value = syncPassphraseInput,
                         onValueChange = { syncPassphraseInput = it },
-                        label = { Text("Password") },
+                        label = { Text(stringResource(R.string.backup_sync_password)) },
                         visualTransformation = PasswordVisualTransformation(),
                         singleLine = true,
                         keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
@@ -397,7 +402,7 @@ fun BackupSyncScreen(
                             autoSyncManager.notifyChanged()
                         }
                     },
-                ) { Text("Save") }
+                ) { Text(stringResource(R.string.common_save)) }
             },
         )
     }

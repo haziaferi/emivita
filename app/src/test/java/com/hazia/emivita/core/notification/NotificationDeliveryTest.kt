@@ -79,15 +79,16 @@ class NotificationDeliveryTest {
     }
 
     @Test
-    fun `tier names match the rows the Notifications and Alerts screen prints`() {
-        // blockedTiers() maps through tierNameFor(), and the card's body then
-        // names a tier the user has to find in Android's settings. If these
-        // drift from the screen's own NotificationTierRow labels, the warning
-        // names something the user cannot see.
-        assertEquals(
-            listOf("Standard", "High", "Alarm"),
-            com.hazia.emivita.core.data.entity.NotificationPriority.entries
-                .map { ReminderNotificationChannels.tierNameFor(it) },
-        )
+    fun `every tier resolves to its own distinct name resource`() {
+        // Since §9 #19 this invariant is structural rather than asserted: the
+        // Notifications & Alerts rows and this card both resolve the ids
+        // tierNameFor() returns, so they cannot name a tier differently. What
+        // is still worth pinning is that every tier has an id of its own -- a
+        // copy-paste giving two tiers the same resource would make a blocked
+        // tier warning name the wrong one, and nothing else would notice.
+        val ids = com.hazia.emivita.core.data.entity.NotificationPriority.entries
+            .map { ReminderNotificationChannels.tierNameFor(it) }
+        assertEquals("one id per tier", ids.size, ids.toSet().size)
+        assertTrue("no tier may resolve to 0", ids.all { it != 0 })
     }
 }

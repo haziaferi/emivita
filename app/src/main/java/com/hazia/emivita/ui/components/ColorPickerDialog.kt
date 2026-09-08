@@ -39,6 +39,8 @@ import com.hazia.emivita.ui.theme.NeutralMedicineAccent
 import androidx.compose.ui.unit.dp
 import androidx.core.graphics.toColorInt
 import kotlin.math.max
+import androidx.compose.ui.res.stringResource
+import com.hazia.emivita.R
 
 /** Parses a `#RRGGBB` string, or null if blank/invalid -- lenient about a
  *  missing leading '#' since users will type either. */
@@ -101,7 +103,7 @@ fun ColorPickerDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Choose a color") },
+        title = { Text(stringResource(R.string.color_picker_choose_a_color)) },
         text = {
             Column {
                 // Saturation/value square: x = saturation, y = brightness, both
@@ -208,7 +210,7 @@ fun ColorPickerDialog(
                                 hexError = true
                             }
                         },
-                        label = { Text("Hex") },
+                        label = { Text(stringResource(R.string.color_picker_hex)) },
                         isError = hexError,
                         singleLine = true,
                         modifier = Modifier.weight(1f),
@@ -216,7 +218,7 @@ fun ColorPickerDialog(
                 }
                 if (hexError) {
                     Text(
-                        "Not a valid hex color (e.g. #4B7A6B)",
+                        stringResource(R.string.color_picker_not_a_valid_hex_color_e_g_4b7a6b),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.error,
                     )
@@ -230,7 +232,7 @@ fun ColorPickerDialog(
                 if (conflict != null) {
                     Spacer(Modifier.height(8.dp))
                     Text(
-                        "Close to ${conflict.otherName}'s color -- they may be hard to tell apart.",
+                        stringResource(R.string.color_picker_close_to, conflict.otherName),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
@@ -238,8 +240,8 @@ fun ColorPickerDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(currentColor()) }, enabled = !hexError) { Text("Use color") }
+            TextButton(onClick = { onConfirm(currentColor()) }, enabled = !hexError) { Text(stringResource(R.string.color_picker_use_color)) }
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancel") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } },
     )
 }

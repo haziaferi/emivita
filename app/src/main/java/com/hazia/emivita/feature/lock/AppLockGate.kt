@@ -33,6 +33,8 @@ import com.hazia.emivita.core.data.settings.SettingsRepository
 import com.hazia.emivita.core.security.BiometricAuthenticator
 import com.hazia.emivita.core.security.BiometricAvailability
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
+import com.hazia.emivita.R
 
 /**
  * Gates [content] behind a BiometricPrompt challenge (spec §9 #11) whenever
@@ -114,10 +116,10 @@ fun AppLockGate(settingsRepository: SettingsRepository, content: @Composable () 
             verticalArrangement = Arrangement.Center,
         ) {
             Icon(Icons.Filled.Fingerprint, contentDescription = null, modifier = Modifier.height(64.dp))
-            Text("Emivita is locked", style = MaterialTheme.typography.titleLarge)
+            Text(stringResource(R.string.app_lock_emivita_is_locked), style = MaterialTheme.typography.titleLarge)
             Box(Modifier.height(16.dp))
             Button(onClick = { scope.launch { authenticated = BiometricAuthenticator.authenticate(activity) } }) {
-                Text("Unlock")
+                Text(stringResource(R.string.common_unlock))
             }
         }
     }

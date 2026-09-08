@@ -12,6 +12,8 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.res.stringResource
+import com.hazia.emivita.R
 
 /** Reusable "HH:MM" field backed by Material3's native TimePicker in a dialog --
  *  used by both FixedTime's time-of-day and DailyWindow's start/end fields
@@ -28,7 +30,13 @@ fun TimeOfDayField(
     var showDialog by remember { mutableStateOf(false) }
 
     OutlinedButton(onClick = { showDialog = true }) {
-        Text("$label: ${"%02d".format(hour)}:${"%02d".format(minute)}")
+        Text(
+            stringResource(
+                R.string.field_label_value,
+                label,
+                "${"%02d".format(hour)}:${"%02d".format(minute)}",
+            ),
+        )
     }
 
     if (showDialog) {
@@ -41,9 +49,9 @@ fun TimeOfDayField(
                 TextButton(onClick = {
                     onChange(state.hour, state.minute)
                     showDialog = false
-                }) { Text("OK") }
+                }) { Text(stringResource(R.string.common_ok)) }
             },
-            dismissButton = { TextButton(onClick = { showDialog = false }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { showDialog = false }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
 }

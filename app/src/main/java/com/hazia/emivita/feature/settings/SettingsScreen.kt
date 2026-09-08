@@ -50,6 +50,8 @@ import com.hazia.emivita.core.security.BiometricAuthenticator
 import com.hazia.emivita.core.security.BiometricAvailability
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
+import com.hazia.emivita.R
 
 /** Destinations reachable from the Settings home list. How each one responds
  *  to a tap is [RowKind]'s concern, not this enum's -- only the NAVIGATE rows
@@ -189,7 +191,7 @@ fun SettingsScreen(settingsRepository: SettingsRepository, onOpenDetail: (Settin
         contentPadding = PaddingValues(vertical = 16.dp),
     ) {
         item {
-            Text("Settings", style = MaterialTheme.typography.headlineSmall)
+            Text(stringResource(R.string.settings_settings), style = MaterialTheme.typography.headlineSmall)
             Spacer(Modifier.height(14.dp))
         }
 

@@ -1217,6 +1217,74 @@ this session.
     the parking lot below; see that entry and R48 for scope and for the
     two boundaries it keeps.
 
+19. **⏳ Internationalisation + accessibility — scoped, Stage A in progress.**
+    The first item on this roadmap that is not a feature. §1 caps what this
+    app can become: single user, single device, no `INTERNET`, no Play Store,
+    so the medTimer capabilities Emivita lacks most visibly (multi-user,
+    sync) are *excluded by constraint*, not unbuilt. With items 0–18 shipped,
+    what separates this from the apps it takes inspiration from is **reach —
+    who can use it — not capability.**
+
+    **Measured surface, not estimated.** 159 user-visible string literals
+    across 32 files (the union of Compose text, notification and channel
+    text, and PDF text — a Compose-only count misses channel names, which
+    Android shows in its own settings UI). 3 strings are in `strings.xml`
+    today. **89 of the 159 are interpolated**, and that is the real cost: an
+    interpolated string is not a find-and-replace, it becomes a positional
+    format argument so a translator can reorder the sentence. ~170
+    interactive elements, **0 `semantics {}` blocks**, and 9 real
+    `contentDescription`s against 14 nulls.
+
+    **Why accessibility is the sharper half.** R55 gave the adherence chart a
+    *texture* channel because colour alone must not carry state (§7.1
+    rules 10–13), and six palettes were re-derived around that rule. TalkBack
+    currently receives **neither** channel. Having solved colour-vision
+    deficiency by measurement and left screen readers at zero is the largest
+    inconsistency left in the codebase, in an app whose users skew toward the
+    people most likely to need one.
+
+    **Neither half is visible to the build.** Lint's `HardcodedText` does not
+    fire on Compose, which is how 159 strings passed a gate configured with
+    `warningsAsErrors = true`; there is no accessibility check in the
+    pipeline at all. §7.1 rule 14's shape exactly.
+
+    **Scope chosen by an `optimization-engines` run** over measured constants
+    (zero model turns), f=0.902: extract everything · pseudolocale plus one
+    real locale · labels **and state** · gate both halves · include the
+    non-Compose text. Two *hard constraints* did the structural work, and
+    both restate rules this repo already holds: a source-scan gate requires
+    **complete** extraction, because a gate failing on the part deliberately
+    skipped must be baselined on day one — which `app/build.gradle.kts`'s own
+    lint comment calls the habit that turns a baseline into a way of never
+    reading lint again; and for the same reason it requires the non-Compose
+    text too, since a scan with carve-outs is a baseline wearing a different
+    hat. So "extract all 159, include the PDF and notification text, gate it"
+    is one indivisible unit and everything else is genuinely optional.
+
+    **Staged, because it does not fit one sitting.**
+    **A** (in progress): `isPseudoLocalesEnabled` on debug, extract all 159,
+    include the non-Compose text, add the source-scan gate. Reaches no new
+    user; makes the next translation hours rather than a rewrite, and makes
+    an un-extracted string *visible on the screen* rather than a claim.
+    **B**: `contentDescription` across the ~170 controls, plus
+    `semantics`/`stateDescription` on the chart, the calendar grid and the
+    dose rows, gated by Compose tests. **C**: one real translation; the
+    language is a decision for the owner, not derivable from the code.
+
+    **Deliberately deferred: custom accessibility actions** (Take/Skip/Snooze
+    reachable from a dose row). Highest-risk edit in the pass, on the one
+    surface where a wrong action is a wrong dose, and there is no
+    `androidTest/` in this project to catch it — every test here is JVM or
+    Robolectric. Revisit with, or after, on-device test automation.
+
+    **Two gates, both cheap because the infrastructure already exists.** The
+    source scan is the shape `PaletteSpecConsistencyTest` already uses (walk
+    up to the repo root, read files, assert) — no custom lint module, no new
+    Gradle module. The semantics gate is content-only: the Compose test suite
+    already makes 25 semantics assertions. `isPseudoLocalesEnabled = true`
+    was **verified to configure on this AGP** (8.13.2, `./gradlew help`
+    returned 0 with it applied) rather than assumed from the property name.
+
 ### Not yet scoped — parking lot ❓
 
 Ideas surfaced in review but deliberately not resolved into the

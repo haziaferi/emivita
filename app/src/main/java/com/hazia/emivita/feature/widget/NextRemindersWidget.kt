@@ -35,6 +35,8 @@ import com.hazia.emivita.core.data.entity.DoseStatus
 import java.time.Instant
 import java.time.ZoneId
 import java.time.format.DateTimeFormatter
+import androidx.glance.LocalContext
+import com.hazia.emivita.R
 
 private const val MAX_ROWS = 4
 
@@ -104,13 +106,13 @@ private fun NextRemindersContent(rows: List<NextReminderRow>) {
             .clickable(actionStartActivity<MainActivity>()),
     ) {
         Text(
-            "Next doses",
+            LocalContext.current.getString(R.string.widget_next_doses_header),
             style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = GlanceTheme.colors.onBackground),
         )
         Spacer(modifier = GlanceModifier.height(4.dp))
         if (rows.isEmpty()) {
             Text(
-                "All caught up",
+                LocalContext.current.getString(R.string.widget_all_caught_up),
                 style = TextStyle(fontSize = 13.sp, color = GlanceTheme.colors.onSurfaceVariant),
             )
         } else {
@@ -134,7 +136,7 @@ private fun NextReminderRowItem(row: NextReminderRow, showTakeAction: Boolean) {
         }
         if (showTakeAction) {
             Text(
-                "Take",
+                LocalContext.current.getString(R.string.common_take),
                 modifier = GlanceModifier
                     .background(GlanceTheme.colors.primary)
                     .cornerRadius(8.dp)

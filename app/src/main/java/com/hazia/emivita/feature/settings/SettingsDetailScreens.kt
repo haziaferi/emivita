@@ -74,6 +74,8 @@ import com.hazia.emivita.ui.theme.swatchColorFor
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalTime
+import androidx.compose.ui.res.stringResource
+import com.hazia.emivita.R
 
 /** Shared by every Settings detail screen in this package, including
  *  BackupSyncScreen's -- `internal`, not `private`, because a file-private
@@ -83,7 +85,7 @@ import java.time.LocalTime
 internal fun DetailHeader(title: String, onBack: () -> Unit) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = onBack) {
-            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
         }
         Spacer(Modifier.width(4.dp))
         Text(title, style = MaterialTheme.typography.headlineSmall)
@@ -105,7 +107,7 @@ fun AlarmsSnoozeScreen(settingsRepository: SettingsRepository, onBack: () -> Uni
     }
 
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
-        DetailHeader("Alarms & Snooze", onBack)
+        DetailHeader(stringResource(R.string.settings_detail_alarms_snooze), onBack)
 
         val current = minutesText
         if (current == null) {
@@ -117,14 +119,14 @@ fun AlarmsSnoozeScreen(settingsRepository: SettingsRepository, onBack: () -> Uni
         OutlinedTextField(
             value = current,
             onValueChange = { minutesText = it },
-            label = { Text("Snooze duration (minutes)") },
+            label = { Text(stringResource(R.string.settings_detail_snooze_duration_minutes)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
         Spacer(Modifier.height(4.dp))
         Text(
-            "How long a snoozed reminder waits before firing again.",
+            stringResource(R.string.settings_detail_how_long_a_snoozed_reminder_waits_before),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
@@ -138,7 +140,7 @@ fun AlarmsSnoozeScreen(settingsRepository: SettingsRepository, onBack: () -> Uni
                     onBack()
                 }
             },
-        ) { Text("Save") }
+        ) { Text(stringResource(R.string.common_save)) }
     }
 }
 
@@ -174,7 +176,7 @@ fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit
     }
 
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
-        DetailHeader("Weekend Mode", onBack)
+        DetailHeader(stringResource(R.string.settings_detail_weekend_mode), onBack)
 
         if (!loaded) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
@@ -187,9 +189,9 @@ fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit
             verticalAlignment = Alignment.CenterVertically,
         ) {
             Column(Modifier.weight(1f)) {
-                Text("Delay reminders on chosen days", style = MaterialTheme.typography.bodyLarge)
+                Text(stringResource(R.string.settings_detail_delay_reminders_on_chosen_days), style = MaterialTheme.typography.bodyLarge)
                 Text(
-                    "Pushes reminders that fall inside the window below to its end time.",
+                    stringResource(R.string.settings_detail_pushes_reminders_that_fall_inside_the_window),
                     style = MaterialTheme.typography.labelMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -198,7 +200,7 @@ fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit
         }
 
         Spacer(Modifier.height(20.dp))
-        Text("Days", style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.settings_detail_days), style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.height(8.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
             weekendDayLabels.forEach { (label, dayNum) ->
@@ -212,8 +214,8 @@ fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit
 
         Spacer(Modifier.height(20.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            TimeOfDayField("Window start", startHour, startMinute) { h, m -> startHour = h; startMinute = m }
-            TimeOfDayField("Window end", endHour, endMinute) { h, m -> endHour = h; endMinute = m }
+            TimeOfDayField(stringResource(R.string.common_window_start), startHour, startMinute) { h, m -> startHour = h; startMinute = m }
+            TimeOfDayField(stringResource(R.string.common_window_end), endHour, endMinute) { h, m -> endHour = h; endMinute = m }
         }
 
         Spacer(Modifier.height(24.dp))
@@ -234,7 +236,7 @@ fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit
                 schedulingCoordinator.rescheduleAll()
                 onBack()
             }
-        }) { Text("Save") }
+        }) { Text(stringResource(R.string.common_save)) }
     }
 }
 
@@ -252,18 +254,21 @@ fun NotificationsAlertsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
 
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
-        DetailHeader("Notifications & Alerts", onBack)
+        DetailHeader(stringResource(R.string.settings_detail_notifications_alerts), onBack)
 
         Text(
-            "Every reminder posts to one of three channels, by the medicine's notification priority.",
+            stringResource(R.string.settings_detail_every_reminder_posts_to_one_of_three),
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(16.dp))
 
-        NotificationTierRow("Standard", "Regular reminders for medicines and supplements.")
-        NotificationTierRow("High", "Higher-priority reminders that shouldn't be easy to miss.")
-        NotificationTierRow("Alarm", "Full-screen alarm reminders for medicines that must not be skipped.")
+        // Names and descriptions come from the same resources the channels
+        // themselves are created with, so this screen cannot describe a tier
+        // differently from how Android's own settings do (§9 #19).
+        NotificationTierRow(stringResource(R.string.tier_standard), stringResource(R.string.channel_standard_desc))
+        NotificationTierRow(stringResource(R.string.tier_high), stringResource(R.string.channel_high_desc))
+        NotificationTierRow(stringResource(R.string.tier_alarm), stringResource(R.string.channel_alarm_desc))
 
         // First of the three on purpose: this is the only one of them that
         // means nothing arrives at all. The other two describe a reminder
@@ -275,14 +280,13 @@ fun NotificationsAlertsScreen(onBack: () -> Unit) {
 
         Spacer(Modifier.height(20.dp))
         Text(
-            "Sound and vibration for each channel are controlled by Android itself, " +
-                "not this app -- open the system notification settings to adjust them.",
+            stringResource(R.string.settings_detail_sound_and_vibration_for_each_channel_are),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(12.dp))
         Button(onClick = { context.startActivity(appNotificationSettings(context)) }) {
-            Text("Open system notification settings")
+            Text(stringResource(R.string.settings_detail_open_system_notification_settings))
         }
     }
 }
@@ -329,21 +333,19 @@ private fun FullScreenAlarmAccessCard() {
     ) {
         Column(Modifier.padding(14.dp)) {
             Text(
-                "Alarm reminders can't take over the screen",
+                stringResource(R.string.settings_detail_alarm_reminders_can_t_take_over_the_screen),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                "Right now an Alarm-tier reminder arrives as an ordinary notification you have to " +
-                    "notice and tap, instead of waking the screen. Allow full-screen notifications to " +
-                    "restore it.",
+                stringResource(R.string.settings_detail_right_now_an_alarm_tier_reminder_arrives_as),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
             Spacer(Modifier.height(10.dp))
             Button(onClick = { context.startActivity(fullScreenIntentSettings(context)) }) {
-                Text("Allow full-screen alarms")
+                Text(stringResource(R.string.settings_detail_allow_full_screen_alarms))
             }
         }
     }
@@ -421,27 +423,24 @@ private fun BatteryOptimizationCard() {
     ) {
         Column(Modifier.padding(14.dp)) {
             Text(
-                "Reminders can arrive late",
+                stringResource(R.string.settings_detail_reminders_can_arrive_late),
                 style = MaterialTheme.typography.titleMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
             Spacer(Modifier.height(4.dp))
             Text(
-                "Battery optimisation lets the system hold this app's alarms back, so a dose can be " +
-                    "announced minutes after it was due — measured at about five on one phone, and the " +
-                    "system reserves the right to defer a daily reminder by up to an hour. Excluding " +
-                    "Emivita from optimisation is the only remaining way to stop that.",
+                stringResource(R.string.settings_detail_battery_optimisation_lets_the_system_hold),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onErrorContainer,
             )
             if (resolvable) {
                 Spacer(Modifier.height(10.dp))
                 Button(onClick = { context.startActivity(settingsIntent) }) {
-                    Text("Open battery settings")
+                    Text(stringResource(R.string.settings_detail_open_battery_settings))
                 }
                 Spacer(Modifier.height(4.dp))
                 Text(
-                    "Find Emivita in the list and set it to not optimised.",
+                    stringResource(R.string.settings_detail_find_emivita_in_the_list_and_set_it_to_not),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                 )
@@ -514,7 +513,7 @@ private fun NotificationsBlockedCard() {
             )
             Spacer(Modifier.height(10.dp))
             Button(onClick = { context.startActivity(appNotificationSettings(context)) }) {
-                Text("Open notification settings")
+                Text(stringResource(R.string.settings_detail_open_notification_settings))
             }
         }
     }
@@ -572,14 +571,14 @@ fun AppearanceScreen(settingsRepository: SettingsRepository, onBack: () -> Unit)
     }
 
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
-        DetailHeader("Appearance", onBack)
+        DetailHeader(stringResource(R.string.common_appearance), onBack)
 
         if (!loaded) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             return@Column
         }
 
-        Text("Theme mode", style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.settings_detail_theme_mode), style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.height(8.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             ThemeMode.entries.forEach { mode ->
@@ -592,7 +591,7 @@ fun AppearanceScreen(settingsRepository: SettingsRepository, onBack: () -> Unit)
         }
 
         Spacer(Modifier.height(20.dp))
-        Text("Palette", style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.settings_detail_palette), style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.height(8.dp))
         Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
             MedPalette.entries.chunked(2).forEach { rowPalettes ->
@@ -617,7 +616,7 @@ fun AppearanceScreen(settingsRepository: SettingsRepository, onBack: () -> Unit)
                 settingsRepository.setThemeMode(themeMode)
                 onBack()
             }
-        }) { Text("Save") }
+        }) { Text(stringResource(R.string.common_save)) }
     }
 }
 
@@ -655,7 +654,7 @@ private fun AppearancePaletteOption(
             if (selected) {
                 Icon(
                     Icons.Filled.Check,
-                    contentDescription = "Selected",
+                    contentDescription = stringResource(R.string.settings_detail_selected),
                     tint = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.align(Alignment.TopEnd),
                 )

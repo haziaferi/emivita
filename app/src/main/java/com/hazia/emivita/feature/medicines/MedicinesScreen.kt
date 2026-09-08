@@ -53,6 +53,8 @@ import com.hazia.emivita.ui.components.parseHexColor
 import com.hazia.emivita.ui.icons.MedicineIcons
 import com.hazia.emivita.ui.theme.NeutralMedicineAccent
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
+import com.hazia.emivita.R
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,7 +90,7 @@ fun MedicinesScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Medicines") },
+                title = { Text(stringResource(R.string.medicines_medicines)) },
                 actions = {
                     IconButton(onClick = {
                         try {
@@ -98,21 +100,21 @@ fun MedicinesScreen(
                             scanUnavailable = true
                         }
                     }) {
-                        Icon(Icons.Filled.QrCodeScanner, contentDescription = "Scan to find")
+                        Icon(Icons.Filled.QrCodeScanner, contentDescription = stringResource(R.string.medicines_scan_to_find))
                     }
                 },
             )
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddMedicine) {
-                Icon(Icons.Filled.Add, contentDescription = "Add medicine")
+                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.medicines_add_medicine))
             }
         },
     ) { padding ->
         Column(Modifier.fillMaxSize().padding(padding)) {
             if (scanUnavailable) {
                 Text(
-                    "No barcode scanner app installed (e.g. Binary Eye from F-Droid).",
+                    stringResource(R.string.common_no_barcode_scanner_app_installed_e_g_binary),
                     style = MaterialTheme.typography.labelSmall,
                     // A note about an OPTIONAL convenience, not a failure. `error`
                     // here told the reader something had gone wrong when nothing had.
@@ -123,7 +125,7 @@ fun MedicinesScreen(
             if (medicines.isEmpty()) {
                 Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                     Text(
-                        "No medicines yet. Tap + to add your first one.",
+                        stringResource(R.string.medicines_no_medicines_yet_tap_to_add_your_first_one),
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
@@ -145,15 +147,15 @@ fun MedicinesScreen(
     if (pendingCode != null) {
         AlertDialog(
             onDismissRequest = { notFoundCode = null },
-            title = { Text("Not found") },
-            text = { Text("No medicine matches that code yet. Add it as a new one?") },
+            title = { Text(stringResource(R.string.medicines_not_found)) },
+            text = { Text(stringResource(R.string.medicines_no_medicine_matches_that_code_yet_add_it_as)) },
             confirmButton = {
                 TextButton(onClick = {
                     notFoundCode = null
                     onAddMedicineWithBarcode(pendingCode)
-                }) { Text("Add new") }
+                }) { Text(stringResource(R.string.medicines_add_new)) }
             },
-            dismissButton = { TextButton(onClick = { notFoundCode = null }) { Text("Cancel") } },
+            dismissButton = { TextButton(onClick = { notFoundCode = null }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
 }

@@ -54,6 +54,8 @@ import com.hazia.emivita.ui.components.parseHexColor
 import com.hazia.emivita.ui.icons.MedicineIcons
 import com.hazia.emivita.ui.theme.NeutralMedicineAccent
 import kotlinx.coroutines.launch
+import androidx.compose.ui.res.stringResource
+import com.hazia.emivita.R
 
 /**
  * Medicine detail: read-only summary + its reminders list + "Add reminder",
@@ -91,24 +93,24 @@ fun MedicineDetailScreen(
                 title = { Text(medicine?.name ?: "") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Back")
+                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
                     }
                 },
                 actions = {
                     IconButton(onClick = onEditMedicine) {
-                        Icon(Icons.Filled.Edit, contentDescription = "Edit medicine")
+                        Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.medicine_detail_edit_medicine))
                     }
                     Box {
                         IconButton(onClick = { showOverflowMenu = true }) {
-                            Icon(Icons.Filled.MoreVert, contentDescription = "More")
+                            Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.medicine_detail_more))
                         }
                         DropdownMenu(expanded = showOverflowMenu, onDismissRequest = { showOverflowMenu = false }) {
                             DropdownMenuItem(
-                                text = { Text("Stock & Expiration") },
+                                text = { Text(stringResource(R.string.common_stock_expiration)) },
                                 onClick = { showOverflowMenu = false; onOpenStockExpiration() },
                             )
                             DropdownMenuItem(
-                                text = { Text("Delete") },
+                                text = { Text(stringResource(R.string.medicine_detail_delete)) },
                                 onClick = { showOverflowMenu = false; showDeleteConfirm = true },
                             )
                         }
@@ -118,7 +120,7 @@ fun MedicineDetailScreen(
         },
         floatingActionButton = {
             FloatingActionButton(onClick = onAddReminder) {
-                Icon(Icons.Filled.Add, contentDescription = "Add reminder")
+                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.common_add_reminder))
             }
         },
     ) { padding ->
@@ -145,7 +147,7 @@ fun MedicineDetailScreen(
                 }
                 currentMedicine.storageNote?.let {
                     Text(
-                        "Storage: $it",
+                        stringResource(R.string.medicine_detail_storage, it),
                         style = MaterialTheme.typography.labelSmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 16.dp),
@@ -155,13 +157,13 @@ fun MedicineDetailScreen(
             }
 
             Text(
-                "Reminders",
+                stringResource(R.string.medicine_detail_reminders),
                 style = MaterialTheme.typography.labelLarge,
                 modifier = Modifier.padding(horizontal = 16.dp),
             )
             if (reminders.isEmpty()) {
                 Text(
-                    "No reminders yet. Tap + to add one.",
+                    stringResource(R.string.medicine_detail_no_reminders_yet_tap_to_add_one),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(16.dp),
@@ -193,8 +195,15 @@ fun MedicineDetailScreen(
         val currentMedicine = medicine
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
-            title = { Text("Delete ${currentMedicine?.name ?: "this medicine"}?") },
-            text = { Text("This removes every reminder and all dose history for it. This can't be undone.") },
+            title = {
+                Text(
+                    stringResource(
+                        R.string.medicine_detail_delete_title,
+                        currentMedicine?.name ?: stringResource(R.string.medicine_detail_this_medicine),
+                    ),
+                )
+            },
+            text = { Text(stringResource(R.string.medicine_detail_this_removes_every_reminder_and_all_dose)) },
             confirmButton = {
                 TextButton(onClick = {
                     showDeleteConfirm = false
@@ -203,10 +212,10 @@ fun MedicineDetailScreen(
                         medicineRepository.delete(toDelete)
                         onDeleted()
                     }
-                }) { Text("Delete") }
+                }) { Text(stringResource(R.string.medicine_detail_delete)) }
             },
             dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) { Text("Cancel") }
+                TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.common_cancel)) }
             },
         )
     }
