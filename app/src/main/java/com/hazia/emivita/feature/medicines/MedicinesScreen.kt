@@ -96,20 +96,30 @@ fun MedicinesScreen(
     // much taller one. Spotted on the device, not in a test (§7 R59).
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            Row(
-                Modifier.fillMaxWidth().padding(start = 16.dp, top = 16.dp, end = 4.dp, bottom = 4.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                Text(stringResource(R.string.medicines_medicines), style = MaterialTheme.typography.headlineSmall)
-                IconButton(onClick = {
-                    try {
-                        scanLauncher.launch(Intent("com.google.zxing.client.android.SCAN"))
-                        scanUnavailable = false
-                    } catch (_: ActivityNotFoundException) {
-                        scanUnavailable = true
-                    }
-                }) {
+            // The header row is byte-for-byte Today's: padding(16.dp) and the
+            // headline alone. The scan button floats over the row's end in a
+            // Box so it adds no height -- an IconButton carries a 48dp minimum
+            // touch target, and putting it IN the row made the row that tall
+            // and centred the headline 34px lower than Today's (measured on
+            // the device, second report from the owner).
+            Box(Modifier.fillMaxWidth()) {
+                Row(
+                    Modifier.fillMaxWidth().padding(16.dp),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                ) {
+                    Text(stringResource(R.string.medicines_medicines), style = MaterialTheme.typography.headlineSmall)
+                }
+                IconButton(
+                    onClick = {
+                        try {
+                            scanLauncher.launch(Intent("com.google.zxing.client.android.SCAN"))
+                            scanUnavailable = false
+                        } catch (_: ActivityNotFoundException) {
+                            scanUnavailable = true
+                        }
+                    },
+                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 4.dp),
+                ) {
                     Icon(Icons.Filled.QrCodeScanner, contentDescription = stringResource(R.string.medicines_scan_to_find))
                 }
             }
@@ -133,7 +143,8 @@ fun MedicinesScreen(
             } else {
                 LazyColumn(
                     modifier = Modifier.fillMaxSize(),
-                    contentPadding = PaddingValues(16.dp),
+                    // Today's list padding, so the first card starts where Today's does.
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                 ) {
                     items(medicines, key = { it.medicine.id }) { entry ->
                         MedicineCard(entry, onClick = { onOpenMedicine(entry.medicine.id) })
