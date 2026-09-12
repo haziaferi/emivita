@@ -28,6 +28,24 @@ ls -la app/build/test-results/testDebugUnitTest/*.xml | tail -3
 - `grep` the log explicitly. "No visible errors" is not an assertion of
   success.
 
+## On-device tests (§9 #20)
+
+`app/src/androidTest/` runs against the real SQLCipher database, AlarmManager
+and NotificationManager. It needs a **physical ARM device** attached — the
+build ships no x86 libs, so no emulator and no CI job can run it.
+
+```bash
+adb devices
+rm -rf app/build/outputs/androidTest-results
+./gradlew connectedDebugAndroidTest > device.log 2>&1; echo "EXIT=$?"
+```
+
+Results land in `app/build/outputs/androidTest-results/connected/`. Same
+rule as above: clear the directory first, read the real exit code. The suite
+installs a debug build over whatever is on the phone and writes (then deletes)
+its own rows in the real database — check what is installed before running it
+on a device that is not the test device.
+
 ## Editing files
 
 - Line endings are enforced by `.gitattributes`; do not fight it. If a patch

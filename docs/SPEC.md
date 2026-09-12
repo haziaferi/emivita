@@ -1285,6 +1285,64 @@ this session.
     was **verified to configure on this AGP** (8.13.2, `./gradlew help`
     returned 0 with it applied) rather than assumed from the property name.
 
+20. **✅ On-device test suite — shipped.** `app/src/androidTest/` exists
+    for the first time: three classes against the *real* `AppContainer` of
+    the *real* `EmivitaApplication` — the same SQLCipher database, the same
+    AlarmManager, the same NotificationManager a user's install has. This is
+    the layer the JVM suite structurally cannot reach: Robolectric runs the
+    migration and repository tests against a JVM SQLite, so nothing in the
+    166 JVM tests ever loads `libsqlcipher.so`, wraps a key through
+    AndroidKeyStore, arms a real PendingIntent, or posts to a real
+    notification manager. §7 R39 proved all of that by hand, once, on a
+    OnePlus 9 Pro. This makes that pass repeatable.
+
+    **What each proves.** `SqlCipherRoundTripTest`: a row written through the
+    real path reads back, *and* the first sixteen bytes of `emivita.db` on disk
+    are not the plaintext SQLite magic — a database that round-trips could
+    still be plaintext if the SQLCipher factory were silently dropped from the
+    builder, and no repository call can stand in for reading the file.
+    `AlarmChainTest`: reminder row → engine → `AlarmScheduler` → AlarmManager →
+    `ReminderAlarmReceiver` → `DoseEvent` materialised → notification active,
+    through `ReminderRepository.create` so the path under test is the one a
+    user's tap takes; it waits generously and names battery optimisation in
+    its timeout message, because R39 measured a five-minute deferral under
+    battery saver and that is a real result, not a broken chain.
+    `NotificationDeliveryDeviceTest`: all three channels exist,
+    `blockedTiers()` agrees with what NotificationManager reports, and R58's
+    card is wired to live system state — asserting *consistency*, not a fixed
+    answer, because the developer's own phone may legitimately have a tier
+    blocked and a test demanding "all enabled" would fail on the exact state
+    the card exists to describe.
+
+    **It runs on a physical ARM device only, never in CI.** `abiFilters`
+    ships no x86 native libraries by design, so no emulator on the CI runner
+    can install it. `./gradlew connectedDebugAndroidTest` with the phone
+    attached is the whole invocation; CI's `verify` job runs the JVM triad
+    and cannot run this. Enabling an emulator job would mean allowing x86_64
+    in debug, which is a decision, not a fix — left to the owner.
+
+    **Device results, LE2123 / Android 14 (the R39 device), 2026-09-12.**
+    First run, fresh install: 4 of 5 passed, and the fifth
+    (`databaseFileOnDiskIsNotPlaintextSqlite`) failed on `file.isFile` — it
+    had run before anything opened the lazily-constructed database, so the
+    encryption assertion never executed. Fixed to open the database first.
+    Second run of that class: **2 / 0 / 0**, the header assertion executed
+    and passed. Across the two runs every test has passed on hardware; the
+    alarm chain end to end is the one that matters most and it passed first
+    time.
+
+    **Two test-authoring lessons, both §7.1 rule 5.** (a) A first draft
+    compared the file header against `"SQLite format 3 "` with a trailing
+    *space*; the real magic ends in a NUL. No file starts with the draft's
+    bytes, so that assertion could never have failed on a plaintext database
+    — it would have shipped as a green check that checks nothing. Caught
+    before the run; the test now sanity-asserts the magic's own length. (b) A
+    lazily-opened resource means a test can run before the thing it inspects
+    exists, and fail on the precondition rather than on the property — which
+    reads as a failure of the property to anyone not reading the message.
+    Both are the same shape as R57: a signal that says something other than
+    what it appears to say.
+
 ### Not yet scoped — parking lot ❓
 
 Ideas surfaced in review but deliberately not resolved into the

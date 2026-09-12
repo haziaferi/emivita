@@ -34,6 +34,13 @@ android {
         versionCode = 1
         versionName = "0.1.0"
 
+        // Instrumentation runner for app/src/androidTest (spec §9 #20). These
+        // tests run only on a physical ARM device -- see the abiFilters block
+        // below, which deliberately ships no x86 native libs -- so they are
+        // never part of CI's `verify` job. `./gradlew connectedDebugAndroidTest`
+        // with the phone attached is the whole invocation.
+        testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
+
         // Only the two ABIs a real phone can load. The x86/x86_64 variants of
         // libsqlcipher.so are ~4.4MB of the release APK and are reachable only
         // from an emulator, which this app is never developed against (device
@@ -383,6 +390,17 @@ dependencies {
 
     // Testing
     testImplementation("junit:junit:4.13.2")
+
+    // On-device tests (spec §9 #20). Versions pinned to what the Gradle cache
+    // already holds, so `--offline` keeps working. Nothing here is a mock
+    // framework: the point of this source set is the real SQLCipher, the real
+    // AlarmManager and the real NotificationManager, which is exactly what the
+    // JVM suite cannot reach (§7 R39 verified these by hand, once).
+    androidTestImplementation("androidx.test.ext:junit:1.2.1")
+    androidTestImplementation("androidx.test:runner:1.6.2")
+    androidTestImplementation("androidx.test:rules:1.6.1")
+    androidTestImplementation("androidx.test:core:1.6.1")
+    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     testImplementation("org.robolectric:robolectric:4.14.1")
     // ApplicationProvider.getApplicationContext() for Robolectric-backed Room
     // repository tests (spec §7 R3 -- resolve()/tag-dedupe race-prone logic).
