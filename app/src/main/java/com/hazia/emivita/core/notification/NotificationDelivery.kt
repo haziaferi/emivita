@@ -1,5 +1,8 @@
 package com.hazia.emivita.core.notification
 
+import androidx.annotation.StringRes
+import com.hazia.emivita.R
+
 /**
  * What, if anything, stands between a reminder and the user actually seeing
  * it (spec §7 R58).
@@ -66,31 +69,39 @@ fun notificationDelivery(
     else -> NotificationDelivery.Fine
 }
 
+/**
+ * A piece of card text as a resource id plus its format arguments, resolved by
+ * the composable (spec §9 #19). These two functions used to return English
+ * strings, for JVM testability -- and stayed English through Stage A because
+ * a `when` branch that is returned and later handed to Text() sits at no
+ * sink the gate can see. en-XA on the device, with POST_NOTIFICATIONS
+ * revoked, is what showed the card plain amid accented text. Same fix as
+ * EmergencyCardExporter.CardLabels: the decision stays pure, the words move.
+ */
+data class CardText(@StringRes val res: Int, val args: List<Any> = emptyList())
+
 /** Card heading, or null when there is no card to show. Says what is happening
  *  now rather than what to do about it -- the button below it does that. */
-fun NotificationDelivery.cardTitle(): String? = when (this) {
+fun NotificationDelivery.cardTitle(): CardText? = when (this) {
     NotificationDelivery.Fine -> null
-    NotificationDelivery.AllBlocked -> "Reminders can't reach you"
+    NotificationDelivery.AllBlocked -> CardText(R.string.notif_card_all_blocked_title)
     is NotificationDelivery.TiersBlocked ->
-        if (tiers.size == 1) "One reminder tier is blocked" else "Some reminder tiers are blocked"
+        CardText(if (tiers.size == 1) R.string.notif_card_one_tier_title else R.string.notif_card_some_tiers_title)
 }
 
 /** Card body, or null when there is no card to show. */
-fun NotificationDelivery.cardBody(): String? = when (this) {
+fun NotificationDelivery.cardBody(): CardText? = when (this) {
     NotificationDelivery.Fine -> null
 
     // Deliberately concrete about the consequence. "Notifications are
     // disabled" is a settings fact; "no reminder will appear" is what it
     // means for someone relying on this app to take a medicine.
-    NotificationDelivery.AllBlocked ->
-        "Notifications are turned off for Emivita, so no reminder will appear -- " +
-            "not on the lock screen, not in the shade, not as an alarm. Doses are " +
-            "still being scheduled, and will start arriving again as soon as " +
-            "notifications are back on."
+    NotificationDelivery.AllBlocked -> CardText(R.string.notif_card_all_blocked_body)
 
-    is NotificationDelivery.TiersBlocked ->
-        "${tiers.joinToString(" and ")} reminders are blocked in Android's own " +
-            "notification settings, so they never appear at all. Any medicine set to " +
-            "${if (tiers.size == 1) "that tier" else "one of those tiers"} is being " +
-            "scheduled and then silently dropped. Other tiers are unaffected."
+    // The tier names arrive already localised (ReminderNotificationChannels
+    // resolves them); only the sentence around them is a resource here.
+    is NotificationDelivery.TiersBlocked -> CardText(
+        if (tiers.size == 1) R.string.notif_card_one_tier_body else R.string.notif_card_some_tiers_body,
+        listOf(tiers.joinToString(", ")),
+    )
 }

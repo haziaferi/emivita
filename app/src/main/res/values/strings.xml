@@ -404,4 +404,17 @@
     <string name="a11y_remove_tag">Remove tag %1$s</string>
     <string name="a11y_expanded">Expanded</string>
     <string name="a11y_collapsed">Collapsed</string>
+    <!-- Found on the device under en-XA, not by the gate (§9 #19 Stage A part 3). -->
+    <string name="theme_mode_light">Light</string>
+    <string name="theme_mode_dark">Dark</string>
+    <string name="theme_mode_system">System</string>
+    <string name="medical_id_allergies_helper">Free text. Listed on the card exactly as written here</string>
+    <!-- The notifications-blocked card (§7 R58). Found plain under en-XA on the
+         device with POST_NOTIFICATIONS revoked; no scanner could see it. -->
+    <string name="notif_card_all_blocked_title">Reminders can\'t reach you</string>
+    <string name="notif_card_all_blocked_body">Notifications are turned off for Emivita, so no reminder will appear — not on the lock screen, not in the shade, not as an alarm. Doses are still being scheduled, and will start arriving again as soon as notifications are back on.</string>
+    <string name="notif_card_one_tier_title">One reminder tier is blocked</string>
+    <string name="notif_card_some_tiers_title">Some reminder tiers are blocked</string>
+    <string name="notif_card_one_tier_body">%1$s reminders are blocked in Android\'s own notification settings, so they never appear at all. Any medicine set to that tier is being scheduled and then silently dropped. Other tiers are unaffected.</string>
+    <string name="notif_card_some_tiers_body">%1$s reminders are blocked in Android\'s own notification settings, so they never appear at all. Any medicine set to one of those tiers is being scheduled and then silently dropped. Other tiers are unaffected.</string>
 </resources>

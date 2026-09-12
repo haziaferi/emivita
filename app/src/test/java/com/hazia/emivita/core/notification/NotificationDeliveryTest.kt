@@ -5,6 +5,7 @@ import org.junit.Assert.assertNotNull
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import com.hazia.emivita.R
 
 /**
  * The decision behind the notifications-blocked card (spec §7 R58).
@@ -45,8 +46,8 @@ class NotificationDeliveryTest {
     fun `a blocked tier is reported when notifications are otherwise on`() {
         val state = notificationDelivery(notificationsEnabled = true, blockedTiers = listOf("Alarm"))
         assertEquals(NotificationDelivery.TiersBlocked(listOf("Alarm")), state)
-        assertEquals("One reminder tier is blocked", state.cardTitle())
-        assertTrue("the body should name the tier", state.cardBody()!!.contains("Alarm"))
+        assertEquals(R.string.notif_card_one_tier_title, state.cardTitle()!!.res)
+        assertEquals("the body should carry the tier as its argument", listOf<Any>("Alarm"), state.cardBody()!!.args)
     }
 
     @Test
@@ -54,12 +55,12 @@ class NotificationDeliveryTest {
         val one = notificationDelivery(true, listOf("Alarm"))
         val two = notificationDelivery(true, listOf("Standard", "Alarm"))
 
-        assertTrue(one.cardTitle()!!.startsWith("One"))
-        assertTrue(two.cardTitle()!!.startsWith("Some"))
+        assertEquals(R.string.notif_card_one_tier_title, one.cardTitle()!!.res)
+        assertEquals(R.string.notif_card_some_tiers_title, two.cardTitle()!!.res)
         // Singular/plural has to hold in the body too, not just the heading.
-        assertTrue(one.cardBody()!!.contains("that tier"))
-        assertTrue(two.cardBody()!!.contains("one of those tiers"))
-        assertTrue("both tiers should be named", two.cardBody()!!.contains("Standard and Alarm"))
+        assertEquals(R.string.notif_card_one_tier_body, one.cardBody()!!.res)
+        assertEquals(R.string.notif_card_some_tiers_body, two.cardBody()!!.res)
+        assertEquals("both tiers should be passed, in order", listOf<Any>("Standard, Alarm"), two.cardBody()!!.args)
     }
 
     @Test

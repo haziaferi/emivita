@@ -11,6 +11,8 @@ import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
+import androidx.annotation.StringRes
+import com.hazia.emivita.R
 
 /** The 6 curated palettes (see Color.kt). SettingsRepository persists the
  *  choice as `.name`, so this enum is the source of truth for valid values --
@@ -54,6 +56,16 @@ val DEFAULT_PALETTE: MedPalette = MedPalette.DAYLIGHT
  * "Daylight" would be a different palette to a reader of the spec. The rest
  * of the Appearance screen is translated; the six names stay as they are.
  */
+/** Found by en-XA on the device, not by any scanner (spec §9 #19): the
+ *  Appearance screen rendered `mode.name.lowercase().replaceFirstChar(...)`,
+ *  text derived from an identifier with no literal anywhere to detect. */
+@StringRes
+fun ThemeMode.labelRes(): Int = when (this) {
+    ThemeMode.LIGHT -> R.string.theme_mode_light
+    ThemeMode.DARK -> R.string.theme_mode_dark
+    ThemeMode.SYSTEM -> R.string.theme_mode_system
+}
+
 fun MedPalette.displayName(): String = when (this) {
     MedPalette.DAYLIGHT -> "Daylight"
     MedPalette.SAGE -> "Sage"

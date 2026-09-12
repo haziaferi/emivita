@@ -82,6 +82,7 @@ import androidx.compose.ui.text.intl.Locale
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
+import com.hazia.emivita.ui.theme.labelRes
 
 /** Shared by every Settings detail screen in this package, including
  *  BackupSyncScreen's -- `internal`, not `private`, because a file-private
@@ -502,8 +503,10 @@ private fun NotificationsBlockedCard() {
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
 
-    val title = delivery.cardTitle() ?: return
-    val body = delivery.cardBody() ?: return
+    val titleText = delivery.cardTitle() ?: return
+    val bodyText = delivery.cardBody() ?: return
+    val title = stringResource(titleText.res, *titleText.args.toTypedArray())
+    val body = stringResource(bodyText.res, *bodyText.args.toTypedArray())
 
     Spacer(Modifier.height(16.dp))
     Surface(
@@ -597,7 +600,7 @@ fun AppearanceScreen(settingsRepository: SettingsRepository, onBack: () -> Unit)
                 FilterChip(
                     selected = themeMode == mode,
                     onClick = { themeMode = mode },
-                    label = { Text(mode.name.lowercase().replaceFirstChar(Char::uppercase)) },
+                    label = { Text(stringResource(mode.labelRes())) },
                 )
             }
         }

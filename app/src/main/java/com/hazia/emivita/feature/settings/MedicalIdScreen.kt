@@ -169,7 +169,7 @@ fun MedicalIdScreen(
             stringResource(R.string.medical_id_allergies),
             allergies,
             { allergies = it },
-            "Free text. Listed on the card exactly as written here",
+            stringResource(R.string.medical_id_allergies_helper),
             singleLine = false,
         )
 
