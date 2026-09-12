@@ -71,6 +71,7 @@ import com.hazia.emivita.core.format.doseStatusLabelRes
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.platform.LocalResources
 
 private const val HISTORY_LOOKBACK_DAYS = 30L
 
@@ -475,7 +476,7 @@ internal fun HistoryEntryRow(row: DoseEventWithMedicine, onClick: () -> Unit) {
                         R.string.history_entry_summary,
                         stringResource(doseStatusLabelRes(status)),
                         time,
-                        formatDoseWithUnit(row.doseEvent.doseAmount, medicine.doseUnit),
+                        formatDoseWithUnit(row.doseEvent.doseAmount, medicine.doseUnit, LocalResources.current),
                     ),
                     // A time and a dose amount together -- squarely what
                     // Typography.doseCritical names a floor for (§7 R47).

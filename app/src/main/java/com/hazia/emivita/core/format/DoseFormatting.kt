@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import com.hazia.emivita.R
 import com.hazia.emivita.core.data.entity.DoseStatus
 import com.hazia.emivita.core.data.config.ReminderType
+import android.content.res.Resources
 
 /**
  * Drops a trailing ".0" so a whole number reads as "2" rather than "2.0",
@@ -70,7 +71,15 @@ fun formatDecimal(value: Double): String =
  * set -- so a medicine with nothing configured reads exactly as it did before
  * that field existed.
  */
-fun formatDoseWithUnit(dose: Double, doseUnit: String?): String {
-    val suffix = doseUnit?.takeIf { it.isNotBlank() } ?: if (dose == 1.0) "dose" else "doses"
-    return "${formatDecimal(dose)} $suffix"
+// [resources] resolves the fallback unit. The old "dose"/"doses" default was
+// the seventh string en-XA found on the device: a Today row read
+// "»1 dose«" in plain English inside an otherwise accented sentence, and no
+// scanner could have seen a word inside a pure formatter (spec §9 #19).
+fun formatDoseWithUnit(dose: Double, doseUnit: String?, resources: Resources): String {
+    val unit = doseUnit?.takeIf { it.isNotBlank() }
+    if (unit != null) return "${formatDecimal(dose)} $unit"
+    // Plural selection wants an integer; a fractional dose ("0.5") takes the
+    // "other" form, which is what English and most rules give a non-integer.
+    val quantity = if (dose == dose.toLong().toDouble()) dose.toInt() else 2
+    return resources.getQuantityString(R.plurals.dose_default_unit, quantity, formatDecimal(dose))
 }

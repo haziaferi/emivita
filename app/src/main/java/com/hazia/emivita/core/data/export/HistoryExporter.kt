@@ -124,7 +124,7 @@ object HistoryExporter {
             canvas!!.drawText(time, colTime, y, rowPaint)
             canvas!!.drawText(row.medicine.name.take(28), colMedicine, y, rowPaint)
             canvas!!.drawText(context.getString(doseStatusLabelRes(row.doseEvent.status)), colStatus, y, rowPaint)
-            canvas!!.drawText(formatDoseWithUnit(row.doseEvent.doseAmount, row.medicine.doseUnit), colDose, y, rowPaint)
+            canvas!!.drawText(formatDoseWithUnit(row.doseEvent.doseAmount, row.medicine.doseUnit, context.resources), colDose, y, rowPaint)
             y += rowHeight
         }
         page?.let { document.finishPage(it) }

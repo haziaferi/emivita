@@ -31,11 +31,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -56,6 +54,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
 import androidx.compose.ui.semantics.Role
+import androidx.compose.foundation.layout.Arrangement
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -88,31 +87,32 @@ fun MedicinesScreen(
     }
     var scanUnavailable by remember { mutableStateOf(false) }
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(stringResource(R.string.medicines_medicines)) },
-                actions = {
-                    IconButton(onClick = {
-                        try {
-                            scanLauncher.launch(Intent("com.google.zxing.client.android.SCAN"))
-                            scanUnavailable = false
-                        } catch (_: ActivityNotFoundException) {
-                            scanUnavailable = true
-                        }
-                    }) {
-                        Icon(Icons.Filled.QrCodeScanner, contentDescription = stringResource(R.string.medicines_scan_to_find))
+    // The same header the other three tabs use: a headline in a padded row on
+    // the page background, with this tab's one action at the end of the row.
+    // This screen used to be the only tab wrapped in its own Scaffold with a
+    // Material TopAppBar, which drew a 64dp bar on the container colour and
+    // then added its own status-bar inset on top of the one the NavHost's
+    // Scaffold had already consumed -- so the header was not just a bar but a
+    // much taller one. Spotted on the device, not in a test (§7 R59).
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            Row(
+                Modifier.fillMaxWidth().padding(start = 16.dp, top = 16.dp, end = 4.dp, bottom = 4.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(stringResource(R.string.medicines_medicines), style = MaterialTheme.typography.headlineSmall)
+                IconButton(onClick = {
+                    try {
+                        scanLauncher.launch(Intent("com.google.zxing.client.android.SCAN"))
+                        scanUnavailable = false
+                    } catch (_: ActivityNotFoundException) {
+                        scanUnavailable = true
                     }
-                },
-            )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = onAddMedicine) {
-                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.medicines_add_medicine))
+                }) {
+                    Icon(Icons.Filled.QrCodeScanner, contentDescription = stringResource(R.string.medicines_scan_to_find))
+                }
             }
-        },
-    ) { padding ->
-        Column(Modifier.fillMaxSize().padding(padding)) {
             if (scanUnavailable) {
                 Text(
                     stringResource(R.string.common_no_barcode_scanner_app_installed_e_g_binary),
@@ -141,6 +141,14 @@ fun MedicinesScreen(
                     }
                 }
             }
+        }
+        // Placed the way Today places its own action, rather than through a
+        // Scaffold slot, for the reason above.
+        FloatingActionButton(
+            onClick = onAddMedicine,
+            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
+        ) {
+            Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.medicines_add_medicine))
         }
     }
 

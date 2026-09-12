@@ -78,6 +78,7 @@ import androidx.annotation.StringRes
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.platform.LocalResources
 
 internal enum class TimelineStatus { PENDING, TAKEN, SKIPPED, UPCOMING }
 
@@ -410,7 +411,7 @@ internal fun TimelineEntryRow(
                     stringResource(
                         R.string.today_entry_summary,
                         stringResource(statusLabelRes(entry)),
-                        formatDoseWithUnit(entry.doseAmount, entry.medicine.doseUnit),
+                        formatDoseWithUnit(entry.doseAmount, entry.medicine.doseUnit, LocalResources.current),
                     ),
                     // Typography.doseCritical, not labelMedium written out: this
                     // is a dose amount, the text the floor exists for (§7 R47).

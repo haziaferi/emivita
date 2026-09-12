@@ -44,6 +44,7 @@ import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
 import com.hazia.emivita.core.format.doseStatusLabelRes
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.platform.LocalResources
 
 /** Sortable columns for [HistoryTableView] -- hand-rolled per spec §5's
  *  ADR-0001 shopping list ("hand-rolled `SortableTable`"), §9 #6.
@@ -181,7 +182,7 @@ private fun HistoryTableRow(row: DoseEventWithMedicine, zone: ZoneId, onClick: (
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                formatDoseWithUnit(row.doseEvent.doseAmount, row.medicine.doseUnit),
+                formatDoseWithUnit(row.doseEvent.doseAmount, row.medicine.doseUnit, LocalResources.current),
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.weight(HistoryTableColumn.DOSE.weight),
                 maxLines = 1,
