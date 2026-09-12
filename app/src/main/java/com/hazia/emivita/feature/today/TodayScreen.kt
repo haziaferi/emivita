@@ -394,7 +394,14 @@ internal fun TimelineEntryRow(
             .let { if (editable) it.clickable(onClickLabel = editLabel, role = Role.Button, onClick = onClick) else it }
             .semantics(mergeDescendants = true) { stateDescription = statusLabel },
     ) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+        // Two lines when the dose is due: name and status first, Take/Skip on
+        // their own row beneath. They used to share one Row, and on a phone-width
+        // screen two labelled chips beside the icon left the name about three
+        // characters -- "Ser / tral / ine". Seen on the device (§7 R59), never
+        // in a test: the chips only render for a PENDING dose, and Robolectric
+        // asserts semantics, not pixels.
+        Column(Modifier.padding(14.dp)) {
+        Row(verticalAlignment = Alignment.CenterVertically) {
             Surface(shape = CircleShape, color = accent.copy(alpha = if (muted) 0.5f else 1f), modifier = Modifier.size(40.dp)) {
                 Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     Icon(MedicineIcons.iconFor(entry.medicine.iconKey), contentDescription = null, tint = Color.White)
@@ -421,8 +428,12 @@ internal fun TimelineEntryRow(
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
             when (entry.status) {
-                TimelineStatus.PENDING -> {
+                TimelineStatus.PENDING -> Row(
+                    Modifier.fillMaxWidth().padding(top = 10.dp),
+                    horizontalArrangement = Arrangement.End,
+                ) {
                     AssistChip(
                         onClick = { onResolve(DoseStatus.TAKEN) },
                         label = { Text(stringResource(R.string.common_take)) },

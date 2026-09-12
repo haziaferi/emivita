@@ -423,4 +423,5 @@
         <item quantity="one">%1$s dose</item>
         <item quantity="other">%1$s doses</item>
     </plurals>
+    <string name="add_medicine_notification_priority">Notification priority</string>
 </resources>

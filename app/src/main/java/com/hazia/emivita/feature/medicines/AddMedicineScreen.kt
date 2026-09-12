@@ -61,6 +61,9 @@ import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.ui.semantics.Role
+import com.hazia.emivita.core.data.entity.NotificationPriority
+import com.hazia.emivita.core.notification.ReminderNotificationChannels
+import androidx.annotation.StringRes
 
 /**
  * Add Medicine (spec §6 field order: name + barcode -> appearance (icon +
@@ -89,8 +92,9 @@ fun AddMedicineScreen(
         initialStorageNote = "",
         initialDoseUnit = "",
         initialLockOverride = null,
+        initialPriority = NotificationPriority.STANDARD,
         colorsInUse = colorsInUse,
-        onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, doseUnit, lockOverride ->
+        onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, doseUnit, lockOverride, priority ->
             val id = medicineRepository.create(
                 Medicine(
                     profileId = profileId,
@@ -98,6 +102,7 @@ fun AddMedicineScreen(
                     iconKey = iconKey,
                     color = color?.toHexString(),
                     remindersLockedUntilTaken = lockOverride,
+                    notificationPriority = priority,
                     sortOrder = System.currentTimeMillis().toDouble(),
                     barcodeValue = barcodeValue,
                     indication = indication,
@@ -168,14 +173,16 @@ fun EditMedicineScreen(
         initialStorageNote = current.storageNote ?: "",
         initialDoseUnit = current.doseUnit ?: "",
         initialLockOverride = current.remindersLockedUntilTaken,
+        initialPriority = current.notificationPriority,
         colorsInUse = colorsInUse,
-        onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, doseUnit, lockOverride ->
+        onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, doseUnit, lockOverride, priority ->
             medicineRepository.update(
                 current.copy(
                     name = name,
                     iconKey = iconKey,
                     color = color?.toHexString(),
                     remindersLockedUntilTaken = lockOverride,
+                    notificationPriority = priority,
                     barcodeValue = barcodeValue,
                     indication = indication,
                     storageNote = storageNote,
@@ -239,6 +246,7 @@ private fun MedicineFormBody(
     initialStorageNote: String,
     initialDoseUnit: String,
     initialLockOverride: Boolean?,
+    initialPriority: NotificationPriority,
     /** Other medicines' accent colours, for the picker's differentiation hint
      *  (spec §3, §7 R47). Excludes the medicine being edited -- a colour is
      *  not "too close to" itself. */
@@ -253,10 +261,12 @@ private fun MedicineFormBody(
         storageNote: String?,
         doseUnit: String?,
         lockOverride: Boolean?,
+        priority: NotificationPriority,
     ) -> Unit,
     onCancel: () -> Unit,
 ) {
     var name by remember { mutableStateOf(initialName) }
+    var priority by remember { mutableStateOf(initialPriority) }
     var barcodeValue by remember { mutableStateOf(initialBarcodeValue) }
     var iconKey by remember { mutableStateOf(initialIconKey) }
     var color by remember { mutableStateOf(initialColor) }
@@ -436,19 +446,42 @@ private fun MedicineFormBody(
             modifier = Modifier.fillMaxWidth(),
         )
 
+        // Notification priority (spec §7 R59). Medicine.notificationPriority
+        // existed from the start and picked the channel a reminder posts to,
+        // but no screen ever set it: every medicine was STANDARD, and the High
+        // and Alarm tiers -- the full-screen AlarmActivity, the whole reason
+        // FullScreenAlarmAccessCard exists -- were unreachable. Found by the
+        // owner on the device when a reminder made a chime where an alarm was
+        // expected. Names and descriptions are the same resources the
+        // Notifications & Alerts screen and the channels themselves use.
+        Spacer(Modifier.height(20.dp))
+        Text(stringResource(R.string.add_medicine_notification_priority), style = MaterialTheme.typography.labelLarge)
+        for (option in NotificationPriority.entries) {
+            PriorityRow(
+                selected = priority == option,
+                title = stringResource(ReminderNotificationChannels.tierNameFor(option)),
+                description = stringResource(channelDescriptionFor(option)),
+                onSelect = { priority = option },
+            )
+        }
+
         Spacer(Modifier.height(20.dp))
         Text(stringResource(R.string.add_medicine_lock_reminders_until_taken), style = MaterialTheme.typography.labelLarge)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            RadioButton(selected = lockOverride == null, onClick = { lockOverride = null })
-            Text(stringResource(R.string.add_medicine_use_global_default))
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            RadioButton(selected = lockOverride == true, onClick = { lockOverride = true })
-            Text(stringResource(R.string.add_medicine_always_lock))
-        }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            RadioButton(selected = lockOverride == false, onClick = { lockOverride = false })
-            Text(stringResource(R.string.add_medicine_never_lock))
+        // One selectable node per option (§9 #19 Stage B). These were
+        // RadioButton + an unclickable Text -- the other shape of the pattern
+        // Stage B fixed, which its regex did not match.
+        for ((value, label) in listOf(
+            null to R.string.add_medicine_use_global_default,
+            true to R.string.add_medicine_always_lock,
+            false to R.string.add_medicine_never_lock,
+        )) {
+            Row(
+                Modifier.fillMaxWidth().selectable(selected = lockOverride == value, role = Role.RadioButton) { lockOverride = value },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = lockOverride == value, onClick = null)
+                Text(stringResource(label))
+            }
         }
 
         Spacer(Modifier.height(24.dp))
@@ -470,6 +503,7 @@ private fun MedicineFormBody(
                                 storageNote.ifBlank { null },
                                 doseUnit.trim().ifBlank { null },
                                 lockOverride,
+                                priority,
                             )
                         } catch (e: Exception) {
                             // Reset on failure, not just success -- otherwise a
@@ -497,5 +531,28 @@ private fun MedicineFormBody(
             onConfirm = { picked -> color = picked; showColorPicker = false },
             inUse = colorsInUse,
         )
+    }
+}
+
+/** The channel description for a tier, so the form's second line says exactly
+ *  what the Notifications & Alerts screen and Android's own settings say. */
+@StringRes
+private fun channelDescriptionFor(priority: NotificationPriority): Int = when (priority) {
+    NotificationPriority.STANDARD -> R.string.channel_standard_desc
+    NotificationPriority.HIGH -> R.string.channel_high_desc
+    NotificationPriority.ALARM -> R.string.channel_alarm_desc
+}
+
+@Composable
+private fun PriorityRow(selected: Boolean, title: String, description: String, onSelect: () -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().selectable(selected = selected, role = Role.RadioButton, onClick = onSelect).padding(vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        RadioButton(selected = selected, onClick = null)
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(description, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
