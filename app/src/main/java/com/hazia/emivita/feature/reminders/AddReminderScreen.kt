@@ -75,6 +75,12 @@ import java.time.format.TextStyle
 import androidx.annotation.StringRes
 import com.hazia.emivita.core.format.labelRes
 import androidx.compose.ui.text.intl.Locale
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 
 // @StringRes: reminderTypeOptions is a top-level val (§9 #19).
 private data class ReminderTypeOption(
@@ -350,7 +356,7 @@ private fun ReminderTypePicker(onSelect: (ReminderType) -> Unit, onCancel: () ->
                     modifier = Modifier
                         .fillMaxWidth()
                         .padding(bottom = 10.dp)
-                        .clickable { onSelect(option.type) },
+                        .clickable(role = Role.Button) { onSelect(option.type) },
                 ) {
                     Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
                         Icon(option.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
@@ -462,13 +468,20 @@ private fun AdvancedReminderFieldsSection(state: AdvancedReminderFieldsState) {
     var expanded by remember { mutableStateOf(false) }
 
     Spacer(Modifier.height(16.dp))
+    val expandedLabel = stringResource(if (expanded) R.string.a11y_expanded else R.string.a11y_collapsed)
     Row(
-        Modifier.fillMaxWidth().clickable { expanded = !expanded },
+        Modifier
+            .fillMaxWidth()
+            .clickable(role = Role.Button) { expanded = !expanded }
+            .semantics { stateDescription = expandedLabel },
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(stringResource(R.string.add_reminder_advanced), style = MaterialTheme.typography.labelLarge)
-        Text(if (expanded) "▲" else "▼", style = MaterialTheme.typography.labelLarge)
+        // An icon with no description, not a triangle glyph: the row above
+        // already says expanded or collapsed, and TalkBack read the glyph as
+        // "black up-pointing triangle" (§9 #19 Stage B).
+        Icon(if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, contentDescription = null)
     }
 
     if (!expanded) return
@@ -560,13 +573,25 @@ private fun AdvancedReminderFieldsSection(state: AdvancedReminderFieldsState) {
 private fun StartBehaviorPicker(value: IntervalStartBehavior, onChange: (IntervalStartBehavior) -> Unit) {
     Column {
         Text(stringResource(R.string.add_reminder_interval_starts), style = MaterialTheme.typography.labelLarge)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            RadioButton(selected = value == IntervalStartBehavior.ON_REMINDED, onClick = { onChange(IntervalStartBehavior.ON_REMINDED) })
-            Text(stringResource(R.string.add_reminder_when_reminded), Modifier.clickable { onChange(IntervalStartBehavior.ON_REMINDED) })
+        Row(
+            // One selectable node per option (§9 #19 Stage B): the row carries
+            // the role and the state, the RadioButton is display-only, and the
+            // label is read as the option's name rather than as a second control.
+            Modifier.selectable(selected = value == IntervalStartBehavior.ON_REMINDED, role = Role.RadioButton) { onChange(IntervalStartBehavior.ON_REMINDED) },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            RadioButton(selected = value == IntervalStartBehavior.ON_REMINDED, onClick = null)
+            Text(stringResource(R.string.add_reminder_when_reminded))
         }
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            RadioButton(selected = value == IntervalStartBehavior.ON_RESOLVED, onClick = { onChange(IntervalStartBehavior.ON_RESOLVED) })
-            Text(stringResource(R.string.add_reminder_when_taken_or_skipped), Modifier.clickable { onChange(IntervalStartBehavior.ON_RESOLVED) })
+        Row(
+            // One selectable node per option (§9 #19 Stage B): the row carries
+            // the role and the state, the RadioButton is display-only, and the
+            // label is read as the option's name rather than as a second control.
+            Modifier.selectable(selected = value == IntervalStartBehavior.ON_RESOLVED, role = Role.RadioButton) { onChange(IntervalStartBehavior.ON_RESOLVED) },
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            RadioButton(selected = value == IntervalStartBehavior.ON_RESOLVED, onClick = null)
+            Text(stringResource(R.string.add_reminder_when_taken_or_skipped))
         }
     }
 }
@@ -894,17 +919,35 @@ private fun LowStockAlertFormBody(
         Spacer(Modifier.height(16.dp))
         Text(stringResource(R.string.common_notify), style = MaterialTheme.typography.labelLarge)
         Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(selected = triggerMode == LowStockTriggerMode.ONCE_WHEN_BELOW, onClick = { triggerMode = LowStockTriggerMode.ONCE_WHEN_BELOW })
-                Text(stringResource(R.string.add_reminder_once_until_restocked), Modifier.clickable { triggerMode = LowStockTriggerMode.ONCE_WHEN_BELOW })
+            Row(
+                // One selectable node per option (§9 #19 Stage B): the row carries
+                // the role and the state, the RadioButton is display-only, and the
+                // label is read as the option's name rather than as a second control.
+                Modifier.selectable(selected = triggerMode == LowStockTriggerMode.ONCE_WHEN_BELOW, role = Role.RadioButton) { triggerMode = LowStockTriggerMode.ONCE_WHEN_BELOW },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = triggerMode == LowStockTriggerMode.ONCE_WHEN_BELOW, onClick = null)
+                Text(stringResource(R.string.add_reminder_once_until_restocked))
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(selected = triggerMode == LowStockTriggerMode.DAILY_WHEN_BELOW, onClick = { triggerMode = LowStockTriggerMode.DAILY_WHEN_BELOW })
-                Text(stringResource(R.string.add_reminder_once_a_day_while_low), Modifier.clickable { triggerMode = LowStockTriggerMode.DAILY_WHEN_BELOW })
+            Row(
+                // One selectable node per option (§9 #19 Stage B): the row carries
+                // the role and the state, the RadioButton is display-only, and the
+                // label is read as the option's name rather than as a second control.
+                Modifier.selectable(selected = triggerMode == LowStockTriggerMode.DAILY_WHEN_BELOW, role = Role.RadioButton) { triggerMode = LowStockTriggerMode.DAILY_WHEN_BELOW },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = triggerMode == LowStockTriggerMode.DAILY_WHEN_BELOW, onClick = null)
+                Text(stringResource(R.string.add_reminder_once_a_day_while_low))
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(selected = triggerMode == LowStockTriggerMode.ALWAYS_WHEN_BELOW, onClick = { triggerMode = LowStockTriggerMode.ALWAYS_WHEN_BELOW })
-                Text(stringResource(R.string.add_reminder_every_relevant_change_while_low), Modifier.clickable { triggerMode = LowStockTriggerMode.ALWAYS_WHEN_BELOW })
+            Row(
+                // One selectable node per option (§9 #19 Stage B): the row carries
+                // the role and the state, the RadioButton is display-only, and the
+                // label is read as the option's name rather than as a second control.
+                Modifier.selectable(selected = triggerMode == LowStockTriggerMode.ALWAYS_WHEN_BELOW, role = Role.RadioButton) { triggerMode = LowStockTriggerMode.ALWAYS_WHEN_BELOW },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = triggerMode == LowStockTriggerMode.ALWAYS_WHEN_BELOW, onClick = null)
+                Text(stringResource(R.string.add_reminder_every_relevant_change_while_low))
             }
         }
 
@@ -956,13 +999,25 @@ private fun ExpirationAlertFormBody(
         Spacer(Modifier.height(16.dp))
         Text(stringResource(R.string.common_notify), style = MaterialTheme.typography.labelLarge)
         Column {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(selected = frequency == ExpirationTriggerFrequency.ONCE, onClick = { frequency = ExpirationTriggerFrequency.ONCE })
-                Text(stringResource(R.string.common_once), Modifier.clickable { frequency = ExpirationTriggerFrequency.ONCE })
+            Row(
+                // One selectable node per option (§9 #19 Stage B): the row carries
+                // the role and the state, the RadioButton is display-only, and the
+                // label is read as the option's name rather than as a second control.
+                Modifier.selectable(selected = frequency == ExpirationTriggerFrequency.ONCE, role = Role.RadioButton) { frequency = ExpirationTriggerFrequency.ONCE },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = frequency == ExpirationTriggerFrequency.ONCE, onClick = null)
+                Text(stringResource(R.string.common_once))
             }
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                RadioButton(selected = frequency == ExpirationTriggerFrequency.DAILY, onClick = { frequency = ExpirationTriggerFrequency.DAILY })
-                Text(stringResource(R.string.add_reminder_once_a_day), Modifier.clickable { frequency = ExpirationTriggerFrequency.DAILY })
+            Row(
+                // One selectable node per option (§9 #19 Stage B): the row carries
+                // the role and the state, the RadioButton is display-only, and the
+                // label is read as the option's name rather than as a second control.
+                Modifier.selectable(selected = frequency == ExpirationTriggerFrequency.DAILY, role = Role.RadioButton) { frequency = ExpirationTriggerFrequency.DAILY },
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = frequency == ExpirationTriggerFrequency.DAILY, onClick = null)
+                Text(stringResource(R.string.add_reminder_once_a_day))
             }
         }
 

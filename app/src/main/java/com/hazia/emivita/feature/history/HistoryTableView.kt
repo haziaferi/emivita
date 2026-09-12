@@ -43,6 +43,7 @@ import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
 import com.hazia.emivita.core.format.doseStatusLabelRes
+import androidx.compose.ui.semantics.Role
 
 /** Sortable columns for [HistoryTableView] -- hand-rolled per spec §5's
  *  ADR-0001 shopping list ("hand-rolled `SortableTable`"), §9 #6.
@@ -111,8 +112,9 @@ private fun HistoryTableHeader(sortColumn: HistoryTableColumn, descending: Boole
         verticalAlignment = Alignment.CenterVertically,
     ) {
         HistoryTableColumn.entries.forEach { column ->
+            val sortLabel = stringResource(R.string.a11y_sort_by, stringResource(column.label))
             Row(
-                Modifier.weight(column.weight).clickable { onSelect(column) },
+                Modifier.weight(column.weight).clickable(onClickLabel = sortLabel, role = Role.Button) { onSelect(column) },
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(
@@ -145,7 +147,9 @@ private fun HistoryTableRow(row: DoseEventWithMedicine, zone: ZoneId, onClick: (
 
     Surface(
         color = Color.Transparent,
-        modifier = Modifier.fillMaxWidth().let { if (editable) it.clickable(onClick = onClick) else it },
+        modifier = Modifier.fillMaxWidth().let {
+            if (editable) it.clickable(onClickLabel = stringResource(R.string.a11y_edit_dose), role = Role.Button, onClick = onClick) else it
+        },
     ) {
         Row(
             Modifier.padding(horizontal = 16.dp, vertical = 10.dp),

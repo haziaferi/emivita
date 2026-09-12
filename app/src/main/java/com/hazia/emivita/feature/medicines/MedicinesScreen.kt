@@ -55,6 +55,7 @@ import com.hazia.emivita.ui.theme.NeutralMedicineAccent
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
+import androidx.compose.ui.semantics.Role
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -170,7 +171,7 @@ private fun MedicineCard(entry: MedicineWithTags, onClick: () -> Unit) {
         color = accent.copy(alpha = 0.14f),
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick),
+            .clickable(role = Role.Button, onClick = onClick),
     ) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Surface(shape = CircleShape, color = accent, modifier = Modifier.size(44.dp)) {

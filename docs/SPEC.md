@@ -1217,7 +1217,7 @@ this session.
     the parking lot below; see that entry and R48 for scope and for the
     two boundaries it keeps.
 
-19. **⏳ Internationalisation + accessibility — Stage A ✅ complete, B and C open.**
+19. **⏳ Internationalisation + accessibility — Stages A ✅ and B ✅ complete, C open.**
     The first item on this roadmap that is not a feature. §1 caps what this
     app can become: single user, single device, no `INTERNET`, no Play Store,
     so the medTimer capabilities Emivita lacks most visibly (multi-user,
@@ -1330,10 +1330,70 @@ this session.
     planted in `TodayScreen.kt` failed the build naming file, line and rule),
     not only on its own built-in samples. Suite 166 → 168.
 
-    **B**: `contentDescription` across the ~170 controls, plus
-    `semantics`/`stateDescription` on the chart, the calendar grid and the
-    dose rows, gated by Compose tests. **C**: one real translation; the
-    language is a decision for the owner, not derivable from the code.
+    **B ✅ (2026-09-12):** semantics on the four surfaces that carried
+    meaning non-textually, roles on every clickable, and the two structural
+    anti-patterns fixed, gated by ten Compose semantics tests.
+    **How Stage B actually went.** Measured before touching anything: **0**
+    `semantics{}`, **0** `stateDescription`, **0** `Role`, 29 bare `.clickable`s,
+    and 14 `contentDescription = null` — every one of which turned out to be
+    *correct* (a decorative icon beside its own text label; nulling those is
+    what the guidelines ask for). The fourteen nulls the first scan counted as
+    a defect were not one. The defects were structural and the scan could not
+    see them at all.
+
+    **The four surfaces.** The Today dose row and the History entry row were a
+    clickable Surface with no role, their status text-only: now one merged node
+    each with `Role.Button`, an `onClickLabel` ("Edit dose"), and the status as
+    `stateDescription` — the channel TalkBack treats *as state*, which is to a
+    screen reader what R55's texture channel is to colour-blind eyes. The
+    Take/Skip chips keep their own nodes (a test pins that: on the one screen
+    where a wrong action is a wrong dose, "Take, button" must be reachable on
+    its own). The calendar day cell was the purest instance of the R55 argument
+    left in the app — three coloured dots, no text, TalkBack told the day
+    number and nothing else — and now says "Tuesday 9 June, 2 Taken, 1 Missed"
+    or "…, no doses", with `Role.Button` and `selected`. The adherence chart
+    draws to a canvas the screen reader cannot see; its host now carries the
+    window's totals through the same `<plurals>` the summary card uses.
+
+    **Two anti-patterns, nine and two instances.** `RadioButton(onClick)` beside
+    `Text(Modifier.clickable)` — two nodes per option, a radio with no label
+    and a text with no role, in the reminder forms and the dose-edit dialog —
+    became one `selectable` row with `Role.RadioButton` and the RadioButton
+    made display-only (`onClick = null`). A clickable Row beside a live
+    `Switch` — two nodes, both toggling, the row with no state — on the Settings
+    biometric row and the Weekend Mode row became one `toggleable` row with
+    `Role.Switch`. Found by reading, not by the scan: neither shape has a
+    missing attribute to count. Also: the "Advanced" expander's `▲`/`▼` glyph,
+    which TalkBack read as "black up-pointing triangle", is an icon with no
+    description under a row that says Expanded or Collapsed; the tag chip's
+    remove icon says which tag; the colour swatch, a sole-content clickable
+    that announced as nothing, says "Pick a color"; the icon and palette
+    pickers carry `selected`. After: **5** `semantics{}`, **3**
+    `stateDescription`, **25** roles, **13** `selectable`/`toggleable`, and no
+    Compose clickable without a role.
+
+    **Compose lint fired once more**, `UnusedResources` on the "Remove" string
+    the tag-specific label superseded. Removed rather than kept.
+
+    **Gated, and the gate verified to bite.** `TimelineEntryRowSemanticsTest`,
+    `CalendarDayCellSemanticsTest`, `AdherenceChartSemanticsTest`, and two new
+    cases in `HistoryEntryRowTest`; `DoseEditDialogTest`'s existing
+    `isSelectable()` assertions passed unchanged through the radio-row refactor,
+    which is the cheapest possible proof the semantics moved rather than broke.
+    Removing `stateDescription` from the Today row fails three of its four tests
+    (the fourth, that a locked dose offers no Skip node, does not depend on it —
+    correctly). Suite 168 → **178**.
+
+    **Deferred, as planned:** custom accessibility actions (Take/Skip/Snooze from
+    a dose row without reaching the chips). The on-device suite (§9 #20) now
+    exists, so the reason for deferring — no way to verify a wrong action on
+    hardware — is weaker than it was; revisit after a TalkBack pass on the
+    device. **Not covered:** the two Glance widgets, whose `GlanceModifier.clickable`
+    is a different API with its own semantics model; their text content is
+    read as-is, and a `GlanceModifier.semantics` pass is a small follow-up.
+
+    **C**: one real translation; the language is a decision for the owner,
+    not derivable from the code.
 
     **Deliberately deferred: custom accessibility actions** (Take/Skip/Snooze
     reachable from a dose row). Highest-risk edit in the pass, on the one

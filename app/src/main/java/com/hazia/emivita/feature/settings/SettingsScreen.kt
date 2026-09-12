@@ -53,6 +53,8 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
 import androidx.annotation.StringRes
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 
 /** Destinations reachable from the Settings home list. How each one responds
  *  to a tap is [RowKind]'s concern, not this enum's -- only the NAVIGATE rows
@@ -267,7 +269,7 @@ private fun SettingsRowItem(row: SettingsRow, onClick: () -> Unit) {
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .clickable(role = Role.Button, onClick = onClick)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -299,10 +301,15 @@ private fun SettingsToggleRowItem(
     description: String,
     onToggle: (Boolean) -> Unit,
 ) {
+    // toggleable() on the row with the Switch made display-only (§9 #19
+    // Stage B). Before: a clickable Row and a live Switch -- two nodes, both
+    // toggling, the row with no role and no state. Now one node that
+    // announces as a switch with its checked state, which is what Material's
+    // own guidance says a labelled switch row should be.
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(enabled = enabled) { onToggle(!checked) }
+            .toggleable(value = checked, enabled = enabled, role = Role.Switch, onValueChange = onToggle)
             .padding(horizontal = 14.dp, vertical = 12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -318,6 +325,6 @@ private fun SettingsToggleRowItem(
                 overflow = TextOverflow.Ellipsis,
             )
         }
-        Switch(checked = checked, onCheckedChange = if (enabled) onToggle else null, enabled = enabled)
+        Switch(checked = checked, onCheckedChange = null, enabled = enabled)
     }
 }

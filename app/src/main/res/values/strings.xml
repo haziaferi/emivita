@@ -20,7 +20,6 @@
     <string name="add_medicine_lock_reminders_until_taken">Lock reminders until taken</string>
     <string name="add_medicine_measurement_optional">Measurement (optional)</string>
     <string name="add_medicine_never_lock">Never lock</string>
-    <string name="add_medicine_remove">Remove</string>
     <string name="add_medicine_storage_note_optional">Storage note (optional)</string>
     <string name="add_medicine_tags">Tags</string>
     <string name="add_medicine_use_global_default">Use global default</string>
@@ -393,4 +392,16 @@
     <string name="reminder_label_every_hours">%1$s – every %2$sh</string>
     <string name="reminder_label_plus_minutes">%1$s – +%2$dmin</string>
     <string name="stock_section_low_stock">Low-stock alert</string>
+
+    <!-- Accessibility (§9 #19 Stage B). Read by TalkBack, never drawn. -->
+    <string name="a11y_edit_dose">Edit dose</string>
+    <string name="a11y_show_doses">Show doses</string>
+    <string name="a11y_calendar_day">%1$s, %2$s</string>
+    <string name="a11y_count_status">%1$d %2$s</string>
+    <string name="a11y_no_doses">no doses</string>
+    <string name="a11y_adherence_chart">Adherence chart. %1$s</string>
+    <string name="a11y_sort_by">Sort by %1$s</string>
+    <string name="a11y_remove_tag">Remove tag %1$s</string>
+    <string name="a11y_expanded">Expanded</string>
+    <string name="a11y_collapsed">Collapsed</string>
 </resources>

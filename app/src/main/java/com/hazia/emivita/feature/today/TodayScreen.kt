@@ -75,10 +75,13 @@ import java.time.format.DateTimeFormatter
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
 import androidx.annotation.StringRes
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 
-private enum class TimelineStatus { PENDING, TAKEN, SKIPPED, UPCOMING }
+internal enum class TimelineStatus { PENDING, TAKEN, SKIPPED, UPCOMING }
 
-private data class TimelineEntry(
+internal data class TimelineEntry(
     val medicine: Medicine,
     val doseAmount: Double,
     val status: TimelineStatus,
@@ -364,7 +367,7 @@ private fun TimelineNodeItem(
 }
 
 @Composable
-private fun TimelineEntryRow(
+internal fun TimelineEntryRow(
     entry: TimelineEntry,
     canSkip: Boolean,
     onResolve: (DoseStatus) -> Unit,
@@ -374,12 +377,21 @@ private fun TimelineEntryRow(
     val muted = entry.status == TimelineStatus.UPCOMING
     val editable = entry.status == TimelineStatus.TAKEN || entry.status == TimelineStatus.SKIPPED
 
+    // Accessibility (spec §9 #19 Stage B). One merged node per dose, with the
+    // dose's state carried as stateDescription -- the semantic channel a
+    // screen reader treats as state, the way R55's texture channel is the
+    // one colour-blind eyes can read. The Take/Skip chips keep their own
+    // nodes: clickable() merges its own descendants, so they are not
+    // swallowed into the row.
+    val statusLabel = stringResource(statusLabelRes(entry))
+    val editLabel = stringResource(R.string.a11y_edit_dose)
     Surface(
         shape = RoundedCornerShape(14.dp),
         color = accent.copy(alpha = if (muted) 0.07f else 0.14f),
         modifier = Modifier
             .fillMaxWidth()
-            .let { if (editable) it.clickable(onClick = onClick) else it },
+            .let { if (editable) it.clickable(onClickLabel = editLabel, role = Role.Button, onClick = onClick) else it }
+            .semantics(mergeDescendants = true) { stateDescription = statusLabel },
     ) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Surface(shape = CircleShape, color = accent.copy(alpha = if (muted) 0.5f else 1f), modifier = Modifier.size(40.dp)) {
@@ -436,7 +448,7 @@ private fun TimelineEntryRow(
 }
 
 @StringRes
-private fun statusLabelRes(entry: TimelineEntry): Int = when (entry.status) {
+internal fun statusLabelRes(entry: TimelineEntry): Int = when (entry.status) {
     TimelineStatus.PENDING -> R.string.status_due
     TimelineStatus.TAKEN -> R.string.status_taken
     TimelineStatus.SKIPPED -> R.string.status_skipped

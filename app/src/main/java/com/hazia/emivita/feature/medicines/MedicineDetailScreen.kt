@@ -57,6 +57,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
 import com.hazia.emivita.core.format.labelRes
+import androidx.compose.ui.semantics.Role
 
 /**
  * Medicine detail: read-only summary + its reminders list + "Add reminder",
@@ -178,7 +179,7 @@ fun MedicineDetailScreen(
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .padding(bottom = 8.dp)
-                                .clickable { onEditReminder(reminder.id) },
+                                .clickable(role = Role.Button) { onEditReminder(reminder.id) },
                         ) {
                             Text(
                                 stringResource(reminder.type.labelRes()),

@@ -59,6 +59,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.semantics.Role
 
 /**
  * Add Medicine (spec §6 field order: name + barcode -> appearance (icon +
@@ -348,7 +350,7 @@ private fun MedicineFormBody(
                     color = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceVariant,
                     modifier = Modifier
                         .size(52.dp)
-                        .clickable { iconKey = option.key },
+                        .selectable(selected = selected, role = Role.RadioButton) { iconKey = option.key },
                 ) {
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         Icon(
@@ -365,7 +367,8 @@ private fun MedicineFormBody(
             Box(
                 Modifier
                     .size(36.dp)
-                    .clickable { showColorPicker = true }
+                    // A sole-content clickable: without this it announces as nothing at all.
+                    .clickable(role = Role.Button, onClickLabel = stringResource(R.string.add_medicine_pick_color)) { showColorPicker = true }
                     .background(color ?: NeutralMedicineAccent, CircleShape),
             )
             Spacer(Modifier.width(10.dp))
@@ -403,10 +406,10 @@ private fun MedicineFormBody(
                         trailingIcon = {
                             Icon(
                                 Icons.Filled.Close,
-                                contentDescription = stringResource(R.string.add_medicine_remove),
+                                contentDescription = stringResource(R.string.a11y_remove_tag, tag),
                                 modifier = Modifier
                                     .size(16.dp)
-                                    .clickable { pendingTags = pendingTags - tag },
+                                    .clickable(role = Role.Button) { pendingTags = pendingTags - tag },
                             )
                         },
                     )

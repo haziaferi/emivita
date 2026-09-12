@@ -68,6 +68,9 @@ import com.hazia.emivita.R
 import androidx.annotation.StringRes
 import android.content.Context
 import com.hazia.emivita.core.format.doseStatusLabelRes
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 
 private const val HISTORY_LOOKBACK_DAYS = 30L
 
@@ -446,12 +449,17 @@ internal fun HistoryEntryRow(row: DoseEventWithMedicine, onClick: () -> Unit) {
         Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
     }
 
+    // One merged node per entry, state as stateDescription (§9 #19 Stage B);
+    // see TimelineEntryRow in TodayScreen for the reasoning.
+    val statusLabel = stringResource(doseStatusLabelRes(status))
+    val editLabel = stringResource(R.string.a11y_edit_dose)
     Surface(
         shape = RoundedCornerShape(14.dp),
         color = accent.copy(alpha = 0.14f),
         modifier = Modifier
             .fillMaxWidth()
-            .let { if (editable) it.clickable(onClick = onClick) else it },
+            .let { if (editable) it.clickable(onClickLabel = editLabel, role = Role.Button, onClick = onClick) else it }
+            .semantics(mergeDescendants = true) { stateDescription = statusLabel },
     ) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Surface(shape = CircleShape, color = accent, modifier = Modifier.size(40.dp)) {

@@ -47,6 +47,9 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.res.pluralStringResource
 
 /** One calendar day's worth of resolved-dose counts, feeding [AdherenceChart].
  *  Refills are excluded entirely -- a restock isn't a dose outcome, same
@@ -130,7 +133,19 @@ fun AdherenceChart(counts: List<DayAdherenceCounts>) {
         Column(Modifier.padding(14.dp)) {
             Text(stringResource(R.string.adherence_adherence_trend), style = MaterialTheme.typography.titleMedium)
             Spacer(Modifier.height(8.dp))
+            // The chart draws to a canvas, so a screen reader gets nothing
+            // from it. This is what a sighted reader takes from it at a
+            // glance; per-day detail is what the Table view is for.
+            val days = counts.size
+            val chartDescription = stringResource(
+                R.string.a11y_adherence_chart,
+                pluralStringResource(
+                    R.plurals.history_counts_summary, days,
+                    counts.sumOf { it.taken }, counts.sumOf { it.skipped }, counts.sumOf { it.missed }, days,
+                ),
+            )
             CartesianChartHost(
+                modifier = Modifier.fillMaxWidth().height(180.dp).semantics { contentDescription = chartDescription },
                 chart = rememberCartesianChart(
                     rememberColumnCartesianLayer(
                         columnProvider = ColumnCartesianLayer.ColumnProvider.series(
@@ -151,7 +166,6 @@ fun AdherenceChart(counts: List<DayAdherenceCounts>) {
                     ),
                 ),
                 modelProducer = modelProducer,
-                modifier = Modifier.fillMaxWidth().height(180.dp),
             )
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {

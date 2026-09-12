@@ -30,6 +30,8 @@ import java.time.Instant
 import java.time.ZoneId
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.ui.semantics.Role
 
 /**
  * Event editing (spec §3/§9 #3) -- shared between Today and History, since
@@ -106,13 +108,25 @@ fun DoseEditDialog(
                     Spacer(Modifier.height(12.dp))
                 }
                 Text(stringResource(R.string.dose_edit_status), style = MaterialTheme.typography.labelLarge)
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(selected = status == DoseStatus.TAKEN, onClick = { status = DoseStatus.TAKEN })
-                    Text(stringResource(R.string.dose_edit_taken), Modifier.clickable { status = DoseStatus.TAKEN })
+                Row(
+                    // One selectable node per option (§9 #19 Stage B): the row carries
+                    // the role and the state, the RadioButton is display-only, and the
+                    // label is read as the option's name rather than as a second control.
+                    Modifier.selectable(selected = status == DoseStatus.TAKEN, role = Role.RadioButton) { status = DoseStatus.TAKEN },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(selected = status == DoseStatus.TAKEN, onClick = null)
+                    Text(stringResource(R.string.dose_edit_taken))
                 }
-                Row(verticalAlignment = Alignment.CenterVertically) {
-                    RadioButton(selected = status == DoseStatus.SKIPPED, onClick = { status = DoseStatus.SKIPPED })
-                    Text(stringResource(R.string.dose_edit_skipped), Modifier.clickable { status = DoseStatus.SKIPPED })
+                Row(
+                    // One selectable node per option (§9 #19 Stage B): the row carries
+                    // the role and the state, the RadioButton is display-only, and the
+                    // label is read as the option's name rather than as a second control.
+                    Modifier.selectable(selected = status == DoseStatus.SKIPPED, role = Role.RadioButton) { status = DoseStatus.SKIPPED },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    RadioButton(selected = status == DoseStatus.SKIPPED, onClick = null)
+                    Text(stringResource(R.string.dose_edit_skipped))
                 }
                 Spacer(Modifier.height(12.dp))
                 TimeOfDayField(stringResource(R.string.dose_edit_recorded_time), hour, minute) { h, m -> hour = h; minute = m }

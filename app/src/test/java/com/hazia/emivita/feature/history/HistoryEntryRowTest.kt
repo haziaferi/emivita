@@ -12,6 +12,9 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import androidx.compose.ui.test.assert
+import androidx.compose.ui.test.assertHasClickAction
+import androidx.compose.ui.test.assertHasNoClickAction
 
 /**
  * The regression guard for spec §7 R46, whose fix reached one of History's
@@ -87,5 +90,28 @@ class HistoryEntryRowTest {
     @Test
     fun refillIsNotClickable() {
         assertEquals(0, clicksFor(DoseStatus.REFILLED))
+    }
+
+    // ---- Stage B (spec §9 #19): what a screen reader is told ------------------
+
+    private fun hasRole(role: androidx.compose.ui.semantics.Role) =
+        androidx.compose.ui.test.SemanticsMatcher.expectValue(androidx.compose.ui.semantics.SemanticsProperties.Role, role)
+
+    @Test
+    fun aMissedDoseIsOneButtonNodeWhoseStateSaysMissed() {
+        // PENDING is relabelled "Missed" everywhere it is shown; the semantic
+        // state must say the same, or a screen reader hears "pending" for a
+        // dose the screen calls missed.
+        compose.setContent { HistoryEntryRow(row(DoseStatus.PENDING), onClick = {}) }
+        compose.onNode(androidx.compose.ui.test.hasStateDescription("Missed"))
+            .assert(hasRole(androidx.compose.ui.semantics.Role.Button))
+            .assert(androidx.compose.ui.test.hasText("Sertraline", substring = true))
+            .assertHasClickAction()
+    }
+
+    @Test
+    fun aRefillAnnouncesItsStateWithoutBeingAButton() {
+        compose.setContent { HistoryEntryRow(row(DoseStatus.REFILLED), onClick = {}) }
+        compose.onNode(androidx.compose.ui.test.hasStateDescription("Refilled")).assertHasNoClickAction()
     }
 }

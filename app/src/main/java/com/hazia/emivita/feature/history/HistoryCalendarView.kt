@@ -56,6 +56,11 @@ import java.time.format.DateTimeFormatter
 import java.time.format.TextStyle
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.selected
+import androidx.compose.ui.text.intl.Locale
 
 /**
  * Calendar view for History (spec §5 ADR-0001 shopping list, §9 #6).
@@ -204,15 +209,26 @@ private fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
 }
 
 @Composable
-private fun CalendarDayCell(day: CalendarDay, today: LocalDate, statuses: List<DoseStatus>, selected: Boolean, onClick: () -> Unit) {
+internal fun CalendarDayCell(day: CalendarDay, today: LocalDate, statuses: List<DoseStatus>, selected: Boolean, onClick: () -> Unit) {
     val inMonth = day.position == DayPosition.MonthDate
+    // Accessibility (spec §9 #19 Stage B). The dots below are the one place
+    // in the app where state is carried by colour alone -- R55 gave the chart
+    // a texture channel for exactly this reason and the calendar never got
+    // its equivalent. A screen reader was told the day number and nothing
+    // else. The description names the date and counts each status.
+    val description = calendarDayDescription(day.date, statuses)
+    val showDoses = stringResource(R.string.a11y_show_doses)
     Box(
         modifier = Modifier
             .aspectRatio(1f)
             .padding(2.dp)
             .clip(RoundedCornerShape(10.dp))
             .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Color.Transparent)
-            .let { if (inMonth) it.clickable(onClick = onClick) else it },
+            .let { if (inMonth) it.clickable(onClickLabel = showDoses, role = Role.Button, onClick = onClick) else it }
+            .semantics(mergeDescendants = true) {
+                contentDescription = description
+                if (inMonth) this.selected = selected
+            },
         contentAlignment = Alignment.Center,
     ) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -235,7 +251,7 @@ private fun CalendarDayCell(day: CalendarDay, today: LocalDate, statuses: List<D
             )
             Row(Modifier.height(6.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 if (statuses.contains(DoseStatus.TAKEN)) DayDot(MaterialTheme.colorScheme.primary)
-                // PENDING here is what historyStatusLabel renders as "Missed" --
+                // PENDING here is what doseStatusLabelRes renders as "Missed" --
                 // fired and never resolved -- so it takes the same pair as
                 // AdherenceChart's series rather than a second opinion about the
                 // same two states. Neither is an error: see Color.kt.
@@ -244,6 +260,26 @@ private fun CalendarDayCell(day: CalendarDay, today: LocalDate, statuses: List<D
             }
         }
     }
+}
+
+/**
+ * "Tuesday 9 September, 2 taken, 1 missed" -- or "..., no doses". Full weekday
+ * and month because a screen reader user has no grid to infer them from.
+ * Internal so the Compose test can pin the wording.
+ */
+@Composable
+internal fun calendarDayDescription(date: LocalDate, statuses: List<DoseStatus>): String {
+    val dateText = date.format(DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.current.platformLocale))
+    val parts = listOf(
+        DoseStatus.TAKEN to R.string.status_taken,
+        DoseStatus.SKIPPED to R.string.status_skipped,
+        DoseStatus.PENDING to R.string.status_missed,
+    ).mapNotNull { (status, label) ->
+        val n = statuses.count { it == status }
+        if (n == 0) null else stringResource(R.string.a11y_count_status, n, stringResource(label))
+    }
+    val counts = if (parts.isEmpty()) stringResource(R.string.a11y_no_doses) else parts.joinToString(", ")
+    return stringResource(R.string.a11y_calendar_day, dateText, counts)
 }
 
 @Composable

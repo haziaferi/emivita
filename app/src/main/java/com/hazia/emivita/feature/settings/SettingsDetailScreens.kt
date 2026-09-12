@@ -79,6 +79,9 @@ import com.hazia.emivita.R
 import java.time.DayOfWeek
 import java.time.format.TextStyle
 import androidx.compose.ui.text.intl.Locale
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 
 /** Shared by every Settings detail screen in this package, including
  *  BackupSyncScreen's -- `internal`, not `private`, because a file-private
@@ -190,7 +193,8 @@ fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit
         }
 
         Row(
-            Modifier.fillMaxWidth().clickable { enabled = !enabled },
+            // One switch node, not a clickable row plus a live Switch (§9 #19 Stage B).
+            Modifier.fillMaxWidth().toggleable(value = enabled, role = Role.Switch) { enabled = it },
             horizontalArrangement = Arrangement.SpaceBetween,
             verticalAlignment = Alignment.CenterVertically,
         ) {
@@ -202,7 +206,7 @@ fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
-            Switch(checked = enabled, onCheckedChange = { enabled = it })
+            Switch(checked = enabled, onCheckedChange = null)
         }
 
         Spacer(Modifier.height(20.dp))
@@ -645,7 +649,7 @@ private fun AppearancePaletteOption(
                 color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
                 shape = RoundedCornerShape(12.dp),
             )
-            .clickable(onClick = onClick)
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
             .padding(12.dp),
     ) {
         Box {
