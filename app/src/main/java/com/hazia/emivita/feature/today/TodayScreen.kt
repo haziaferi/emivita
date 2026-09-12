@@ -74,6 +74,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
+import androidx.annotation.StringRes
 
 private enum class TimelineStatus { PENDING, TAKEN, SKIPPED, UPCOMING }
 
@@ -394,7 +395,11 @@ private fun TimelineEntryRow(
                     color = if (muted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                 )
                 Text(
-                    statusLabel(entry) + " - " + formatDoseWithUnit(entry.doseAmount, entry.medicine.doseUnit),
+                    stringResource(
+                        R.string.today_entry_summary,
+                        stringResource(statusLabelRes(entry)),
+                        formatDoseWithUnit(entry.doseAmount, entry.medicine.doseUnit),
+                    ),
                     // Typography.doseCritical, not labelMedium written out: this
                     // is a dose amount, the text the floor exists for (§7 R47).
                     // Same 12sp today -- the point is that raising the floor is
@@ -430,11 +435,12 @@ private fun TimelineEntryRow(
     }
 }
 
-private fun statusLabel(entry: TimelineEntry): String = when (entry.status) {
-    TimelineStatus.PENDING -> "Due"
-    TimelineStatus.TAKEN -> "Taken"
-    TimelineStatus.SKIPPED -> "Skipped"
-    TimelineStatus.UPCOMING -> "Upcoming"
+@StringRes
+private fun statusLabelRes(entry: TimelineEntry): Int = when (entry.status) {
+    TimelineStatus.PENDING -> R.string.status_due
+    TimelineStatus.TAKEN -> R.string.status_taken
+    TimelineStatus.SKIPPED -> R.string.status_skipped
+    TimelineStatus.UPCOMING -> R.string.status_upcoming
 }
 
 @OptIn(ExperimentalMaterial3Api::class)

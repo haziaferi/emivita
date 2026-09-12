@@ -76,6 +76,9 @@ import kotlinx.coroutines.launch
 import java.time.LocalTime
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
+import java.time.DayOfWeek
+import java.time.format.TextStyle
+import androidx.compose.ui.text.intl.Locale
 
 /** Shared by every Settings detail screen in this package, including
  *  BackupSyncScreen's -- `internal`, not `private`, because a file-private
@@ -144,13 +147,16 @@ fun AlarmsSnoozeScreen(settingsRepository: SettingsRepository, onBack: () -> Uni
     }
 }
 
-private val weekendDayLabels = listOf("Mon" to 1, "Tue" to 2, "Wed" to 3, "Thu" to 4, "Fri" to 5, "Sat" to 6, "Sun" to 7)
 
 /** Weekend Mode (spec §3/§9 item 12) -- wires the already-existing Settings
- *  destination to the global preferences SchedulingEngine now reads
- *  (applyWeekendMode). A day-of-week set + one push-to time window, applied
- *  uniformly to every reminder type -- matches medTimer's own
- *  WeekendModeSchedulingDecorator (spec §5), no per-reminder opt-out. */
+ *  destination to the global preferences SchedulingEngine reads
+ *  (applyWeekendMode): a day-of-week set + one push-to time window.
+ *
+ *  This used to say "applied uniformly to every reminder type, no
+ *  per-reminder opt-out", which stopped being true at §7 R36: the global
+ *  setting here is necessary but not sufficient, and each reminder opts in
+ *  via Reminder.weekendModeOptIn. Third copy of that stale sentence found
+ *  and corrected (§7 R58 fixed the first two). */
 @Composable
 fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit) {
     val schedulingCoordinator = LocalAppContainer.current.schedulingCoordinator
@@ -203,7 +209,9 @@ fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit
         Text(stringResource(R.string.settings_detail_days), style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.height(8.dp))
         FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            weekendDayLabels.forEach { (label, dayNum) ->
+            // Day names from java.time, which already localises them (§9 #19).
+            (1..7).forEach { dayNum ->
+                val label = DayOfWeek.of(dayNum).getDisplayName(TextStyle.SHORT, Locale.current.platformLocale)
                 FilterChip(
                     selected = dayNum in days,
                     onClick = { days = if (dayNum in days) days - dayNum else days + dayNum },

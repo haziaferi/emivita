@@ -287,4 +287,110 @@
     </plurals>
     <string name="history_today">Today</string>
     <string name="history_yesterday">Yesterday</string>
+
+    <!-- Settings home. Group labels are rendered uppercase by the screen. -->
+    <string name="settings_group_reminders">Reminders &amp; Alarms</string>
+    <string name="settings_row_notifications">Notifications &amp; Alerts</string>
+    <string name="settings_row_notifications_desc">Sound, priority, how reminders behave</string>
+    <string name="settings_row_alarms">Alarms &amp; Snooze</string>
+    <string name="settings_row_alarms_desc">Alarm sound, vibration, snooze length</string>
+    <string name="settings_row_weekend">Weekend Mode</string>
+    <string name="settings_row_weekend_desc">Delay reminders on chosen days</string>
+    <string name="settings_group_appearance">Appearance</string>
+    <string name="settings_row_appearance">Appearance</string>
+    <string name="settings_row_appearance_desc">Theme, palette, display preferences</string>
+    <string name="settings_group_privacy">Privacy &amp; Security</string>
+    <string name="settings_row_biometric">Biometric lock</string>
+    <string name="settings_row_biometric_desc">Require fingerprint or face unlock to open Emivita</string>
+    <string name="settings_biometric_not_enrolled">No fingerprint or face unlock set up on this device</string>
+    <string name="settings_biometric_no_hardware">This device doesn\'t support biometric authentication</string>
+    <string name="settings_group_data">Data &amp; Backup</string>
+    <string name="settings_row_data_backup">Data &amp; Backup</string>
+    <string name="settings_row_data_backup_desc">Auto-backup, restore, PDF/CSV export</string>
+    <string name="settings_row_medical_id">Medical ID</string>
+    <string name="settings_row_medical_id_desc">Blood type, allergies, doctor and pharmacy – printable card</string>
+
+    <!-- Dose status labels. Shared by the History list, table, chart legend,
+         Today timeline and the PDF. The CSV keeps English on purpose. -->
+    <string name="status_missed">Missed</string>
+    <string name="status_taken">Taken</string>
+    <string name="status_skipped">Skipped</string>
+    <string name="status_refilled">Refilled</string>
+    <string name="status_due">Due</string>
+    <string name="status_upcoming">Upcoming</string>
+    <string name="today_entry_summary">%1$s – %2$s</string>
+    <string name="history_sorted_ascending">Sorted ascending</string>
+    <string name="history_sorted_descending">Sorted descending</string>
+    <string name="history_subtitle_join">%1$s — %2$s</string>
+    <plurals name="history_last_days">
+        <item quantity="one">Last %d day</item>
+        <item quantity="other">Last %d days</item>
+    </plurals>
+
+    <!-- Form titles and save labels. -->
+    <string name="common_save_changes">Save changes</string>
+    <string name="common_unknown_error">unknown error</string>
+    <string name="add_medicine_title">Add medicine</string>
+    <string name="edit_medicine_title">Edit medicine</string>
+    <string name="medicine_not_found">Medicine not found.</string>
+    <string name="reminder_not_found">Reminder not found.</string>
+    <string name="add_medicine_scan_barcode">Scan barcode</string>
+    <string name="add_medicine_scanned">Scanned: %1$s</string>
+    <string name="add_medicine_change_color">Change color</string>
+    <string name="add_medicine_pick_color">Pick a color</string>
+    <string name="reminder_fixed_time">Fixed Time</string>
+    <string name="reminder_repeating_interval">Repeating Interval</string>
+    <string name="reminder_daily_window">Daily Window</string>
+    <string name="reminder_linked_following">Linked Following</string>
+    <string name="reminder_edit_fixed_time">Edit Fixed Time</string>
+    <string name="reminder_edit_repeating_interval">Edit Repeating Interval</string>
+    <string name="reminder_edit_daily_window">Edit Daily Window</string>
+    <string name="reminder_edit_low_stock">Edit Low Stock Alert</string>
+    <string name="reminder_edit_expiration">Edit Expiration Alert</string>
+    <string name="reminder_edit_linked_following">Edit Linked Following</string>
+    <!-- Stock & Expiration. -->
+    <string name="stock_section_current">Current stock</string>
+    <string name="stock_section_expiration">Expiration</string>
+    <string name="stock_refilled_status">Refilled.</string>
+    <!-- Backup & restore status lines. -->
+    <string name="backup_exported">Backup exported.</string>
+    <string name="backup_export_failed">Export failed: %1$s</string>
+    <string name="backup_unreadable_file">Couldn\'t read the selected file.</string>
+    <string name="backup_restore_complete">Restore complete.</string>
+    <string name="backup_invalid_file">This file isn\'t a valid Emivita backup.</string>
+    <string name="backup_restore_failed">Restore failed: %1$s</string>
+    <string name="medical_id_name_helper">Printed at the top of the card</string>
+
+    <!-- Emergency card (PDF). CardLabels.ENGLISH in EmergencyCardExporter must
+         say the same thing; EmergencyCardExporterTest pins that side. -->
+    <string name="card_title">Emergency medical card</string>
+    <string name="card_prepared">Prepared %1$s – Emivita</string>
+    <string name="card_blood_type">Blood type: %1$s</string>
+    <string name="card_allergies">Allergies: %1$s</string>
+    <string name="card_not_recorded">Not recorded</string>
+    <string name="card_current_medicines">Current medicines (%1$d)</string>
+    <string name="card_none_recorded">"  None recorded"</string>
+    <string name="card_indication">" – for %1$s"</string>
+    <plurals name="card_and_more">
+        <item quantity="one">"  … and %1$d more – see the full dose history export"</item>
+        <item quantity="other">"  … and %1$d more – see the full dose history export"</item>
+    </plurals>
+    <string name="card_doctor">Doctor</string>
+    <string name="card_pharmacy">Pharmacy</string>
+    <!-- Medical ID screen. -->
+    <string name="medical_id_blood_type_helper">For example O+, AB-</string>
+    <string name="medical_id_export_failed">Couldn\'t export: %1$s</string>
+    <string name="medical_id_save_failed">Couldn\'t save: %1$s</string>
+    <!-- Reminder types: names shared by the picker, the medicine detail summary
+         and the parent-reminder dropdown; descriptions are the picker's second line. -->
+    <string name="reminder_low_stock_alert">Low Stock Alert</string>
+    <string name="reminder_expiration_alert">Expiration Alert</string>
+    <string name="reminder_type_fixed_time_desc">Same time (or times) every day</string>
+    <string name="reminder_type_repeating_interval_desc">Every N hours, around the clock</string>
+    <string name="reminder_type_daily_window_desc">Every N hours, only within a daily window</string>
+    <string name="reminder_type_linked_following_desc">A follow-up dose after another reminder</string>
+    <string name="reminder_label_at">%1$s – %2$s</string>
+    <string name="reminder_label_every_hours">%1$s – every %2$sh</string>
+    <string name="reminder_label_plus_minutes">%1$s – +%2$dmin</string>
+    <string name="stock_section_low_stock">Low-stock alert</string>
 </resources>

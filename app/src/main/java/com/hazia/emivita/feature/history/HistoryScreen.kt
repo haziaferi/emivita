@@ -66,6 +66,8 @@ import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
 import androidx.annotation.StringRes
+import android.content.Context
+import com.hazia.emivita.core.format.doseStatusLabelRes
 
 private const val HISTORY_LOOKBACK_DAYS = 30L
 
@@ -149,7 +151,7 @@ fun HistoryScreen(
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
             withContext(Dispatchers.IO) {
-                val document = HistoryExporter.buildPdf(context, exportRows, adherenceSubtitle(exportRows), zone)
+                val document = HistoryExporter.buildPdf(context, exportRows, adherenceSubtitle(context, exportRows), zone)
                 context.contentResolver.openOutputStream(uri)?.use { HistoryExporter.writePdf(document, it) }
             }
         }
@@ -287,12 +289,20 @@ private fun defaultExportFileName(extension: String): String {
  *  report's subtitle line -- kept in sync by both reading from the same
  *  [HISTORY_LOOKBACK_DAYS] window and the same [adherenceCounts], not by
  *  sharing layout. */
-private fun adherenceSubtitle(events: List<DoseEventWithMedicine>): String {
+// Takes a Context: this builds the PDF subtitle from a coroutine, not a
+// composable, so stringResource() is out of reach (§9 #19).
+private fun adherenceSubtitle(context: Context, events: List<DoseEventWithMedicine>): String {
     val counts = adherenceCounts(events)
-    if (counts.answered == 0 && counts.missed == 0) return "Last $HISTORY_LOOKBACK_DAYS days"
-    val lead = if (counts.answered == 0) "No doses answered" else "${counts.percent}% of answered doses taken"
-    return "$lead -- ${counts.taken} taken, ${counts.skipped} skipped, " +
-        "${counts.missed} missed, last $HISTORY_LOOKBACK_DAYS days"
+    val days = HISTORY_LOOKBACK_DAYS.toInt()
+    if (counts.answered == 0 && counts.missed == 0) {
+        return context.resources.getQuantityString(R.plurals.history_last_days, days, days)
+    }
+    val lead = if (counts.answered == 0) context.getString(R.string.history_no_doses_answered)
+    else context.getString(R.string.history_percent_taken, counts.percent)
+    val tail = context.resources.getQuantityString(
+        R.plurals.history_counts_summary, days, counts.taken, counts.skipped, counts.missed, days,
+    )
+    return context.getString(R.string.history_subtitle_join, lead, tail)
 }
 
 /** Taken / (Taken + Skipped) over the visible window, with the missed count
@@ -455,7 +465,7 @@ internal fun HistoryEntryRow(row: DoseEventWithMedicine, onClick: () -> Unit) {
                 Text(
                     stringResource(
                         R.string.history_entry_summary,
-                        historyStatusLabel(status),
+                        stringResource(doseStatusLabelRes(status)),
                         time,
                         formatDoseWithUnit(row.doseEvent.doseAmount, medicine.doseUnit),
                     ),
@@ -469,13 +479,6 @@ internal fun HistoryEntryRow(row: DoseEventWithMedicine, onClick: () -> Unit) {
     }
 }
 
-// PENDING here means the alarm fired (or was projected in the past) and
-// nothing ever resolved it -- "Missed" is a display-only relabeling for a
-// past-dated PENDING row, not a fifth DoseStatus; the underlying column
-// stays PENDING so a late resolve() from elsewhere still works normally.
-internal fun historyStatusLabel(status: DoseStatus): String = when (status) {
-    DoseStatus.PENDING -> "Missed"
-    DoseStatus.TAKEN -> "Taken"
-    DoseStatus.SKIPPED -> "Skipped"
-    DoseStatus.REFILLED -> "Refilled"
-}
+// The status label moved to core/format/DoseFormatting.kt as
+// doseStatusLabelRes() (§9 #19): one @StringRes function now serves this
+// screen, the table view and the PDF, where it used to be two String copies.

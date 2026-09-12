@@ -52,6 +52,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
+import androidx.annotation.StringRes
 
 /** Destinations reachable from the Settings home list. How each one responds
  *  to a tap is [RowKind]'s concern, not this enum's -- only the NAVIGATE rows
@@ -68,85 +69,88 @@ enum class SettingsDestination {
  *  SAF picker and dialogs) still warrants a real destination. */
 private enum class RowKind { NAVIGATE, SHEET, TOGGLE }
 
+// title/description/label are @StringRes, not String: settingsGroups below is
+// a top-level val, so there is no composable scope to call stringResource()
+// in. The ids travel and the row composables resolve them (spec §9 #19).
 private data class SettingsRow(
     val destination: SettingsDestination,
     val icon: ImageVector,
-    val title: String,
-    val description: String,
+    @StringRes val title: Int,
+    @StringRes val description: Int,
     val kind: RowKind,
 )
 
 private data class SettingsGroup(
-    val label: String,
+    @StringRes val label: Int,
     val rows: List<SettingsRow>,
 )
 
 private val settingsGroups = listOf(
     SettingsGroup(
-        label = "Reminders & Alarms",
+        label = R.string.settings_group_reminders,
         rows = listOf(
             SettingsRow(
                 SettingsDestination.NotificationsAlerts,
                 Icons.Filled.Notifications,
-                "Notifications & Alerts",
-                "Sound, priority, how reminders behave",
+                R.string.settings_row_notifications,
+                R.string.settings_row_notifications_desc,
                 RowKind.NAVIGATE,
             ),
             SettingsRow(
                 SettingsDestination.AlarmsSnooze,
                 Icons.Filled.Alarm,
-                "Alarms & Snooze",
-                "Alarm sound, vibration, snooze length",
+                R.string.settings_row_alarms,
+                R.string.settings_row_alarms_desc,
                 RowKind.SHEET,
             ),
             SettingsRow(
                 SettingsDestination.WeekendMode,
                 Icons.Filled.CalendarViewWeek,
-                "Weekend Mode",
-                "Delay reminders on chosen days",
+                R.string.settings_row_weekend,
+                R.string.settings_row_weekend_desc,
                 RowKind.SHEET,
             ),
         ),
     ),
     SettingsGroup(
-        label = "Appearance",
+        label = R.string.settings_group_appearance,
         rows = listOf(
             SettingsRow(
                 SettingsDestination.Appearance,
                 Icons.Filled.Palette,
-                "Appearance",
-                "Theme, palette, display preferences",
+                R.string.settings_row_appearance,
+                R.string.settings_row_appearance_desc,
                 RowKind.NAVIGATE,
             ),
         ),
     ),
     SettingsGroup(
-        label = "Privacy & Security",
+        label = R.string.settings_group_privacy,
         rows = listOf(
             SettingsRow(
                 SettingsDestination.PrivacySecurity,
                 Icons.Filled.Lock,
-                "Biometric lock",
-                "Require fingerprint or face unlock to open Emivita",
+                R.string.settings_row_biometric,
+                R.string.settings_row_biometric_desc,
                 RowKind.TOGGLE,
             ),
         ),
     ),
     SettingsGroup(
-        label = "Data & Backup",
+        label = R.string.settings_group_data,
         rows = listOf(
             SettingsRow(
                 SettingsDestination.DataBackup,
                 Icons.Filled.CloudUpload,
-                "Data & Backup",
-                "Auto-backup, restore, PDF/CSV export",
+                R.string.settings_row_data_backup,
+                R.string.settings_row_data_backup_desc,
                 RowKind.NAVIGATE,
             ),
             SettingsRow(
                 SettingsDestination.MedicalId,
                 Icons.Filled.MedicalInformation,
-                "Medical ID",
-                "Blood type, allergies, doctor and pharmacy - printable card",
+                R.string.settings_row_medical_id,
+                R.string.settings_row_medical_id_desc,
                 RowKind.NAVIGATE,
             ),
         ),
@@ -197,7 +201,7 @@ fun SettingsScreen(settingsRepository: SettingsRepository, onOpenDetail: (Settin
 
         items(settingsGroups) { group ->
             Text(
-                group.label.uppercase(),
+                stringResource(group.label).uppercase(),
                 style = MaterialTheme.typography.labelSmall,
                 color = MaterialTheme.colorScheme.primary,
                 modifier = Modifier.padding(start = 4.dp, bottom = 6.dp),
@@ -218,9 +222,9 @@ fun SettingsScreen(settingsRepository: SettingsRepository, onOpenDetail: (Settin
                                 checked = biometricEnabled,
                                 enabled = availability == BiometricAvailability.AVAILABLE,
                                 description = when (availability) {
-                                    BiometricAvailability.AVAILABLE -> row.description
-                                    BiometricAvailability.NOT_ENROLLED -> "No fingerprint or face unlock set up on this device"
-                                    BiometricAvailability.NO_HARDWARE -> "This device doesn't support biometric authentication"
+                                    BiometricAvailability.AVAILABLE -> stringResource(row.description)
+                                    BiometricAvailability.NOT_ENROLLED -> stringResource(R.string.settings_biometric_not_enrolled)
+                                    BiometricAvailability.NO_HARDWARE -> stringResource(R.string.settings_biometric_no_hardware)
                                 },
                                 onToggle = { checked ->
                                     biometricEnabled = checked
@@ -270,9 +274,9 @@ private fun SettingsRowItem(row: SettingsRow, onClick: () -> Unit) {
         Icon(row.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(row.title, style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(row.title), style = MaterialTheme.typography.bodyLarge)
             Text(
-                row.description,
+                stringResource(row.description),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 maxLines = 1,
@@ -305,7 +309,7 @@ private fun SettingsToggleRowItem(
         Icon(row.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
-            Text(row.title, style = MaterialTheme.typography.bodyLarge)
+            Text(stringResource(row.title), style = MaterialTheme.typography.bodyLarge)
             Text(
                 description,
                 style = MaterialTheme.typography.labelMedium,

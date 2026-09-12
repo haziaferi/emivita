@@ -56,6 +56,7 @@ import com.hazia.emivita.ui.theme.NeutralMedicineAccent
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
+import com.hazia.emivita.core.format.labelRes
 
 /**
  * Medicine detail: read-only summary + its reminders list + "Add reminder",
@@ -180,7 +181,7 @@ fun MedicineDetailScreen(
                                 .clickable { onEditReminder(reminder.id) },
                         ) {
                             Text(
-                                reminder.type.summaryLabel(),
+                                stringResource(reminder.type.labelRes()),
                                 modifier = Modifier.padding(12.dp),
                                 style = MaterialTheme.typography.bodyMedium,
                             )
@@ -221,11 +222,3 @@ fun MedicineDetailScreen(
     }
 }
 
-private fun ReminderType.summaryLabel(): String = when (this) {
-    ReminderType.FIXED_TIME -> "Fixed Time"
-    ReminderType.REPEATING_INTERVAL -> "Repeating Interval"
-    ReminderType.DAILY_WINDOW -> "Daily Window"
-    ReminderType.LOW_STOCK_ALERT -> "Low Stock Alert"
-    ReminderType.EXPIRATION_ALERT -> "Expiration Alert"
-    ReminderType.LINKED_FOLLOWING -> "Linked Following"
-}

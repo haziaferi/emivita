@@ -45,7 +45,12 @@ import kotlinx.coroutines.launch
  *  screen needs. MedicalIdScreen holds the other half of the deal: it treats
  *  this exact string as an empty field rather than a chosen name, and refuses
  *  to export a card until a real one is entered. Change this constant and
- *  change PLACEHOLDER_PROFILE_NAME there with it. */
+ *  change PLACEHOLDER_PROFILE_NAME there with it.
+ *
+ *  Not a string resource, deliberately (§9 #19): this is a sentinel that is
+ *  WRITTEN to the database and later RECOGNISED by comparison. Translating it
+ *  would make a profile created under one language unrecognisable under
+ *  another, and the card exporter would print the placeholder as a name. */
 private const val DEFAULT_PROFILE_NAME = "Me"
 
 /**

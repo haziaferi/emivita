@@ -12,19 +12,12 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import android.content.Context
 import com.hazia.emivita.R
+import com.hazia.emivita.core.format.csvStatusLabel
+import com.hazia.emivita.core.format.doseStatusLabelRes
 
 private val DATE_FORMAT = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 private val TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm")
 
-/** Same "Missed" display relabel HistoryScreen uses for a past-dated PENDING
- *  row -- kept as its own copy here (not shared) since the two call sites
- *  don't share a natural home and this one's small enough to just repeat. */
-private fun statusLabel(status: DoseStatus): String = when (status) {
-    DoseStatus.PENDING -> "Missed"
-    DoseStatus.TAKEN -> "Taken"
-    DoseStatus.SKIPPED -> "Skipped"
-    DoseStatus.REFILLED -> "Refilled"
-}
 
 /**
  * Human-readable dose-history reports for sharing with a doctor (spec §9
@@ -53,7 +46,7 @@ object HistoryExporter {
             builder.append(scheduled.format(DATE_FORMAT)).append(',')
             builder.append(time).append(',')
             builder.append(csvEscape(row.medicine.name)).append(',')
-            builder.append(statusLabel(row.doseEvent.status)).append(',')
+            builder.append(csvStatusLabel(row.doseEvent.status)).append(',')
             builder.append(formatDecimal(row.doseEvent.doseAmount)).append(',')
             builder.append(csvEscape(row.medicine.doseUnit ?: "")).append('\n')
         }
@@ -130,7 +123,7 @@ object HistoryExporter {
             canvas!!.drawText(scheduled.format(DATE_FORMAT), colDate, y, rowPaint)
             canvas!!.drawText(time, colTime, y, rowPaint)
             canvas!!.drawText(row.medicine.name.take(28), colMedicine, y, rowPaint)
-            canvas!!.drawText(statusLabel(row.doseEvent.status), colStatus, y, rowPaint)
+            canvas!!.drawText(context.getString(doseStatusLabelRes(row.doseEvent.status)), colStatus, y, rowPaint)
             canvas!!.drawText(formatDoseWithUnit(row.doseEvent.doseAmount, row.medicine.doseUnit), colDose, y, rowPaint)
             y += rowHeight
         }

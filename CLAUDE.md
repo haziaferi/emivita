@@ -46,6 +46,25 @@ installs a debug build over whatever is on the phone and writes (then deletes)
 its own rows in the real database — check what is installed before running it
 on a device that is not the test device.
 
+## User-visible text (§9 #19)
+
+Every string a user sees lives in `app/src/main/res/values/strings.xml`.
+`HardcodedUiTextGateTest` fails the build on a literal handed to `Text()`,
+`contentDescription`, a notification builder, or a `title`/`label` argument
+in the UI layers. Its blind spot is a literal assigned to a `val` first;
+en-XA on the device (`isPseudoLocalesEnabled`) is the complement.
+
+- Composable: `stringResource(R.string.x)`. Callback or coroutine:
+  `LocalResources.current.getString(...)` captured at composition — not
+  `LocalContext`, which Compose lint rejects. Top-level `val` or enum:
+  `@StringRes Int`, resolved at the render site.
+- Deliberately English, do not "fix": `csvStatusLabel` (CSV is data),
+  `MedPalette.displayName()` (pinned to SPEC Appendix A), `CardLabels.ENGLISH`
+  (test-pinned), `"Me"` (a stored sentinel), `MedicineIconOption.key`
+  (persisted). Each says why at its declaration.
+- Lint will demand real dashes, ellipses and `<plurals>` the moment text
+  lands in XML. Fix them; never baseline them.
+
 ## Editing files
 
 - Line endings are enforced by `.gitattributes`; do not fight it. If a patch

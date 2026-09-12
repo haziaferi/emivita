@@ -42,6 +42,7 @@ import java.time.format.DateTimeFormatter
 import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
+import com.hazia.emivita.core.format.doseStatusLabelRes
 
 /** Sortable columns for [HistoryTableView] -- hand-rolled per spec §5's
  *  ADR-0001 shopping list ("hand-rolled `SortableTable`"), §9 #6.
@@ -122,7 +123,7 @@ private fun HistoryTableHeader(sortColumn: HistoryTableColumn, descending: Boole
                 if (column == sortColumn) {
                     Icon(
                         if (descending) Icons.Filled.ArrowDownward else Icons.Filled.ArrowUpward,
-                        contentDescription = if (descending) "Sorted descending" else "Sorted ascending",
+                        contentDescription = stringResource(if (descending) R.string.history_sorted_descending else R.string.history_sorted_ascending),
                         tint = MaterialTheme.colorScheme.primary,
                         modifier = Modifier.size(14.dp).padding(start = 2.dp),
                     )
@@ -168,7 +169,7 @@ private fun HistoryTableRow(row: DoseEventWithMedicine, zone: ZoneId, onClick: (
                 )
             }
             Text(
-                historyStatusLabel(row.doseEvent.status),
+                stringResource(doseStatusLabelRes(row.doseEvent.status)),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(HistoryTableColumn.STATUS.weight),

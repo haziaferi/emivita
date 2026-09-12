@@ -76,8 +76,8 @@ fun AddMedicineScreen(
 ) {
     val colorsInUse = rememberColorsInUse(medicineRepository, profileId)
     MedicineFormBody(
-        title = "Add medicine",
-        saveLabel = "Save",
+        title = stringResource(R.string.add_medicine_title),
+        saveLabel = stringResource(R.string.common_save),
         initialName = "",
         initialBarcodeValue = prefilledBarcode,
         initialIconKey = MedicineIcons.default.key,
@@ -147,7 +147,7 @@ fun EditMedicineScreen(
     val current = medicine
     if (!loaded || current == null) {
         Column(Modifier.fillMaxWidth().padding(16.dp)) {
-            Text(if (loaded) "Medicine not found." else "Loading...", style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(if (loaded) R.string.medicine_not_found else R.string.common_loading), style = MaterialTheme.typography.bodyMedium)
         }
         return
     }
@@ -155,8 +155,8 @@ fun EditMedicineScreen(
     val tagsSnapshot = existingTags
     val colorsInUse = rememberColorsInUse(medicineRepository, current.profileId, excludeId = medicineId)
     MedicineFormBody(
-        title = "Edit medicine",
-        saveLabel = "Save changes",
+        title = stringResource(R.string.edit_medicine_title),
+        saveLabel = stringResource(R.string.common_save_changes),
         initialName = current.name,
         initialBarcodeValue = current.barcodeValue,
         initialIconKey = current.iconKey,
@@ -324,7 +324,7 @@ private fun MedicineFormBody(
             }) {
                 Icon(Icons.Filled.QrCodeScanner, contentDescription = null)
                 Spacer(Modifier.width(6.dp))
-                Text(if (barcodeValue != null) "Scanned: $barcodeValue" else "Scan barcode")
+                Text(barcodeValue?.let { stringResource(R.string.add_medicine_scanned, it) } ?: stringResource(R.string.add_medicine_scan_barcode))
             }
         }
         if (scanUnavailable) {
@@ -369,7 +369,7 @@ private fun MedicineFormBody(
                     .background(color ?: NeutralMedicineAccent, CircleShape),
             )
             Spacer(Modifier.width(10.dp))
-            AssistChip(onClick = { showColorPicker = true }, label = { Text(color?.let { "Change color" } ?: "Pick a color") })
+            AssistChip(onClick = { showColorPicker = true }, label = { Text(stringResource(if (color != null) R.string.add_medicine_change_color else R.string.add_medicine_pick_color)) })
         }
 
         Spacer(Modifier.height(20.dp))

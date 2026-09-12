@@ -56,6 +56,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
+import androidx.compose.ui.platform.LocalResources
 
 private val EXPORT_FILE_STAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
@@ -75,6 +76,11 @@ fun BackupSyncScreen(
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
+    // LocalResources, not LocalContext, for strings resolved inside a
+    // callback: Compose's own lint (LocalContextGetResourceValueCall) flags
+    // context.getString() on a captured context because it will not see a
+    // configuration change; this one does (§9 #19).
+    val resources = LocalResources.current
     val scope = rememberCoroutineScope()
 
     // ---- Manual export (a) ------------------------------------------------
@@ -107,10 +113,10 @@ fun BackupSyncScreen(
                         ?: error("Couldn't open the chosen file for writing")
                     out.use { tempFile.inputStream().use { input -> input.copyTo(it) } }
                 }
-                exportStatus = "Backup exported."
+                exportStatus = resources.getString(R.string.backup_exported)
                 exportPassword = "" // cleared after use, matching restorePasswordInput/syncPassphraseInput below
             } catch (e: Exception) {
-                exportStatus = "Export failed: ${e.message ?: "unknown error"}"
+                exportStatus = resources.getString(R.string.backup_export_failed, e.message ?: resources.getString(R.string.common_unknown_error))
             } finally {
                 // Same wipe-after-use discipline AutoSyncPassphraseStore asks
                 // for: this array was built from the text field only to hand to
@@ -146,7 +152,7 @@ fun BackupSyncScreen(
                 context.contentResolver.openInputStream(uri)?.use { input -> tempFile.outputStream().use { input.copyTo(it) } }
                     ?: return@withContext null
                 BackupZipWriter.read(tempFile, password)
-            } ?: run { restoreStatus = "Couldn't read the selected file."; return }
+            } ?: run { restoreStatus = resources.getString(R.string.backup_unreadable_file); return }
             when (readResult) {
                 is BackupZipReadResult.Success -> {
                     // restoreSnapshot goes through Room's withTransaction, which
@@ -157,7 +163,7 @@ fun BackupSyncScreen(
                     backupRepository.restoreSnapshot(data)
                     showRestorePasswordDialog = false
                     restorePasswordInput = ""
-                    restoreStatus = "Restore complete."
+                    restoreStatus = resources.getString(R.string.backup_restore_complete)
                 }
                 BackupZipReadResult.PasswordRequired -> {
                     pendingRestoreUri = uri
@@ -170,11 +176,11 @@ fun BackupSyncScreen(
                     showRestorePasswordDialog = true
                 }
                 BackupZipReadResult.Corrupt -> {
-                    restoreStatus = "This file isn't a valid Emivita backup."
+                    restoreStatus = resources.getString(R.string.backup_invalid_file)
                 }
             }
         } catch (e: Exception) {
-            restoreStatus = "Restore failed: ${e.message ?: "unknown error"}"
+            restoreStatus = resources.getString(R.string.backup_restore_failed, e.message ?: resources.getString(R.string.common_unknown_error))
         } finally {
             withContext(Dispatchers.IO) { tempFile.delete() }
         }

@@ -46,6 +46,14 @@ enum class ThemeMode { LIGHT, DARK, SYSTEM }
  */
 val DEFAULT_PALETTE: MedPalette = MedPalette.DAYLIGHT
 
+/**
+ * English on purpose, and not a string resource (spec §9 #19). These are the
+ * palettes' names in the sense a typeface has a name: `PaletteSpecConsistencyTest`
+ * matches them against SPEC Appendix A's headings, so resourcing them would
+ * break the one gate that keeps the spec's tables honest, and a translated
+ * "Daylight" would be a different palette to a reader of the spec. The rest
+ * of the Appearance screen is translated; the six names stay as they are.
+ */
 fun MedPalette.displayName(): String = when (this) {
     MedPalette.DAYLIGHT -> "Daylight"
     MedPalette.SAGE -> "Sage"

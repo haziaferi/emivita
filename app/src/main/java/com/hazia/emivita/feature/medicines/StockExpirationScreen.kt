@@ -59,6 +59,7 @@ import kotlinx.coroutines.launch
 import java.time.format.DateTimeFormatter
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
+import androidx.compose.ui.platform.LocalResources
 
 private val RUN_OUT_FORMAT = DateTimeFormatter.ofPattern("MMM d, yyyy")
 
@@ -111,6 +112,11 @@ fun StockExpirationScreen(
     var frequency by remember { mutableStateOf(ExpirationTriggerFrequency.ONCE) }
 
     var saveStatus by remember { mutableStateOf<String?>(null) }
+    // LocalResources, not LocalContext, for strings resolved inside a
+    // callback: Compose's own lint (LocalContextGetResourceValueCall) flags
+    // context.getString() on a captured context because it will not see a
+    // configuration change; this one does (§9 #19).
+    val resources = LocalResources.current
 
     LaunchedEffect(medicineId) {
         val medicine = medicineRepository.getById(medicineId) ?: return@LaunchedEffect
@@ -159,7 +165,7 @@ fun StockExpirationScreen(
         }
 
         // ---- Zone 1: Current stock ------------------------------------
-        ZonedSection(title = "Current stock", color = MaterialTheme.colorScheme.primaryContainer) {
+        ZonedSection(title = stringResource(R.string.stock_section_current), color = MaterialTheme.colorScheme.primaryContainer) {
             OutlinedTextField(
                 value = quantity,
                 onValueChange = { quantity = it },
@@ -200,7 +206,7 @@ fun StockExpirationScreen(
                         doseEventRepository.logRefill(medicineId, amount, System.currentTimeMillis())
                         val fresh = medicineRepository.getById(medicineId)
                         quantity = formatDecimal(fresh?.stockInfo?.quantity ?: 0.0)
-                        saveStatus = "Refilled."
+                        saveStatus = resources.getString(R.string.stock_refilled_status)
                     }
                 },
             ) { Text(stringResource(R.string.stock_refill_now, refillQuantity.toString())) }
@@ -209,7 +215,7 @@ fun StockExpirationScreen(
         Spacer(Modifier.height(16.dp))
 
         // ---- Zone 2: Low-stock alert ------------------------------------
-        ZonedSection(title = "Low-stock alert", color = MaterialTheme.colorScheme.tertiaryContainer) {
+        ZonedSection(title = stringResource(R.string.stock_section_low_stock), color = MaterialTheme.colorScheme.tertiaryContainer) {
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -253,7 +259,7 @@ fun StockExpirationScreen(
         Spacer(Modifier.height(16.dp))
 
         // ---- Zone 3: Expiration ------------------------------------
-        ZonedSection(title = "Expiration", color = MaterialTheme.colorScheme.errorContainer) {
+        ZonedSection(title = stringResource(R.string.stock_section_expiration), color = MaterialTheme.colorScheme.errorContainer) {
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,

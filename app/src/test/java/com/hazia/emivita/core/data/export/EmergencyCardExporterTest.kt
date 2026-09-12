@@ -117,7 +117,9 @@ class EmergencyCardExporterTest {
             listOf(medicine("Sertraline", doseUnit = "tablets", indication = "depression")),
         )
         assertTrue(out.contains("Current medicines (1)"))
-        assertTrue(out.contains("  Sertraline (tablets) - for depression"))
+        // En dash, not hyphen, since §9 #19 moved the card text into resources and
+        // lint's TypographyDashes applies there. CardLabels.ENGLISH matches.
+        assertTrue(out.contains("  Sertraline (tablets) – for depression"))
     }
 
     /**

@@ -36,6 +36,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
+import androidx.compose.ui.platform.LocalResources
 
 /**
  * Medical ID (spec section 9's parking lot, promoted in section 7 R48).
@@ -66,6 +67,11 @@ fun MedicalIdScreen(
     onBack: () -> Unit,
 ) {
     val context = LocalContext.current
+    // LocalResources, not LocalContext, for strings resolved inside a
+    // callback: Compose's own lint (LocalContextGetResourceValueCall) flags
+    // context.getString() on a captured context because it will not see a
+    // configuration change; this one does (§9 #19).
+    val resources = LocalResources.current
     val scope = rememberCoroutineScope()
 
     var profile by remember { mutableStateOf<Profile?>(null) }
@@ -127,12 +133,12 @@ fun MedicalIdScreen(
                 profileRepository.update(updated)
                 profile = updated
                 val medicines = medicineRepository.observeForProfile(profileId).first().map { it.medicine }
-                val document = EmergencyCardExporter.buildPdf(updated, medicines)
+                val document = EmergencyCardExporter.buildPdf(updated, medicines, labels = EmergencyCardExporter.CardLabels.from(resources))
                 context.contentResolver.openOutputStream(uri)?.use {
                     EmergencyCardExporter.writePdf(document, it)
                 }
             } catch (e: Exception) {
-                saveError = "Couldn't export: " + (e.message ?: "unknown error")
+                saveError = resources.getString(R.string.medical_id_export_failed, e.message ?: resources.getString(R.string.common_unknown_error))
             }
         }
     }
@@ -157,8 +163,8 @@ fun MedicalIdScreen(
         )
         Spacer(Modifier.height(16.dp))
 
-        Field(stringResource(R.string.common_name), name, { name = it }, "Printed at the top of the card")
-        Field(stringResource(R.string.medical_id_blood_type), bloodType, { bloodType = it }, "For example O+, AB-")
+        Field(stringResource(R.string.common_name), name, { name = it }, stringResource(R.string.medical_id_name_helper))
+        Field(stringResource(R.string.medical_id_blood_type), bloodType, { bloodType = it }, stringResource(R.string.medical_id_blood_type_helper))
         Field(
             stringResource(R.string.medical_id_allergies),
             allergies,
@@ -190,7 +196,7 @@ fun MedicalIdScreen(
                         profile = updated
                         onBack()
                     } catch (e: Exception) {
-                        saveError = "Couldn't save: " + (e.message ?: "unknown error")
+                        saveError = resources.getString(R.string.medical_id_save_failed, e.message ?: resources.getString(R.string.common_unknown_error))
                     }
                 }
             }) { Text(stringResource(R.string.common_save)) }

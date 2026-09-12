@@ -155,9 +155,9 @@ fun AdherenceChart(counts: List<DayAdherenceCounts>) {
             )
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-                LegendSwatch(SeriesPattern.SOLID, takenColor, surfaceColor, density, "Taken")
-                LegendSwatch(SeriesPattern.DIAGONAL, skippedColor, surfaceColor, density, "Skipped")
-                LegendSwatch(SeriesPattern.CROSS_HATCH, missedColor, surfaceColor, density, "Missed")
+                LegendSwatch(SeriesPattern.SOLID, takenColor, surfaceColor, density, stringResource(R.string.status_taken))
+                LegendSwatch(SeriesPattern.DIAGONAL, skippedColor, surfaceColor, density, stringResource(R.string.status_skipped))
+                LegendSwatch(SeriesPattern.CROSS_HATCH, missedColor, surfaceColor, density, stringResource(R.string.status_missed))
             }
             Spacer(Modifier.height(6.dp))
             // The third channel, said out loud. The stack order is fixed, so

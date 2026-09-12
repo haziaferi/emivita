@@ -70,13 +70,20 @@ import kotlinx.coroutines.launch
 import java.time.LocalDate
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
+import java.time.DayOfWeek
+import java.time.format.TextStyle
+import androidx.annotation.StringRes
+import com.hazia.emivita.core.format.labelRes
+import androidx.compose.ui.text.intl.Locale
 
+// @StringRes: reminderTypeOptions is a top-level val (§9 #19).
 private data class ReminderTypeOption(
     val type: ReminderType,
     val icon: ImageVector,
-    val title: String,
-    val description: String,
-)
+    @StringRes val description: Int,
+) {
+    val title: Int @StringRes get() = type.labelRes()
+}
 
 // LOW_STOCK_ALERT/EXPIRATION_ALERT deliberately excluded (spec §6/§9 #1:
 // "Stock & expiration: one screen... one entry point, no duplicated fields
@@ -86,10 +93,10 @@ private data class ReminderTypeOption(
 // be edited from wherever it's tapped -- one creation entry point, not two,
 // but editing reuses the same field-level form either way (not duplication).
 private val reminderTypeOptions = listOf(
-    ReminderTypeOption(ReminderType.FIXED_TIME, Icons.Filled.Schedule, "Fixed Time", "Same time (or times) every day"),
-    ReminderTypeOption(ReminderType.REPEATING_INTERVAL, Icons.Filled.Repeat, "Repeating Interval", "Every N hours, around the clock"),
-    ReminderTypeOption(ReminderType.DAILY_WINDOW, Icons.Filled.CalendarViewWeek, "Daily Window", "Every N hours, only within a daily window"),
-    ReminderTypeOption(ReminderType.LINKED_FOLLOWING, Icons.Filled.Link, "Linked Following", "A follow-up dose after another reminder"),
+    ReminderTypeOption(ReminderType.FIXED_TIME, Icons.Filled.Schedule, R.string.reminder_type_fixed_time_desc),
+    ReminderTypeOption(ReminderType.REPEATING_INTERVAL, Icons.Filled.Repeat, R.string.reminder_type_repeating_interval_desc),
+    ReminderTypeOption(ReminderType.DAILY_WINDOW, Icons.Filled.CalendarViewWeek, R.string.reminder_type_daily_window_desc),
+    ReminderTypeOption(ReminderType.LINKED_FOLLOWING, Icons.Filled.Link, R.string.reminder_type_linked_following_desc),
 )
 
 /**
@@ -122,8 +129,8 @@ fun AddReminderScreen(
     when (selectedType) {
         null -> ReminderTypePicker(onSelect = { selectedType = it }, onCancel = onCancel)
         ReminderType.FIXED_TIME -> FixedTimeFormBody(
-            title = "Fixed Time",
-            saveLabel = "Save",
+            title = stringResource(R.string.reminder_fixed_time),
+            saveLabel = stringResource(R.string.common_save),
             initial = ReminderConfig.FixedTime(hour = 8, minute = 0, dose = 1.0, repeatPattern = RepeatPattern.Daily),
             doseUnit = doseUnit,
             onSave = { config, advanced ->
@@ -138,8 +145,8 @@ fun AddReminderScreen(
             onCancel = { selectedType = null },
         )
         ReminderType.REPEATING_INTERVAL -> RepeatingIntervalFormBody(
-            title = "Repeating Interval",
-            saveLabel = "Save",
+            title = stringResource(R.string.reminder_repeating_interval),
+            saveLabel = stringResource(R.string.common_save),
             initial = ReminderConfig.RepeatingInterval(
                 intervalMinutes = 8 * 60,
                 dose = 1.0,
@@ -159,8 +166,8 @@ fun AddReminderScreen(
             onCancel = { selectedType = null },
         )
         ReminderType.DAILY_WINDOW -> DailyWindowFormBody(
-            title = "Daily Window",
-            saveLabel = "Save",
+            title = stringResource(R.string.reminder_daily_window),
+            saveLabel = stringResource(R.string.common_save),
             initial = ReminderConfig.DailyWindow(
                 intervalMinutes = 4 * 60,
                 dose = 1.0,
@@ -190,8 +197,8 @@ fun AddReminderScreen(
         // revisited. EditReminderScreen below routes to their form bodies.
         ReminderType.LOW_STOCK_ALERT, ReminderType.EXPIRATION_ALERT -> Unit
         ReminderType.LINKED_FOLLOWING -> LinkedFollowingFormBody(
-            title = "Linked Following",
-            saveLabel = "Save",
+            title = stringResource(R.string.reminder_linked_following),
+            saveLabel = stringResource(R.string.common_save),
             medicineId = medicineId,
             excludeReminderId = null,
             reminderRepository = reminderRepository,
@@ -242,15 +249,15 @@ fun EditReminderScreen(
     val current = reminder
     if (!loaded || current == null) {
         Column(Modifier.fillMaxWidth().padding(16.dp)) {
-            Text(if (loaded) "Reminder not found." else "Loading...", style = MaterialTheme.typography.bodyMedium)
+            Text(stringResource(if (loaded) R.string.reminder_not_found else R.string.common_loading), style = MaterialTheme.typography.bodyMedium)
         }
         return
     }
 
     when (val config = reminderRepository.decodeConfig(current)) {
         is ReminderConfig.FixedTime -> FixedTimeFormBody(
-            title = "Edit Fixed Time",
-            saveLabel = "Save changes",
+            title = stringResource(R.string.reminder_edit_fixed_time),
+            saveLabel = stringResource(R.string.common_save_changes),
             initial = config,
             initialReminder = current,
             doseUnit = doseUnit,
@@ -264,8 +271,8 @@ fun EditReminderScreen(
             onCancel = onCancel,
         )
         is ReminderConfig.RepeatingInterval -> RepeatingIntervalFormBody(
-            title = "Edit Repeating Interval",
-            saveLabel = "Save changes",
+            title = stringResource(R.string.reminder_edit_repeating_interval),
+            saveLabel = stringResource(R.string.common_save_changes),
             initial = config,
             initialReminder = current,
             doseUnit = doseUnit,
@@ -279,8 +286,8 @@ fun EditReminderScreen(
             onCancel = onCancel,
         )
         is ReminderConfig.DailyWindow -> DailyWindowFormBody(
-            title = "Edit Daily Window",
-            saveLabel = "Save changes",
+            title = stringResource(R.string.reminder_edit_daily_window),
+            saveLabel = stringResource(R.string.common_save_changes),
             initial = config,
             initialReminder = current,
             doseUnit = doseUnit,
@@ -294,22 +301,22 @@ fun EditReminderScreen(
             onCancel = onCancel,
         )
         is ReminderConfig.LowStockAlert -> LowStockAlertFormBody(
-            title = "Edit Low Stock Alert",
-            saveLabel = "Save changes",
+            title = stringResource(R.string.reminder_edit_low_stock),
+            saveLabel = stringResource(R.string.common_save_changes),
             initial = config,
             onSave = { updated -> reminderRepository.updateConfig(current, updated); onDone() },
             onCancel = onCancel,
         )
         is ReminderConfig.ExpirationAlert -> ExpirationAlertFormBody(
-            title = "Edit Expiration Alert",
-            saveLabel = "Save changes",
+            title = stringResource(R.string.reminder_edit_expiration),
+            saveLabel = stringResource(R.string.common_save_changes),
             initial = config,
             onSave = { updated -> reminderRepository.updateConfig(current, updated); onDone() },
             onCancel = onCancel,
         )
         is ReminderConfig.LinkedFollowing -> LinkedFollowingFormBody(
-            title = "Edit Linked Following",
-            saveLabel = "Save changes",
+            title = stringResource(R.string.reminder_edit_linked_following),
+            saveLabel = stringResource(R.string.common_save_changes),
             medicineId = current.medicineId,
             excludeReminderId = current.id,
             reminderRepository = reminderRepository,
@@ -349,9 +356,9 @@ private fun ReminderTypePicker(onSelect: (ReminderType) -> Unit, onCancel: () ->
                         Icon(option.icon, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                         Spacer(Modifier.width(14.dp))
                         Column(Modifier.weight(1f)) {
-                            Text(option.title, style = MaterialTheme.typography.bodyLarge)
+                            Text(stringResource(option.title), style = MaterialTheme.typography.bodyLarge)
                             Text(
-                                option.description,
+                                stringResource(option.description),
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                             )
@@ -369,7 +376,7 @@ private fun ReminderFormScaffold(
     onSave: () -> Unit,
     onCancel: () -> Unit,
     saveEnabled: Boolean,
-    saveLabel: String = "Save",
+    saveLabel: String,
     content: @Composable () -> Unit,
 ) {
     Column(
@@ -647,10 +654,9 @@ private fun FixedTimeFormBody(
         }
         if (patternKind == 1) {
             Spacer(Modifier.height(8.dp))
-            val dayLabels = listOf("Mon", "Tue", "Wed", "Thu", "Fri", "Sat", "Sun")
             FlowRow {
-                dayLabels.forEachIndexed { index, label ->
-                    val dayNum = index + 1
+                (1..7).forEach { dayNum ->
+                    val label = DayOfWeek.of(dayNum).getDisplayName(TextStyle.SHORT, Locale.current.platformLocale)
                     Row(verticalAlignment = Alignment.CenterVertically) {
                         Checkbox(
                             checked = dayNum in selectedDays,
@@ -1087,13 +1093,17 @@ private fun LinkedFollowingFormBody(
     }
 }
 
-private fun reminderLabel(reminder: Reminder): String = when (val config = decodeReminderConfig(reminder.configJson)) {
-    is ReminderConfig.FixedTime -> "Fixed Time - ${"%02d".format(config.hour)}:${"%02d".format(config.minute)}"
-    is ReminderConfig.RepeatingInterval -> "Repeating Interval - every ${formatHours(config.intervalMinutes)}h"
-    is ReminderConfig.DailyWindow -> "Daily Window - every ${formatHours(config.intervalMinutes)}h"
-    is ReminderConfig.LinkedFollowing -> "Linked Following - +${config.delayMinutes}min"
-    is ReminderConfig.LowStockAlert -> "Low Stock Alert"
-    is ReminderConfig.ExpirationAlert -> "Expiration Alert"
+@Composable
+private fun reminderLabel(reminder: Reminder): String {
+    val name = stringResource(reminder.type.labelRes())
+    return when (val config = decodeReminderConfig(reminder.configJson)) {
+        is ReminderConfig.FixedTime ->
+            stringResource(R.string.reminder_label_at, name, "${"%02d".format(config.hour)}:${"%02d".format(config.minute)}")
+        is ReminderConfig.RepeatingInterval -> stringResource(R.string.reminder_label_every_hours, name, formatHours(config.intervalMinutes))
+        is ReminderConfig.DailyWindow -> stringResource(R.string.reminder_label_every_hours, name, formatHours(config.intervalMinutes))
+        is ReminderConfig.LinkedFollowing -> stringResource(R.string.reminder_label_plus_minutes, name, config.delayMinutes)
+        is ReminderConfig.LowStockAlert, is ReminderConfig.ExpirationAlert -> name
+    }
 }
 
 private fun formatHours(intervalMinutes: Int): String = formatDecimal(intervalMinutes / 60.0)

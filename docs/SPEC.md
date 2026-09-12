@@ -1217,7 +1217,7 @@ this session.
     the parking lot below; see that entry and R48 for scope and for the
     two boundaries it keeps.
 
-19. **⏳ Internationalisation + accessibility — scoped, Stage A in progress.**
+19. **⏳ Internationalisation + accessibility — Stage A ✅ complete, B and C open.**
     The first item on this roadmap that is not a feature. §1 caps what this
     app can become: single user, single device, no `INTERNET`, no Play Store,
     so the medTimer capabilities Emivita lacks most visibly (multi-user,
@@ -1262,10 +1262,74 @@ this session.
     is one indivisible unit and everything else is genuinely optional.
 
     **Staged, because it does not fit one sitting.**
-    **A** (in progress): `isPseudoLocalesEnabled` on debug, extract all 159,
-    include the non-Compose text, add the source-scan gate. Reaches no new
+    **A ✅ (two commits, 2026-09-08 and 2026-09-12):** `isPseudoLocalesEnabled` on
+    debug, every user-visible literal extracted, the non-Compose text
+    included, the source-scan gate added and verified to bite. Reaches no new
     user; makes the next translation hours rather than a rewrite, and makes
     an un-extracted string *visible on the screen* rather than a claim.
+    **How Stage A actually went, because the numbers moved four times.**
+    159 → 235 → ~300 → **323 strings and 3 plurals**, and the code never
+    changed between counts: the detection method was the limit each time. A
+    line-based scan missed 27% by not seeing multi-line `Text(` calls. A
+    sink-based scan then missed ~70 that reach a sink only after being
+    assigned to a `val`, returned from a `when`, or carried in a data class —
+    the four bottom-nav labels, every Settings row, every status label, the
+    form titles. A prose-shaped regex missed "Reminders & Alarms" for the
+    ampersand. Each pass was honest about its own scope and wrong about the
+    total, which is §7.1 rule 9 in a different costume: a detector that
+    reports nothing has proven only that *it* found nothing.
+
+    **What needed a decision rather than an edit, and what was decided.**
+    (a) `historyStatusLabel` fed both the CSV and the PDF, which now disagree
+    about translation: split into `doseStatusLabelRes()` (a `@StringRes`, one
+    function serving the History list, the table, the chart legend, the Today
+    timeline and the PDF, where there had been two String copies) and
+    `csvStatusLabel()` (English on purpose — a CSV is data for a spreadsheet,
+    and a column value that changes with the phone's language breaks whatever
+    reads it). (b) `MedPalette.displayName()` is pinned by
+    `PaletteSpecConsistencyTest` against Appendix A's headings: **stays
+    English**, documented at the declaration — the names are names in the
+    sense a typeface has one, and resourcing them would break the one gate
+    that keeps this document's tables honest. (c) `EmergencyCardExporter.buildLines`
+    is deliberately pure so the whole card can be asserted line by line: it now
+    takes a `CardLabels` with an `ENGLISH` default the test uses and a
+    `from(Resources)` production uses, the same shape as (a). (d) `"Me"` is a
+    sentinel that is written to the database and later recognised by
+    comparison; translating it would make a profile created under one language
+    unrecognisable under another. Stays. (e) Day-of-week names come from
+    `java.time`'s `getDisplayName`, which is already localised, not from
+    resources. (f) `MedicineIconOption`'s first argument is `Medicine.iconKey`,
+    persisted: never translated, excluded from the gate by name.
+
+    **Moving text into XML put it under checks Compose literals escape, and
+    they fired immediately.** `TypographyDashes` ×9, `TypographyEllipsis`,
+    `PluralsCandidate` ×2, and then Compose's own `LocalContextGetResourceValueCall`
+    ×10 and `NonObservableLocale` ×2 once strings were resolved in callbacks.
+    All fixed, none baselined: real em and en dashes, `history_counts_summary`,
+    `history_last_days` and `card_and_more` are `<plurals>`, callbacks resolve
+    through `LocalResources.current` (configuration-aware, which a captured
+    `LocalContext` is not), and day names read `Locale.current` rather than
+    `Locale.getDefault()`. Every one of these was invisible while the strings
+    were inline. That is this item's argument, made concrete by lint itself.
+
+    **The gate, `HardcodedUiTextGateTest`.** Same shape as
+    `PaletteSpecConsistencyTest`: walks up to the repo root, reads
+    `app/src/main/java`, asserts. Sink-based — a literal handed directly to
+    `Text()`, `contentDescription`, a notification builder, a channel, `drawText`,
+    the biometric prompt, the app's own text-taking composables, an enum's
+    display argument, or a `title`/`label`/`saveLabel`/`helper` named argument
+    in the UI layers — because a prose-shaped rule would have needed an
+    allowlist for (b), (c) and `csvStatusLabel`, and a gate with an allowlist
+    is a lint baseline wearing a different hat. Its first run caught
+    `CardLabels.ENGLISH`'s `title =`; the fix was to scope the named-argument
+    rule to the feature/ui/navigation packages where it is true, not to exempt
+    a file. **Its blind spot is stated in its KDoc rather than hidden:** a
+    literal assigned to a `val` before a sink. The complement is en-XA on the
+    device, where anything the gate misses renders plain English amid accented
+    text. Verified to bite on a real mutation (a `Text("Sneaked back in")`
+    planted in `TodayScreen.kt` failed the build naming file, line and rule),
+    not only on its own built-in samples. Suite 166 → 168.
+
     **B**: `contentDescription` across the ~170 controls, plus
     `semantics`/`stateDescription` on the chart, the calendar grid and the
     dose rows, gated by Compose tests. **C**: one real translation; the

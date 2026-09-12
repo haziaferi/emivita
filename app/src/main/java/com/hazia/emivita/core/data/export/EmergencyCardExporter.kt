@@ -7,6 +7,8 @@ import com.hazia.emivita.core.data.entity.Profile
 import java.io.OutputStream
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
+import android.content.res.Resources
+import com.hazia.emivita.R
 
 /**
  * The emergency/medical card (spec §9's parking lot, promoted in §7 R48).
@@ -31,6 +33,63 @@ import java.time.format.DateTimeFormatter
  */
 object EmergencyCardExporter {
 
+    /**
+     * Every fixed string the card prints, resolved by the caller (spec §9 #19).
+     *
+     * [buildLines] is deliberately pure -- no Context, no resources -- so the
+     * whole document can be asserted line by line in a JVM test. Translating
+     * it therefore cannot mean calling getString() inside; it means handing
+     * the strings in. [ENGLISH] is what the test uses and what production
+     * used to hardcode; [fromContext] is what production uses now. The two
+     * must say the same thing in English, and `EmergencyCardExporterTest`
+     * pins that on the ENGLISH side.
+     */
+    data class CardLabels(
+        val title: String,
+        val prepared: (String) -> String,
+        val bloodType: (String) -> String,
+        val allergies: (String) -> String,
+        val notRecorded: String,
+        val currentMedicines: (Int) -> String,
+        val noneRecorded: String,
+        val indication: (String) -> String,
+        val andMore: (Int) -> String,
+        val doctor: String,
+        val pharmacy: String,
+    ) {
+        companion object {
+            val ENGLISH = CardLabels(
+                title = "Emergency medical card",
+                prepared = { "Prepared $it – Emivita" },
+                bloodType = { "Blood type: $it" },
+                allergies = { "Allergies: $it" },
+                notRecorded = "Not recorded",
+                currentMedicines = { "Current medicines ($it)" },
+                noneRecorded = "  None recorded",
+                indication = { " – for $it" },
+                andMore = { "  … and $it more – see the full dose history export" },
+                doctor = "Doctor",
+                pharmacy = "Pharmacy",
+            )
+
+            /** From [Resources] rather than a Context so a composable can hand
+             *  in `LocalResources.current`, which tracks configuration changes. */
+            fun from(resources: Resources) = CardLabels(
+                title = resources.getString(R.string.card_title),
+                prepared = { resources.getString(R.string.card_prepared, it) },
+                bloodType = { resources.getString(R.string.card_blood_type, it) },
+                allergies = { resources.getString(R.string.card_allergies, it) },
+                notRecorded = resources.getString(R.string.card_not_recorded),
+                currentMedicines = { resources.getString(R.string.card_current_medicines, it) },
+                noneRecorded = resources.getString(R.string.card_none_recorded),
+                indication = { resources.getString(R.string.card_indication, it) },
+                andMore = { resources.getQuantityString(R.plurals.card_and_more, it, it) },
+                doctor = resources.getString(R.string.card_doctor),
+                pharmacy = resources.getString(R.string.card_pharmacy),
+            )
+        }
+    }
+
     /** Fits one A4 page beside the contact sections at the sizes below, with
      *  room for the truncation line. A reader with more medicines than this
      *  is better served by the full dose-history export. */
@@ -48,11 +107,12 @@ object EmergencyCardExporter {
         profile: Profile,
         medicines: List<Medicine>,
         today: LocalDate = LocalDate.now(),
+        labels: CardLabels = CardLabels.ENGLISH,
     ): List<String> {
         val lines = mutableListOf<String>()
-        lines += "Emergency medical card"
+        lines += labels.title
         lines += profile.name
-        lines += "Prepared ${today.format(DATE_FORMAT)} - Emivita"
+        lines += labels.prepared(today.format(DATE_FORMAT))
         lines += ""
 
         // Blood type and allergies lead, in that order: they are the two
@@ -61,13 +121,13 @@ object EmergencyCardExporter {
         // empty. "Not recorded" is information; a missing line is ambiguous
         // between "none" and "nobody filled this in", and those differ a great
         // deal for an allergy.
-        lines += "Blood type: ${profile.bloodType.orNotRecorded()}"
-        lines += "Allergies: ${profile.allergies.orNotRecorded()}"
+        lines += labels.bloodType(profile.bloodType.orNotRecorded(labels))
+        lines += labels.allergies(profile.allergies.orNotRecorded(labels))
         lines += ""
 
-        lines += "Current medicines (${medicines.size})"
+        lines += labels.currentMedicines(medicines.size)
         if (medicines.isEmpty()) {
-            lines += "  None recorded"
+            lines += labels.noneRecorded
         } else {
             medicines.take(MAX_MEDICINES).forEach { m ->
                 // The measurement label only -- never a dose amount. A dose
@@ -76,29 +136,29 @@ object EmergencyCardExporter {
                 // not read. Name, form and reason are what a clinician needs
                 // from a card; the amounts are in the dose-history export.
                 val form = m.doseUnit?.takeIf { it.isNotBlank() }?.let { " ($it)" } ?: ""
-                val indication = m.indication?.takeIf { it.isNotBlank() }?.let { " - for $it" } ?: ""
+                val indication = m.indication?.takeIf { it.isNotBlank() }?.let { labels.indication(it) } ?: ""
                 lines += "  ${m.name}$form$indication"
             }
             val hidden = medicines.size - MAX_MEDICINES
-            if (hidden > 0) lines += "  ... and $hidden more - see the full dose history export"
+            if (hidden > 0) lines += labels.andMore(hidden)
         }
 
         // Contact blocks, unlike the two above, are omitted entirely when
         // nothing was entered. An empty "Doctor" heading on a card handed to a
         // doctor is worse than no heading.
-        section("Doctor", listOf(profile.doctorName, profile.doctorPhone, profile.doctorAddress))?.let {
+        section(labels.doctor, listOf(profile.doctorName, profile.doctorPhone, profile.doctorAddress))?.let {
             lines += ""
             lines += it
         }
-        section("Pharmacy", listOf(profile.pharmacyName, profile.pharmacyPhone))?.let {
+        section(labels.pharmacy, listOf(profile.pharmacyName, profile.pharmacyPhone))?.let {
             lines += ""
             lines += it
         }
         return lines.flatMap { it.split("\n") }
     }
 
-    private fun String?.orNotRecorded(): String =
-        this?.takeIf { it.isNotBlank() } ?: "Not recorded"
+    private fun String?.orNotRecorded(labels: CardLabels): String =
+        this?.takeIf { it.isNotBlank() } ?: labels.notRecorded
 
     private fun section(heading: String, fields: List<String?>): String? {
         val present = fields.mapNotNull { it?.takeIf { v -> v.isNotBlank() } }
@@ -110,6 +170,7 @@ object EmergencyCardExporter {
         profile: Profile,
         medicines: List<Medicine>,
         today: LocalDate = LocalDate.now(),
+        labels: CardLabels = CardLabels.ENGLISH,
     ): PdfDocument {
         val pageWidth = 595 // A4 at 72dpi, same basis as HistoryExporter
         val pageHeight = 842
@@ -121,7 +182,7 @@ object EmergencyCardExporter {
         val headingPaint = Paint().apply { textSize = 12f; isFakeBoldText = true }
         val bodyPaint = Paint().apply { textSize = 12f }
 
-        val lines = buildLines(profile, medicines, today)
+        val lines = buildLines(profile, medicines, today, labels = labels)
         val document = PdfDocument()
         val page = document.startPage(PdfDocument.PageInfo.Builder(pageWidth, pageHeight, 1).create())
         val canvas = page.canvas
