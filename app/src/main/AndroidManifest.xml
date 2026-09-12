@@ -23,6 +23,10 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT" />
+    <!-- Alarm-tier reminders vibrate until answered, the way a clock alarm
+         does (AlarmActivity, and the Alarm channel's own pattern). A normal
+         permission, granted at install; see §7 R59 for why it was missing. -->
+    <uses-permission android:name="android.permission.VIBRATE" />
 
     <!-- REQUEST_IGNORE_BATTERY_OPTIMIZATIONS removed (least-privilege), and
          it stays removed.

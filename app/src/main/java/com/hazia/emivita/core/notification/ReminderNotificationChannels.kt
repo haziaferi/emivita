@@ -6,6 +6,8 @@ import android.content.Context
 import com.hazia.emivita.core.data.entity.NotificationPriority
 import com.hazia.emivita.R
 import androidx.annotation.StringRes
+import android.media.AudioAttributes
+import android.provider.Settings
 
 /**
  * One notification channel per [NotificationPriority] tier. Call
@@ -20,7 +22,15 @@ import androidx.annotation.StringRes
 object ReminderNotificationChannels {
     const val CHANNEL_STANDARD = "reminders_standard"
     const val CHANNEL_HIGH = "reminders_high"
-    const val CHANNEL_ALARM = "reminders_alarm"
+    // "_v2": a NotificationChannel's sound, importance and vibration are
+    // fixed the moment it is first created and the app cannot change them
+    // afterwards -- only the user can. The original "reminders_alarm" was
+    // created with the defaults, i.e. the notification chime on the
+    // notification stream, and every installed device already has it that
+    // way. A new id is the only way to ship the alarm sound; the old channel
+    // is deleted in createAll (§7 R59).
+    const val CHANNEL_ALARM = "reminders_alarm_v2"
+    private const val LEGACY_CHANNEL_ALARM = "reminders_alarm"
 
     fun channelIdFor(priority: NotificationPriority): String = when (priority) {
         NotificationPriority.STANDARD -> CHANNEL_STANDARD
@@ -89,8 +99,25 @@ object ReminderNotificationChannels {
             NotificationManager.IMPORTANCE_HIGH,
         ).apply {
             description = context.getString(R.string.channel_alarm_desc)
+            // The alarm ringtone on the ALARM stream, so the heads-up this
+            // channel produces while the phone is in use rings like an alarm
+            // rather than chiming like a message. AlarmActivity plays its own
+            // looping tone when it is on screen; this covers the case where
+            // Android shows a banner instead (screen on and unlocked).
+            setSound(
+                Settings.System.DEFAULT_ALARM_ALERT_URI,
+                AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build(),
+            )
+            enableVibration(true)
+            vibrationPattern = longArrayOf(0, 500, 500, 500)
         }
 
+        // The pre-v2 alarm channel carried the notification chime; retire it
+        // so Android's settings do not list two "Alarm-style" channels.
+        manager.deleteNotificationChannel(LEGACY_CHANNEL_ALARM)
         manager.createNotificationChannels(listOf(standard, high, alarm))
     }
 }

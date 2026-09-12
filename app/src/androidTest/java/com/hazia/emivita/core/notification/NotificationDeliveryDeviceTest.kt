@@ -57,6 +57,27 @@ class NotificationDeliveryDeviceTest {
     }
 
     @Test
+    fun theAlarmTierChannelIsActuallyAnAlarm() {
+        // §7 R59: the original alarm channel was created with the defaults --
+        // the notification chime on the notification stream, no vibration --
+        // so an "alarm" chimed once like a message. Nothing on the JVM can see
+        // what a channel was created with; only the OS can. This pins the
+        // three properties that make the difference, and that the pre-v2
+        // channel is gone (getNotificationChannel returns null for a deleted
+        // one), so a fresh install cannot come back with the chime.
+        val app = DeviceTestSupport.app()
+        val nm = app.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val alarm = nm.getNotificationChannel(ReminderNotificationChannels.CHANNEL_ALARM)
+        assertNotNull("alarm channel should exist", alarm)
+        assertEquals("alarm tier must use the ALARM audio stream",
+            android.media.AudioAttributes.USAGE_ALARM, alarm!!.audioAttributes?.usage)
+        assertEquals("alarm tier must play the system alarm tone, not the notification chime",
+            android.provider.Settings.System.DEFAULT_ALARM_ALERT_URI, alarm.sound)
+        assertEquals("alarm tier must vibrate", true, alarm.shouldVibrate())
+        assertEquals("the pre-v2 alarm channel must be gone", null, nm.getNotificationChannel("reminders_alarm"))
+    }
+
+    @Test
     fun theCardsInputsAreWiredToTheRealSystemState() {
         val app = DeviceTestSupport.app()
         val enabled = NotificationManagerCompat.from(app).areNotificationsEnabled()

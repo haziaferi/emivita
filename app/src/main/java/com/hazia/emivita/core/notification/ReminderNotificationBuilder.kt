@@ -115,6 +115,10 @@ class ReminderNotificationBuilder(
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
 
+        // CATEGORY_ALARM, as medTimer sets it: tells the system and any
+        // notification-aware tooling that this is an alarm, which is also what
+        // Do Not Disturb's default "allow alarms" rule keys on.
+        builder.setCategory(NotificationCompat.CATEGORY_ALARM)
         if (canFullScreen) {
             builder.setFullScreenIntent(alarmPendingIntent, true)
         } else {

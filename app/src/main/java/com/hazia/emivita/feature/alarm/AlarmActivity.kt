@@ -43,6 +43,16 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
+import android.media.AudioAttributes
+import android.media.MediaPlayer
+import android.os.Build
+import android.os.VibrationEffect
+import android.os.Vibrator
+import android.os.VibratorManager
+import android.provider.Settings
+import android.util.Log
+import androidx.core.view.WindowCompat
+import androidx.core.view.WindowInsetsCompat
 
 /**
  * Full-screen target for ALARM-priority reminders (see
@@ -56,11 +66,25 @@ import com.hazia.emivita.R
  * this app. Don't mistake this Composable for a design decision.
  */
 class AlarmActivity : ComponentActivity() {
+
+    // The half of medTimer's ReminderAlarmActivity that the port left out
+    // (§7 R59): this screen showed over the lock screen and turned the
+    // display on, and then sat there silently. medTimer loops the alarm
+    // ringtone through a MediaPlayer on USAGE_ALARM -- the alarm stream,
+    // which rings through vibrate mode and, by default, through Do Not
+    // Disturb -- and vibrates 500ms on / 500ms off until the dose is
+    // answered. Found on the device: "alarm firing but no sound".
+    private var player: MediaPlayer? = null
+    private var vibrator: Vibrator? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setShowWhenLocked(true)
         setTurnScreenOn(true)
         (getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager)?.requestDismissKeyguard(this, null)
+        // Full screen means full screen: no status or navigation bars, the
+        // same call medTimer makes.
+        WindowCompat.getInsetsController(window, window.decorView).hide(WindowInsetsCompat.Type.systemBars())
 
         val reminderId = intent.getLongExtra(EXTRA_REMINDER_ID, -1L)
         val doseEventId = intent.getLongExtra(EXTRA_DOSE_EVENT_ID, -1L)
@@ -74,6 +98,50 @@ class AlarmActivity : ComponentActivity() {
                 )
             }
         }
+    }
+
+    // Ring while the screen is in front; stop the moment it is not. Leaving
+    // for Home without answering stops the noise but keeps the notification,
+    // which is the same trade medTimer makes in its pauseAlarm.
+    override fun onStart() { super.onStart(); startRinging() }
+    override fun onStop() { stopRinging(); super.onStop() }
+    override fun onDestroy() { stopRinging(); super.onDestroy() }
+
+    private fun startRinging() {
+        if (player != null) return
+        val attrs = AudioAttributes.Builder()
+            .setUsage(AudioAttributes.USAGE_ALARM)
+            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+            .build()
+        // The system's alarm tone, not its notification tone: this is what the
+        // user hears from their clock app, which is what "alarm" means to them.
+        player = runCatching {
+            MediaPlayer.create(this, Settings.System.DEFAULT_ALARM_ALERT_URI, null, attrs, 0)
+        }.getOrNull()?.apply {
+            isLooping = true
+            start()
+        }
+        if (player == null) Log.w(TAG, "Could not create the alarm MediaPlayer -- ringing without sound.")
+
+        vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager)?.defaultVibrator
+        } else {
+            @Suppress("DEPRECATION")
+            getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+        }
+        vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(500, 500), 0))
+    }
+
+    private fun stopRinging() {
+        runCatching { player?.stop() }
+        player?.release()
+        player = null
+        vibrator?.cancel()
+        vibrator = null
+    }
+
+    private companion object {
+        const val TAG = "AlarmActivity"
     }
 }
 
