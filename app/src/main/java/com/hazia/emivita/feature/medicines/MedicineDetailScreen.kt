@@ -58,6 +58,9 @@ import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
 import com.hazia.emivita.core.format.labelRes
 import androidx.compose.ui.semantics.Role
+import androidx.compose.material3.Switch
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
 
 /**
  * Medicine detail: read-only summary + its reminders list + "Add reminder",
@@ -77,8 +80,10 @@ fun MedicineDetailScreen(
     onEditReminder: (reminderId: Long) -> Unit,
     onOpenStockExpiration: () -> Unit,
     onDeleted: () -> Unit,
+    onDuplicated: (newMedicineId: Long) -> Unit,
     onBack: () -> Unit,
 ) {
+    val copySuffix = stringResource(R.string.medicine_detail_copy_suffix)
     val medicine by produceState<Medicine?>(initialValue = null, medicineId) {
         medicineRepository.observeById(medicineId).collect { value = it }
     }
@@ -111,6 +116,35 @@ fun MedicineDetailScreen(
                                 text = { Text(stringResource(R.string.common_stock_expiration)) },
                                 onClick = { showOverflowMenu = false; onOpenStockExpiration() },
                             )
+                            // §9 #24: duplicate (§6's planned pair) and pause/resume all.
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.medicine_detail_duplicate)) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    scope.launch {
+                                        medicineRepository.duplicate(medicineId, copySuffix, withReminders = false, reminderRepository)?.let(onDuplicated)
+                                    }
+                                },
+                            )
+                            DropdownMenuItem(
+                                text = { Text(stringResource(R.string.medicine_detail_duplicate_with_reminders)) },
+                                onClick = {
+                                    showOverflowMenu = false
+                                    scope.launch {
+                                        medicineRepository.duplicate(medicineId, copySuffix, withReminders = true, reminderRepository)?.let(onDuplicated)
+                                    }
+                                },
+                            )
+                            val anyDosingEnabled = reminders.any { it.enabled && it.type != ReminderType.LOW_STOCK_ALERT && it.type != ReminderType.EXPIRATION_ALERT }
+                            if (reminders.any { it.type != ReminderType.LOW_STOCK_ALERT && it.type != ReminderType.EXPIRATION_ALERT }) {
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(if (anyDosingEnabled) R.string.medicine_detail_pause_all else R.string.medicine_detail_resume_all)) },
+                                    onClick = {
+                                        showOverflowMenu = false
+                                        scope.launch { reminderRepository.setAllDosingEnabled(medicineId, enabled = !anyDosingEnabled) }
+                                    },
+                                )
+                            }
                             DropdownMenuItem(
                                 text = { Text(stringResource(R.string.medicine_detail_delete)) },
                                 onClick = { showOverflowMenu = false; showDeleteConfirm = true },
@@ -180,21 +214,12 @@ fun MedicineDetailScreen(
                 )
             } else {
                 LazyColumn(contentPadding = PaddingValues(16.dp)) {
-                    items(reminders) { reminder ->
-                        Surface(
-                            shape = RoundedCornerShape(12.dp),
-                            color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.4f),
-                            modifier = Modifier
-                                .fillMaxWidth()
-                                .padding(bottom = 8.dp)
-                                .clickable(role = Role.Button) { onEditReminder(reminder.id) },
-                        ) {
-                            Text(
-                                stringResource(reminder.type.labelRes()),
-                                modifier = Modifier.padding(12.dp),
-                                style = MaterialTheme.typography.bodyMedium,
-                            )
-                        }
+                    items(reminders, key = { it.id }) { reminder ->
+                        ReminderRow(
+                            reminder = reminder,
+                            onEdit = { onEditReminder(reminder.id) },
+                            onEnabledChange = { enabled -> scope.launch { reminderRepository.setEnabled(reminder, enabled) } },
+                        )
                     }
                 }
             }
@@ -231,3 +256,45 @@ fun MedicineDetailScreen(
     }
 }
 
+/**
+ * One reminder on the detail screen (§9 #24, owner's choice): the row opens
+ * the editor; the switch pauses or resumes. Two nodes on purpose -- they do
+ * two different things, unlike the Stage B rows where a switch and its row
+ * were one action. The switch carries its own label so a screen reader hears
+ * "Enabled, Fixed time" rather than an unnamed toggle. An alert reminder
+ * (low stock / expiry) has no switch here: the stock screen owns those.
+ */
+@Composable
+internal fun ReminderRow(reminder: Reminder, onEdit: () -> Unit, onEnabledChange: (Boolean) -> Unit) {
+    val isAlert = reminder.type == ReminderType.LOW_STOCK_ALERT || reminder.type == ReminderType.EXPIRATION_ALERT
+    val typeLabel = stringResource(reminder.type.labelRes())
+    val switchLabel = stringResource(R.string.reminder_enabled_switch, typeLabel)
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (reminder.enabled) 0.4f else 0.2f),
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(bottom = 8.dp)
+            .clickable(role = Role.Button, onClick = onEdit),
+    ) {
+        Row(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+            Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
+                Text(typeLabel, style = MaterialTheme.typography.bodyMedium)
+                if (!reminder.enabled) {
+                    Text(
+                        stringResource(R.string.reminder_paused),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+            if (!isAlert) {
+                Switch(
+                    checked = reminder.enabled,
+                    onCheckedChange = onEnabledChange,
+                    modifier = Modifier.semantics { contentDescription = switchLabel },
+                )
+            }
+        }
+    }
+}

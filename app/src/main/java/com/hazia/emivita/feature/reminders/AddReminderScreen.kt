@@ -82,6 +82,8 @@ import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import com.hazia.emivita.core.format.parseDecimal
 import com.hazia.emivita.core.format.formatDecimalLocalized
+import androidx.compose.material3.TextButton
+import androidx.compose.material3.AlertDialog
 
 // @StringRes: reminderTypeOptions is a top-level val (§9 #19).
 private data class ReminderTypeOption(
@@ -261,6 +263,27 @@ fun EditReminderScreen(
         return
     }
 
+    var showDeleteConfirm by remember { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    val onDelete: () -> Unit = { showDeleteConfirm = true }
+    if (showDeleteConfirm) {
+        AlertDialog(
+            onDismissRequest = { showDeleteConfirm = false },
+            title = { Text(stringResource(R.string.reminder_delete_title)) },
+            text = { Text(stringResource(R.string.reminder_delete_body)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    showDeleteConfirm = false
+                    scope.launch {
+                        reminderRepository.delete(current)
+                        onDone()
+                    }
+                }) { Text(stringResource(R.string.reminder_delete)) }
+            },
+            dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.common_cancel)) } },
+        )
+    }
+
     when (val config = reminderRepository.decodeConfig(current)) {
         is ReminderConfig.FixedTime -> FixedTimeFormBody(
             title = stringResource(R.string.reminder_edit_fixed_time),
@@ -276,6 +299,7 @@ fun EditReminderScreen(
                 onDone()
             },
             onCancel = onCancel,
+            onDelete = onDelete,
         )
         is ReminderConfig.RepeatingInterval -> RepeatingIntervalFormBody(
             title = stringResource(R.string.reminder_edit_repeating_interval),
@@ -291,6 +315,7 @@ fun EditReminderScreen(
                 onDone()
             },
             onCancel = onCancel,
+            onDelete = onDelete,
         )
         is ReminderConfig.DailyWindow -> DailyWindowFormBody(
             title = stringResource(R.string.reminder_edit_daily_window),
@@ -306,6 +331,7 @@ fun EditReminderScreen(
                 onDone()
             },
             onCancel = onCancel,
+            onDelete = onDelete,
         )
         is ReminderConfig.LowStockAlert -> LowStockAlertFormBody(
             title = stringResource(R.string.reminder_edit_low_stock),
@@ -313,6 +339,7 @@ fun EditReminderScreen(
             initial = config,
             onSave = { updated -> reminderRepository.updateConfig(current, updated); onDone() },
             onCancel = onCancel,
+            onDelete = onDelete,
         )
         is ReminderConfig.ExpirationAlert -> ExpirationAlertFormBody(
             title = stringResource(R.string.reminder_edit_expiration),
@@ -320,6 +347,7 @@ fun EditReminderScreen(
             initial = config,
             onSave = { updated -> reminderRepository.updateConfig(current, updated); onDone() },
             onCancel = onCancel,
+            onDelete = onDelete,
         )
         is ReminderConfig.LinkedFollowing -> LinkedFollowingFormBody(
             title = stringResource(R.string.reminder_edit_linked_following),
@@ -340,6 +368,7 @@ fun EditReminderScreen(
                 onDone()
             },
             onCancel = onCancel,
+            onDelete = onDelete,
         )
     }
 }
@@ -384,6 +413,7 @@ private fun ReminderFormScaffold(
     onCancel: () -> Unit,
     saveEnabled: Boolean,
     saveLabel: String,
+    onDelete: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
     Column(
@@ -399,6 +429,15 @@ private fun ReminderFormScaffold(
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(onClick = onSave, enabled = saveEnabled) { Text(saveLabel) }
             Button(onClick = onCancel) { Text(stringResource(R.string.common_cancel)) }
+        }
+        // Edit only (§9 #24, owner's choice: delete lives at the bottom of the
+        // edit form, pause on the detail row). Until R62 the only way to be
+        // rid of a reminder was deleting its medicine -- Appendix E C-29/D F1.
+        if (onDelete != null) {
+            Spacer(Modifier.height(24.dp))
+            TextButton(onClick = onDelete) {
+                Text(stringResource(R.string.reminder_delete), color = MaterialTheme.colorScheme.error)
+            }
         }
     }
 }
@@ -609,6 +648,7 @@ private fun FixedTimeFormBody(
     doseUnit: String? = null,
     onSave: suspend (ReminderConfig.FixedTime, AdvancedFields) -> Unit,
     onCancel: () -> Unit,
+    onDelete: (() -> Unit)? = null,
 ) {
     val advanced = rememberAdvancedReminderFieldsState(initialReminder)
     var hour by remember { mutableIntStateOf(initial.hour) }
@@ -649,6 +689,7 @@ private fun FixedTimeFormBody(
 
     ReminderFormScaffold(
         title = title,
+        onDelete = onDelete,
         saveLabel = saveLabel,
         saveEnabled = doseValue != null && doseValue > 0 &&
             (patternKind != 1 || selectedDays.isNotEmpty()) &&
@@ -742,6 +783,7 @@ private fun RepeatingIntervalFormBody(
     doseUnit: String? = null,
     onSave: suspend (ReminderConfig.RepeatingInterval, AdvancedFields) -> Unit,
     onCancel: () -> Unit,
+    onDelete: (() -> Unit)? = null,
 ) {
     val advanced = rememberAdvancedReminderFieldsState(initialReminder)
     var intervalHours by remember { mutableStateOf(formatHours(initial.intervalMinutes)) }
@@ -765,6 +807,7 @@ private fun RepeatingIntervalFormBody(
 
     ReminderFormScaffold(
         title = title,
+        onDelete = onDelete,
         saveLabel = saveLabel,
         saveEnabled = doseValue != null && doseValue > 0 &&
             intervalMinutesValue != null && intervalMinutesValue >= 1,
@@ -811,6 +854,7 @@ private fun DailyWindowFormBody(
     doseUnit: String? = null,
     onSave: suspend (ReminderConfig.DailyWindow, AdvancedFields) -> Unit,
     onCancel: () -> Unit,
+    onDelete: (() -> Unit)? = null,
 ) {
     val advanced = rememberAdvancedReminderFieldsState(initialReminder)
     var intervalHours by remember { mutableStateOf(formatHours(initial.intervalMinutes)) }
@@ -838,6 +882,7 @@ private fun DailyWindowFormBody(
 
     ReminderFormScaffold(
         title = title,
+        onDelete = onDelete,
         saveLabel = saveLabel,
         saveEnabled = doseValue != null && doseValue > 0 &&
             intervalMinutesValue != null && intervalMinutesValue >= 1,
@@ -890,6 +935,7 @@ private fun LowStockAlertFormBody(
     initial: ReminderConfig.LowStockAlert,
     onSave: suspend (ReminderConfig.LowStockAlert) -> Unit,
     onCancel: () -> Unit,
+    onDelete: (() -> Unit)? = null,
 ) {
     var threshold by remember { mutableStateOf(formatDecimalLocalized(initial.threshold)) }
     var triggerMode by remember { mutableStateOf(initial.triggerMode) }
@@ -900,6 +946,7 @@ private fun LowStockAlertFormBody(
 
     ReminderFormScaffold(
         title = title,
+        onDelete = onDelete,
         saveLabel = saveLabel,
         saveEnabled = thresholdValue != null && thresholdValue >= 0,
         onSave = {
@@ -970,6 +1017,7 @@ private fun ExpirationAlertFormBody(
     initial: ReminderConfig.ExpirationAlert,
     onSave: suspend (ReminderConfig.ExpirationAlert) -> Unit,
     onCancel: () -> Unit,
+    onDelete: (() -> Unit)? = null,
 ) {
     var leadDays by remember { mutableStateOf(initial.leadDays.toString()) }
     var frequency by remember { mutableStateOf(initial.frequency) }
@@ -980,6 +1028,7 @@ private fun ExpirationAlertFormBody(
 
     ReminderFormScaffold(
         title = title,
+        onDelete = onDelete,
         saveLabel = saveLabel,
         saveEnabled = leadDaysValue != null && leadDaysValue >= 0,
         onSave = {
@@ -1052,6 +1101,7 @@ private fun LinkedFollowingFormBody(
     doseUnit: String? = null,
     onSave: suspend (parentReminderId: Long, ReminderConfig.LinkedFollowing, AdvancedFields) -> Unit,
     onCancel: () -> Unit,
+    onDelete: (() -> Unit)? = null,
 ) {
     val advanced = rememberAdvancedReminderFieldsState(initialReminder)
     var siblings by remember { mutableStateOf<List<Reminder>?>(null) }
@@ -1088,6 +1138,7 @@ private fun LinkedFollowingFormBody(
 
     ReminderFormScaffold(
         title = title,
+        onDelete = onDelete,
         saveLabel = saveLabel,
         saveEnabled = selectedParent != null && delayValue != null && delayValue in 1..1440 && doseValue != null && doseValue > 0,
         onSave = {

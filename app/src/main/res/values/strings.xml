@@ -445,4 +445,14 @@
     <string name="settings_lock_until_taken_default_desc">New medicines inherit this; each medicine can override it in its own form.</string>
     <string name="stock_production_date">Production date</string>
     <string name="add_medicine_notes_optional">Notes (optional)</string>
+    <string name="reminder_delete">Delete reminder</string>
+    <string name="reminder_delete_title">Delete this reminder?</string>
+    <string name="reminder_delete_body">Its past doses stay in History. A reminder that follows this one is switched off.</string>
+    <string name="reminder_paused">Paused</string>
+    <string name="reminder_enabled_switch">%1$s reminder enabled</string>
+    <string name="medicine_detail_duplicate">Duplicate</string>
+    <string name="medicine_detail_duplicate_with_reminders">Duplicate with reminders</string>
+    <string name="medicine_detail_pause_all">Pause all reminders</string>
+    <string name="medicine_detail_resume_all">Resume all reminders</string>
+    <string name="medicine_detail_copy_suffix">(copy)</string>
 </resources>

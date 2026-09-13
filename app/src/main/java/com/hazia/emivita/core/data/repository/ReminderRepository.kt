@@ -12,6 +12,7 @@ import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.entity.RepeatConfig
 import com.hazia.emivita.core.scheduling.SchedulingCoordinator
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.first
 
 /**
  * Every mutation here calls [schedulingCoordinator] afterward, the same
@@ -189,6 +190,16 @@ class ReminderRepository(
         reminderDao.update(reminder.copy(enabled = enabled))
         schedulingCoordinator.onReminderChanged(reminder.id, System.currentTimeMillis())
         autoSyncManager.notifyChanged()
+    }
+
+    /** Pause or resume every dosing reminder of a medicine (§9 #24; medTimer's
+     *  "activate/deactivate all"). Alert reminders are left alone: pausing the
+     *  doses does not mean the pack stops expiring. */
+    suspend fun setAllDosingEnabled(medicineId: Long, enabled: Boolean) {
+        for (r in reminderDao.observeForMedicine(medicineId).first()) {
+            if (r.type == ReminderType.LOW_STOCK_ALERT || r.type == ReminderType.EXPIRATION_ALERT) continue
+            if (r.enabled != enabled) setEnabled(r, enabled)
+        }
     }
 
     /** Deleting a reminder switches its direct LinkedFollowing children off

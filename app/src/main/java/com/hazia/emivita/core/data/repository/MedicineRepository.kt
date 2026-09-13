@@ -15,6 +15,8 @@ import com.hazia.emivita.core.scheduling.OccurrenceProjectionCache
 import com.hazia.emivita.core.scheduling.SchedulingCoordinator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import com.hazia.emivita.core.data.entity.StockInfo
+import com.hazia.emivita.core.data.config.decodeReminderConfig
 
 class MedicineRepository(
     private val database: EmivitaDatabase,
@@ -45,6 +47,65 @@ class MedicineRepository(
         medicineDao.update(medicine)
         schedulingCoordinator.onMedicineChanged(medicine.id)
         autoSyncManager.notifyChanged()
+    }
+
+    /** Duplicate a medicine (§9 #24; §6 planned "Duplicate, Duplicate-with-
+     *  reminders" in the overflow, and Appendix E C-28 / F HM-41 confirmed
+     *  every neighbour has it). The copy keeps every field but the id,
+     *  barcode (a code identifies one pack) and stock (a new entry starts
+     *  untracked), takes the name with a "(copy)" suffix, the same tags, and
+     *  -- when asked -- the reminders, re-created through [ReminderRepository]
+     *  so each gets its own alarm. LinkedFollowing parents are remapped to
+     *  the copies; a child whose parent was not copied is dropped rather
+     *  than left pointing at the original's parent. Returns the new id. */
+    suspend fun duplicate(
+        medicineId: Long,
+        copySuffix: String,
+        withReminders: Boolean,
+        reminderRepository: ReminderRepository,
+    ): Long? {
+        val source = medicineDao.getById(medicineId) ?: return null
+        val tags = tagDao.observeTagsForMedicine(medicineId).first()
+        val newId = database.withTransaction {
+            val id = medicineDao.insert(
+                source.copy(
+                    id = 0,
+                    name = "${source.name} $copySuffix",
+                    barcodeValue = null,
+                    stockInfo = StockInfo(),
+                    sortOrder = System.currentTimeMillis().toDouble(),
+                    createdAtEpochMillis = System.currentTimeMillis(),
+                ),
+            )
+            for (tag in tags) tagDao.attachToMedicine(MedicineTagCrossRef(medicineId = id, tagId = tag.id))
+            id
+        }
+        if (withReminders) {
+            val originals = reminderDao.observeForMedicine(medicineId).first()
+            val idMap = mutableMapOf<Long, Long>()
+            // Parents before children so a linked child's parent id is known.
+            val ordered = originals.filter { it.parentReminderId == null } + originals.filter { it.parentReminderId != null }
+            for (r in ordered) {
+                val parent = r.parentReminderId?.let { idMap[it] }
+                if (r.parentReminderId != null && parent == null) continue
+                val copiedId = reminderRepository.create(
+                    medicineId = newId,
+                    groupId = null,
+                    type = r.type,
+                    config = decodeReminderConfig(r.configJson),
+                    parentReminderId = parent,
+                    autoResolve = r.autoResolve,
+                    activeFromEpochDay = r.activeFromEpochDay,
+                    activeUntilEpochDay = r.activeUntilEpochDay,
+                    repeatOnUnanswered = r.repeatOnUnanswered,
+                    weekendModeOptIn = r.weekendModeOptIn,
+                )
+                idMap[r.id] = copiedId
+            }
+        }
+        occurrenceProjectionCache.invalidate()
+        autoSyncManager.notifyChanged()
+        return newId
     }
 
     /** Cascade delete (spec §9 #1's deferred data-integrity question,

@@ -172,6 +172,11 @@ fun EmivitaNavHost() {
                     onEditReminder = { reminderId -> navController.navigate(EmivitaRoute.EditReminder(reminderId)) },
                     onOpenStockExpiration = { navController.navigate(EmivitaRoute.StockExpiration(route.medicineId)) },
                     onDeleted = { navController.popBackStack(EmivitaRoute.Medicines, inclusive = false) },
+                    onDuplicated = { newId ->
+                        navController.navigate(EmivitaRoute.MedicineDetail(newId)) {
+                            popUpTo(EmivitaRoute.Medicines) { inclusive = false }
+                        }
+                    },
                     onBack = { navController.popBackStack() },
                 )
             }
