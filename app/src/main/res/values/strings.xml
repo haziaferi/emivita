@@ -584,4 +584,13 @@
     <string name="stock_use_within_days">Use within this many days of opening</string>
     <string name="stock_effective_expiry">Counts as expired from %1$s</string>
     <string name="common_clear">Clear</string>
+    <string name="medicines_sort_group_by_tag">Group by tag</string>
+    <string name="medicines_untagged">Untagged</string>
+    <string name="medicines_search">Search medicines</string>
+    <string name="medicines_search_clear">Clear search</string>
+    <plurals name="medicines_filter_active">
+        <item quantity="one">%1$d tag selected</item>
+        <item quantity="other">%1$d tags selected</item>
+    </plurals>
+    <string name="medicines_nothing_matches">Nothing matches. Clear the search or the tags to see everything.</string>
 </resources>

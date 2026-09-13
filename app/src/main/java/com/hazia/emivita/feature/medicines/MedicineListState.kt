@@ -19,7 +19,7 @@ import java.time.LocalDate
  */
 
 /** Sort keys the owner picked. Stored by name (§9 #24). */
-enum class MedicinesSort { MANUAL, NAME, NEXT_DOSE, EXPIRY_STOCK }
+enum class MedicinesSort { MANUAL, NAME, NEXT_DOSE, EXPIRY_STOCK, GROUP_BY_TAG }
 
 /** Today's answer for one medicine, from its materialised dose events and
  *  the projection: nothing scheduled today, a dose still due, all answered,
@@ -112,7 +112,9 @@ data class MedicineListEntry(
 )
 
 fun sortEntries(entries: List<MedicineListEntry>, sort: MedicinesSort, locale: java.util.Locale): List<MedicineListEntry> = when (sort) {
-    MedicinesSort.MANUAL -> entries.sortedBy { it.medicine.sortOrder }
+    // Grouped mode keeps manual order inside each section; the sections
+    // themselves come from [groupByTag].
+    MedicinesSort.MANUAL, MedicinesSort.GROUP_BY_TAG -> entries.sortedBy { it.medicine.sortOrder }
     MedicinesSort.NAME -> {
         val collator = java.text.Collator.getInstance(locale)
         entries.sortedWith(compareBy(collator) { it.medicine.name })
@@ -148,5 +150,46 @@ fun sortOrderForMove(orderedSortOrders: List<Double>, toIndex: Int): Double {
         prev == null -> next!! - 1.0
         next == null -> prev + 1.0
         else -> (prev + next) / 2.0
+    }
+}
+
+/** One section of the grouped list (§9 #27; HM-01's kits, on tags): [name]
+ *  null is the "Untagged" bucket. */
+data class TagSection(val name: String?, val entries: List<MedicineListEntry>)
+
+/**
+ * Tags as kits: one section per tag in the locale's collation order, a
+ * medicine with two tags appearing under both (a kit is a place a medicine
+ * *can* be found, not the one place it *is*), the untagged bucket last.
+ * Entries keep the order they arrive in, so callers sort first.
+ */
+fun groupByTag(entries: List<MedicineListEntry>, locale: java.util.Locale): List<TagSection> {
+    val collator = java.text.Collator.getInstance(locale)
+    val byTag = linkedMapOf<String, MutableList<MedicineListEntry>>()
+    val untagged = mutableListOf<MedicineListEntry>()
+    for (entry in entries) {
+        if (entry.tagNames.isEmpty()) untagged += entry
+        for (tag in entry.tagNames) byTag.getOrPut(tag) { mutableListOf() } += entry
+    }
+    val sections = byTag.keys.sortedWith(collator).map { TagSection(it, byTag.getValue(it)) }
+    return if (untagged.isEmpty()) sections else sections + TagSection(null, untagged)
+}
+
+/**
+ * The live search and the tag filter (§9 #27; HM-13 without FTS, HM-02):
+ * a query matches case-insensitively anywhere in the name, the strength,
+ * the indication or a tag name; a selected tag set passes an entry that
+ * carries **any** of them ("show me the morning kit and the travel kit").
+ * Blank query and empty set pass everything. Whitespace around the query
+ * is ignored; the tag comparison is exact, since tags are chosen, not typed.
+ */
+fun filterEntries(entries: List<MedicineListEntry>, query: String, selectedTags: Set<String>): List<MedicineListEntry> {
+    val q = query.trim()
+    return entries.filter { e ->
+        val tagOk = selectedTags.isEmpty() || e.tagNames.any { it in selectedTags }
+        val queryOk = q.isEmpty() || listOfNotNull(e.medicine.name, e.medicine.strength, e.medicine.indication)
+            .plus(e.tagNames)
+            .any { it.contains(q, ignoreCase = true) }
+        tagOk && queryOk
     }
 }

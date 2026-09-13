@@ -98,6 +98,48 @@ class MedicineListStateTest {
     private fun entry(m: Medicine, next: Long? = null, empty: Boolean = false, runsOut: Long? = null) =
         MedicineListEntry(m, emptyList(), MedicineCardState(TodayStatus.NONE, expired = false, empty = empty, runsOutInDays = runsOut, course = CourseState.None, nextDoseEpochMillis = next))
 
+    private fun tagged(m: Medicine, vararg tags: String) = MedicineListEntry(m, tags.toList(), MedicineCardState(TodayStatus.NONE, expired = false, empty = false, runsOutInDays = null, course = CourseState.None, nextDoseEpochMillis = null))
+
+    @Test
+    fun `grouping -- one section per tag in collation order, a two-tag medicine under both, untagged last`() {
+        val a = tagged(medicine(1, "Aspirin", sortOrder = 2.0), "morning", "travel")
+        val b = tagged(medicine(2, "Bisoprolol", sortOrder = 1.0), "morning")
+        val c = tagged(medicine(3, "Cetirizine", sortOrder = 3.0))
+        val d = tagged(medicine(4, "Élan", sortOrder = 4.0), "évening")
+        val sections = groupByTag(sortEntries(listOf(a, b, c, d), MedicinesSort.GROUP_BY_TAG, Locale.US), Locale.US)
+        assertEquals(listOf("évening", "morning", "travel", null), sections.map { it.name })
+        assertEquals("manual order inside a section", listOf(2L, 1L), sections[1].entries.map { it.medicine.id })
+        assertEquals(listOf(1L), sections[2].entries.map { it.medicine.id })
+        assertEquals(listOf(3L), sections.last().entries.map { it.medicine.id })
+        assertTrue("no untagged bucket when nothing is untagged", groupByTag(listOf(a, b), Locale.US).none { it.name == null })
+    }
+
+    @Test
+    fun `filtering -- the query reaches name, strength, indication and tags, case-insensitively`() {
+        val a = tagged(medicine(1, "Sertraline").copy(strength = "50 mg", indication = "mood"), "morning")
+        val b = tagged(medicine(2, "Ibuprofen").copy(strength = "400 mg"), "pain")
+        val all = listOf(a, b)
+        assertEquals(listOf(1L), filterEntries(all, "sert", emptySet()).map { it.medicine.id })
+        assertEquals(listOf(2L), filterEntries(all, "400", emptySet()).map { it.medicine.id })
+        assertEquals(listOf(1L), filterEntries(all, "MOOD", emptySet()).map { it.medicine.id })
+        assertEquals(listOf(2L), filterEntries(all, " pain ", emptySet()).map { it.medicine.id })
+        assertEquals("blank passes everything", 2, filterEntries(all, "   ", emptySet()).size)
+        assertTrue(filterEntries(all, "zzz", emptySet()).isEmpty())
+    }
+
+    @Test
+    fun `filtering -- selected tags pass a medicine carrying any of them, and combine with the query`() {
+        val a = tagged(medicine(1, "Aspirin"), "morning", "travel")
+        val b = tagged(medicine(2, "Bisoprolol"), "morning")
+        val c = tagged(medicine(3, "Cetirizine"))
+        val all = listOf(a, b, c)
+        assertEquals(listOf(1L, 2L), filterEntries(all, "", setOf("morning")).map { it.medicine.id })
+        assertEquals(listOf(1L), filterEntries(all, "", setOf("travel")).map { it.medicine.id })
+        assertEquals("any, not all", listOf(1L, 2L), filterEntries(all, "", setOf("travel", "morning")).map { it.medicine.id })
+        assertEquals(listOf(2L), filterEntries(all, "biso", setOf("morning")).map { it.medicine.id })
+        assertTrue("a tag nobody carries hides everything", filterEntries(all, "", setOf("gone")).isEmpty())
+    }
+
     @Test
     fun `sorting -- manual by sortOrder, name by collator, next dose soonest first with none last, stock by need`() {
         val a = entry(medicine(1, "Zoloft", sortOrder = 2.0), next = at(18))

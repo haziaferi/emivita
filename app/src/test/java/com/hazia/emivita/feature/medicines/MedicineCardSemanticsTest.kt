@@ -17,6 +17,11 @@ import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
+import androidx.compose.ui.test.assertIsSelected
+import androidx.compose.ui.test.assertIsNotSelected
+import androidx.compose.ui.test.isSelectable
+import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 
 /** The Medicines card and its drag handle (spec §9 #24): one button node
  *  whose state is the card's state line; a handle a screen reader can use
@@ -57,6 +62,33 @@ class MedicineCardSemanticsTest {
         assertEquals(listOf("Move up", "Move down"), actions.map { it.label })
         actions.first { it.label == "Move down" }.action()
         assertEquals(1, moved)
+    }
+
+    // ---- §9 #27: the filter bar ----
+
+    @Test
+    fun theSearchFieldIsFoundByItsLabelAndClearsItself() {
+        var q = "ser"
+        compose.setContent {
+            MedicinesFilterBar(searching = true, query = q, onQuery = { q = it }, tags = emptyList(), selectedTags = emptySet(), onToggleTag = {}, hideEmptyOffered = false, hideEmpty = false, onHideEmpty = {})
+        }
+        compose.onNodeWithContentDescription("Search medicines").assertExists()
+        compose.onNodeWithContentDescription("Clear search").performClick()
+        assertEquals("", q)
+    }
+
+    @Test
+    fun eachTagIsItsOwnChipAndTheBadgeCountsTheSelectedOnes() {
+        var toggled: String? = null
+        compose.setContent {
+            MedicinesFilterBar(searching = false, query = "", onQuery = {}, tags = listOf("morning", "travel"), selectedTags = setOf("morning"), onToggleTag = { toggled = it }, hideEmptyOffered = true, hideEmpty = false, onHideEmpty = {})
+        }
+        compose.onNodeWithText("morning").assertIsSelected()
+        compose.onNodeWithText("travel").assertIsNotSelected().performClick()
+        assertEquals("travel", toggled)
+        compose.onNodeWithText("Hide empty").assertExists()
+        compose.onNodeWithContentDescription("1 tag selected").assertExists()
+        assertEquals("three chips, each selectable", 3, compose.onAllNodes(isSelectable()).fetchSemanticsNodes().size)
     }
 
     @Test

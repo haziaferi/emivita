@@ -64,6 +64,9 @@ class SettingsRepository(context: Context) {
         // The Medicines tab's sort key (enum name) and hide-empty filter (§9 #24).
         val MEDICINES_SORT = stringPreferencesKey("medicines_sort")
         val MEDICINES_HIDE_EMPTY = booleanPreferencesKey("medicines_hide_empty")
+        // §9 #27: the tag filter on Medicines, by tag name (tags are keyed by
+        // name on the form; a renamed or deleted tag simply stops matching).
+        val MEDICINES_TAG_FILTER = stringSetPreferencesKey("medicines_tag_filter")
         // §9 #25: what a swiped-away reminder records (enum name; default SNOOZE,
         // the owner's choice) and whether notifications mask the medicine name.
         val SWIPE_ACTION = stringPreferencesKey("notification_swipe_action")
@@ -236,6 +239,11 @@ class SettingsRepository(context: Context) {
     }
     suspend fun setMedicinesHideEmpty(hide: Boolean) {
         dataStore.edit { it[Keys.MEDICINES_HIDE_EMPTY] = hide }
+    }
+
+    val medicinesTagFilter: Flow<Set<String>> = dataStore.data.map { prefs -> prefs[Keys.MEDICINES_TAG_FILTER] ?: emptySet() }
+    suspend fun setMedicinesTagFilter(tags: Set<String>) {
+        dataStore.edit { it[Keys.MEDICINES_TAG_FILTER] = tags }
     }
 
     /** Null clears the setting (the "Stop syncing" action) -- callers also

@@ -21,6 +21,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -60,6 +61,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.semantics.CustomAccessibilityAction
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -82,6 +84,16 @@ import com.hazia.emivita.ui.theme.EmivitaTheme
 import com.hazia.emivita.ui.theme.NeutralMedicineAccent
 import kotlinx.coroutines.launch
 import java.time.ZoneId
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.FilterList
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Badge
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.ui.semantics.heading
+import androidx.compose.foundation.ExperimentalFoundationApi
 
 /**
  * The Medicines tab (spec §9 #24). What each card says and how the list is
@@ -93,7 +105,7 @@ import java.time.ZoneId
  * carries "Move up" / "Move down" accessibility actions, since a screen
  * reader cannot drag.
  */
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalFoundationApi::class)
 @Composable
 fun MedicinesScreen(
     profileId: Long,
@@ -121,11 +133,15 @@ fun MedicinesScreen(
     val projection by occurrenceProjectionCache.state.collectAsState()
     val sortName by settingsRepository.medicinesSortName.collectAsState(initial = null)
     val hideEmpty by settingsRepository.medicinesHideEmpty.collectAsState(initial = false)
+    val selectedTags by settingsRepository.medicinesTagFilter.collectAsState(initial = emptySet())
+    var query by remember { mutableStateOf("") }
+    var searching by remember { mutableStateOf(false) }
+    val allTags = remember(tagsByMedicine) { tagsByMedicine.values.flatten().distinct() }
     val sort = remember(sortName) { sortName?.let { n -> MedicinesSort.entries.firstOrNull { it.name == n } } ?: MedicinesSort.MANUAL }
     val locale = Locale.current.platformLocale
     val scope = rememberCoroutineScope()
 
-    val entries = remember(withReminders, tagsByMedicine, todayEvents, projection, today, sort, hideEmpty) {
+    val entries = remember(withReminders, tagsByMedicine, todayEvents, projection, today, sort, hideEmpty, query, selectedTags, locale) {
         val now = System.currentTimeMillis()
         val built = withReminders.map { mw ->
             MedicineListEntry(
@@ -137,8 +153,9 @@ fun MedicinesScreen(
                 ),
             )
         }.filter { !hideEmpty || !it.state.empty }
-        sortEntries(built, sort, locale)
+        sortEntries(filterEntries(built, query, selectedTags), sort, locale)
     }
+    val sections = remember(entries, sort, locale) { if (sort == MedicinesSort.GROUP_BY_TAG) groupByTag(entries, locale) else emptyList() }
 
     var notFoundCode by remember { mutableStateOf<String?>(null) }
     val scanLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -174,6 +191,12 @@ fun MedicinesScreen(
                     Text(stringResource(R.string.medicines_medicines), style = MaterialTheme.typography.headlineSmall)
                 }
                 Row(Modifier.align(Alignment.CenterEnd).padding(end = 4.dp)) {
+                    // Search (§9 #27; HM-13): the field opens under the header
+                    // and the list narrows as you type. A search is a moment,
+                    // so it is not persisted; the tag filter beside it is.
+                    IconButton(onClick = { searching = !searching; if (!searching) query = "" }) {
+                        Icon(Icons.Filled.Search, contentDescription = stringResource(R.string.medicines_search))
+                    }
                     Box {
                         IconButton(onClick = { showSortMenu = true }) {
                             Icon(Icons.Filled.Sort, contentDescription = stringResource(R.string.medicines_sort))
@@ -213,21 +236,52 @@ fun MedicinesScreen(
                     modifier = Modifier.padding(16.dp),
                 )
             }
-            // The one filter the owner picked (HM-07). Shown only when it can
-            // do something, so an empty-stock-free list has no dead chip.
-            if (withReminders.any { it.medicine.stockInfo.unit != null && it.medicine.stockInfo.quantity <= 0.0 }) {
-                Row(Modifier.padding(horizontal = 16.dp)) {
-                    FilterChip(
-                        selected = hideEmpty,
-                        onClick = { scope.launch { settingsRepository.setMedicinesHideEmpty(!hideEmpty) } },
-                        label = { Text(stringResource(R.string.medicines_hide_empty)) },
-                    )
-                }
-                Spacer(Modifier.height(4.dp))
-            }
+            MedicinesFilterBar(
+                searching = searching,
+                query = query,
+                onQuery = { query = it },
+                tags = allTags,
+                selectedTags = selectedTags,
+                onToggleTag = { tag ->
+                    scope.launch { settingsRepository.setMedicinesTagFilter(if (tag in selectedTags) selectedTags - tag else selectedTags + tag) }
+                },
+                // The hide-empty chip (HM-07) shows only when it can do
+                // something, so an empty-stock-free list has no dead chip.
+                hideEmptyOffered = withReminders.any { it.medicine.stockInfo.unit != null && it.medicine.stockInfo.quantity <= 0.0 },
+                hideEmpty = hideEmpty,
+                onHideEmpty = { scope.launch { settingsRepository.setMedicinesHideEmpty(!hideEmpty) } },
+            )
             if (withReminders.isEmpty()) {
                 Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                     Text(stringResource(R.string.medicines_no_medicines_yet_tap_to_add_your_first_one), style = MaterialTheme.typography.bodyMedium)
+                }
+            } else if (entries.isEmpty()) {
+                // A filter or a search left nothing -- say that, not "no medicines".
+                Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+                    Text(stringResource(R.string.medicines_nothing_matches), style = MaterialTheme.typography.bodyMedium)
+                }
+            } else if (sort == MedicinesSort.GROUP_BY_TAG) {
+                // Tags as kits (HM-01): a sticky header per section, no drag
+                // handle -- a move across sections is not a defined operation.
+                LazyColumn(
+                    modifier = Modifier.fillMaxSize(),
+                    contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
+                ) {
+                    sections.forEach { section ->
+                        stickyHeader(key = "tag-" + (section.name ?: "")) {
+                            Surface(color = MaterialTheme.colorScheme.background, modifier = Modifier.fillMaxWidth()) {
+                                Text(
+                                    section.name ?: stringResource(R.string.medicines_untagged),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    modifier = Modifier.padding(vertical = 6.dp).semantics { heading() },
+                                )
+                            }
+                        }
+                        items(section.entries, key = { (section.name ?: "") + "/" + it.medicine.id }) { entry ->
+                            MedicineCard(entry = entry, onClick = { onOpenMedicine(entry.medicine.id) }, dragHandle = null)
+                            Spacer(Modifier.height(10.dp))
+                        }
+                    }
                 }
             } else {
                 LazyColumn(
@@ -296,6 +350,61 @@ fun MedicinesSort.labelRes(): Int = when (this) {
     MedicinesSort.NAME -> R.string.medicines_sort_name
     MedicinesSort.NEXT_DOSE -> R.string.medicines_sort_next_dose
     MedicinesSort.EXPIRY_STOCK -> R.string.medicines_sort_expiry_stock
+    MedicinesSort.GROUP_BY_TAG -> R.string.medicines_sort_group_by_tag
+}
+
+/**
+ * The search field, the tag chips and the hide-empty chip (§9 #27). One
+ * node per chip (the Stage B rule); the search field carries its label as
+ * its content description so a screen reader finds "Search medicines" and
+ * not an unlabelled edit box. The badge on the count of selected tags is
+ * plain text beside the chips, which is what a badge reads as anyway.
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+internal fun MedicinesFilterBar(
+    searching: Boolean,
+    query: String,
+    onQuery: (String) -> Unit,
+    tags: List<String>,
+    selectedTags: Set<String>,
+    onToggleTag: (String) -> Unit,
+    hideEmptyOffered: Boolean,
+    hideEmpty: Boolean,
+    onHideEmpty: () -> Unit,
+) {
+    if (searching) {
+        val label = stringResource(R.string.medicines_search)
+        OutlinedTextField(
+            value = query,
+            onValueChange = onQuery,
+            placeholder = { Text(label) },
+            singleLine = true,
+            trailingIcon = if (query.isNotEmpty()) {
+                { IconButton(onClick = { onQuery("") }) { Icon(Icons.Filled.Close, contentDescription = stringResource(R.string.medicines_search_clear)) } }
+            } else null,
+            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).semantics { contentDescription = label },
+        )
+        Spacer(Modifier.height(4.dp))
+    }
+    if (tags.isNotEmpty() || hideEmptyOffered) {
+        Row(Modifier.padding(horizontal = 16.dp).horizontalScroll(rememberScrollState()), verticalAlignment = Alignment.CenterVertically) {
+            if (selectedTags.isNotEmpty()) {
+                BadgedBox(badge = { Badge { Text(selectedTags.size.toString()) } }) {
+                    Icon(Icons.Filled.FilterList, contentDescription = pluralStringResource(R.plurals.medicines_filter_active, selectedTags.size, selectedTags.size))
+                }
+                Spacer(Modifier.width(10.dp))
+            }
+            tags.forEach { tag ->
+                FilterChip(selected = tag in selectedTags, onClick = { onToggleTag(tag) }, label = { Text(tag) })
+                Spacer(Modifier.width(6.dp))
+            }
+            if (hideEmptyOffered) {
+                FilterChip(selected = hideEmpty, onClick = onHideEmpty, label = { Text(stringResource(R.string.medicines_hide_empty)) })
+            }
+        }
+        Spacer(Modifier.height(4.dp))
+    }
 }
 
 /** Which item is being dragged and how far; the list re-orders as the
