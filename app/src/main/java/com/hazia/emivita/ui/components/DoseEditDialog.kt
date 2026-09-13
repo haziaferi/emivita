@@ -34,6 +34,11 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.LocalResources
 import com.hazia.emivita.core.format.parseDecimal
 import com.hazia.emivita.core.format.formatDecimalLocalized
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.app.NotificationManagerCompat
+import com.hazia.emivita.core.data.entity.DoseEvent
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 
 /**
  * Event editing (spec §3/§9 #3) -- shared between Today and History, since
@@ -75,7 +80,12 @@ fun DoseEditDialog(
     doseEventRepository: DoseEventRepository,
     onDismiss: () -> Unit,
     doseUnit: String? = null,
+    originalNotes: String? = null,
+    /** Called with the reopened event after "Return to Due" (§9 #26), so the
+     *  caller -- which has the notification builder -- can re-post it. */
+    onReopened: (suspend (DoseEvent) -> Unit)? = null,
 ) {
+    val context = LocalContext.current
     val zone = remember { ZoneId.systemDefault() }
     val resources = LocalResources.current
     // Falls back to the dose's own scheduled slot, not to now: for a PENDING
@@ -92,6 +102,12 @@ fun DoseEditDialog(
     var hour by remember { mutableIntStateOf(originalZoned.hour) }
     var minute by remember { mutableIntStateOf(originalZoned.minute) }
     var doseAmount by remember { mutableStateOf(formatDecimalLocalized(originalDoseAmount)) }
+    var notes by remember { mutableStateOf(originalNotes ?: "") }
+    var confirmDelete by remember { mutableStateOf(false) }
+    // Move (§9 #26; medTimer RESCHEDULE): a pending dose to a chosen day + time.
+    var moveDay by remember { mutableStateOf<Long?>(null) }
+    var moveHour by remember { mutableIntStateOf(originalZoned.hour) }
+    var moveMinute by remember { mutableIntStateOf(originalZoned.minute) }
     var saving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -101,7 +117,7 @@ fun DoseEditDialog(
         onDismissRequest = onDismiss,
         title = { Text(medicineName) },
         text = {
-            Column {
+            Column(Modifier.verticalScroll(rememberScrollState())) {
                 if (wasUnresolved) {
                     Text(
                         stringResource(R.string.dose_edit_this_dose_was_never_answered_recording_it),
@@ -142,6 +158,91 @@ fun DoseEditDialog(
                     singleLine = true,
                     modifier = Modifier.fillMaxWidth(),
                 )
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = notes,
+                    onValueChange = { notes = it },
+                    label = { Text(stringResource(R.string.dose_edit_notes)) },
+                    minLines = 1,
+                    maxLines = 4,
+                    modifier = Modifier.fillMaxWidth(),
+                )
+
+                if (wasUnresolved) {
+                    // Move this dose (§9 #26): the slot itself changes and a one-off
+                    // alarm is armed there; its current notification goes.
+                    Spacer(Modifier.height(16.dp))
+                    Text(stringResource(R.string.dose_edit_move_title), style = MaterialTheme.typography.labelLarge)
+                    DateField(stringResource(R.string.dose_edit_move_day), moveDay) { moveDay = it }
+                    TimeOfDayField(stringResource(R.string.dose_edit_move_time), moveHour, moveMinute) { h, m -> moveHour = h; moveMinute = m }
+                    TextButton(
+                        enabled = moveDay != null && !saving,
+                        onClick = {
+                            val day = moveDay ?: return@TextButton
+                            saving = true
+                            scope.launch {
+                                try {
+                                    val at = java.time.LocalDate.ofEpochDay(day).atTime(moveHour, moveMinute).atZone(zone).toInstant().toEpochMilli()
+                                    doseEventRepository.reschedule(doseEventId, at)
+                                    NotificationManagerCompat.from(context).cancel(doseEventId.toInt())
+                                    onDismiss()
+                                } catch (e: Exception) {
+                                    saving = false
+                                    saveError = resources.getString(R.string.error_could_not_save, e.message ?: resources.getString(R.string.error_unknown))
+                                }
+                            }
+                        },
+                    ) { Text(stringResource(R.string.dose_edit_move_action)) }
+                } else {
+                    // Return to Due (§9 #26; medTimer RERAISE): undo an answer.
+                    Spacer(Modifier.height(12.dp))
+                    TextButton(
+                        enabled = !saving && onReopened != null,
+                        onClick = {
+                            saving = true
+                            scope.launch {
+                                try {
+                                    val reopened = doseEventRepository.reopen(doseEventId)
+                                    if (reopened != null) onReopened?.invoke(reopened)
+                                    onDismiss()
+                                } catch (e: Exception) {
+                                    saving = false
+                                    saveError = resources.getString(R.string.error_could_not_save, e.message ?: resources.getString(R.string.error_unknown))
+                                }
+                            }
+                        },
+                    ) { Text(stringResource(R.string.dose_edit_return_to_due)) }
+                }
+
+                // Delete (§9 #26, soft): the row hides, its slot stays claimed,
+                // a Taken dose gives its stock back. Two taps, never one.
+                Spacer(Modifier.height(4.dp))
+                if (!confirmDelete) {
+                    TextButton(enabled = !saving, onClick = { confirmDelete = true }) {
+                        Text(stringResource(R.string.dose_edit_delete), color = MaterialTheme.colorScheme.error)
+                    }
+                } else {
+                    Text(stringResource(R.string.dose_edit_delete_confirm_text), style = MaterialTheme.typography.labelMedium)
+                    Row {
+                        TextButton(
+                            enabled = !saving,
+                            onClick = {
+                                saving = true
+                                scope.launch {
+                                    try {
+                                        doseEventRepository.softDelete(doseEventId)
+                                        NotificationManagerCompat.from(context).cancel(doseEventId.toInt())
+                                        onDismiss()
+                                    } catch (e: Exception) {
+                                        saving = false
+                                        saveError = resources.getString(R.string.error_could_not_save, e.message ?: resources.getString(R.string.error_unknown))
+                                    }
+                                }
+                            },
+                        ) { Text(stringResource(R.string.dose_edit_delete_confirm), color = MaterialTheme.colorScheme.error) }
+                        TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.common_cancel)) }
+                    }
+                }
                 saveError?.let {
                     Spacer(Modifier.height(8.dp))
                     Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
@@ -179,6 +280,7 @@ fun DoseEditDialog(
                                 if (newResolvedAt != originalResolvedAtEpochMillis) doseEventRepository.editRecordedTime(doseEventId, newResolvedAt)
                                 if (amount != originalDoseAmount) doseEventRepository.editDoseAmount(doseEventId, amount)
                             }
+                            if (notes.trim() != (originalNotes ?: "")) doseEventRepository.setNotes(doseEventId, notes)
                             onDismiss()
                         } catch (e: Exception) {
                             saving = false

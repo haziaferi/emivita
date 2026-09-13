@@ -76,6 +76,15 @@ import com.hazia.emivita.core.format.LocaleFormats
 import com.hazia.emivita.core.data.settings.SettingsRepository
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
+import com.hazia.emivita.core.data.repository.ReminderRepository
+import com.hazia.emivita.core.notification.ReminderNotificationBuilder
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.RadioButton
+import androidx.compose.material3.TextButton
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.rememberScrollState
+import com.hazia.emivita.core.data.entity.Medicine
 
 private const val HISTORY_LOOKBACK_DAYS = 30L
 
@@ -121,6 +130,8 @@ fun HistoryScreen(
     profileId: Long,
     doseEventRepository: DoseEventRepository,
     settingsRepository: SettingsRepository,
+    reminderRepository: ReminderRepository,
+    notificationBuilder: ReminderNotificationBuilder,
 ) {
     val zone = remember { ZoneId.systemDefault() }
     val resources = LocalResources.current
@@ -149,7 +160,23 @@ fun HistoryScreen(
 
     val context = LocalContext.current
     var showExportMenu by remember { mutableStateOf(false) }
+    // Export scope (§9 #26; MT-05/HM-14): a range preset and an optional
+    // medicine, chosen in a dialog before the file picker. The rows are
+    // fetched once for the chosen scope, not taken from the visible window.
+    var exportDialogFormat by remember { mutableStateOf<String?>(null) }
+    var exportRange by remember { mutableStateOf(ExportRange.LAST_30_DAYS) }
+    var exportMedicineId by remember { mutableStateOf<Long?>(null) }
     val exportRows = events ?: emptyList()
+    val medicinesForFilter = remember(events) { events.orEmpty().map { it.medicine }.distinctBy { it.id }.sortedBy { it.name } }
+    suspend fun rowsForExport(): List<DoseEventWithMedicine> {
+        val start = when (exportRange) {
+            ExportRange.LAST_30_DAYS -> today.minusDays(30).atStartOfDay(zone).toInstant().toEpochMilli()
+            ExportRange.LAST_90_DAYS -> today.minusDays(90).atStartOfDay(zone).toInstant().toEpochMilli()
+            ExportRange.THIS_YEAR -> today.withDayOfYear(1).atStartOfDay(zone).toInstant().toEpochMilli()
+            ExportRange.ALL -> 0L
+        }
+        return doseEventRepository.getInRangeOnce(profileId, start, rangeEnd, exportMedicineId)
+    }
 
     // Both exports run on Dispatchers.IO: formatting the rows and writing
     // through the SAF stream are real work over the whole visible window, and
@@ -164,7 +191,7 @@ fun HistoryScreen(
         scope.launch {
             exportStatus = try {
                 withContext(Dispatchers.IO) {
-                    val csv = HistoryExporter.buildCsv(exportRows, zone)
+                    val csv = HistoryExporter.buildCsv(rowsForExport(), zone)
                     val out = context.contentResolver.openOutputStream(uri)
                         ?: error(resources.getString(R.string.history_export_no_stream))
                     out.use { it.write(csv.toByteArray(Charsets.UTF_8)) }
@@ -180,7 +207,8 @@ fun HistoryScreen(
         scope.launch {
             exportStatus = try {
                 withContext(Dispatchers.IO) {
-                    val document = HistoryExporter.buildPdf(context, exportRows, adherenceSubtitle(context, exportRows), zone)
+                    val rows = rowsForExport()
+                    val document = HistoryExporter.buildPdf(context, rows, adherenceSubtitle(context, rows), zone)
                     val out = context.contentResolver.openOutputStream(uri)
                         ?: error(resources.getString(R.string.history_export_no_stream))
                     out.use { HistoryExporter.writePdf(document, it) }
@@ -209,19 +237,34 @@ fun HistoryScreen(
                             text = { Text(stringResource(R.string.history_export_as_csv)) },
                             onClick = {
                                 showExportMenu = false
-                                exportCsvLauncher.launch(defaultExportFileName("csv"))
+                                exportDialogFormat = "csv"
                             },
                         )
                         DropdownMenuItem(
                             text = { Text(stringResource(R.string.history_export_as_pdf)) },
                             onClick = {
                                 showExportMenu = false
-                                exportPdfLauncher.launch(defaultExportFileName("pdf"))
+                                exportDialogFormat = "pdf"
                             },
                         )
                     }
                 }
             }
+        }
+
+        exportDialogFormat?.let { format ->
+            ExportScopeDialog(
+                range = exportRange,
+                onRange = { exportRange = it },
+                medicines = medicinesForFilter,
+                medicineId = exportMedicineId,
+                onMedicine = { exportMedicineId = it },
+                onDismiss = { exportDialogFormat = null },
+                onConfirm = {
+                    exportDialogFormat = null
+                    if (format == "csv") exportCsvLauncher.launch(defaultExportFileName("csv")) else exportPdfLauncher.launch(defaultExportFileName("pdf"))
+                },
+            )
         }
 
         exportStatus?.let {
@@ -320,6 +363,11 @@ fun HistoryScreen(
             doseEventRepository = doseEventRepository,
             onDismiss = { editing = null },
             doseUnit = row.medicine.doseUnit,
+            originalNotes = row.doseEvent.notes,
+            onReopened = { reopened ->
+                val reminder = reopened.reminderId?.let { reminderRepository.getById(it) }
+                if (reminder != null) notificationBuilder.buildAndPost(reopened, reminder, row.medicine)
+            },
         )
     }
 }
@@ -531,3 +579,56 @@ internal fun HistoryEntryRow(row: DoseEventWithMedicine, onClick: () -> Unit) {
 // The status label moved to core/format/DoseFormatting.kt as
 // doseStatusLabelRes() (§9 #19): one @StringRes function now serves this
 // screen, the table view and the PDF, where it used to be two String copies.
+
+internal enum class ExportRange(@StringRes val labelRes: Int) {
+    LAST_30_DAYS(R.string.history_export_range_30),
+    LAST_90_DAYS(R.string.history_export_range_90),
+    THIS_YEAR(R.string.history_export_range_year),
+    ALL(R.string.history_export_range_all),
+}
+
+/** Range preset and medicine filter for an export (§9 #26). One node per
+ *  option, radios for the range, chips for the medicine. */
+@Composable
+internal fun ExportScopeDialog(
+    range: ExportRange,
+    onRange: (ExportRange) -> Unit,
+    medicines: List<Medicine>,
+    medicineId: Long?,
+    onMedicine: (Long?) -> Unit,
+    onDismiss: () -> Unit,
+    onConfirm: () -> Unit,
+) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.history_export)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.history_export_range), style = MaterialTheme.typography.labelLarge)
+                ExportRange.entries.forEach { option ->
+                    Row(
+                        Modifier.fillMaxWidth().selectable(selected = range == option, role = Role.RadioButton) { onRange(option) }.padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        RadioButton(selected = range == option, onClick = null)
+                        Spacer(Modifier.width(8.dp))
+                        Text(stringResource(option.labelRes))
+                    }
+                }
+                if (medicines.isNotEmpty()) {
+                    Spacer(Modifier.height(8.dp))
+                    Text(stringResource(R.string.history_export_medicine), style = MaterialTheme.typography.labelLarge)
+                    Row(Modifier.horizontalScroll(rememberScrollState())) {
+                        FilterChip(selected = medicineId == null, onClick = { onMedicine(null) }, label = { Text(stringResource(R.string.history_export_all_medicines)) })
+                        medicines.forEach { m ->
+                            Spacer(Modifier.width(6.dp))
+                            FilterChip(selected = medicineId == m.id, onClick = { onMedicine(m.id) }, label = { Text(m.name) })
+                        }
+                    }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(R.string.history_export)) } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } },
+    )
+}

@@ -81,6 +81,17 @@ import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.platform.LocalResources
 import com.hazia.emivita.core.format.LocaleFormats
 import com.hazia.emivita.core.format.parseDecimal
+import android.text.format.DateUtils
+import com.hazia.emivita.core.data.dao.MedicineWithReminders
+import com.hazia.emivita.core.data.entity.DoseEvent
+import com.hazia.emivita.core.data.entity.Reminder
+import com.hazia.emivita.core.data.repository.ReminderRepository
+import com.hazia.emivita.core.notification.ReminderNotificationBuilder
+import com.hazia.emivita.ui.components.DateField
+import com.hazia.emivita.ui.components.TimeOfDayField
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.material3.Switch
+import androidx.compose.runtime.mutableIntStateOf
 
 internal enum class TimelineStatus { PENDING, TAKEN, SKIPPED, UPCOMING }
 
@@ -96,6 +107,11 @@ internal data class TimelineEntry(
     // Only meaningful (and only ever read) for TAKEN/SKIPPED -- the edit
     // dialog's starting time for editRecordedTime (spec §9 #3).
     val resolvedAtEpochMillis: Long?,
+    // §9 #26: the reminder behind the slot (UPCOMING needs it for "Take now"),
+    // its one-line instructions, and the note on an already-recorded dose.
+    val reminderId: Long? = null,
+    val instructions: String? = null,
+    val notes: String? = null,
 )
 
 private data class TimelineNode(
@@ -138,8 +154,12 @@ fun TodayScreen(
     doseEventRepository: DoseEventRepository,
     occurrenceProjectionCache: OccurrenceProjectionCache,
     settingsRepository: SettingsRepository,
+    reminderRepository: ReminderRepository,
+    notificationBuilder: ReminderNotificationBuilder,
 ) {
     var showLogDose by remember { mutableStateOf(false) }
+    // The as-needed row's Log chip opens the dialog on its own medicine.
+    var logDosePreselected by remember { mutableStateOf<Medicine?>(null) }
 
     DisposableEffect(Unit) {
         occurrenceProjectionCache.requestWindow(TODAY_CONSUMER_ID, TODAY_WINDOW_DAYS)
@@ -151,6 +171,16 @@ fun TodayScreen(
             value = list.associate { it.medicine.id to it.medicine }
         }
     }.value
+    // Reminders by id, for the instructions line and for "Take now" on a
+    // projected slot; and the medicines with no dosing reminder switched on,
+    // which are the as-needed ones (§9 #26; Pill Time's whole model).
+    val withReminders = produceState<List<MedicineWithReminders>?>(initialValue = null, profileId) {
+        medicineRepository.observeWithRemindersForProfile(profileId).collectLatest { value = it }
+    }.value
+    val remindersById = remember(withReminders) { withReminders.orEmpty().flatMap { it.reminders }.associateBy { it.id } }
+    val asNeeded = remember(withReminders) {
+        withReminders.orEmpty().filter { m -> m.reminders.none { it.enabled } }.map { it.medicine }.sortedBy { it.sortOrder }
+    }
 
     val zone = remember { ZoneId.systemDefault() }
     // rememberCurrentDate, not remember { LocalDate.now() } -- otherwise the
@@ -190,8 +220,8 @@ fun TodayScreen(
         settingsRepository.lockRemindersUntilTakenByDefault.collectLatest { value = it }
     }
 
-    val nodes = remember(medicinesById, materializedToday, projectionState, startOfToday, startOfTomorrow) {
-        buildTimeline(medicinesById, materializedToday, projectionState, startOfToday, startOfTomorrow)
+    val nodes = remember(medicinesById, materializedToday, projectionState, startOfToday, startOfTomorrow, remindersById) {
+        buildTimeline(medicinesById, materializedToday, projectionState, startOfToday, startOfTomorrow, remindersById)
     }
 
     Box(Modifier.fillMaxSize()) {
@@ -207,7 +237,7 @@ fun TodayScreen(
                 medicinesById == null || materializedToday == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
-                nodes.isEmpty() -> Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+                nodes.isEmpty() && asNeeded.isEmpty() -> Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                     Text(
                         stringResource(R.string.today_nothing_scheduled_yet_add_a_medicine_and_a),
                         style = MaterialTheme.typography.bodyMedium,
@@ -215,9 +245,32 @@ fun TodayScreen(
                 }
                 else -> LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)) {
                     items(nodes, key = { it.epochMillis }) { node ->
-                        TimelineNodeItem(node, doseEventRepository, lockedByDefault)
+                        TimelineNodeItem(node, doseEventRepository, lockedByDefault, reminderRepository, notificationBuilder)
                         Spacer(Modifier.height(12.dp))
                     }
+                    // As-needed medicines (§9 #26): a standing row each, with
+                    // the time since the last dose and a Log chip. They have no
+                    // slot on the timeline, so they sit beneath it.
+                    if (asNeeded.isNotEmpty()) {
+                        item(key = "as-needed-header") {
+                            Text(
+                                stringResource(R.string.today_as_needed),
+                                style = MaterialTheme.typography.labelLarge,
+                                modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
+                            )
+                        }
+                        items(asNeeded, key = { "as-needed-" + it.id }) { medicine ->
+                            AsNeededRow(
+                                medicine = medicine,
+                                doseEventRepository = doseEventRepository,
+                                // Re-fetches "last taken" after a log today.
+                                refreshKey = materializedToday?.size ?: 0,
+                                onLog = { logDosePreselected = medicine; showLogDose = true },
+                            )
+                            Spacer(Modifier.height(8.dp))
+                        }
+                    }
+                    item(key = "fab-space") { Spacer(Modifier.height(72.dp)) }
                 }
             }
         }
@@ -228,7 +281,7 @@ fun TodayScreen(
         ExtendedFloatingActionButton(
             text = { Text(stringResource(R.string.today_log_dose)) },
             icon = { Icon(Icons.Filled.Add, contentDescription = null) },
-            onClick = { showLogDose = true },
+            onClick = { logDosePreselected = null; showLogDose = true },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
                 .padding(16.dp),
@@ -242,7 +295,50 @@ fun TodayScreen(
             doseEventRepository = doseEventRepository,
             onDismiss = { showLogDose = false },
             onLogged = { showLogDose = false },
+            preselected = logDosePreselected,
         )
+    }
+}
+
+/** One as-needed medicine (§9 #26; Pill Time PT-02): name, how long since
+ *  the last dose in the platform's own relative words, and Log. */
+@Composable
+internal fun AsNeededRow(
+    medicine: Medicine,
+    doseEventRepository: DoseEventRepository,
+    refreshKey: Int,
+    onLog: () -> Unit,
+) {
+    val last by produceState<DoseEvent?>(initialValue = null, medicine.id, refreshKey) {
+        value = doseEventRepository.lastDose(medicine.id)
+    }
+    val accent = medicine.color?.let { parseHexColor(it) } ?: NeutralMedicineAccent
+    val lastLine = last?.let { event ->
+        val at = event.resolvedAtEpochMillis ?: event.scheduledEpochMillis
+        stringResource(R.string.today_as_needed_last, DateUtils.getRelativeTimeSpanString(at, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString())
+    } ?: stringResource(R.string.today_as_needed_never)
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = accent.copy(alpha = 0.10f),
+        modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
+    ) {
+        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
+            Surface(shape = CircleShape, color = accent, modifier = Modifier.size(40.dp)) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    Icon(MedicineIcons.iconFor(medicine.iconKey), contentDescription = null, tint = Color.White)
+                }
+            }
+            Spacer(Modifier.width(12.dp))
+            Column(Modifier.weight(1f)) {
+                Text(medicine.name, style = MaterialTheme.typography.titleMedium)
+                Text(lastLine, style = MaterialTheme.typography.doseCritical, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
+            AssistChip(
+                onClick = onLog,
+                label = { Text(stringResource(R.string.today_log)) },
+                leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
+            )
+        }
     }
 }
 
@@ -257,6 +353,7 @@ private fun buildTimeline(
     projection: ProjectionState,
     startOfToday: Long,
     startOfTomorrow: Long,
+    remindersById: Map<Long, Reminder> = emptyMap(),
 ): List<TimelineNode> {
     if (medicinesById == null || materialized == null) return emptyList()
 
@@ -278,6 +375,9 @@ private fun buildTimeline(
             status = status,
             doseEventId = row.doseEvent.id,
             resolvedAtEpochMillis = row.doseEvent.resolvedAtEpochMillis,
+            reminderId = row.doseEvent.reminderId,
+            instructions = row.doseEvent.reminderId?.let { remindersById[it]?.instructions },
+            notes = row.doseEvent.notes,
         )
     }
 
@@ -293,6 +393,8 @@ private fun buildTimeline(
                 status = TimelineStatus.UPCOMING,
                 doseEventId = null,
                 resolvedAtEpochMillis = null,
+                reminderId = occurrence.reminderId,
+                instructions = remindersById[occurrence.reminderId]?.instructions,
             )
         }
 
@@ -307,6 +409,8 @@ private fun TimelineNodeItem(
     node: TimelineNode,
     doseEventRepository: DoseEventRepository,
     lockedByDefault: Boolean,
+    reminderRepository: ReminderRepository,
+    notificationBuilder: ReminderNotificationBuilder,
 ) {
     val time = remember(node.epochMillis) {
         LocaleFormats.time(node.epochMillis)
@@ -334,8 +438,15 @@ private fun TimelineNodeItem(
                     // default fills in when it is null.
                     canSkip = !(entry.medicine.remindersLockedUntilTaken ?: lockedByDefault),
                     onResolve = { status ->
-                        val id = entry.doseEventId ?: return@TimelineEntryRow
-                        scope.launch { doseEventRepository.resolve(id, status) }
+                        val id = entry.doseEventId
+                        scope.launch {
+                            if (id != null) {
+                                doseEventRepository.resolve(id, status)
+                            } else if (entry.reminderId != null && status == DoseStatus.TAKEN) {
+                                // "Take now" on a projected slot (§9 #26).
+                                doseEventRepository.takeProjectedNow(entry.reminderId, entry.medicine.id, node.epochMillis, entry.doseAmount)
+                            }
+                        }
                     },
                     // Event editing (spec §3/§9 #3) -- only an already-resolved
                     // entry has anything to edit; PENDING/UPCOMING have no
@@ -365,6 +476,11 @@ private fun TimelineNodeItem(
                 doseEventRepository = doseEventRepository,
                 onDismiss = { editing = null },
                 doseUnit = entry.medicine.doseUnit,
+                originalNotes = entry.notes,
+                onReopened = { reopened ->
+                    val reminder = reopened.reminderId?.let { reminderRepository.getById(it) }
+                    if (reminder != null) notificationBuilder.buildAndPost(reopened, reminder, entry.medicine)
+                },
             )
         }
     }
@@ -430,6 +546,11 @@ internal fun TimelineEntryRow(
                     style = MaterialTheme.typography.doseCritical,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
+                // The reminder's one line (§9 #26): "with food" belongs where
+                // the dose is taken, not only on the notification.
+                entry.instructions?.takeIf { it.isNotBlank() }?.let {
+                    Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
         }
             when (entry.status) {
@@ -456,6 +577,18 @@ internal fun TimelineEntryRow(
                         )
                     }
                 }
+                // A slot the alarm has not reached yet can still be answered
+                // early (§9 #26; medTimer's "take now" on a future dose).
+                TimelineStatus.UPCOMING -> if (entry.reminderId != null) Row(
+                    Modifier.fillMaxWidth().padding(top = 10.dp),
+                    horizontalArrangement = Arrangement.End,
+                ) {
+                    AssistChip(
+                        onClick = { onResolve(DoseStatus.TAKEN) },
+                        label = { Text(stringResource(R.string.today_take_now)) },
+                        leadingIcon = { Icon(Icons.Filled.Check, contentDescription = null) },
+                    )
+                }
                 else -> {}
             }
         }
@@ -478,21 +611,80 @@ private fun LogDoseDialog(
     doseEventRepository: DoseEventRepository,
     onDismiss: () -> Unit,
     onLogged: () -> Unit,
+    preselected: Medicine? = null,
 ) {
     val resources = LocalResources.current
     var medicines by remember { mutableStateOf<List<MedicineWithTags>?>(null) }
-    var selected by remember { mutableStateOf<Medicine?>(null) }
+    var selected by remember { mutableStateOf<Medicine?>(preselected) }
     var doseAmount by remember { mutableStateOf("1") }
     var menuExpanded by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    // Backdating (§9 #26; DITMM/Pill Time): "just now" by default, any day
+    // and time on request. The chosen instant is what the headroom counts to.
+    val zone = remember { ZoneId.systemDefault() }
+    val openedAt = remember { System.currentTimeMillis() }
+    var backdate by remember { mutableStateOf(false) }
+    val openedZoned = remember { Instant.ofEpochMilli(openedAt).atZone(zone) }
+    var atDay by remember { mutableStateOf<Long?>(openedZoned.toLocalDate().toEpochDay()) }
+    var atHour by remember { mutableIntStateOf(openedZoned.hour) }
+    var atMinute by remember { mutableIntStateOf(openedZoned.minute) }
+    val atEpochMillis = remember(backdate, atDay, atHour, atMinute) {
+        if (!backdate) null else atDay?.let { java.time.LocalDate.ofEpochDay(it).atTime(atHour, atMinute).atZone(zone).toInstant().toEpochMilli() }
+    }
+    // Headroom against the medicine's as-needed ceiling (§9 #26; PT-01).
+    val headroom by produceState<PrnHeadroom?>(initialValue = null, selected?.id, atEpochMillis, preselected) {
+        val medicine = selected
+        val max = medicine?.prnMaxDoses; val hours = medicine?.prnWindowHours
+        value = if (medicine == null || max == null || hours == null) null else {
+            val at = atEpochMillis ?: System.currentTimeMillis()
+            val window = hours * 60L * 60L * 1000L
+            val taken = doseEventRepository.takenSince(medicine.id, at - window).filter { (it.resolvedAtEpochMillis ?: 0L) <= at }
+            prnHeadroom(taken.mapNotNull { it.resolvedAtEpochMillis }, max, window)
+        }
+    }
+    var confirmOverCeiling by remember { mutableStateOf(false) }
 
     LaunchedEffect(profileId) {
         medicineRepository.observeForProfile(profileId).collect { list ->
             medicines = list
             if (selected == null) selected = list.firstOrNull()?.medicine
         }
+    }
+
+    fun log() {
+        val medicine = selected ?: return
+        val amount = parseDecimal(doseAmount) ?: return
+        saving = true
+        saveError = null
+        scope.launch {
+            try {
+                doseEventRepository.logAdhocDose(medicine.id, amount, atEpochMillis ?: System.currentTimeMillis())
+                onLogged()
+            } catch (e: Exception) {
+                saving = false
+                saveError = resources.getString(R.string.error_could_not_log_dose, e.message ?: resources.getString(R.string.error_unknown))
+            }
+        }
+    }
+
+    if (confirmOverCeiling) {
+        // At the ceiling the app asks once and never refuses (the owner's
+        // choice, §9 #26): the person knows more than the counter does.
+        val h = headroom
+        AlertDialog(
+            onDismissRequest = { confirmOverCeiling = false },
+            title = { Text(stringResource(R.string.today_prn_over_title)) },
+            text = {
+                Text(
+                    if (h != null) stringResource(R.string.today_prn_over_text, h.taken, h.max, selected?.prnWindowHours ?: 0)
+                    else stringResource(R.string.today_prn_over_title),
+                )
+            },
+            confirmButton = { TextButton(onClick = { confirmOverCeiling = false; log() }) { Text(stringResource(R.string.today_prn_log_anyway)) } },
+            dismissButton = { TextButton(onClick = { confirmOverCeiling = false }) { Text(stringResource(R.string.common_cancel)) } },
+        )
     }
 
     LaunchedEffect(selected?.id) {
@@ -549,11 +741,33 @@ private fun LogDoseDialog(
                             modifier = Modifier.fillMaxWidth(),
                         )
                         Spacer(Modifier.height(4.dp))
-                        Text(
-                            stringResource(R.string.today_logged_as_taken_just_now),
-                            style = MaterialTheme.typography.labelMedium,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
+                        Row(
+                            Modifier.fillMaxWidth().toggleable(value = backdate, role = Role.Switch) { backdate = it },
+                            horizontalArrangement = Arrangement.SpaceBetween,
+                            verticalAlignment = Alignment.CenterVertically,
+                        ) {
+                            Text(
+                                stringResource(if (backdate) R.string.today_log_earlier else R.string.today_logged_as_taken_just_now),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.weight(1f),
+                            )
+                            Switch(checked = backdate, onCheckedChange = null)
+                        }
+                        if (backdate) {
+                            DateField(stringResource(R.string.dose_edit_move_day), atDay) { atDay = it }
+                            TimeOfDayField(stringResource(R.string.dose_edit_move_time), atHour, atMinute) { h, m -> atHour = h; atMinute = m }
+                        }
+                        headroom?.let { h ->
+                            Spacer(Modifier.height(4.dp))
+                            val line = stringResource(R.string.today_prn_headroom, h.taken, h.max, selected?.prnWindowHours ?: 0)
+                            val returns = h.headroomReturnsAtEpochMillis?.let { " · " + stringResource(R.string.today_prn_headroom_returns, LocaleFormats.monthDayTime(it)) } ?: ""
+                            Text(
+                                line + returns,
+                                style = MaterialTheme.typography.labelMedium,
+                                color = if (h.atCeiling) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
+                        }
                         saveError?.let {
                             Spacer(Modifier.height(4.dp))
                             Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
@@ -564,22 +778,8 @@ private fun LogDoseDialog(
         },
         confirmButton = {
             TextButton(
-                enabled = selected != null && parseDecimal(doseAmount) != null && !saving,
-                onClick = {
-                    val medicine = selected ?: return@TextButton
-                    val amount = parseDecimal(doseAmount) ?: return@TextButton
-                    saving = true
-                    saveError = null
-                    scope.launch {
-                        try {
-                            doseEventRepository.logAdhocDose(medicine.id, amount, System.currentTimeMillis())
-                            onLogged()
-                        } catch (e: Exception) {
-                            saving = false
-                            saveError = resources.getString(R.string.error_could_not_log_dose, e.message ?: resources.getString(R.string.error_unknown))
-                        }
-                    }
-                },
+                enabled = selected != null && parseDecimal(doseAmount) != null && !saving && (!backdate || atDay != null),
+                onClick = { if (headroom?.atCeiling == true) confirmOverCeiling = true else log() },
             ) { Text(stringResource(R.string.today_log)) }
         },
         dismissButton = {

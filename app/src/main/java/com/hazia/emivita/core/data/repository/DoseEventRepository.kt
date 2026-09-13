@@ -355,6 +355,23 @@ class DoseEventRepository(
     suspend fun getLastUsedDoseAmount(medicineId: Long): Double? =
         doseEventDao.getMostRecentForMedicine(medicineId)?.doseAmount
 
+    /** The most recent dose row (any status but a refill or a deletion) --
+     *  the "last taken 3 h ago" an as-needed medicine shows (§9 #26; PT-02). */
+    suspend fun lastDose(medicineId: Long): DoseEvent? = doseEventDao.getMostRecentForMedicine(medicineId)
+
+    /**
+     * "Take now" on a slot the alarm has not reached yet (§9 #26): the slot
+     * is materialised through the same idempotent path the alarm uses, then
+     * answered Taken at [nowEpochMillis]. When the alarm fires later it finds
+     * a resolved row and stays quiet (ReminderAlarmReceiver checks PENDING).
+     */
+    suspend fun takeProjectedNow(reminderId: Long, medicineId: Long, scheduledEpochMillis: Long, doseAmount: Double, nowEpochMillis: Long = System.currentTimeMillis()) {
+        val id = materializeIfAbsent(reminderId, medicineId, scheduledEpochMillis, doseAmount)
+            ?: doseEventDao.findByReminderAndTime(reminderId, scheduledEpochMillis)?.id
+            ?: return
+        resolve(id, DoseStatus.TAKEN, nowEpochMillis)
+    }
+
     /** PRN / ad-hoc dose logging (spec §3, §9 #2) -- a manually-logged dose not
      *  tied to any scheduled occurrence: reminderId = null, logged retrospectively
      *  so it goes straight to TAKEN rather than through PENDING. */

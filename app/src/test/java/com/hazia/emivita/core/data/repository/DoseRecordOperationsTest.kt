@@ -140,6 +140,20 @@ class DoseRecordOperationsTest {
     }
 
     @Test
+    fun `take now on a projected slot materialises it and answers Taken, once`() = runTest {
+        val m = medicine(10.0); val r = reminder(m)
+        doses.takeProjectedNow(r, m, 7_000_000L, 1.0, nowEpochMillis = 6_500_000L)
+        val row = database.doseEventDao().findByReminderAndTime(r, 7_000_000L)!!
+        assertEquals(DoseStatus.TAKEN, row.status)
+        assertEquals(6_500_000L, row.resolvedAtEpochMillis)
+        assertEquals(9.0, stock(m), 0.001)
+        // a second tap (or the alarm) finds the row already answered and changes nothing
+        doses.takeProjectedNow(r, m, 7_000_000L, 1.0, nowEpochMillis = 6_600_000L)
+        assertEquals(6_500_000L, database.doseEventDao().findByReminderAndTime(r, 7_000_000L)!!.resolvedAtEpochMillis)
+        assertEquals(9.0, stock(m), 0.001)
+    }
+
+    @Test
     fun `a dose-count course counts down on Taken only and stops at zero`() = runTest {
         val m = medicine(); val r = reminder(m, dosesRemaining = 2)
         doses.resolve(pending(m, r, at = 1L), DoseStatus.SKIPPED)

@@ -84,6 +84,8 @@ fun EmivitaNavHost() {
                     doseEventRepository = container.doseEventRepository,
                     occurrenceProjectionCache = container.occurrenceProjectionCache,
                     settingsRepository = container.settingsRepository,
+                    reminderRepository = container.reminderRepository,
+                    notificationBuilder = container.notificationBuilder,
                 )
             }
             composable<EmivitaRoute.Medicines> {
@@ -103,6 +105,8 @@ fun EmivitaNavHost() {
                     profileId = profileId,
                     doseEventRepository = container.doseEventRepository,
                     settingsRepository = container.settingsRepository,
+                    reminderRepository = container.reminderRepository,
+                    notificationBuilder = container.notificationBuilder,
                 )
             }
             composable<EmivitaRoute.Settings> {
@@ -130,6 +134,8 @@ fun EmivitaNavHost() {
                     settingsRepository = container.settingsRepository,
                     autoSyncManager = container.autoSyncManager,
                     onBack = { navController.popBackStack() },
+                    profileId = profileId,
+                    medicineRepository = container.medicineRepository,
                 )
             }
             composable<EmivitaRoute.NotificationsAlertsSettings> {

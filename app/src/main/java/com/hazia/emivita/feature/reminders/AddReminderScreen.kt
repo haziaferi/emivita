@@ -149,6 +149,7 @@ fun AddReminderScreen(
                     autoResolve = advanced.autoResolve, activeFromEpochDay = advanced.activeFromEpochDay,
                     activeUntilEpochDay = advanced.activeUntilEpochDay, repeatOnUnanswered = advanced.repeatOnUnanswered,
                     weekendModeOptIn = advanced.weekendModeOptIn, preAlarmMinutes = advanced.preAlarmMinutes,
+                    instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
                 )
                 onDone()
             },
@@ -170,6 +171,7 @@ fun AddReminderScreen(
                     autoResolve = advanced.autoResolve, activeFromEpochDay = advanced.activeFromEpochDay,
                     activeUntilEpochDay = advanced.activeUntilEpochDay, repeatOnUnanswered = advanced.repeatOnUnanswered,
                     weekendModeOptIn = advanced.weekendModeOptIn, preAlarmMinutes = advanced.preAlarmMinutes,
+                    instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
                 )
                 onDone()
             },
@@ -194,6 +196,7 @@ fun AddReminderScreen(
                     autoResolve = advanced.autoResolve, activeFromEpochDay = advanced.activeFromEpochDay,
                     activeUntilEpochDay = advanced.activeUntilEpochDay, repeatOnUnanswered = advanced.repeatOnUnanswered,
                     weekendModeOptIn = advanced.weekendModeOptIn, preAlarmMinutes = advanced.preAlarmMinutes,
+                    instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
                 )
                 onDone()
             },
@@ -221,6 +224,7 @@ fun AddReminderScreen(
                     autoResolve = advanced.autoResolve, activeFromEpochDay = advanced.activeFromEpochDay,
                     activeUntilEpochDay = advanced.activeUntilEpochDay, repeatOnUnanswered = advanced.repeatOnUnanswered,
                     weekendModeOptIn = advanced.weekendModeOptIn, preAlarmMinutes = advanced.preAlarmMinutes,
+                    instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
                 )
                 onDone()
             },
@@ -296,7 +300,7 @@ fun EditReminderScreen(
                 reminderRepository.updateConfigAndAdvancedFields(
                     current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
                     advanced.activeUntilEpochDay, advanced.repeatOnUnanswered, advanced.weekendModeOptIn,
-                    preAlarmMinutes = advanced.preAlarmMinutes,
+                    preAlarmMinutes = advanced.preAlarmMinutes, instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
                 )
                 onDone()
             },
@@ -313,7 +317,7 @@ fun EditReminderScreen(
                 reminderRepository.updateConfigAndAdvancedFields(
                     current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
                     advanced.activeUntilEpochDay, advanced.repeatOnUnanswered, advanced.weekendModeOptIn,
-                    preAlarmMinutes = advanced.preAlarmMinutes,
+                    preAlarmMinutes = advanced.preAlarmMinutes, instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
                 )
                 onDone()
             },
@@ -330,7 +334,7 @@ fun EditReminderScreen(
                 reminderRepository.updateConfigAndAdvancedFields(
                     current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
                     advanced.activeUntilEpochDay, advanced.repeatOnUnanswered, advanced.weekendModeOptIn,
-                    preAlarmMinutes = advanced.preAlarmMinutes,
+                    preAlarmMinutes = advanced.preAlarmMinutes, instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
                 )
                 onDone()
             },
@@ -367,7 +371,7 @@ fun EditReminderScreen(
                 reminderRepository.updateConfigAndAdvancedFields(
                     current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
                     advanced.activeUntilEpochDay, advanced.repeatOnUnanswered, advanced.weekendModeOptIn,
-                    preAlarmMinutes = advanced.preAlarmMinutes,
+                    preAlarmMinutes = advanced.preAlarmMinutes, instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
                     parentReminderId = parentId,
                 )
                 onDone()
@@ -471,6 +475,8 @@ private data class AdvancedFields(
     val repeatOnUnanswered: RepeatConfig?,
     val weekendModeOptIn: Boolean,
     val preAlarmMinutes: Int?,
+    val instructions: String?,
+    val dosesRemaining: Int?,
 )
 
 /** State holder for [AdvancedReminderFieldsSection] -- a plain class with
@@ -487,6 +493,9 @@ private class AdvancedReminderFieldsState(initialReminder: Reminder?) {
     var weekendModeOptIn by mutableStateOf(initialReminder?.weekendModeOptIn ?: false)
     var preAlarmEnabled by mutableStateOf(initialReminder?.preAlarmMinutes != null)
     var preAlarmMinutes by mutableStateOf(initialReminder?.preAlarmMinutes?.toString() ?: "30")
+    var instructions by mutableStateOf(initialReminder?.instructions ?: "")
+    var courseEnabled by mutableStateOf(initialReminder?.dosesRemaining != null)
+    var dosesRemaining by mutableStateOf(initialReminder?.dosesRemaining?.toString() ?: "10")
 
     fun snapshot(): AdvancedFields = AdvancedFields(
         autoResolve = autoResolve,
@@ -499,6 +508,8 @@ private class AdvancedReminderFieldsState(initialReminder: Reminder?) {
         },
         weekendModeOptIn = weekendModeOptIn,
         preAlarmMinutes = if (preAlarmEnabled) preAlarmMinutes.toIntOrNull()?.takeIf { it > 0 } else null,
+        instructions = instructions.trim().ifBlank { null },
+        dosesRemaining = if (courseEnabled) dosesRemaining.toIntOrNull()?.takeIf { it >= 0 } else null,
     )
 }
 
@@ -618,6 +629,45 @@ private fun AdvancedReminderFieldsSection(state: AdvancedReminderFieldsState) {
             value = state.preAlarmMinutes,
             onValueChange = { state.preAlarmMinutes = it },
             label = { Text(stringResource(R.string.add_reminder_pre_alarm_minutes)) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
+    }
+
+    // Instructions (§9 #26; medTimer): the one line that goes on the notification.
+    Spacer(Modifier.height(12.dp))
+    OutlinedTextField(
+        value = state.instructions,
+        onValueChange = { state.instructions = it },
+        label = { Text(stringResource(R.string.add_reminder_instructions)) },
+        placeholder = { Text(stringResource(R.string.add_reminder_instructions_hint)) },
+        singleLine = true,
+        modifier = Modifier.fillMaxWidth(),
+    )
+
+    // Dose-count course (§9 #26; MediTrak MT-07): "N doses, then stop".
+    Spacer(Modifier.height(12.dp))
+    Row(
+        Modifier.fillMaxWidth().toggleable(value = state.courseEnabled, role = Role.Switch) { state.courseEnabled = it },
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.add_reminder_course), style = MaterialTheme.typography.bodyMedium)
+            Text(
+                stringResource(R.string.add_reminder_course_desc),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(checked = state.courseEnabled, onCheckedChange = null)
+    }
+    if (state.courseEnabled) {
+        OutlinedTextField(
+            value = state.dosesRemaining,
+            onValueChange = { state.dosesRemaining = it },
+            label = { Text(stringResource(R.string.add_reminder_doses_remaining)) },
             keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),

@@ -61,6 +61,9 @@ import com.hazia.emivita.core.data.backup.BackupJson
 import com.hazia.emivita.core.data.backup.BackupDecodeResult
 import com.hazia.emivita.core.data.backup.decodeBackup
 import com.hazia.emivita.core.data.backup.BACKUP_SCHEMA_VERSION
+import com.hazia.emivita.core.data.entity.Medicine
+import com.hazia.emivita.core.data.repository.MedicineRepository
+import androidx.compose.runtime.produceState
 
 private val EXPORT_FILE_STAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
@@ -78,6 +81,8 @@ fun BackupSyncScreen(
     settingsRepository: SettingsRepository,
     autoSyncManager: AutoSyncManager,
     onBack: () -> Unit,
+    profileId: Long? = null,
+    medicineRepository: MedicineRepository? = null,
 ) {
     val context = LocalContext.current
     // LocalResources, not LocalContext, for strings resolved inside a
@@ -314,6 +319,14 @@ fun BackupSyncScreen(
                 }) { Text(stringResource(R.string.backup_sync_stop_syncing)) }
             }
         }
+
+        // ---- Archived medicines (§9 #26) --------------------------------------
+        // Delete on a medicine archives it: its record stays, its reminders
+        // pause, it leaves every list but this one. From here it comes back,
+        // or goes for good -- the only place the cascade is still reachable.
+        if (profileId != null && medicineRepository != null) {
+            ArchivedMedicinesSection(profileId, medicineRepository)
+        }
     }
 
     if (showUnencryptedConfirm) {
@@ -419,6 +432,52 @@ fun BackupSyncScreen(
                     },
                 ) { Text(stringResource(R.string.common_save)) }
             },
+        )
+    }
+}
+
+@Composable
+private fun ArchivedMedicinesSection(profileId: Long, medicineRepository: MedicineRepository) {
+    val archived by produceState<List<Medicine>>(initialValue = emptyList(), profileId) {
+        medicineRepository.observeArchivedForProfile(profileId).collect { value = it }
+    }
+    val scope = rememberCoroutineScope()
+    var confirmDelete by remember { mutableStateOf<Medicine?>(null) }
+
+    Spacer(Modifier.height(24.dp))
+    Text(stringResource(R.string.data_archived_title), style = MaterialTheme.typography.titleMedium)
+    Text(
+        stringResource(R.string.data_archived_desc),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(Modifier.height(8.dp))
+    if (archived.isEmpty()) {
+        Text(stringResource(R.string.data_archived_none), style = MaterialTheme.typography.bodyMedium)
+    }
+    archived.forEach { medicine ->
+        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
+            Text(medicine.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
+            TextButton(onClick = { scope.launch { medicineRepository.unarchive(medicine.id) } }) {
+                Text(stringResource(R.string.data_archived_restore))
+            }
+            TextButton(onClick = { confirmDelete = medicine }) {
+                Text(stringResource(R.string.data_archived_delete), color = MaterialTheme.colorScheme.error)
+            }
+        }
+    }
+
+    confirmDelete?.let { medicine ->
+        AlertDialog(
+            onDismissRequest = { confirmDelete = null },
+            title = { Text(stringResource(R.string.data_archived_delete_title, medicine.name)) },
+            text = { Text(stringResource(R.string.data_archived_delete_text)) },
+            confirmButton = {
+                TextButton(onClick = { scope.launch { medicineRepository.deletePermanently(medicine); confirmDelete = null } }) {
+                    Text(stringResource(R.string.data_archived_delete), color = MaterialTheme.colorScheme.error)
+                }
+            },
+            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
 }

@@ -64,6 +64,8 @@ import androidx.compose.ui.semantics.Role
 import com.hazia.emivita.core.data.entity.NotificationPriority
 import com.hazia.emivita.core.notification.ReminderNotificationChannels
 import androidx.annotation.StringRes
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.ui.text.input.KeyboardType
 
 /**
  * Add Medicine (spec §6 field order: name + barcode -> appearance (icon +
@@ -95,7 +97,7 @@ fun AddMedicineScreen(
         initialLockOverride = null,
         initialPriority = NotificationPriority.STANDARD,
         colorsInUse = colorsInUse,
-        onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, notes, doseUnit, lockOverride, priority ->
+        onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, notes, doseUnit, lockOverride, priority, prnMax, prnHours ->
             val id = medicineRepository.create(
                 Medicine(
                     profileId = profileId,
@@ -110,6 +112,8 @@ fun AddMedicineScreen(
                     storageNote = storageNote,
                     notes = notes,
                     doseUnit = doseUnit,
+                    prnMaxDoses = prnMax,
+                    prnWindowHours = prnHours,
                     createdAtEpochMillis = System.currentTimeMillis(),
                 )
             )
@@ -174,11 +178,13 @@ fun EditMedicineScreen(
         initialIndication = current.indication ?: "",
         initialStorageNote = current.storageNote ?: "",
         initialNotes = current.notes ?: "",
+        initialPrnMaxDoses = current.prnMaxDoses,
+        initialPrnWindowHours = current.prnWindowHours,
         initialDoseUnit = current.doseUnit ?: "",
         initialLockOverride = current.remindersLockedUntilTaken,
         initialPriority = current.notificationPriority,
         colorsInUse = colorsInUse,
-        onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, notes, doseUnit, lockOverride, priority ->
+        onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, notes, doseUnit, lockOverride, priority, prnMax, prnHours ->
             medicineRepository.update(
                 current.copy(
                     name = name,
@@ -191,6 +197,8 @@ fun EditMedicineScreen(
                     storageNote = storageNote,
                     notes = notes,
                     doseUnit = doseUnit,
+                    prnMaxDoses = prnMax,
+                    prnWindowHours = prnHours,
                 )
             )
             val previousNames = tagsSnapshot.associateBy { it.name }
@@ -249,6 +257,8 @@ private fun MedicineFormBody(
     initialIndication: String,
     initialStorageNote: String,
     initialNotes: String,
+    initialPrnMaxDoses: Int? = null,
+    initialPrnWindowHours: Int? = null,
     initialDoseUnit: String,
     initialLockOverride: Boolean?,
     initialPriority: NotificationPriority,
@@ -268,6 +278,8 @@ private fun MedicineFormBody(
         doseUnit: String?,
         lockOverride: Boolean?,
         priority: NotificationPriority,
+        prnMaxDoses: Int?,
+        prnWindowHours: Int?,
     ) -> Unit,
     onCancel: () -> Unit,
 ) {
@@ -282,6 +294,8 @@ private fun MedicineFormBody(
     var indication by remember { mutableStateOf(initialIndication) }
     var storageNote by remember { mutableStateOf(initialStorageNote) }
     var notes by remember { mutableStateOf(initialNotes) }
+    var prnMax by remember { mutableStateOf(initialPrnMaxDoses?.toString() ?: "") }
+    var prnHours by remember { mutableStateOf(initialPrnWindowHours?.toString() ?: "") }
     var doseUnit by remember { mutableStateOf(initialDoseUnit) }
     // null = inherit global default, true/false = explicit override
     var lockOverride by remember { mutableStateOf(initialLockOverride) }
@@ -467,6 +481,35 @@ private fun MedicineFormBody(
             modifier = Modifier.fillMaxWidth(),
         )
 
+        // As-needed ceiling (§9 #26; Pill Time PT-01): "at most N in any H
+        // hours". Shown as headroom on the Log dose dialog; at the ceiling
+        // logging asks once and never refuses (the owner's choice).
+        Spacer(Modifier.height(20.dp))
+        Text(stringResource(R.string.add_medicine_prn_ceiling), style = MaterialTheme.typography.labelLarge)
+        Text(
+            stringResource(R.string.add_medicine_prn_ceiling_desc),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+            OutlinedTextField(
+                value = prnMax,
+                onValueChange = { prnMax = it },
+                label = { Text(stringResource(R.string.add_medicine_prn_max)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+            OutlinedTextField(
+                value = prnHours,
+                onValueChange = { prnHours = it },
+                label = { Text(stringResource(R.string.add_medicine_prn_hours)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+        }
+
         // Notification priority (spec §7 R59). Medicine.notificationPriority
         // existed from the start and picked the channel a reminder posts to,
         // but no screen ever set it: every medicine was STANDARD, and the High
@@ -526,6 +569,8 @@ private fun MedicineFormBody(
                                 doseUnit.trim().ifBlank { null },
                                 lockOverride,
                                 priority,
+                                prnMax.toIntOrNull()?.takeIf { it > 0 },
+                                prnHours.toIntOrNull()?.takeIf { it > 0 },
                             )
                         } catch (e: Exception) {
                             // Reset on failure, not just success -- otherwise a

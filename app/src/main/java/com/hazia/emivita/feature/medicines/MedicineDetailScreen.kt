@@ -61,6 +61,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.material3.Switch
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
+import com.hazia.emivita.core.data.entity.MedicineNote
+import com.hazia.emivita.core.format.LocaleFormats
 
 /**
  * Medicine detail: read-only summary + its reminders list + "Add reminder",
@@ -200,6 +202,8 @@ fun MedicineDetailScreen(
                 Spacer(Modifier.height(16.dp))
             }
 
+            NotesJournal(medicineId, medicineRepository)
+
             Text(
                 stringResource(R.string.medicine_detail_reminders),
                 style = MaterialTheme.typography.labelLarge,
@@ -296,5 +300,86 @@ internal fun ReminderRow(reminder: Reminder, onEdit: () -> Unit, onEnabledChange
                 )
             }
         }
+    }
+}
+
+/**
+ * The notes journal (§9 #26; Appendix F MT-04): dated entries, newest first,
+ * for what a standing notes field cannot say -- "dizzy for two days after
+ * the dose went up". Add at the top; tap an entry to edit; delete from the
+ * edit dialog. Kept short here: three most recent, "show all" expands.
+ */
+@Composable
+private fun NotesJournal(medicineId: Long, medicineRepository: MedicineRepository) {
+    val notes by produceState<List<MedicineNote>>(initialValue = emptyList(), medicineId) {
+        medicineRepository.observeNotes(medicineId).collect { value = it }
+    }
+    val scope = rememberCoroutineScope()
+    var draft by remember { mutableStateOf("") }
+    var editing by remember { mutableStateOf<MedicineNote?>(null) }
+    var showAll by remember { mutableStateOf(false) }
+
+    Column(Modifier.padding(horizontal = 16.dp)) {
+        Text(stringResource(R.string.medicine_detail_journal), style = MaterialTheme.typography.labelLarge)
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            androidx.compose.material3.OutlinedTextField(
+                value = draft,
+                onValueChange = { draft = it },
+                placeholder = { Text(stringResource(R.string.medicine_detail_journal_hint)) },
+                maxLines = 3,
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(
+                enabled = draft.isNotBlank(),
+                onClick = { scope.launch { medicineRepository.addNote(medicineId, draft); draft = "" } },
+            ) { Text(stringResource(R.string.medicine_detail_journal_add)) }
+        }
+        val shown = if (showAll) notes else notes.take(3)
+        shown.forEach { note ->
+            Surface(
+                shape = RoundedCornerShape(12.dp),
+                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
+                    .clickable(role = Role.Button, onClickLabel = stringResource(R.string.medicine_detail_journal_edit)) { editing = note },
+            ) {
+                Column(Modifier.padding(12.dp)) {
+                    Text(note.text, style = MaterialTheme.typography.bodyMedium)
+                    Text(
+                        LocaleFormats.monthDayTime(note.createdAtEpochMillis) +
+                            (note.editedAtEpochMillis?.let { " · " + stringResource(R.string.medicine_detail_journal_edited) } ?: ""),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+            }
+        }
+        if (notes.size > 3 && !showAll) {
+            TextButton(onClick = { showAll = true }) { Text(stringResource(R.string.medicine_detail_journal_show_all, notes.size)) }
+        }
+        Spacer(Modifier.height(8.dp))
+    }
+
+    editing?.let { note ->
+        var text by remember(note.id) { mutableStateOf(note.text) }
+        AlertDialog(
+            onDismissRequest = { editing = null },
+            title = { Text(stringResource(R.string.medicine_detail_journal_edit)) },
+            text = {
+                androidx.compose.material3.OutlinedTextField(value = text, onValueChange = { text = it }, maxLines = 6, modifier = Modifier.fillMaxWidth())
+            },
+            confirmButton = {
+                TextButton(enabled = text.isNotBlank(), onClick = { scope.launch { medicineRepository.editNote(note, text); editing = null } }) {
+                    Text(stringResource(R.string.common_save))
+                }
+            },
+            dismissButton = {
+                Row {
+                    TextButton(onClick = { scope.launch { medicineRepository.deleteNote(note.id); editing = null } }) {
+                        Text(stringResource(R.string.medicine_detail_delete), color = MaterialTheme.colorScheme.error)
+                    }
+                    TextButton(onClick = { editing = null }) { Text(stringResource(R.string.common_cancel)) }
+                }
+            },
+        )
     }
 }

@@ -7,6 +7,7 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextClearance
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.isSelectable
@@ -21,6 +22,8 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import java.time.LocalDateTime
 import java.time.ZoneId
+import androidx.compose.ui.test.assertCountEquals
+import androidx.compose.ui.test.hasText
 
 /**
  * The other half of spec §7 R46 that shipped without verification: how this
@@ -130,5 +133,43 @@ class DoseEditDialogTest {
             repository.editDoseAmount(7L, 2.0)
             repository.resolve(7L, DoseStatus.TAKEN, scheduled)
         }
+    }
+
+    // ---- §9 #26: the record can be annotated, undone, moved and removed ----
+
+    @Test
+    fun aNoteIsSavedOnlyWhenItChanged() {
+        val repository = mockk<DoseEventRepository>(relaxed = true)
+        show(DoseStatus.TAKEN, resolvedAt = scheduled, repository = repository)
+        compose.onNodeWithText("Note (optional)").performTextInput("with food")
+        compose.onNodeWithText("Save").performClick()
+        compose.waitForIdle()
+        coVerify(exactly = 1) { repository.setNotes(7L, "with food") }
+    }
+
+    @Test
+    fun aResolvedDoseOffersReturnToDueAndAPendingOneOffersMove() {
+        show(DoseStatus.TAKEN, resolvedAt = scheduled)
+        compose.onNodeWithText("Return to due").assertExists()
+        compose.onAllNodes(hasText("Move this dose")).assertCountEquals(0)
+    }
+
+    @Test
+    fun aPendingDoseOffersMoveNotReturnToDue() {
+        show(DoseStatus.PENDING)
+        compose.onNodeWithText("Move this dose").assertExists()
+        compose.onNodeWithText("Move and remind me then").assertIsNotEnabled()
+        compose.onAllNodes(hasText("Return to due")).assertCountEquals(0)
+    }
+
+    @Test
+    fun deleteTakesTwoTapsAndThenSoftDeletes() {
+        val repository = mockk<DoseEventRepository>(relaxed = true)
+        show(DoseStatus.TAKEN, resolvedAt = scheduled, repository = repository)
+        compose.onNodeWithText("Delete this record").performScrollTo().performClick()
+        coVerify(exactly = 0) { repository.softDelete(any()) }
+        compose.onNodeWithText("Delete").performScrollTo().performClick()
+        compose.waitForIdle()
+        coVerify(exactly = 1) { repository.softDelete(7L) }
     }
 }

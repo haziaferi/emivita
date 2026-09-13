@@ -43,7 +43,8 @@ object HistoryExporter {
         // The old row paired the scheduled date with the resolved time, so a
         // 23:30 dose taken at 00:10 exported as a timestamp that never
         // happened. medTimer writes reminded and taken as two full columns.
-        builder.append("Date,Time,Recorded,Medicine,Status,Dose,Measurement\n")
+        // Notes last (§9 #26): the dose's own note, quoted like the name.
+        builder.append("Date,Time,Recorded,Medicine,Status,Dose,Measurement,Notes\n")
         for (row in rows) {
             val scheduled = Instant.ofEpochMilli(row.doseEvent.scheduledEpochMillis).atZone(zone)
             val recorded = row.doseEvent.resolvedAtEpochMillis
@@ -55,7 +56,8 @@ object HistoryExporter {
             builder.append(csvEscape(row.medicine.name)).append(',')
             builder.append(csvStatusLabel(row.doseEvent.status)).append(',')
             builder.append(formatDecimal(row.doseEvent.doseAmount)).append(',')
-            builder.append(csvEscape(row.medicine.doseUnit ?: "")).append('\n')
+            builder.append(csvEscape(row.medicine.doseUnit ?: "")).append(',')
+            builder.append(csvEscape(row.doseEvent.notes ?: "")).append('\n')
         }
         return builder.toString()
     }

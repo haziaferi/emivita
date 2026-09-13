@@ -37,7 +37,7 @@ class HistoryExporterCsvTest {
         // "2026-09-12,00:10" -- a moment that never happened.
         val csv = HistoryExporter.buildCsv(listOf(row("2026-09-12T23:30", "2026-09-13T00:10", DoseStatus.TAKEN)), zone)
         assertEquals(
-            "Date,Time,Recorded,Medicine,Status,Dose,Measurement\n2026-09-12,23:30,2026-09-13 00:10,Sertraline,Taken,50,mg\n",
+            "Date,Time,Recorded,Medicine,Status,Dose,Measurement,Notes\n2026-09-12,23:30,2026-09-13 00:10,Sertraline,Taken,50,mg,\n",
             csv,
         )
     }
@@ -45,6 +45,13 @@ class HistoryExporterCsvTest {
     @Test
     fun `an unanswered dose has a scheduled slot and an empty Recorded column`() {
         val csv = HistoryExporter.buildCsv(listOf(row("2026-09-12T08:00", null, DoseStatus.PENDING)), zone)
-        assertEquals("2026-09-12,08:00,,Sertraline,Missed,50,mg", csv.lines()[1])
+        assertEquals("2026-09-12,08:00,,Sertraline,Missed,50,mg,", csv.lines()[1])
+    }
+
+    @Test
+    fun `a note with a comma is quoted in the last column`() {
+        val row = row("2026-09-12T08:00", "2026-09-12T08:05", DoseStatus.TAKEN)
+        val noted = row.copy(doseEvent = row.doseEvent.copy(notes = "dizzy, mild"))
+        assertEquals("2026-09-12,08:00,2026-09-12 08:05,Sertraline,Taken,50,mg,\"dizzy, mild\"", HistoryExporter.buildCsv(listOf(noted), zone).lines()[1])
     }
 }

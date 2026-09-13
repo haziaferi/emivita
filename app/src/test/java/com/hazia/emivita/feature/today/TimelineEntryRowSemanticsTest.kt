@@ -38,9 +38,9 @@ class TimelineEntryRowSemanticsTest {
         sortOrder = 0.0, createdAtEpochMillis = 0L,
     )
 
-    private fun entry(status: TimelineStatus) = TimelineEntry(
+    private fun entry(status: TimelineStatus, reminderId: Long? = null, instructions: String? = null) = TimelineEntry(
         medicine = medicine(), doseAmount = 1.0, status = status, doseEventId = 7L,
-        resolvedAtEpochMillis = null,
+        resolvedAtEpochMillis = null, reminderId = reminderId, instructions = instructions,
     )
 
     private fun hasRole(role: Role) = SemanticsMatcher.expectValue(SemanticsProperties.Role, role)
@@ -77,6 +77,32 @@ class TimelineEntryRowSemanticsTest {
         compose.onNode(anyState).assert(hasStateDescription("Due"))
         compose.onNodeWithText("Take").assert(hasClickAction())
         compose.onNodeWithText("Skip").assert(hasClickAction())
+    }
+
+    // ---- §9 #26 ----
+
+    @Test
+    fun anUpcomingDoseWithAReminderOffersTakeNowAsItsOwnControl() {
+        // The row stays a non-button (it is not editable); the chip is its own
+        // node, the way Take/Skip are on a due row.
+        compose.setContent { TimelineEntryRow(entry(TimelineStatus.UPCOMING, reminderId = 3L), canSkip = true, onResolve = {}, onClick = {}) }
+        compose.onNode(anyState).assert(hasStateDescription("Upcoming")).assertHasNoClickAction()
+        compose.onNodeWithText("Take now").assert(hasClickAction())
+    }
+
+    @Test
+    fun theReminderInstructionsAreReadAsPartOfTheRow() {
+        compose.setContent { TimelineEntryRow(entry(TimelineStatus.PENDING, instructions = "With food"), canSkip = true, onResolve = {}, onClick = {}) }
+        compose.onNode(anyState).assert(hasText("With food", substring = true))
+    }
+
+    @Test
+    fun anAsNeededRowSaysNoDoseYetAndOffersLog() {
+        val repository = io.mockk.mockk<com.hazia.emivita.core.data.repository.DoseEventRepository>(relaxed = true)
+        io.mockk.coEvery { repository.lastDose(1L) } returns null
+        compose.setContent { AsNeededRow(medicine = medicine(), doseEventRepository = repository, refreshKey = 0, onLog = {}) }
+        compose.onNodeWithText("No dose logged yet", substring = true).assertExists()
+        compose.onNodeWithText("Log").assert(hasClickAction())
     }
 
     @Test
