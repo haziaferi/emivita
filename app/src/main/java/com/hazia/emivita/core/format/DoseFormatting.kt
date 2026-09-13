@@ -85,3 +85,9 @@ fun formatDoseWithUnit(dose: Double, doseUnit: String?, resources: Resources): S
     val quantity = if (dose == dose.toLong().toDouble()) dose.toInt() else 2
     return resources.getQuantityString(R.plurals.dose_default_unit, quantity, formatDecimalLocalized(dose))
 }
+
+/** "Sertraline" -> "S********" when names are hidden (§9 #25). Idea from
+ *  medTimer's `MedicineHelper.getMedicineName` (MIT); written here from the
+ *  description, not copied. A one-character name stays as it is. */
+fun maskedMedicineName(name: String, hide: Boolean): String =
+    if (!hide || name.length <= 1) name else name.take(1) + "*".repeat(name.length - 1)

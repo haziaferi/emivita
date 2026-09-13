@@ -479,4 +479,14 @@
     <string name="medicines_course_starts_on">Starts %1$s</string>
     <string name="medicines_course_until">Until %1$s</string>
     <string name="medicines_course_cycle_day">Cycle day %1$d of %2$d</string>
+    <string name="notif_public_title">Medication reminder</string>
+    <string name="notif_public_text">A dose is due. Unlock to see which.</string>
+    <string name="notif_left_after_dose">%1$s %2$s left after this dose</string>
+    <string name="settings_swipe_title">When I swipe a reminder away</string>
+    <string name="settings_swipe_desc">A swipe is not an answer unless you say it is.</string>
+    <string name="settings_swipe_nothing">Nothing — it stays due on Today</string>
+    <string name="settings_swipe_snooze">Snooze it</string>
+    <string name="settings_swipe_skip">Record it as skipped</string>
+    <string name="settings_hide_names">Hide medicine names in notifications</string>
+    <string name="settings_hide_names_desc">Shows only the first letter, so a glance at the shade says a dose is due without saying of what.</string>
 </resources>

@@ -22,10 +22,15 @@ import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import com.hazia.emivita.core.format.formatDecimal
 import com.hazia.emivita.core.format.formatDecimalLocalized
+import com.hazia.emivita.core.format.maskedMedicineName
+import kotlinx.coroutines.flow.first
 
 const val ACTION_TAKE = "com.hazia.emivita.action.TAKE"
 const val ACTION_SKIP = "com.hazia.emivita.action.SKIP"
 const val ACTION_SNOOZE = "com.hazia.emivita.action.SNOOZE"
+/** Fired by the notification's deleteIntent when the user swipes it away
+ *  (§9 #25); what it records is [com.hazia.emivita.core.data.settings.SwipeAction]. */
+const val ACTION_SWIPED = "com.hazia.emivita.action.SWIPED"
 const val EXTRA_DOSE_EVENT_ID = "com.hazia.emivita.extra.DOSE_EVENT_ID"
 
 private const val TAG = "ReminderNotification"
@@ -47,15 +52,39 @@ class ReminderNotificationBuilder(
         // doseEvent.id.toInt(): same Long->Int caveat as AlarmScheduler's
         // reminderId.toInt() -- practically safe for a personal app's data volume.
         val notificationId = doseEvent.id.toInt()
+        val hideNames = settingsRepository.hideMedicineNames.first()
+        val title = maskedMedicineName(medicine.name, hideNames)
+
+        // The lock-screen copy (§9 #25; Appendix F PT-06 / DP-F1). A phone set
+        // to hide sensitive content used to show "Content hidden" with no
+        // buttons, so a Standard or High reminder could not be answered
+        // without unlocking; only the ALARM tier reached the lock screen. The
+        // public version names no medicine and carries the same actions.
+        val publicVersion = NotificationCompat.Builder(context, channelId)
+            .setSmallIcon(R.drawable.ic_notification_reminder)
+            .setContentTitle(context.getString(R.string.notif_public_title))
+            .setContentText(context.getString(R.string.notif_public_text))
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .addAction(0, context.getString(R.string.common_take), actionPendingIntent(ACTION_TAKE, doseEvent.id, requestCodeSalt = 1))
+            .addAction(0, context.getString(R.string.common_snooze), actionPendingIntent(ACTION_SNOOZE, doseEvent.id, requestCodeSalt = 3))
+            .build()
 
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification_reminder)
-            .setContentTitle(medicine.name)
-            .setContentText(contentText(doseEvent))
+            .setContentTitle(title)
+            .setContentText(contentText(doseEvent, medicine))
             .setPriority(compatPriorityFor(priority))
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setOnlyAlertOnce(false)
             .setAutoCancel(false)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setPublicVersion(publicVersion)
+            // Back-to-back reminders alert once (§9 #25, E B-06); the ALARM tier
+            // is exempt -- an alarm that does not sound is not an alarm.
+            .setSilent(priority != NotificationPriority.ALARM && NotificationRateLimit.shouldBeSilent())
+            // A swipe records what the owner chose it to (Snooze by default);
+            // the receiver reads the setting at swipe time, not post time.
+            .setDeleteIntent(actionPendingIntent(ACTION_SWIPED, doseEvent.id, requestCodeSalt = 4))
             .addAction(0, context.getString(R.string.common_take), actionPendingIntent(ACTION_TAKE, doseEvent.id, requestCodeSalt = 1))
             .addAction(0, context.getString(R.string.common_snooze), actionPendingIntent(ACTION_SNOOZE, doseEvent.id, requestCodeSalt = 3))
 
@@ -90,11 +119,17 @@ class ReminderNotificationBuilder(
         NotificationPriority.HIGH, NotificationPriority.ALARM -> NotificationCompat.PRIORITY_HIGH
     }
 
-    private fun contentText(doseEvent: DoseEvent): String {
+    private fun contentText(doseEvent: DoseEvent, medicine: Medicine): String {
         val time = Instant.ofEpochMilli(doseEvent.scheduledEpochMillis)
             .atZone(ZoneId.systemDefault())
             .format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
-        return context.getString(R.string.notif_dose_body, formatDecimalLocalized(doseEvent.doseAmount), time)
+        val dose = context.getString(R.string.notif_dose_body, formatDecimalLocalized(doseEvent.doseAmount), time)
+        // "N left after this dose" when stock is tracked (§9 #25; Appendix F
+        // HM-18) -- the text only, never the take-blocking HomeMedkit does.
+        val stock = medicine.stockInfo
+        if (stock.unit == null) return dose
+        val left = (stock.quantity - doseEvent.doseAmount).coerceAtLeast(0.0)
+        return dose + " · " + context.getString(R.string.notif_left_after_dose, formatDecimalLocalized(left), stock.unit)
     }
 
     /**

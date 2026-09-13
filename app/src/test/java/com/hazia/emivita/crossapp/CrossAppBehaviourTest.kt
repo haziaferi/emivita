@@ -25,12 +25,13 @@ import com.hazia.emivita.core.scheduling.OccurrenceProjectionCache
 import com.hazia.emivita.core.scheduling.SchedulingCoordinator
 import com.hazia.emivita.core.scheduling.nextExpirationAlertOccurrence
 import io.mockk.coEvery
+import io.mockk.every
+import kotlinx.coroutines.flow.flowOf
 import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNotNull
-import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -114,13 +115,12 @@ class CrossAppBehaviourTest {
     // ---- Daily Pill DP-01/DP-02/DP-F1, Emivita §9 #22 group 1 -------------------
 
     @Test
-    fun `a Standard reminder notification opens the app when tapped, never times out, and has no public version`() = runTest {
+    fun `a Standard reminder notification opens the app when tapped, never times out, and carries a nameless public version`() = runTest {
         // The content intent is §9 #22 group 1's fix (R61) and must stay.
-        // The other two are decisions Daily Pill made the other way: its
-        // reminder self-expires at midnight (DP-02) and it renders on a
-        // redacting lock screen (DP-F1 / PT-06 via setPublicVersion). Emivita
-        // leaves a reminder standing until answered and carries no public
-        // version; both are pinned here so adopting either is a visible edit.
+        // Day-end expiry (Daily Pill DP-02) was put to the owner and declined
+        // (§9 #25): a reminder stands until answered. The public version
+        // (PT-06 / DP-F1) was adopted in §9 #25 -- this line read "no public
+        // version yet" until then, which is what this test is for.
         val m = medicine()
         val reminderId = database.reminderDao().insert(
             Reminder(
@@ -134,7 +134,10 @@ class CrossAppBehaviourTest {
             DoseEvent(reminderId = reminderId, medicineId = m.id, scheduledEpochMillis = 1_000_000L, doseAmount = 1.0, status = DoseStatus.PENDING, createdAtEpochMillis = 0),
         )
         val event = database.doseEventDao().getById(eventId)!!
-        val settings = mockk<SettingsRepository>().also { coEvery { it.isLockedUntilTaken(any()) } returns false }
+        val settings = mockk<SettingsRepository>().also {
+            coEvery { it.isLockedUntilTaken(any()) } returns false
+            every { it.hideMedicineNames } returns flowOf(false)
+        }
         val groups = mockk<DoseGroupDao>().also { coEvery { it.getById(any()) } returns null }
 
         ReminderNotificationBuilder(context, groups, settings).buildAndPost(event, reminder, m)
@@ -143,6 +146,9 @@ class CrossAppBehaviourTest {
         val posted = shadowOf(nm).allNotifications.single()
         assertNotNull("tapping the body must open the app (R61)", posted.contentIntent)
         assertEquals("a reminder stands until answered (Appendix F DP-02 would change this)", 0L, posted.timeoutAfter)
-        assertNull("no redacted lock-screen copy yet (Appendix F PT-06 / DP-F1)", posted.publicVersion)
+        val public = posted.publicVersion
+        assertNotNull("a redacted lock-screen copy (Appendix F PT-06, §9 #25)", public)
+        assertEquals("the public copy names no medicine", "Medication reminder", public.extras.getString(android.app.Notification.EXTRA_TITLE))
+        assertNotNull("a swipe reaches the receiver (§9 #25 swipe setting)", posted.deleteIntent)
     }
 }

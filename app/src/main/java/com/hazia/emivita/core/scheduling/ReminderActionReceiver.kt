@@ -17,6 +17,8 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import com.hazia.emivita.core.notification.ACTION_SWIPED
+import com.hazia.emivita.core.data.settings.SwipeAction
 
 private const val TAG = "ReminderActionReceiver"
 
@@ -40,7 +42,7 @@ class ReminderActionReceiver : BroadcastReceiver() {
             return
         }
         val action = intent.action
-        if (action == null || (action != ACTION_TAKE && action != ACTION_SKIP && action != ACTION_SNOOZE)) {
+        if (action == null || (action != ACTION_TAKE && action != ACTION_SKIP && action != ACTION_SNOOZE && action != ACTION_SWIPED)) {
             Log.w(TAG, "Received an unrecognized action: $action -- ignoring.")
             return
         }
@@ -86,6 +88,26 @@ class ReminderActionReceiver : BroadcastReceiver() {
                 }
                 container.doseEventRepository.resolve(doseEventId, DoseStatus.SKIPPED)
                 dismissNotification(context, doseEventId)
+            }
+
+            // Swiped away (§9 #25): the setting decides. Snooze is the default
+            // and re-uses the snooze path below; Skip respects the lock the
+            // way the button does (a locked medicine treats a swipe as
+            // Nothing, logged); Nothing leaves the dose Due on Today.
+            ACTION_SWIPED -> {
+                when (container.settingsRepository.swipeAction.first()) {
+                    SwipeAction.NOTHING -> Unit
+                    SwipeAction.SNOOZE -> handleAction(context, ACTION_SNOOZE, doseEventId, container)
+                    SwipeAction.SKIP -> {
+                        val doseEvent = container.doseEventRepository.getById(doseEventId)
+                        val medicine = doseEvent?.let { container.medicineRepository.getById(it.medicineId) }
+                        if (medicine != null && container.settingsRepository.isLockedUntilTaken(medicine)) {
+                            Log.i(TAG, "Swipe-to-skip ignored for dose event $doseEventId -- ${medicine.name} is locked until taken.")
+                        } else if (doseEvent?.status == DoseStatus.PENDING) {
+                            container.doseEventRepository.resolve(doseEventId, DoseStatus.SKIPPED)
+                        }
+                    }
+                }
             }
 
             ACTION_SNOOZE -> {

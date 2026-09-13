@@ -84,6 +84,8 @@ import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
 import com.hazia.emivita.ui.theme.labelRes
 import androidx.compose.runtime.collectAsState
+import com.hazia.emivita.core.data.settings.SwipeAction
+import androidx.compose.material3.RadioButton
 
 /** Shared by every Settings detail screen in this package, including
  *  BackupSyncScreen's -- `internal`, not `private`, because a file-private
@@ -149,7 +151,57 @@ fun AlarmsSnoozeScreen(settingsRepository: SettingsRepository, onBack: () -> Uni
                 }
             },
         ) { Text(stringResource(R.string.common_save)) }
+
+        // §9 #25 -- what a swipe records. Saved on tap; one selectable node
+        // per option (Stage B).
+        Spacer(Modifier.height(24.dp))
+        val swipe by settingsRepository.swipeAction.collectAsState(initial = null)
+        Text(stringResource(R.string.settings_swipe_title), style = MaterialTheme.typography.labelLarge)
+        Text(
+            stringResource(R.string.settings_swipe_desc),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(4.dp))
+        for (option in SwipeAction.entries) {
+            Row(
+                Modifier.fillMaxWidth().selectable(selected = swipe == option, role = Role.RadioButton) {
+                    scope.launch { settingsRepository.setSwipeAction(option) }
+                }.padding(vertical = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = swipe == option, onClick = null)
+                Text(stringResource(option.labelRes()))
+            }
+        }
+
+        // §9 #11 / #25 -- hidden names.
+        Spacer(Modifier.height(16.dp))
+        val hideNames by settingsRepository.hideMedicineNames.collectAsState(initial = false)
+        Row(
+            Modifier.fillMaxWidth().toggleable(value = hideNames, role = Role.Switch) { checked ->
+                scope.launch { settingsRepository.setHideMedicineNames(checked) }
+            },
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.settings_hide_names), style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    stringResource(R.string.settings_hide_names_desc),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = hideNames, onCheckedChange = null)
+        }
     }
+}
+
+private fun SwipeAction.labelRes(): Int = when (this) {
+    SwipeAction.NOTHING -> R.string.settings_swipe_nothing
+    SwipeAction.SNOOZE -> R.string.settings_swipe_snooze
+    SwipeAction.SKIP -> R.string.settings_swipe_skip
 }
 
 

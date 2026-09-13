@@ -11,6 +11,9 @@ import com.hazia.emivita.core.format.formatDecimal
 import com.hazia.emivita.core.scheduling.AlertActionReceiver
 import java.time.LocalDate
 import com.hazia.emivita.core.format.formatDecimalLocalized
+import com.hazia.emivita.core.format.maskedMedicineName
+import com.hazia.emivita.core.data.settings.SettingsRepository
+import kotlinx.coroutines.flow.first
 
 const val ACTION_REFILL = "com.hazia.emivita.action.REFILL"
 const val EXTRA_MEDICINE_ID = "com.hazia.emivita.extra.MEDICINE_ID"
@@ -32,14 +35,18 @@ private const val TAG = "AlertNotification"
  * [ReminderNotificationBuilder]'s `doseEvent.id.toInt()` ids, which are
  * always positive (Room autoincrement starts at 1).
  */
-class AlertNotificationBuilder(private val context: Context) {
+class AlertNotificationBuilder(
+    private val context: Context,
+    private val settingsRepository: SettingsRepository,
+) {
 
-    fun postLowStock(medicine: Medicine, reminder: Reminder) {
+    suspend fun postLowStock(medicine: Medicine, reminder: Reminder) {
         val notificationId = -(reminder.id.toInt())
+        val name = maskedMedicineName(medicine.name, settingsRepository.hideMedicineNames.first())
         val unit = medicine.stockInfo.unit?.let { " $it" } ?: ""
         val builder = NotificationCompat.Builder(context, ReminderNotificationChannels.channelIdFor(medicine.notificationPriority))
             .setSmallIcon(R.drawable.ic_notification_reminder)
-            .setContentTitle(context.getString(R.string.alert_low_stock_title, medicine.name))
+            .setContentTitle(context.getString(R.string.alert_low_stock_title, name))
             .setContentText(context.getString(R.string.alert_low_stock_text, formatDecimalLocalized(medicine.stockInfo.quantity) + unit))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
@@ -57,12 +64,13 @@ class AlertNotificationBuilder(private val context: Context) {
         postIfPermitted(context, TAG, notificationId, builder.build())
     }
 
-    fun postExpiration(medicine: Medicine, reminder: Reminder, expirationEpochDay: Long) {
+    suspend fun postExpiration(medicine: Medicine, reminder: Reminder, expirationEpochDay: Long) {
         val notificationId = -(reminder.id.toInt())
+        val name = maskedMedicineName(medicine.name, settingsRepository.hideMedicineNames.first())
         val expirationDate = LocalDate.ofEpochDay(expirationEpochDay)
         val builder = NotificationCompat.Builder(context, ReminderNotificationChannels.channelIdFor(medicine.notificationPriority))
             .setSmallIcon(R.drawable.ic_notification_reminder)
-            .setContentTitle(context.getString(R.string.alert_expiring_title, medicine.name))
+            .setContentTitle(context.getString(R.string.alert_expiring_title, name))
             .setContentText(context.getString(R.string.alert_expiring_text, expirationDate.toString()))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)

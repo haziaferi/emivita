@@ -63,6 +63,10 @@ class SettingsRepository(context: Context) {
         // The Medicines tab's sort key (enum name) and hide-empty filter (§9 #24).
         val MEDICINES_SORT = stringPreferencesKey("medicines_sort")
         val MEDICINES_HIDE_EMPTY = booleanPreferencesKey("medicines_hide_empty")
+        // §9 #25: what a swiped-away reminder records (enum name; default SNOOZE,
+        // the owner's choice) and whether notifications mask the medicine name.
+        val SWIPE_ACTION = stringPreferencesKey("notification_swipe_action")
+        val HIDE_MEDICINE_NAMES = booleanPreferencesKey("hide_medicine_names")
     }
 
     val palette: Flow<MedPalette> = dataStore.data.map { prefs ->
@@ -165,6 +169,21 @@ class SettingsRepository(context: Context) {
     }
 
     val medicinesHideEmpty: Flow<Boolean> = dataStore.data.map { prefs -> prefs[Keys.MEDICINES_HIDE_EMPTY] ?: false }
+
+    val swipeAction: Flow<SwipeAction> = dataStore.data.map { prefs ->
+        prefs[Keys.SWIPE_ACTION]?.let { n -> SwipeAction.entries.firstOrNull { it.name == n } } ?: SwipeAction.SNOOZE
+    }
+    suspend fun setSwipeAction(action: SwipeAction) {
+        dataStore.edit { it[Keys.SWIPE_ACTION] = action.name }
+    }
+
+    /** Mask the medicine's name in every notification (§9 #11, #25): first
+     *  letter and asterisks, so a shade glanced at across a table says a dose
+     *  is due without saying of what. The idea is medTimer's; re-implemented. */
+    val hideMedicineNames: Flow<Boolean> = dataStore.data.map { prefs -> prefs[Keys.HIDE_MEDICINE_NAMES] ?: false }
+    suspend fun setHideMedicineNames(hide: Boolean) {
+        dataStore.edit { it[Keys.HIDE_MEDICINE_NAMES] = hide }
+    }
     suspend fun setMedicinesHideEmpty(hide: Boolean) {
         dataStore.edit { it[Keys.MEDICINES_HIDE_EMPTY] = hide }
     }
@@ -194,3 +213,8 @@ class SettingsRepository(context: Context) {
     suspend fun isLockedUntilTaken(medicine: Medicine): Boolean =
         medicine.remindersLockedUntilTaken ?: lockRemindersUntilTakenByDefault.first()
 }
+
+/** What swiping a reminder notification away records (§9 #25). medTimer
+ *  offers the same three and defaults to Skip; the owner chose Snooze -- a
+ *  swipe is closer to "not now" than to "no". NOTHING leaves the dose Due. */
+enum class SwipeAction { NOTHING, SNOOZE, SKIP }

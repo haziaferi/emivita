@@ -84,7 +84,7 @@ class AppContainer(context: Context) {
     // notifications directly now that alert reminders own real alarms,
     // rather than every alert going through the evaluator.
     val alertNotificationBuilder: AlertNotificationBuilder by lazy {
-        AlertNotificationBuilder(appContext)
+        AlertNotificationBuilder(appContext, settingsRepository)
     }
 
     private val alertEvaluator: LowStockExpirationAlertEvaluator by lazy {
