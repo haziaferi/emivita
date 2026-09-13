@@ -81,6 +81,16 @@ en-XA on the device (`isPseudoLocalesEnabled`) is the complement.
 - Lint will demand real dashes, ellipses and `<plurals>` the moment text
   lands in XML. Fix them; never baseline them.
 
+## The reference app (§5, §7 R60, Appendix E)
+
+medTimer v1.24.6 (MIT) is the reference. `docs/SPEC.md` Appendix E is the
+285-row code-level diff, with the ranked adoption list in E.4 and the
+`import-as-is` candidates in E.1 — a copy needs `THIRD_PARTY_NOTICES.md`
+with the MIT notice, created at the first copy. Thirty of medTimer's
+scheduler tests run against Emivita's engine in
+`app/src/test/.../core/scheduling/medtimer/`; when scheduling changes,
+they say whether parity or a documented divergence moved.
+
 ## Editing files
 
 - Line endings are enforced by `.gitattributes`; do not fight it. If a patch
