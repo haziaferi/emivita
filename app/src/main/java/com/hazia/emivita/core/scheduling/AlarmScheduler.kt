@@ -83,6 +83,7 @@ class AlarmScheduler(private val context: Context) {
     /** Schedules (replacing any prior alarm for the same reminder) the next
      *  regular firing at [triggerAtEpochMillis]. */
     fun schedule(reminderId: Long, triggerAtEpochMillis: Long) {
+        AlarmWatchdog.recordPlanned(context, reminderId, triggerAtEpochMillis)
         if (useAlarmClock) {
             val pendingIntent = buildPendingIntent(regularRequestCode(reminderId), reminderId, triggerAtEpochMillis, isNag = false)
             val show = PendingIntent.getActivity(
@@ -153,6 +154,7 @@ class AlarmScheduler(private val context: Context) {
      *  disabled or deleted), and its pre-alarm with it. A pending snooze, if
      *  any, is left alone -- see ReminderActionReceiver's doc comment. */
     fun cancel(reminderId: Long) {
+        AlarmWatchdog.recordCancelled(context, reminderId)
         alarmManager.cancel(buildPendingIntent(regularRequestCode(reminderId), reminderId, null, isNag = false))
         alarmManager.cancel(buildPendingIntent(preAlarmRequestCode(reminderId), reminderId, null, isNag = false, isPreAlarm = true))
     }

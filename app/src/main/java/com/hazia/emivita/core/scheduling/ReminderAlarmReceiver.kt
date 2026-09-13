@@ -65,6 +65,7 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
             try {
                 // The app was alive at this instant (§9 #26 back-fill window).
                 runCatching { container.settingsRepository.setAppLastSeenEpochMillis(System.currentTimeMillis()) }
+                AlarmWatchdog.recordFired(context)
                 when {
                     isPreAlarm -> handlePreAlarm(context, reminderId, scheduledEpochMillis, container)
                     isNag -> handleNagFire(reminderId, scheduledEpochMillis, container)

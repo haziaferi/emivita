@@ -92,6 +92,9 @@ import com.hazia.emivita.ui.components.TimeOfDayField
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.material3.Switch
 import androidx.compose.runtime.mutableIntStateOf
+import com.hazia.emivita.core.scheduling.AlarmWatchdog
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.runtime.collectAsState
 
 internal enum class TimelineStatus { PENDING, TAKEN, SKIPPED, UPCOMING }
 
@@ -156,8 +159,11 @@ fun TodayScreen(
     settingsRepository: SettingsRepository,
     reminderRepository: ReminderRepository,
     notificationBuilder: ReminderNotificationBuilder,
+    onOpenNotificationSettings: () -> Unit = {},
 ) {
     var showLogDose by remember { mutableStateOf(false) }
+    val context = LocalContext.current
+    val missedAlarm by AlarmWatchdog.notice.collectAsState()
     // The as-needed row's Log chip opens the dialog on its own medicine.
     var logDosePreselected by remember { mutableStateOf<Medicine?>(null) }
 
@@ -231,6 +237,9 @@ fun TodayScreen(
                 horizontalArrangement = Arrangement.SpaceBetween,
             ) {
                 Text(stringResource(R.string.today_today), style = MaterialTheme.typography.headlineSmall)
+            }
+            missedAlarm?.let { plannedAt ->
+                MissedAlarmCard(plannedAt, onOpen = onOpenNotificationSettings, onDismiss = { AlarmWatchdog.dismissNotice(context) })
             }
 
             when {
@@ -788,3 +797,27 @@ private fun LogDoseDialog(
     )
 }
 
+/** "A reminder planned for … did not fire" (§9 #29; DP-04): the one place the
+ *  app admits the phone held it back, with the way to the battery settings
+ *  and a dismiss. One merged node plus its two buttons. */
+@Composable
+internal fun MissedAlarmCard(plannedAtEpochMillis: Long, onOpen: () -> Unit, onDismiss: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.errorContainer,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 8.dp),
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Text(stringResource(R.string.missed_alarm_title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onErrorContainer)
+            Text(
+                stringResource(R.string.missed_alarm_body, LocaleFormats.monthDayTime(plannedAtEpochMillis)),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onErrorContainer,
+            )
+            Row(Modifier.padding(top = 6.dp)) {
+                TextButton(onClick = onOpen) { Text(stringResource(R.string.missed_alarm_open)) }
+                TextButton(onClick = onDismiss) { Text(stringResource(R.string.missed_alarm_dismiss)) }
+            }
+        }
+    }
+}

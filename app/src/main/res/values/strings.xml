@@ -617,4 +617,18 @@
     <string name="disclaimer_body">Emivita is a reminder and record-keeping app, not a medical device. It does not replace your doctor or pharmacist, and it does not check doses, interactions or anything else you enter. Reminders depend on the phone: a phone that is off, silenced, or saving battery can miss one. Keep taking your medicines as prescribed, whatever the app says or does not say.</string>
     <string name="disclaimer_understood">I understand</string>
     <string name="disclaimer_continue">Continue</string>
+    <string name="missed_alarm_title">A reminder did not fire</string>
+    <string name="missed_alarm_body">The reminder planned for %1$s never went off — the phone held Emivita back. Check the battery settings.</string>
+    <string name="missed_alarm_open">Check settings</string>
+    <string name="missed_alarm_dismiss">Dismiss</string>
+    <string name="settings_open_auto_start">Open auto-start settings</string>
+    <string name="settings_open_auto_start_desc">On this phone the auto-start list is where background apps get stopped. Allow Emivita there.</string>
+    <string name="settings_permissions">What Android allows</string>
+    <string name="permission_notifications">Notifications</string>
+    <string name="permission_exact_alarms">Exact alarms</string>
+    <string name="permission_full_screen">Full-screen alarms</string>
+    <string name="permission_battery">Unrestricted battery</string>
+    <string name="permission_granted">Allowed</string>
+    <string name="permission_blocked">Blocked</string>
+    <string name="permission_fix">Fix</string>
 </resources>

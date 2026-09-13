@@ -25,6 +25,7 @@ import com.hazia.emivita.core.notification.UnansweredDoseReposter
 import com.hazia.emivita.core.scheduling.MissedDoseBackfiller
 import com.hazia.emivita.core.format.LocaleFormats
 import com.hazia.emivita.core.data.settings.TimeFormat
+import com.hazia.emivita.core.scheduling.AlarmWatchdog
 
 /** Single-maintainer personal app -- a plain composition root reads more clearly
  *  here than Hilt's codegen for the size this project is at. Revisit if it
@@ -139,6 +140,9 @@ class AppContainer(context: Context) {
 
     fun rescheduleOnLaunch() {
         applicationScope.launch {
+            // Before the repair (§9 #29, DP-04): did an armed alarm fail to fire?
+            runCatching { AlarmWatchdog.checkOnLaunch(appContext) }
+                .onFailure { android.util.Log.e("AppContainer", "alarm watchdog failed", it) }
             runCatching { schedulingCoordinator.rescheduleAll() }
                 .onFailure { android.util.Log.e("AppContainer", "rescheduleOnLaunch failed", it) }
             // The past, in two steps (§9 #25, #26): slots that passed while

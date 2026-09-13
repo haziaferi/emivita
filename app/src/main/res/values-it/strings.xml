@@ -560,4 +560,18 @@
     <string name="disclaimer_body">Emivita è un’app per ricordare e annotare, non un dispositivo medico. Non sostituisce il medico o il farmacista e non controlla dosi, interazioni o altro di ciò che inserisci. I promemoria dipendono dal telefono: un telefono spento, silenzioso o in risparmio energetico può perderne uno. Continua a prendere i farmaci come prescritto, qualunque cosa l’app dica o non dica.</string>
     <string name="disclaimer_understood">Ho capito</string>
     <string name="disclaimer_continue">Continua</string>
+    <string name="missed_alarm_title">Un promemoria non è suonato</string>
+    <string name="missed_alarm_body">Il promemoria previsto per %1$s non è mai partito: il telefono ha trattenuto Emivita. Controlla le impostazioni della batteria.</string>
+    <string name="missed_alarm_open">Controlla le impostazioni</string>
+    <string name="missed_alarm_dismiss">Ignora</string>
+    <string name="settings_open_auto_start">Apri le impostazioni di avvio automatico</string>
+    <string name="settings_open_auto_start_desc">Su questo telefono le app in background vengono fermate dall’elenco di avvio automatico. Consenti Emivita lì.</string>
+    <string name="settings_permissions">Cosa consente Android</string>
+    <string name="permission_notifications">Notifiche</string>
+    <string name="permission_exact_alarms">Sveglie esatte</string>
+    <string name="permission_full_screen">Sveglie a schermo intero</string>
+    <string name="permission_battery">Batteria senza limitazioni</string>
+    <string name="permission_granted">Consentito</string>
+    <string name="permission_blocked">Bloccato</string>
+    <string name="permission_fix">Sistema</string>
 </resources>

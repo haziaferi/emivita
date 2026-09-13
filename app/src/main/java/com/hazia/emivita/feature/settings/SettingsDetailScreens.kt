@@ -98,6 +98,11 @@ import com.hazia.emivita.core.locale.AppLocale
 import com.hazia.emivita.core.format.LocaleFormats
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
+import com.hazia.emivita.core.platform.AutoStartSettings
+import com.hazia.emivita.core.scheduling.AlarmWatchdog
+import android.app.AlarmManager
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
 
 /** Shared by every Settings detail screen in this package, including
  *  BackupSyncScreen's -- `internal`, not `private`, because a file-private
@@ -465,6 +470,11 @@ fun NotificationsAlertsScreen(onBack: () -> Unit) {
         // means nothing arrives at all. The other two describe a reminder
         // that is degraded or late, which is a smaller problem and stays
         // true underneath this one.
+        // One place for the four things Android can take away (§9 #29, HM-37):
+        // a row each with its state, the card with the reasons only under a
+        // blocked one. Re-read on every resume, since all four change in
+        // system settings behind the app's back.
+        PermissionsSection(missedAlarmAt = AlarmWatchdog.notice.collectAsState().value)
         NotificationsBlockedCard()
         FullScreenAlarmAccessCard()
         BatteryOptimizationCard()
@@ -652,6 +662,17 @@ private fun BatteryOptimizationCard() {
                 Spacer(Modifier.height(4.dp))
                 Text(
                     stringResource(R.string.settings_detail_find_emivita_in_the_list_and_set_it_to_not),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onErrorContainer,
+                )
+            }
+            // The OEM's own kill list (§9 #29, HM-36), when this phone has one.
+            val autoStart = remember { AutoStartSettings.intentFor(context) }
+            if (autoStart != null) {
+                Spacer(Modifier.height(6.dp))
+                Button(onClick = { context.startActivity(autoStart) }) { Text(stringResource(R.string.settings_open_auto_start)) }
+                Text(
+                    stringResource(R.string.settings_open_auto_start_desc),
                     style = MaterialTheme.typography.labelSmall,
                     color = MaterialTheme.colorScheme.onErrorContainer,
                 )
@@ -989,5 +1010,90 @@ private fun AppearancePaletteOption(
                 )
             }
         }
+    }
+}
+
+/** What the four rows show (§9 #29, HM-37); pure so the section is testable. */
+internal data class PermissionState(
+    val notifications: Boolean,
+    val exactAlarms: Boolean,
+    val fullScreen: Boolean,
+    val batteryExempt: Boolean,
+)
+
+internal fun readPermissionState(context: Context): PermissionState {
+    val alarms = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
+    val power = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
+    return PermissionState(
+        notifications = NotificationManagerCompat.from(context).areNotificationsEnabled(),
+        exactAlarms = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) alarms?.canScheduleExactAlarms() ?: true else true,
+        fullScreen = NotificationManagerCompat.from(context).canUseFullScreenIntent(),
+        batteryExempt = power?.isIgnoringBatteryOptimizations(context.packageName) ?: true,
+    )
+}
+
+@Composable
+private fun PermissionsSection(missedAlarmAt: Long?) {
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    var state by remember { mutableStateOf(readPermissionState(context)) }
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) state = readPermissionState(context) }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+    Spacer(Modifier.height(16.dp))
+    Text(stringResource(R.string.settings_permissions), style = MaterialTheme.typography.labelLarge)
+    PermissionRows(
+        state = state,
+        onNotifications = { context.startActivity(appNotificationSettings(context)) },
+        onExactAlarms = {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                context.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.fromParts("package", context.packageName, null)))
+            }
+        },
+        onFullScreen = { context.startActivity(fullScreenIntentSettings(context)) },
+        onBattery = { context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) },
+    )
+    // The watchdog's finding, beside the row that explains it (§9 #29, DP-04):
+    // "may" becomes "did, at …" while a missed alarm is on record.
+    missedAlarmAt?.let {
+        Text(
+            stringResource(R.string.missed_alarm_body, LocaleFormats.monthDayTime(it)),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.error,
+        )
+    }
+}
+
+/** Four merged nodes, each carrying Granted/Blocked as its state and its own
+ *  action button when blocked (one node per control, Stage B). */
+@Composable
+internal fun PermissionRows(
+    state: PermissionState,
+    onNotifications: () -> Unit,
+    onExactAlarms: () -> Unit,
+    onFullScreen: () -> Unit,
+    onBattery: () -> Unit,
+) {
+    PermissionRow(stringResource(R.string.permission_notifications), state.notifications, onNotifications)
+    PermissionRow(stringResource(R.string.permission_exact_alarms), state.exactAlarms, onExactAlarms)
+    PermissionRow(stringResource(R.string.permission_full_screen), state.fullScreen, onFullScreen)
+    PermissionRow(stringResource(R.string.permission_battery), state.batteryExempt, onBattery)
+}
+
+@Composable
+private fun PermissionRow(title: String, granted: Boolean, onFix: () -> Unit) {
+    val stateLabel = stringResource(if (granted) R.string.permission_granted else R.string.permission_blocked)
+    Row(
+        Modifier.fillMaxWidth().padding(vertical = 6.dp).semantics(mergeDescendants = true) { stateDescription = stateLabel },
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(stateLabel, style = MaterialTheme.typography.labelMedium, color = if (granted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error)
+        }
+        if (!granted) TextButton(onClick = onFix) { Text(stringResource(R.string.permission_fix)) }
     }
 }

@@ -108,6 +108,7 @@ fun EmivitaNavHost() {
                     settingsRepository = container.settingsRepository,
                     reminderRepository = container.reminderRepository,
                     notificationBuilder = container.notificationBuilder,
+                    onOpenNotificationSettings = { navController.navigate(EmivitaRoute.NotificationsAlertsSettings) },
                 )
             }
             composable<EmivitaRoute.Medicines> {
