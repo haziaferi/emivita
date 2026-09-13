@@ -12,6 +12,7 @@ import kotlinx.coroutines.flow.first
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import com.hazia.emivita.core.data.entity.DoseStatus
 
 /**
  * Bridges the pure math in ReminderScheduling.kt to real reminder/dose-event
@@ -106,11 +107,12 @@ class SchedulingEngine(
         reminder: Reminder,
         notBeforeEpochMillis: Long = nowEpochMillis(),
         weekendMode: WeekendMode? = null,
+        assumeOutstandingResolved: Boolean = false,
     ): NextOccurrence? {
         if (!reminder.enabled) return null
         if (reminder.type !in supportedTypes) return null
 
-        var base = computeBase(reminder, notBeforeEpochMillis) ?: return null
+        var base = computeBase(reminder, notBeforeEpochMillis, assumeOutstandingResolved) ?: return null
 
         // activeFrom/activeUntil clamp (spec §3/§4) -- after the type-specific
         // calculator, before weekend mode, per §4's explicit ordering ("weekend
@@ -147,7 +149,7 @@ class SchedulingEngine(
             // to its parent rather than to notBefore -- so there is nothing
             // further forward to find, and re-running would only repeat itself.
             if (opensAtEpochMillis <= notBeforeEpochMillis) return null
-            base = computeBase(reminder, opensAtEpochMillis) ?: return null
+            base = computeBase(reminder, opensAtEpochMillis, assumeOutstandingResolved) ?: return null
             if (base.epochDayIn(zone) < activeFrom) return null
         }
 
@@ -184,7 +186,42 @@ class SchedulingEngine(
      *  cross-cutting clamps. Split out of it specifically so the activeFrom
      *  clamp can re-run the calculation from the day the active range opens
      *  rather than having to answer "never". */
-    private suspend fun computeBase(reminder: Reminder, notBeforeEpochMillis: Long): NextOccurrence? =
+    /** The anchor an ON_RESOLVED interval or window continues from, or
+     *  [Outstanding] when a dose is still unanswered (§7 R60).
+     *
+     *  This used to read [DoseEventDao.getLastResolved] alone, which skips
+     *  PENDING, and never asked whether a dose was outstanding. So while one
+     *  was, `rescheduleAll()` at boot -- or any edit of the reminder -- armed
+     *  a second alarm at `previousResolution + k * interval` and materialised
+     *  a second PENDING dose beside the first. medTimer's schedulers return
+     *  null in exactly this state (`IntervalScheduling`,
+     *  `WindowedIntervalScheduling`: "otherwise the notification loop would
+     *  fire continuously"); its ported test is what found this.
+     *
+     *  The projection walk is the other caller, and blanking it would make
+     *  the stock run-out date jump while a dose sits unanswered. medTimer's
+     *  simulator treats an unprocessed event as processed at its reminded
+     *  time; [assumeOutstandingResolved] does the same here. */
+    private sealed interface ResolvedAnchor {
+        data class At(val epochMillis: Long) : ResolvedAnchor
+        data object Outstanding : ResolvedAnchor
+    }
+
+    private suspend fun resolvedAnchorFor(reminder: Reminder, assumeOutstandingResolved: Boolean): ResolvedAnchor {
+        val mostRecent = doseEventDao.getMostRecentForReminder(reminder.id)
+        if (mostRecent != null && mostRecent.status == DoseStatus.PENDING) {
+            return if (assumeOutstandingResolved) ResolvedAnchor.At(mostRecent.scheduledEpochMillis) else ResolvedAnchor.Outstanding
+        }
+        return ResolvedAnchor.At(
+            doseEventDao.getLastResolved(reminder.id)?.resolvedAtEpochMillis ?: reminder.createdAtEpochMillis,
+        )
+    }
+
+    private suspend fun computeBase(
+        reminder: Reminder,
+        notBeforeEpochMillis: Long,
+        assumeOutstandingResolved: Boolean,
+    ): NextOccurrence? =
         when (val config = decodeReminderConfig(reminder.configJson)) {
             is ReminderConfig.FixedTime ->
                 nextFixedTimeOccurrence(config, notBeforeEpochMillis, zone)
@@ -193,15 +230,20 @@ class SchedulingEngine(
                 val effectiveAnchor = when (config.startBehavior) {
                     IntervalStartBehavior.ON_REMINDED -> config.anchorEpochMillis
                     IntervalStartBehavior.ON_RESOLVED ->
-                        doseEventDao.getLastResolved(reminder.id)?.resolvedAtEpochMillis
-                            ?: reminder.createdAtEpochMillis
+                        when (val anchor = resolvedAnchorFor(reminder, assumeOutstandingResolved)) {
+                            is ResolvedAnchor.At -> anchor.epochMillis
+                            ResolvedAnchor.Outstanding -> return null
+                        }
                 }
                 nextRepeatingIntervalOccurrence(config, notBeforeEpochMillis, effectiveAnchor)
             }
 
             is ReminderConfig.DailyWindow -> {
                 val lastResolvedEpochMillis = if (config.startBehavior == IntervalStartBehavior.ON_RESOLVED) {
-                    doseEventDao.getLastResolved(reminder.id)?.resolvedAtEpochMillis
+                    when (val anchor = resolvedAnchorFor(reminder, assumeOutstandingResolved)) {
+                        is ResolvedAnchor.At -> anchor.epochMillis
+                        ResolvedAnchor.Outstanding -> return null
+                    }
                 } else {
                     null
                 }
@@ -319,7 +361,7 @@ class SchedulingEngine(
         val result = mutableListOf<NextOccurrence>()
         var notBefore = fromEpochMillis
         while (result.size < maxOccurrences) {
-            val next = nextOccurrenceFor(reminder, notBefore, mode) ?: break
+            val next = nextOccurrenceFor(reminder, notBefore, mode, assumeOutstandingResolved = true) ?: break
             if (next.epochMillis > toEpochMillis) break
             result.add(next)
             // LinkedFollowing has no "next after this one" within a single walk

@@ -25,6 +25,7 @@ class RealSchedulingCoordinator(
     private val schedulingEngine: SchedulingEngine,
     private val alarmScheduler: AlarmScheduler,
     private val occurrenceProjectionCache: OccurrenceProjectionCache,
+    private val nowEpochMillis: () -> Long = System::currentTimeMillis,
 ) : SchedulingCoordinator {
 
     override suspend fun onDoseResolved(reminderId: Long) {
@@ -94,7 +95,19 @@ class RealSchedulingCoordinator(
     }
 
     private suspend fun scheduleOrCancel(reminder: Reminder, notBeforeEpochMillis: Long) {
-        val next = schedulingEngine.nextOccurrenceFor(reminder, notBeforeEpochMillis)
+        // Floor at "now" (§7 R60). ReminderAlarmReceiver reschedules from the
+        // fired slot + 1 min, which is right when the alarm was on time and
+        // wrong when it was not: AlarmManager delivers a past instant at once,
+        // so a clock set forward three days -- or an OEM deferring an alarm
+        // for hours -- had the receiver arm the next *missed* slot, fire it
+        // immediately, arm the one after, and replay every missed dose as a
+        // notification chain. medTimer bounds catch-up to today
+        // (`raisedToday`, `adjustToToday`); this is the same guarantee at the
+        // one point every caller passes through. The dose that just fired
+        // still materialises for its own slot; only the ones nobody was there
+        // for are skipped, which is what a missed dose is.
+        val floor = maxOf(notBeforeEpochMillis, nowEpochMillis())
+        val next = schedulingEngine.nextOccurrenceFor(reminder, floor)
         if (next != null) {
             alarmScheduler.schedule(reminder.id, next.epochMillis)
         } else {

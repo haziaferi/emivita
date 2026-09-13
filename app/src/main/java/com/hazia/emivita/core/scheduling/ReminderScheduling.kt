@@ -295,11 +295,16 @@ fun nextExpirationAlertOccurrence(
     val opensOnEpochDay = expirationEpochDay - config.leadDays
 
     val earliest = when (config.frequency) {
-        // Once really means once: announced already, never again for this
-        // reminder. Unlike low stock there is no "resolved" state to re-arm
-        // from -- an expiry date does not un-pass.
+        // Once per pack, not once per reminder (§7 R60). This used to return
+        // null whenever the alert had ever fired, on the reasoning that "an
+        // expiry date does not un-pass" -- true of a date, not of a medicine:
+        // the user opens a new pack, types its expiry into the stock screen,
+        // and the alert they configured was dead for good, with nothing on
+        // screen to say so. medTimer scans events relative to the *current*
+        // expiry date, so a moved date re-arms it; here the recorded day
+        // blocks only while it lies inside the current lead window.
         ExpirationTriggerFrequency.ONCE -> {
-            if (lastNotifiedEpochDay != null) return null
+            if (lastNotifiedEpochDay != null && lastNotifiedEpochDay >= opensOnEpochDay) return null
             opensOnEpochDay
         }
         ExpirationTriggerFrequency.DAILY ->

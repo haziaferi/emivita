@@ -37,8 +37,13 @@ sealed interface RepeatPattern {
      *  the existing pattern, not a new top-level ReminderConfig, since cyclic
      *  reminders are still "a time of day + a day-selection rule" exactly
      *  like the other three. Truly periodic in *both* directions -- active on
-     *  dates before [firstCycleStartEpochDay] too, matching medTimer's own
-     *  documented behavior. See [isActiveOn] for the actual rule. */
+     *  dates before [firstCycleStartEpochDay] too. This used to claim that
+     *  matched medTimer; it does not (§7 R60): medTimer's `StandardScheduling`
+     *  schedules nothing before its cycle start (`dayInCycle >= 0`) and its
+     *  own test pins that. Kept as a deliberate divergence -- a user who
+     *  enters a cycle start in the past expects the rhythm to hold on either
+     *  side of it -- and pinned by `MedTimerCalculatorParityTest`. See
+     *  [isActiveOn] for the actual rule. */
     @Serializable
     data class CyclicActivePause(
         val firstCycleStartEpochDay: Long,
