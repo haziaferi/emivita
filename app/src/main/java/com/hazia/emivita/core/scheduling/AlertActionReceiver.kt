@@ -7,6 +7,7 @@ import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import com.hazia.emivita.EmivitaApplication
 import com.hazia.emivita.core.notification.ACTION_REFILL
+import com.hazia.emivita.core.notification.ACTION_ALERT_DISMISSED
 import com.hazia.emivita.core.notification.EXTRA_MEDICINE_ID
 import com.hazia.emivita.core.notification.EXTRA_NOTIFICATION_ID
 import com.hazia.emivita.core.notification.EXTRA_REFILL_AMOUNT
@@ -26,6 +27,11 @@ private const val TAG = "AlertActionReceiver"
  */
 class AlertActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        if (intent.action == ACTION_ALERT_DISMISSED) {
+            // A swiped stock alert (§9 #27): the summary's count follows it.
+            (context.applicationContext as? EmivitaApplication)?.container?.alertNotificationBuilder?.updateStockSummary()
+            return
+        }
         if (intent.action != ACTION_REFILL) {
             Log.w(TAG, "Received an unrecognized action: ${intent.action} -- ignoring.")
             return
@@ -48,6 +54,7 @@ class AlertActionReceiver : BroadcastReceiver() {
             try {
                 container.doseEventRepository.logRefill(medicineId, amount, System.currentTimeMillis())
                 NotificationManagerCompat.from(context).cancel(notificationId)
+                container.alertNotificationBuilder.updateStockSummary()
             } catch (t: Throwable) {
                 Log.e(TAG, "Failed handling refill for medicine $medicineId", t)
             } finally {

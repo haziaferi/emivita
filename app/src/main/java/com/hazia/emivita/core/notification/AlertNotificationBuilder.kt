@@ -19,6 +19,10 @@ const val ACTION_REFILL = "com.hazia.emivita.action.REFILL"
 const val EXTRA_MEDICINE_ID = "com.hazia.emivita.extra.MEDICINE_ID"
 const val EXTRA_REFILL_AMOUNT = "com.hazia.emivita.extra.REFILL_AMOUNT"
 const val EXTRA_NOTIFICATION_ID = "com.hazia.emivita.extra.NOTIFICATION_ID"
+/** A stock alert was swiped away: the summary's count must follow (§9 #27). */
+const val ACTION_ALERT_DISMISSED = "com.hazia.emivita.action.ALERT_DISMISSED"
+const val STOCK_GROUP_KEY = "com.hazia.emivita.group.STOCK"
+const val STOCK_GROUP_SUMMARY_ID = -4_000_000
 
 private const val TAG = "AlertNotification"
 
@@ -52,6 +56,8 @@ class AlertNotificationBuilder(
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
             .setContentIntent(openAppPendingIntent(context, notificationId))
+            .setGroup(STOCK_GROUP_KEY)
+            .setDeleteIntent(dismissedPendingIntent(notificationId))
 
         // One-tap restock (spec §3/§9 #2/#8) -- only offered when a refill
         // amount is actually configured; otherwise there's nothing to log
@@ -62,6 +68,7 @@ class AlertNotificationBuilder(
         }
 
         postIfPermitted(context, TAG, notificationId, builder.build())
+        updateStockSummary()
     }
 
     suspend fun postExpiration(medicine: Medicine, reminder: Reminder, expirationEpochDay: Long) {
@@ -76,8 +83,51 @@ class AlertNotificationBuilder(
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
             .setContentIntent(openAppPendingIntent(context, notificationId))
+            .setGroup(STOCK_GROUP_KEY)
+            .setDeleteIntent(dismissedPendingIntent(notificationId))
 
         postIfPermitted(context, TAG, notificationId, builder.build())
+        updateStockSummary()
+    }
+
+    /**
+     * One line over the stock alerts (§9 #27; DS-05, Dosage's "You have N
+     * treatments low in stock"): the per-medicine cards stay -- they carry
+     * the Refill action and are the better data (Appendix F) -- and from two
+     * showing a silent summary names them all. Rebuilt after every post,
+     * every refill and every swipe, gone below two, so the count is never
+     * stale for longer than the next event. The R64 `updateGroupSummary`
+     * shape, on the negative ids the alerts use.
+     */
+    fun updateStockSummary() {
+        val nm = androidx.core.app.NotificationManagerCompat.from(context)
+        val showing = nm.activeNotifications
+            .filter { it.id < 0 && it.id != STOCK_GROUP_SUMMARY_ID && it.notification.group == STOCK_GROUP_KEY }
+            .sortedBy { it.id }
+        if (showing.size < 2) {
+            nm.cancel(STOCK_GROUP_SUMMARY_ID)
+            return
+        }
+        val style = NotificationCompat.InboxStyle()
+        showing.forEach { style.addLine(it.notification.extras.getCharSequence(NotificationCompat.EXTRA_TITLE) ?: "") }
+        val summary = NotificationCompat.Builder(context, ReminderNotificationChannels.CHANNEL_STANDARD)
+            .setSmallIcon(R.drawable.ic_notification_reminder)
+            .setContentTitle(context.resources.getQuantityString(R.plurals.alert_stock_summary, showing.size, showing.size))
+            .setStyle(style)
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setGroup(STOCK_GROUP_KEY)
+            .setGroupSummary(true)
+            .setSilent(true)
+            .setAutoCancel(false)
+            .setContentIntent(openAppPendingIntent(context, STOCK_GROUP_SUMMARY_ID))
+            .build()
+        postIfPermitted(context, TAG, STOCK_GROUP_SUMMARY_ID, summary)
+    }
+
+    private fun dismissedPendingIntent(notificationId: Int): PendingIntent {
+        val intent = Intent(context, AlertActionReceiver::class.java).apply { action = ACTION_ALERT_DISMISSED }
+        // Its own request code space: the refill intent uses notificationId itself.
+        return PendingIntent.getBroadcast(context, notificationId * 10 + 7, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }
 
     private fun refillPendingIntent(medicineId: Long, refillAmount: Double, notificationId: Int): PendingIntent {

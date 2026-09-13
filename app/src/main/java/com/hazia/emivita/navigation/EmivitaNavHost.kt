@@ -36,6 +36,14 @@ import com.hazia.emivita.feature.settings.SettingsDestination
 import com.hazia.emivita.feature.settings.SettingsScreen
 import com.hazia.emivita.feature.today.TodayScreen
 import androidx.compose.ui.res.stringResource
+import androidx.compose.material3.BadgedBox
+import androidx.compose.material3.Badge
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.ui.res.pluralStringResource
+import com.hazia.emivita.feature.medicines.stockAttentionCount
+import com.hazia.emivita.ui.components.rememberCurrentDate
+import com.hazia.emivita.R
 
 @Composable
 fun EmivitaNavHost() {
@@ -48,6 +56,12 @@ fun EmivitaNavHost() {
             val backStackEntry by navController.currentBackStackEntryAsState()
             val currentDestination = backStackEntry?.destination
 
+            // §9 #27 (DS-05): the Medicines tab wears the count of medicines
+            // that are empty, low or expired -- the same rule as the cards.
+            val today = rememberCurrentDate(remember { java.time.ZoneId.systemDefault() })
+            val attention by produceState(initialValue = 0, profileId, today) {
+                container.medicineRepository.observeWithRemindersForProfile(profileId).collect { value = stockAttentionCount(it, today) }
+            }
             NavigationBar {
                 bottomNavItems.forEach { item ->
                     val selected = currentDestination?.hierarchy?.any {
@@ -65,7 +79,15 @@ fun EmivitaNavHost() {
                                 restoreState = true
                             }
                         },
-                        icon = { Icon(item.icon, contentDescription = stringResource(item.label)) },
+                        icon = {
+                            if (item.route == EmivitaRoute.Medicines && attention > 0) {
+                                BadgedBox(badge = { Badge { Text(attention.toString()) } }) {
+                                    Icon(item.icon, contentDescription = pluralStringResource(R.plurals.nav_medicines_attention, attention, attention))
+                                }
+                            } else {
+                                Icon(item.icon, contentDescription = stringResource(item.label))
+                            }
+                        },
                         label = { Text(stringResource(item.label)) },
                     )
                 }

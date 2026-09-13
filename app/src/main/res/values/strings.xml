@@ -593,4 +593,12 @@
         <item quantity="other">%1$d tags selected</item>
     </plurals>
     <string name="medicines_nothing_matches">Nothing matches. Clear the search or the tags to see everything.</string>
+    <plurals name="nav_medicines_attention">
+        <item quantity="one">Medicines, %1$d needs attention</item>
+        <item quantity="other">Medicines, %1$d need attention</item>
+    </plurals>
+    <plurals name="alert_stock_summary">
+        <item quantity="one">%1$d medicine needs attention</item>
+        <item quantity="other">%1$d medicines need attention</item>
+    </plurals>
 </resources>
