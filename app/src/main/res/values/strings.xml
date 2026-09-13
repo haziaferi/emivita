@@ -441,4 +441,7 @@
     <string name="history_export_done">Exported.</string>
     <string name="history_export_failed">Couldn\'t export: %1$s</string>
     <string name="history_export_no_stream">the chosen location could not be opened for writing</string>
+    <string name="settings_lock_until_taken_default">Lock reminders until taken by default</string>
+    <string name="settings_lock_until_taken_default_desc">New medicines inherit this; each medicine can override it in its own form.</string>
+    <string name="stock_production_date">Production date</string>
 </resources>

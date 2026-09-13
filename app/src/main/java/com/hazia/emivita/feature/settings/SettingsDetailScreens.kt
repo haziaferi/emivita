@@ -83,6 +83,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
 import com.hazia.emivita.ui.theme.labelRes
+import androidx.compose.runtime.collectAsState
 
 /** Shared by every Settings detail screen in this package, including
  *  BackupSyncScreen's -- `internal`, not `private`, because a file-private
@@ -265,6 +266,13 @@ fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit
 @Composable
 fun NotificationsAlertsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
+    val settingsRepository = LocalAppContainer.current.settingsRepository
+    val scope = rememberCoroutineScope()
+    // The global default behind each medicine's "use global default" lock
+    // option (§7 R60 D F2). The key, its flow and its setter existed; no
+    // screen called the setter, so "inherit" always inherited false and the
+    // medicine form's first radio button was a promise nothing kept.
+    val lockByDefault by settingsRepository.lockRemindersUntilTakenByDefault.collectAsState(initial = false)
 
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
         DetailHeader(stringResource(R.string.settings_detail_notifications_alerts), onBack)
@@ -290,6 +298,26 @@ fun NotificationsAlertsScreen(onBack: () -> Unit) {
         NotificationsBlockedCard()
         FullScreenAlarmAccessCard()
         BatteryOptimizationCard()
+
+        Spacer(Modifier.height(20.dp))
+        Row(
+            // One switch node, not a clickable row plus a live Switch (§9 #19 Stage B).
+            Modifier.fillMaxWidth().toggleable(value = lockByDefault, role = Role.Switch) { checked ->
+                scope.launch { settingsRepository.setLockRemindersUntilTakenByDefault(checked) }
+            },
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.settings_lock_until_taken_default), style = MaterialTheme.typography.bodyLarge)
+                Text(
+                    stringResource(R.string.settings_lock_until_taken_default_desc),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = lockByDefault, onCheckedChange = null)
+        }
 
         Spacer(Modifier.height(20.dp))
         Text(

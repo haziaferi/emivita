@@ -113,6 +113,9 @@ fun StockExpirationScreen(
     var expirationReminderId by remember { mutableStateOf<Long?>(null) }
     var expirationEnabled by remember { mutableStateOf(false) }
     var expirationDateEpochDay by remember { mutableStateOf<Long?>(null) }
+    // A column no screen could set (§7 R60 C F-5), the shape R59's rule 18
+    // names; carried forward unchanged on every save until now.
+    var productionDateEpochDay by remember { mutableStateOf<Long?>(null) }
     var leadDays by remember { mutableStateOf("") }
     var frequency by remember { mutableStateOf(ExpirationTriggerFrequency.ONCE) }
 
@@ -130,6 +133,7 @@ fun StockExpirationScreen(
         trackingSaved = medicine.stockInfo.unit != null
         refillQuantity = medicine.stockInfo.refillQuantity?.let { formatDecimalLocalized(it) } ?: ""
         expirationDateEpochDay = medicine.stockInfo.expirationDateEpochDay
+        productionDateEpochDay = medicine.stockInfo.productionDateEpochDay
 
         val reminders = reminderRepository.observeForMedicine(medicineId).first()
         reminders.find { it.type == ReminderType.LOW_STOCK_ALERT }?.let { reminder ->
@@ -285,6 +289,8 @@ fun StockExpirationScreen(
                 Switch(checked = expirationEnabled, onCheckedChange = { expirationEnabled = it })
             }
             Spacer(Modifier.height(8.dp))
+            DateField(stringResource(R.string.stock_production_date), productionDateEpochDay) { productionDateEpochDay = it }
+            Spacer(Modifier.height(8.dp))
             DateField(stringResource(R.string.stock_expiration_expiration_date), expirationDateEpochDay) { expirationDateEpochDay = it }
             if (expirationEnabled) {
                 Spacer(Modifier.height(8.dp))
@@ -323,7 +329,7 @@ fun StockExpirationScreen(
                             quantity = parseDecimal(quantity) ?: 0.0,
                             unit = unit.ifBlank { null },
                             refillQuantity = parseDecimal(refillQuantity),
-                            productionDateEpochDay = medicine.stockInfo.productionDateEpochDay,
+                            productionDateEpochDay = productionDateEpochDay,
                             expirationDateEpochDay = expirationDateEpochDay,
                         )
                     )
