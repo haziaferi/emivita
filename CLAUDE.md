@@ -91,6 +91,12 @@ scheduler tests run against Emivita's engine in
 `app/src/test/.../core/scheduling/medtimer/`; when scheduling changes,
 they say whether parity or a documented divergence moved.
 
+Appendix F is the same exercise against the rest of the field (HomeMedkit,
+MediTrak, Did I Take My Meds?, Daily Pill, Pill Time, Dosage, the Medisafe /
+MyTherapy listings) — **all GPL: ideas only, never code**. F.5 is the
+re-ranked adoption list; §9 #24–#26 are the owner's picks from it. The
+trees are under `Downloads/xapps/` beside `Downloads/medTimer-main/`.
+
 ## Editing files
 
 - Line endings are enforced by `.gitattributes`; do not fight it. If a patch
