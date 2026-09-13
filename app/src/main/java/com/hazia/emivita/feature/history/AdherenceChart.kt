@@ -50,6 +50,7 @@ import com.hazia.emivita.R
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.res.pluralStringResource
+import com.hazia.emivita.core.format.LocaleFormats
 
 /** One calendar day's worth of resolved-dose counts, feeding [AdherenceChart].
  *  Refills are excluded entirely -- a restock isn't a dose outcome, same
@@ -121,7 +122,7 @@ fun AdherenceChart(counts: List<DayAdherenceCounts>) {
 
     val dateFormatter = remember(counts) {
         CartesianValueFormatter { _, x, _ ->
-            counts.getOrNull(x.toInt())?.date?.format(DateTimeFormatter.ofPattern("M/d")).orEmpty()
+            counts.getOrNull(x.toInt())?.date?.let { LocaleFormats.numericMonthDay(it) }.orEmpty()
         }
     }
 

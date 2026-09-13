@@ -72,6 +72,10 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.platform.LocalResources
+import com.hazia.emivita.core.format.LocaleFormats
+import com.hazia.emivita.core.data.settings.SettingsRepository
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.LaunchedEffect
 
 private const val HISTORY_LOOKBACK_DAYS = 30L
 
@@ -116,6 +120,7 @@ private enum class HistoryViewMode(@StringRes val label: Int) {
 fun HistoryScreen(
     profileId: Long,
     doseEventRepository: DoseEventRepository,
+    settingsRepository: SettingsRepository,
 ) {
     val zone = remember { ZoneId.systemDefault() }
     val resources = LocalResources.current
@@ -132,10 +137,17 @@ fun HistoryScreen(
 
     val days = remember(events) { groupByDay(events, zone) }
     var editing by remember { mutableStateOf<DoseEventWithMedicine?>(null) }
+    // Remembered across navigation and process death (§7 R60 D F5) -- a
+    // person who reads History as a table should not be handed the list
+    // every time. Stored by name so a removed case degrades to LIST.
+    val savedViewModeName by settingsRepository.historyViewModeName.collectAsState(initial = null)
     var viewMode by remember { mutableStateOf(HistoryViewMode.LIST) }
+    LaunchedEffect(savedViewModeName) {
+        savedViewModeName?.let { name -> HistoryViewMode.entries.firstOrNull { it.name == name }?.let { viewMode = it } }
+    }
+    val scope = rememberCoroutineScope()
 
     val context = LocalContext.current
-    val scope = rememberCoroutineScope()
     var showExportMenu by remember { mutableStateOf(false) }
     val exportRows = events ?: emptyList()
 
@@ -228,7 +240,7 @@ fun HistoryScreen(
             HistoryViewMode.entries.forEach { mode ->
                 FilterChip(
                     selected = viewMode == mode,
-                    onClick = { viewMode = mode },
+                    onClick = { viewMode = mode; scope.launch { settingsRepository.setHistoryViewModeName(mode.name) } },
                     label = { Text(stringResource(mode.label)) },
                 )
             }
@@ -449,7 +461,7 @@ private fun DayHeader(date: LocalDate, today: LocalDate) {
         // gate (§9 #19 Stage A, and the gate's own KDoc says so).
         date == today -> stringResource(R.string.history_today)
         date == today.minusDays(1) -> stringResource(R.string.history_yesterday)
-        else -> date.format(DateTimeFormatter.ofPattern("EEE, MMM d"))
+        else -> LocaleFormats.weekdayMonthDay(date)
     }
     Text(
         label,
@@ -475,7 +487,7 @@ internal fun HistoryEntryRow(row: DoseEventWithMedicine, onClick: () -> Unit) {
     val editable = status != DoseStatus.REFILLED
     val time = remember(row.doseEvent.resolvedAtEpochMillis, row.doseEvent.scheduledEpochMillis) {
         val epochMillis = row.doseEvent.resolvedAtEpochMillis ?: row.doseEvent.scheduledEpochMillis
-        Instant.ofEpochMilli(epochMillis).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
+        LocaleFormats.time(epochMillis)
     }
 
     // One merged node per entry, state as stateDescription (§9 #19 Stage B);

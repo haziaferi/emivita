@@ -57,6 +57,9 @@ class SettingsRepository(context: Context) {
         // exactly once rather than re-prompting on every app open after a
         // denial (PERM-023/PERM-024 -- respect the user's decision).
         val NOTIFICATION_PERMISSION_REQUESTED = booleanPreferencesKey("notification_permission_requested")
+        // Which of History's three views was open last (§7 R60 D F5); the
+        // enum name, tolerant of a value from a removed case.
+        val HISTORY_VIEW_MODE = stringPreferencesKey("history_view_mode")
     }
 
     val palette: Flow<MedPalette> = dataStore.data.map { prefs ->
@@ -144,6 +147,13 @@ class SettingsRepository(context: Context) {
 
     suspend fun setLockRemindersUntilTakenByDefault(locked: Boolean) {
         dataStore.edit { it[Keys.LOCK_REMINDERS_UNTIL_TAKEN_BY_DEFAULT] = locked }
+    }
+
+    /** The last History view, by enum name; null when never set or stale. */
+    val historyViewModeName: Flow<String?> = dataStore.data.map { prefs -> prefs[Keys.HISTORY_VIEW_MODE] }
+
+    suspend fun setHistoryViewModeName(name: String) {
+        dataStore.edit { it[Keys.HISTORY_VIEW_MODE] = name }
     }
 
     /** Null clears the setting (the "Stop syncing" action) -- callers also

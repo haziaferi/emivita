@@ -61,6 +61,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.selected
 import androidx.compose.ui.text.intl.Locale
+import com.hazia.emivita.core.format.LocaleFormats
 
 /**
  * Calendar view for History (spec §5 ADR-0001 shopping list, §9 #6).
@@ -165,14 +166,14 @@ private fun CalendarSelectedDayPanel(
             entries.isNullOrEmpty() -> Text(
                 stringResource(
                     R.string.history_nothing_recorded_on,
-                    selectedDate.format(DateTimeFormatter.ofPattern("EEE, MMM d")),
+                    LocaleFormats.weekdayMonthDay(selectedDate),
                 ),
                 style = MaterialTheme.typography.bodyMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
             else -> {
                 Text(
-                    selectedDate.format(DateTimeFormatter.ofPattern("EEEE, MMM d")),
+                    LocaleFormats.longWeekdayMonthDay(selectedDate),
                     style = MaterialTheme.typography.labelLarge,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(bottom = 6.dp),

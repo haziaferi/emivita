@@ -45,6 +45,7 @@ import com.hazia.emivita.R
 import com.hazia.emivita.core.format.doseStatusLabelRes
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.LocalResources
+import com.hazia.emivita.core.format.LocaleFormats
 
 /** Sortable columns for [HistoryTableView] -- hand-rolled per spec §5's
  *  ADR-0001 shopping list ("hand-rolled `SortableTable`"), §9 #6.
@@ -77,7 +78,10 @@ fun HistoryTableView(
 
     val sorted = remember(events, sortColumn, descending) {
         val comparator = when (sortColumn) {
-            HistoryTableColumn.DATE -> compareBy<DoseEventWithMedicine> { it.doseEvent.scheduledEpochMillis }
+            // By the value the cell shows (§7 R60 D F4): a dose taken late
+            // sorted by its scheduled slot appeared out of order beside its
+            // displayed time.
+            HistoryTableColumn.DATE -> compareBy<DoseEventWithMedicine> { it.doseEvent.resolvedAtEpochMillis ?: it.doseEvent.scheduledEpochMillis }
             HistoryTableColumn.MEDICINE -> compareBy { it.medicine.name.lowercase() }
             HistoryTableColumn.STATUS -> compareBy { it.doseEvent.status.ordinal }
             HistoryTableColumn.DOSE -> compareBy { it.doseEvent.doseAmount }
@@ -143,7 +147,7 @@ private fun HistoryTableRow(row: DoseEventWithMedicine, zone: ZoneId, onClick: (
     val editable = row.doseEvent.status != DoseStatus.REFILLED
     val time = remember(row.doseEvent.resolvedAtEpochMillis, row.doseEvent.scheduledEpochMillis) {
         val epochMillis = row.doseEvent.resolvedAtEpochMillis ?: row.doseEvent.scheduledEpochMillis
-        Instant.ofEpochMilli(epochMillis).atZone(zone).format(DateTimeFormatter.ofPattern("MMM d, HH:mm"))
+        LocaleFormats.monthDayTime(epochMillis, zone)
     }
 
     Surface(

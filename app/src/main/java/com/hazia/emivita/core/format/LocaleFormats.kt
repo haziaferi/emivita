@@ -1,0 +1,85 @@
+package com.hazia.emivita.core.format
+
+import android.text.format.DateFormat
+import java.text.NumberFormat
+import java.text.ParsePosition
+import java.time.Instant
+import java.time.LocalDate
+import java.time.ZoneId
+import java.time.format.DateTimeFormatter
+import java.time.format.FormatStyle
+import java.util.Locale
+
+/**
+ * Locale-aware rendering for the screens, the widgets and the notification
+ * (spec §7 R60 D F3 / E F7 / F 2). The exports keep their invariant formats
+ * on purpose: a CSV column and a PDF for a clinician are data, and `0.5` /
+ * `2026-09-12` read the same in every country.
+ *
+ * Time uses `ofLocalizedTime(SHORT)`, which is what decides 12- vs 24-hour.
+ * Dates use skeletons through [DateFormat.getBestDateTimePattern], the
+ * Android way to get "weekday, month day" in the locale's own order rather
+ * than a hard-coded `EEE, MMM d` that reads as English everywhere. Every
+ * pattern here used to be a literal; the pseudolocale sweep cannot see a
+ * pattern string, which is how they survived Stage A.
+ */
+object LocaleFormats {
+    fun time(epochMillis: Long, zone: ZoneId = ZoneId.systemDefault(), locale: Locale = Locale.getDefault()): String =
+        Instant.ofEpochMilli(epochMillis).atZone(zone).format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale))
+
+    /** "Fri, Sep 12" / "ven 12 set". */
+    fun weekdayMonthDay(date: LocalDate, locale: Locale = Locale.getDefault()): String =
+        date.format(skeleton("EEEMMMd", locale))
+
+    /** "Friday, Sep 12". */
+    fun longWeekdayMonthDay(date: LocalDate, locale: Locale = Locale.getDefault()): String =
+        date.format(skeleton("EEEEMMMd", locale))
+
+    /** "Sep 12" / "12 set". */
+    fun monthDay(date: LocalDate, locale: Locale = Locale.getDefault()): String =
+        date.format(skeleton("MMMd", locale))
+
+    /** "9/12" / "12/9" -- the chart axis, where space is the constraint. */
+    fun numericMonthDay(date: LocalDate, locale: Locale = Locale.getDefault()): String =
+        date.format(skeleton("Md", locale))
+
+    /** "Sep 12, 2026" / "12 set 2026". */
+    fun monthDayYear(date: LocalDate, locale: Locale = Locale.getDefault()): String =
+        date.format(skeleton("MMMdyyyy", locale))
+
+    /** "Sep 12, 08:30" -- the History table's compact cell. */
+    fun monthDayTime(epochMillis: Long, zone: ZoneId = ZoneId.systemDefault(), locale: Locale = Locale.getDefault()): String {
+        val zoned = Instant.ofEpochMilli(epochMillis).atZone(zone)
+        return zoned.toLocalDate().format(skeleton("MMMd", locale)) + ", " + time(epochMillis, zone, locale)
+    }
+
+    private fun skeleton(skeleton: String, locale: Locale): DateTimeFormatter =
+        DateTimeFormatter.ofPattern(DateFormat.getBestDateTimePattern(locale, skeleton), locale)
+}
+
+/** [formatDecimal] for a person rather than a file: `0,5` under it/de,
+ *  `0.5` under en. Up to three fraction digits, no grouping (a dose is never
+ *  in the thousands and "1.000" would read as one in half of Europe). */
+fun formatDecimalLocalized(value: Double, locale: Locale = Locale.getDefault()): String =
+    NumberFormat.getNumberInstance(locale).apply {
+        isGroupingUsed = false
+        maximumFractionDigits = 3
+    }.format(value)
+
+/**
+ * The inverse for a text field (§7 R60 E F6). `toDoubleOrNull()` rejected
+ * `0,5`, which is what the Decimal keyboard types under an Italian or German
+ * locale, so the field went invalid and Save stayed disabled. The invariant
+ * form is tried first so `0.5` means a half everywhere regardless of what
+ * keyboard produced it; then the locale's own separator, and only when the
+ * whole string was consumed -- `NumberFormat.parse` would otherwise read
+ * "1a" as 1.
+ */
+fun parseDecimal(text: String, locale: Locale = Locale.getDefault()): Double? {
+    val t = text.trim()
+    if (t.isEmpty()) return null
+    t.toDoubleOrNull()?.let { return it }
+    val position = ParsePosition(0)
+    val parsed = NumberFormat.getNumberInstance(locale).apply { isGroupingUsed = false }.parse(t, position) ?: return null
+    return if (position.index == t.length) parsed.toDouble() else null
+}

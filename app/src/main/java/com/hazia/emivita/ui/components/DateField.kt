@@ -17,8 +17,8 @@ import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
+import com.hazia.emivita.core.format.LocaleFormats
 
-private val DATE_LABEL_FORMAT = DateTimeFormatter.ofPattern("MMM d, yyyy")
 
 /** Epoch-day date picker, the [com.hazia.emivita.ui.components.TimeOfDayField]
  *  pattern applied to a date instead of a time -- same "button that opens an
@@ -33,7 +33,7 @@ fun DateField(label: String, epochDay: Long?, onChange: (Long?) -> Unit) {
     var showDialog by remember { mutableStateOf(false) }
 
     OutlinedButton(onClick = { showDialog = true }) {
-        val display = epochDay?.let { LocalDate.ofEpochDay(it).format(DATE_LABEL_FORMAT) } ?: stringResource(R.string.common_not_set)
+        val display = epochDay?.let { LocaleFormats.monthDayYear(LocalDate.ofEpochDay(it)) } ?: stringResource(R.string.common_not_set)
         Text(stringResource(R.string.field_label_value, label, display))
     }
 

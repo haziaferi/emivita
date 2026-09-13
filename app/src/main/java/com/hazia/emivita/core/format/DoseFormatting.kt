@@ -61,6 +61,8 @@ fun ReminderType.labelRes(): Int = when (this) {
     ReminderType.LINKED_FOLLOWING -> R.string.reminder_linked_following
 }
 
+/** Invariant (`.`), for files: CSV, PDF, the backup. Screens use
+ *  [formatDecimalLocalized] (§7 R60 F 2). */
 fun formatDecimal(value: Double): String =
     if (value == value.toLong().toDouble()) value.toLong().toString() else value.toString()
 
@@ -77,9 +79,9 @@ fun formatDecimal(value: Double): String =
 // scanner could have seen a word inside a pure formatter (spec §9 #19).
 fun formatDoseWithUnit(dose: Double, doseUnit: String?, resources: Resources): String {
     val unit = doseUnit?.takeIf { it.isNotBlank() }
-    if (unit != null) return "${formatDecimal(dose)} $unit"
+    if (unit != null) return "${formatDecimalLocalized(dose)} $unit"
     // Plural selection wants an integer; a fractional dose ("0.5") takes the
     // "other" form, which is what English and most rules give a non-integer.
     val quantity = if (dose == dose.toLong().toDouble()) dose.toInt() else 2
-    return resources.getQuantityString(R.plurals.dose_default_unit, quantity, formatDecimal(dose))
+    return resources.getQuantityString(R.plurals.dose_default_unit, quantity, formatDecimalLocalized(dose))
 }

@@ -10,6 +10,7 @@ import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.format.formatDecimal
 import com.hazia.emivita.core.scheduling.AlertActionReceiver
 import java.time.LocalDate
+import com.hazia.emivita.core.format.formatDecimalLocalized
 
 const val ACTION_REFILL = "com.hazia.emivita.action.REFILL"
 const val EXTRA_MEDICINE_ID = "com.hazia.emivita.extra.MEDICINE_ID"
@@ -39,7 +40,7 @@ class AlertNotificationBuilder(private val context: Context) {
         val builder = NotificationCompat.Builder(context, ReminderNotificationChannels.channelIdFor(medicine.notificationPriority))
             .setSmallIcon(R.drawable.ic_notification_reminder)
             .setContentTitle(context.getString(R.string.alert_low_stock_title, medicine.name))
-            .setContentText(context.getString(R.string.alert_low_stock_text, formatDecimal(medicine.stockInfo.quantity) + unit))
+            .setContentText(context.getString(R.string.alert_low_stock_text, formatDecimalLocalized(medicine.stockInfo.quantity) + unit))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)

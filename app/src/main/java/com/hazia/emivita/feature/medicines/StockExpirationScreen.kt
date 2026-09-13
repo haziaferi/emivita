@@ -48,7 +48,6 @@ import com.hazia.emivita.core.data.config.LowStockTriggerMode
 import com.hazia.emivita.core.data.config.ReminderConfig
 import com.hazia.emivita.core.data.config.ReminderType
 import com.hazia.emivita.core.data.entity.StockInfo
-import com.hazia.emivita.core.format.formatDecimal
 import com.hazia.emivita.core.data.repository.DoseEventRepository
 import com.hazia.emivita.core.data.repository.MedicineRepository
 import com.hazia.emivita.core.data.repository.ReminderRepository
@@ -60,8 +59,10 @@ import java.time.format.DateTimeFormatter
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
 import androidx.compose.ui.platform.LocalResources
+import com.hazia.emivita.core.format.LocaleFormats
+import com.hazia.emivita.core.format.parseDecimal
+import com.hazia.emivita.core.format.formatDecimalLocalized
 
-private val RUN_OUT_FORMAT = DateTimeFormatter.ofPattern("MMM d, yyyy")
 
 /**
  * Stock & Expiration (spec §6/§9 #1): "one screen, three visually zoned
@@ -124,10 +125,10 @@ fun StockExpirationScreen(
 
     LaunchedEffect(medicineId) {
         val medicine = medicineRepository.getById(medicineId) ?: return@LaunchedEffect
-        quantity = formatDecimal(medicine.stockInfo.quantity)
+        quantity = formatDecimalLocalized(medicine.stockInfo.quantity)
         unit = medicine.stockInfo.unit ?: ""
         trackingSaved = medicine.stockInfo.unit != null
-        refillQuantity = medicine.stockInfo.refillQuantity?.let { formatDecimal(it) } ?: ""
+        refillQuantity = medicine.stockInfo.refillQuantity?.let { formatDecimalLocalized(it) } ?: ""
         expirationDateEpochDay = medicine.stockInfo.expirationDateEpochDay
 
         val reminders = reminderRepository.observeForMedicine(medicineId).first()
@@ -136,7 +137,7 @@ fun StockExpirationScreen(
             lowStockEnabled = reminder.enabled
             val config = reminderRepository.decodeConfig(reminder) as? ReminderConfig.LowStockAlert
             if (config != null) {
-                threshold = formatDecimal(config.threshold)
+                threshold = formatDecimalLocalized(config.threshold)
                 triggerMode = config.triggerMode
             }
         }
@@ -199,11 +200,11 @@ fun StockExpirationScreen(
             Spacer(Modifier.height(8.dp))
             val runOut = runOutDate.stockRunOutDates[medicineId]
             Text(
-                if (runOut != null) stringResource(R.string.stock_runs_out, runOut.format(RUN_OUT_FORMAT)) else stringResource(R.string.stock_runs_out_not_tracked),
+                if (runOut != null) stringResource(R.string.stock_runs_out, LocaleFormats.monthDayYear(runOut)) else stringResource(R.string.stock_runs_out_not_tracked),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Spacer(Modifier.height(8.dp))
-            val refillAmount = refillQuantity.toDoubleOrNull()?.takeIf { it > 0 }
+            val refillAmount = parseDecimal(refillQuantity)?.takeIf { it > 0 }
             OutlinedButton(
                 enabled = refillAmount != null && trackingSaved,
                 onClick = {
@@ -211,7 +212,7 @@ fun StockExpirationScreen(
                     scope.launch {
                         val logged = doseEventRepository.logRefill(medicineId, amount, System.currentTimeMillis())
                         val fresh = medicineRepository.getById(medicineId)
-                        quantity = formatDecimal(fresh?.stockInfo?.quantity ?: 0.0)
+                        quantity = formatDecimalLocalized(fresh?.stockInfo?.quantity ?: 0.0)
                         saveStatus = resources.getString(
                             if (logged != null) R.string.stock_refilled_status else R.string.stock_refill_needs_unit,
                         )
@@ -319,9 +320,9 @@ fun StockExpirationScreen(
                 medicineRepository.update(
                     medicine.copy(
                         stockInfo = StockInfo(
-                            quantity = quantity.toDoubleOrNull() ?: 0.0,
+                            quantity = parseDecimal(quantity) ?: 0.0,
                             unit = unit.ifBlank { null },
-                            refillQuantity = refillQuantity.toDoubleOrNull(),
+                            refillQuantity = parseDecimal(refillQuantity),
                             productionDateEpochDay = medicine.stockInfo.productionDateEpochDay,
                             expirationDateEpochDay = expirationDateEpochDay,
                         )
@@ -329,7 +330,7 @@ fun StockExpirationScreen(
                 )
                 trackingSaved = unit.isNotBlank()
 
-                val thresholdValue = threshold.toDoubleOrNull()
+                val thresholdValue = parseDecimal(threshold)
                 if (lowStockEnabled && thresholdValue != null) {
                     val existingId = lowStockReminderId
                     val existingReminder = existingId?.let { reminderRepository.getById(it) }

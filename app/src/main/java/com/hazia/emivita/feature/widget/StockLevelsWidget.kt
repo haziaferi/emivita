@@ -36,6 +36,8 @@ import java.time.LocalDate
 import java.time.format.DateTimeFormatter
 import androidx.glance.LocalContext
 import com.hazia.emivita.R
+import com.hazia.emivita.core.format.LocaleFormats
+import com.hazia.emivita.core.format.formatDecimalLocalized
 
 private const val MAX_ROWS = 4
 
@@ -119,7 +121,7 @@ private fun StockLevelsContent(rows: List<StockRow>) {
 @Composable
 private fun StockRowItem(row: StockRow, showRefillAction: Boolean) {
     val context = LocalContext.current
-    val subtitle = row.runOutDate?.let { context.getString(R.string.widget_runs_out, it.format(DateTimeFormatter.ofPattern("MMM d"))) }
+    val subtitle = row.runOutDate?.let { context.getString(R.string.widget_runs_out, LocaleFormats.monthDay(it)) }
         ?: context.getString(R.string.widget_no_imminent_run_out)
     Row(
         modifier = GlanceModifier.fillMaxWidth().padding(vertical = 4.dp),
@@ -130,7 +132,7 @@ private fun StockRowItem(row: StockRow, showRefillAction: Boolean) {
             Text(
                 LocalContext.current.getString(
                     R.string.widget_stock_row,
-                    "${formatDecimal(row.quantity)} ${row.unit}",
+                    "${formatDecimalLocalized(row.quantity)} ${row.unit}",
                     subtitle,
                 ),
                 style = TextStyle(fontSize = 11.sp, color = GlanceTheme.colors.onSurfaceVariant),

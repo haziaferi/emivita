@@ -37,6 +37,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import androidx.glance.LocalContext
 import com.hazia.emivita.R
+import com.hazia.emivita.core.format.LocaleFormats
 
 private const val MAX_ROWS = 4
 
@@ -125,7 +126,7 @@ private fun NextRemindersContent(rows: List<NextReminderRow>) {
 
 @Composable
 private fun NextReminderRowItem(row: NextReminderRow, showTakeAction: Boolean) {
-    val time = Instant.ofEpochMilli(row.epochMillis).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
+    val time = LocaleFormats.time(row.epochMillis)
     Row(
         modifier = GlanceModifier.fillMaxWidth().padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,

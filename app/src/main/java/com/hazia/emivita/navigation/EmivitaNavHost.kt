@@ -99,6 +99,7 @@ fun EmivitaNavHost() {
                 HistoryScreen(
                     profileId = profileId,
                     doseEventRepository = container.doseEventRepository,
+                    settingsRepository = container.settingsRepository,
                 )
             }
             composable<EmivitaRoute.Settings> {

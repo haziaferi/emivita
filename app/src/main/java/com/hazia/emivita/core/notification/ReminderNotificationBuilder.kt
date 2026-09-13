@@ -21,6 +21,7 @@ import java.time.ZoneId
 import java.time.format.DateTimeFormatter
 import java.time.format.FormatStyle
 import com.hazia.emivita.core.format.formatDecimal
+import com.hazia.emivita.core.format.formatDecimalLocalized
 
 const val ACTION_TAKE = "com.hazia.emivita.action.TAKE"
 const val ACTION_SKIP = "com.hazia.emivita.action.SKIP"
@@ -93,7 +94,7 @@ class ReminderNotificationBuilder(
         val time = Instant.ofEpochMilli(doseEvent.scheduledEpochMillis)
             .atZone(ZoneId.systemDefault())
             .format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
-        return context.getString(R.string.notif_dose_body, formatDecimal(doseEvent.doseAmount), time)
+        return context.getString(R.string.notif_dose_body, formatDecimalLocalized(doseEvent.doseAmount), time)
     }
 
     /**

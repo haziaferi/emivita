@@ -61,7 +61,6 @@ import com.hazia.emivita.core.data.config.RepeatPattern
 import com.hazia.emivita.core.data.config.decodeReminderConfig
 import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.entity.RepeatConfig
-import com.hazia.emivita.core.format.formatDecimal
 import com.hazia.emivita.core.data.repository.MedicineRepository
 import com.hazia.emivita.core.data.repository.ReminderRepository
 import com.hazia.emivita.ui.components.DateField
@@ -81,6 +80,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
+import com.hazia.emivita.core.format.parseDecimal
+import com.hazia.emivita.core.format.formatDecimalLocalized
 
 // @StringRes: reminderTypeOptions is a top-level val (§9 #19).
 private data class ReminderTypeOption(
@@ -612,7 +613,7 @@ private fun FixedTimeFormBody(
     val advanced = rememberAdvancedReminderFieldsState(initialReminder)
     var hour by remember { mutableIntStateOf(initial.hour) }
     var minute by remember { mutableIntStateOf(initial.minute) }
-    var dose by remember { mutableStateOf(formatDecimal(initial.dose)) }
+    var dose by remember { mutableStateOf(formatDecimalLocalized(initial.dose)) }
     val initialPattern = initial.repeatPattern
     var patternKind by remember {
         mutableIntStateOf(
@@ -636,7 +637,7 @@ private fun FixedTimeFormBody(
     // is handled above.
     val firstCycleStartEpochDay = (initialPattern as? RepeatPattern.CyclicActivePause)?.firstCycleStartEpochDay ?: LocalDate.now().toEpochDay()
     val scope = rememberCoroutineScope()
-    val doseValue = dose.toDoubleOrNull()
+    val doseValue = parseDecimal(dose)
     val activeDaysValue = activeDays.toIntOrNull()
     val pauseDaysValue = pauseDays.toIntOrNull()
     // "0".toIntOrNull() is 0, not null, so the `?: 2` fallback below never
@@ -744,11 +745,11 @@ private fun RepeatingIntervalFormBody(
 ) {
     val advanced = rememberAdvancedReminderFieldsState(initialReminder)
     var intervalHours by remember { mutableStateOf(formatHours(initial.intervalMinutes)) }
-    var dose by remember { mutableStateOf(formatDecimal(initial.dose)) }
+    var dose by remember { mutableStateOf(formatDecimalLocalized(initial.dose)) }
     var startBehavior by remember { mutableStateOf(initial.startBehavior) }
     val scope = rememberCoroutineScope()
-    val doseValue = dose.toDoubleOrNull()
-    val hoursValue = intervalHours.toDoubleOrNull()
+    val doseValue = parseDecimal(dose)
+    val hoursValue = parseDecimal(intervalHours)
     // Guard the value actually stored, not the raw hours: 0.01 passes
     // `hoursValue > 0` but truncates to 0 minutes, which the calculator then
     // rejects -- after the row would already have been committed. Same shape
@@ -813,15 +814,15 @@ private fun DailyWindowFormBody(
 ) {
     val advanced = rememberAdvancedReminderFieldsState(initialReminder)
     var intervalHours by remember { mutableStateOf(formatHours(initial.intervalMinutes)) }
-    var dose by remember { mutableStateOf(formatDecimal(initial.dose)) }
+    var dose by remember { mutableStateOf(formatDecimalLocalized(initial.dose)) }
     var startHour by remember { mutableIntStateOf(initial.windowStartHour) }
     var startMinute by remember { mutableIntStateOf(initial.windowStartMinute) }
     var endHour by remember { mutableIntStateOf(initial.windowEndHour) }
     var endMinute by remember { mutableIntStateOf(initial.windowEndMinute) }
     var startBehavior by remember { mutableStateOf(initial.startBehavior) }
     val scope = rememberCoroutineScope()
-    val doseValue = dose.toDoubleOrNull()
-    val hoursValue = intervalHours.toDoubleOrNull()
+    val doseValue = parseDecimal(dose)
+    val hoursValue = parseDecimal(intervalHours)
     // Guard the value actually stored, not the raw hours: 0.01 passes
     // `hoursValue > 0` but truncates to 0 minutes, which the calculator then
     // rejects -- after the row would already have been committed. Same shape
@@ -890,12 +891,12 @@ private fun LowStockAlertFormBody(
     onSave: suspend (ReminderConfig.LowStockAlert) -> Unit,
     onCancel: () -> Unit,
 ) {
-    var threshold by remember { mutableStateOf(formatDecimal(initial.threshold)) }
+    var threshold by remember { mutableStateOf(formatDecimalLocalized(initial.threshold)) }
     var triggerMode by remember { mutableStateOf(initial.triggerMode) }
     var hour by remember { mutableStateOf(initial.hour) }
     var minute by remember { mutableStateOf(initial.minute) }
     val scope = rememberCoroutineScope()
-    val thresholdValue = threshold.toDoubleOrNull()
+    val thresholdValue = parseDecimal(threshold)
 
     ReminderFormScaffold(
         title = title,
@@ -1056,7 +1057,7 @@ private fun LinkedFollowingFormBody(
     var siblings by remember { mutableStateOf<List<Reminder>?>(null) }
     var selectedParent by remember { mutableStateOf<Reminder?>(null) }
     var delayMinutes by remember { mutableStateOf(initial.delayMinutes.toString()) }
-    var dose by remember { mutableStateOf(formatDecimal(initial.dose)) }
+    var dose by remember { mutableStateOf(formatDecimalLocalized(initial.dose)) }
     var startBehavior by remember { mutableStateOf(initial.startBehavior) }
     var menuExpanded by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
@@ -1082,7 +1083,7 @@ private fun LinkedFollowingFormBody(
     }
 
     val delayValue = delayMinutes.toIntOrNull()
-    val doseValue = dose.toDoubleOrNull()
+    val doseValue = parseDecimal(dose)
     val currentSiblings = siblings
 
     ReminderFormScaffold(
@@ -1161,4 +1162,4 @@ private fun reminderLabel(reminder: Reminder): String {
     }
 }
 
-private fun formatHours(intervalMinutes: Int): String = formatDecimal(intervalMinutes / 60.0)
+private fun formatHours(intervalMinutes: Int): String = formatDecimalLocalized(intervalMinutes / 60.0)

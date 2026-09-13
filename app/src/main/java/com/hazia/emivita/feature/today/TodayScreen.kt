@@ -79,6 +79,8 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.platform.LocalResources
+import com.hazia.emivita.core.format.LocaleFormats
+import com.hazia.emivita.core.format.parseDecimal
 
 internal enum class TimelineStatus { PENDING, TAKEN, SKIPPED, UPCOMING }
 
@@ -306,7 +308,7 @@ private fun TimelineNodeItem(
     lockedByDefault: Boolean,
 ) {
     val time = remember(node.epochMillis) {
-        Instant.ofEpochMilli(node.epochMillis).atZone(ZoneId.systemDefault()).format(DateTimeFormatter.ofPattern("HH:mm"))
+        LocaleFormats.time(node.epochMillis)
     }
     val scope = rememberCoroutineScope()
     var editing by remember { mutableStateOf<TimelineEntry?>(null) }
@@ -561,10 +563,10 @@ private fun LogDoseDialog(
         },
         confirmButton = {
             TextButton(
-                enabled = selected != null && doseAmount.toDoubleOrNull() != null && !saving,
+                enabled = selected != null && parseDecimal(doseAmount) != null && !saving,
                 onClick = {
                     val medicine = selected ?: return@TextButton
-                    val amount = doseAmount.toDoubleOrNull() ?: return@TextButton
+                    val amount = parseDecimal(doseAmount) ?: return@TextButton
                     saving = true
                     saveError = null
                     scope.launch {

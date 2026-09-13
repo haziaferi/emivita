@@ -23,7 +23,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.hazia.emivita.core.data.entity.DoseStatus
-import com.hazia.emivita.core.format.formatDecimal
 import com.hazia.emivita.core.data.repository.DoseEventRepository
 import kotlinx.coroutines.launch
 import java.time.Instant
@@ -33,6 +32,8 @@ import com.hazia.emivita.R
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.LocalResources
+import com.hazia.emivita.core.format.parseDecimal
+import com.hazia.emivita.core.format.formatDecimalLocalized
 
 /**
  * Event editing (spec §3/§9 #3) -- shared between Today and History, since
@@ -90,11 +91,11 @@ fun DoseEditDialog(
     var status by remember { mutableStateOf(originalStatus.takeIf { !wasUnresolved }) }
     var hour by remember { mutableIntStateOf(originalZoned.hour) }
     var minute by remember { mutableIntStateOf(originalZoned.minute) }
-    var doseAmount by remember { mutableStateOf(formatDecimal(originalDoseAmount)) }
+    var doseAmount by remember { mutableStateOf(formatDecimalLocalized(originalDoseAmount)) }
     var saving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
-    val doseValue = doseAmount.toDoubleOrNull()
+    val doseValue = parseDecimal(doseAmount)
 
     AlertDialog(
         onDismissRequest = onDismiss,
