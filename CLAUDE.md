@@ -46,6 +46,22 @@ installs a debug build over whatever is on the phone and writes (then deletes)
 its own rows in the real database — check what is installed before running it
 on a device that is not the test device.
 
+`connectedDebugAndroidTest` **uninstalls the app when it finishes**; run
+`./gradlew installDebug` afterwards if the phone should keep a build.
+
+Pseudolocale sweep (§7 R59) — every resource string renders accented, every
+leftover literal renders plain English. The debug build has
+`isPseudoLocalesEnabled = true`; the locale is set per app, not system-wide:
+
+```bash
+adb shell cmd locale set-app-locales com.hazia.emivita --locales en-XA   # or ar-XB; "" to reset
+adb shell uiautomator dump /sdcard/ui.xml && adb pull /sdcard/ui.xml      # the real accessibility tree
+adb exec-out screencap -p > screen.png
+```
+
+en-XA glyph traps when matching text in a dump: b→ɓ, f→ƒ, v→V, x→Cyrillic х.
+A dump does not surface `onClickLabel`; that half stays Robolectric-only.
+
 ## User-visible text (§9 #19)
 
 Every string a user sees lives in `app/src/main/res/values/strings.xml`.
