@@ -36,7 +36,7 @@ object AppLocale {
      *  pseudolocales join on a debuggable build (`isPseudoLocalesEnabled`).
      *  `AppLocaleTest` pins this list to the resource folders, so a new
      *  translation is one folder plus one entry here. */
-    val SHIPPED: List<String> = listOf("en")
+    val SHIPPED: List<String> = listOf("en", "it")
     fun supported(context: Context): List<String> =
         if (context.applicationInfo.flags and ApplicationInfo.FLAG_DEBUGGABLE != 0) SHIPPED + listOf("en-XA", "ar-XB") else SHIPPED
 

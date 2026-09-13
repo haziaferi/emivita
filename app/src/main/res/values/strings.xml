@@ -134,7 +134,7 @@
     <string name="medicine_detail_more">More</string>
     <string name="medicine_detail_no_reminders_yet_tap_to_add_one">No reminders yet. Tap + to add one.</string>
     <string name="medicine_detail_reminders">Reminders</string>
-    <string name="medicine_detail_this_removes_every_reminder_and_all_dose">This removes every reminder and all dose history for it. This can\'t be undone.</string>
+    <string name="medicine_detail_this_removes_every_reminder_and_all_dose">It leaves every list and its reminders stop; the dose history stays. Restore it from Settings › Data &amp; Backup.</string>
     <string name="medicines_add_medicine">Add medicine</string>
     <string name="medicines_add_new">Add new</string>
     <string name="medicines_medicines">Medicines</string>
