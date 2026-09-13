@@ -67,6 +67,8 @@ class ReminderRepository(
         repeatOnUnanswered: RepeatConfig? = null,
         weekendModeOptIn: Boolean = false,
         preAlarmMinutes: Int? = null,
+        instructions: String? = null,
+        dosesRemaining: Int? = null,
     ): Long {
         val id = reminderDao.insert(
             Reminder(
@@ -81,6 +83,8 @@ class ReminderRepository(
                 repeatOnUnanswered = repeatOnUnanswered,
                 weekendModeOptIn = weekendModeOptIn,
                 preAlarmMinutes = preAlarmMinutes,
+                instructions = instructions,
+                dosesRemaining = dosesRemaining,
                 createdAtEpochMillis = System.currentTimeMillis(),
             )
         )
@@ -116,6 +120,8 @@ class ReminderRepository(
         weekendModeOptIn: Boolean,
         parentReminderId: Long? = reminder.parentReminderId,
         preAlarmMinutes: Int? = reminder.preAlarmMinutes,
+        instructions: String? = reminder.instructions,
+        dosesRemaining: Int? = reminder.dosesRemaining,
     ) {
         reminderDao.update(
             reminder.copy(
@@ -127,6 +133,8 @@ class ReminderRepository(
                 repeatOnUnanswered = repeatOnUnanswered,
                 weekendModeOptIn = weekendModeOptIn,
                 preAlarmMinutes = preAlarmMinutes,
+                instructions = instructions,
+                dosesRemaining = dosesRemaining,
             )
         )
         schedulingCoordinator.onReminderChanged(reminder.id, System.currentTimeMillis())
@@ -149,6 +157,8 @@ class ReminderRepository(
         repeatOnUnanswered: RepeatConfig?,
         weekendModeOptIn: Boolean,
         preAlarmMinutes: Int? = reminder.preAlarmMinutes,
+        instructions: String? = reminder.instructions,
+        dosesRemaining: Int? = reminder.dosesRemaining,
     ) {
         reminderDao.update(
             reminder.copy(
@@ -158,6 +168,8 @@ class ReminderRepository(
                 repeatOnUnanswered = repeatOnUnanswered,
                 weekendModeOptIn = weekendModeOptIn,
                 preAlarmMinutes = preAlarmMinutes,
+                instructions = instructions,
+                dosesRemaining = dosesRemaining,
             )
         )
         schedulingCoordinator.onReminderChanged(reminder.id, System.currentTimeMillis())

@@ -10,6 +10,7 @@ import com.hazia.emivita.core.data.dao.TagDao
 import com.hazia.emivita.core.data.db.EmivitaDatabase
 import com.hazia.emivita.core.scheduling.OccurrenceProjectionCache
 import com.hazia.emivita.core.scheduling.SchedulingCoordinator
+import com.hazia.emivita.core.data.dao.MedicineNoteDao
 
 /**
  * The single reader/writer for whole-database JSON snapshots (spec §9 #9) --
@@ -26,6 +27,7 @@ class BackupRepository(
     private val doseGroupDao: DoseGroupDao,
     private val reminderDao: ReminderDao,
     private val doseEventDao: DoseEventDao,
+    private val medicineNoteDao: MedicineNoteDao,
     private val schedulingCoordinator: SchedulingCoordinator,
     private val occurrenceProjectionCache: OccurrenceProjectionCache,
 ) {
@@ -38,6 +40,7 @@ class BackupRepository(
         doseGroups = doseGroupDao.getAllOnce(),
         reminders = reminderDao.getAllOnce(),
         doseEvents = doseEventDao.getAllOnce(),
+        medicineNotes = medicineNoteDao.getAllOnce(),
     )
 
     /** Wholesale replace, not a merge -- restoring a disaster-recovery/migration
@@ -49,6 +52,7 @@ class BackupRepository(
      *  parentReminderId, ...) only stay correct if ids round-trip exactly. */
     suspend fun restoreSnapshot(data: BackupData) {
         database.withTransaction {
+            medicineNoteDao.deleteAll()
             doseEventDao.deleteAll()
             reminderDao.deleteAll()
             tagDao.deleteAllCrossRefs()
@@ -64,6 +68,7 @@ class BackupRepository(
             doseGroupDao.restoreAll(data.doseGroups)
             reminderDao.restoreAll(data.reminders)
             doseEventDao.restoreAll(data.doseEvents)
+            medicineNoteDao.restoreAll(data.medicineNotes)
         }
 
         // Outside the transaction, same reasoning DoseEventRepository.resolve()

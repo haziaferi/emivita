@@ -45,8 +45,15 @@ data class MedicineWithReminders(
 interface MedicineDao {
     // sortOrder, not name -- manual drag-to-reorder (spec §3), not alphabetical.
     @Transaction
-    @Query("SELECT * FROM medicines WHERE profileId = :profileId ORDER BY sortOrder ASC")
+    @Query("SELECT * FROM medicines WHERE profileId = :profileId AND archived = 0 ORDER BY sortOrder ASC")
     fun observeForProfile(profileId: Long): Flow<List<MedicineWithTags>>
+
+    /** The archive (§9 #26): what "Delete" now does to a medicine. */
+    @Query("SELECT * FROM medicines WHERE profileId = :profileId AND archived = 1 ORDER BY name ASC")
+    fun observeArchivedForProfile(profileId: Long): Flow<List<Medicine>>
+
+    @Query("UPDATE medicines SET archived = :archived WHERE id = :medicineId")
+    suspend fun setArchived(medicineId: Long, archived: Boolean)
 
     @Query("SELECT * FROM medicines WHERE id = :id")
     fun observeById(id: Long): Flow<Medicine?>
@@ -54,7 +61,7 @@ interface MedicineDao {
     /** The Medicines tab's read (§9 #24): a medicine and its reminders, in
      *  manual order; the screen re-sorts in memory for the other keys. */
     @Transaction
-    @Query("SELECT * FROM medicines WHERE profileId = :profileId ORDER BY sortOrder ASC")
+    @Query("SELECT * FROM medicines WHERE profileId = :profileId AND archived = 0 ORDER BY sortOrder ASC")
     fun observeWithRemindersForProfile(profileId: Long): Flow<List<MedicineWithReminders>>
 
     /** One row, one column (§9 #24 drag-reorder). The narrow-update shape
@@ -98,7 +105,7 @@ interface MedicineDao {
     /** The change-notification side of [OccurrenceProjectionCache]: Room
      *  re-fires this on any write to `medicines` or `reminders`. */
     @Transaction
-    @Query("SELECT * FROM medicines")
+    @Query("SELECT * FROM medicines WHERE archived = 0")
     fun observeAllWithReminders(): Flow<List<MedicineWithReminders>>
 
     /** The read side of the same data. A one-shot suspend query rather than
@@ -107,13 +114,13 @@ interface MedicineDao {
      *  snapshot -- pure overhead on a recompute pass that is already
      *  subscribed to the Flow above for exactly that signal. */
     @Transaction
-    @Query("SELECT * FROM medicines")
+    @Query("SELECT * FROM medicines WHERE archived = 0")
     suspend fun getAllWithReminders(): List<MedicineWithReminders>
 
     /** Widgets (spec §9 #7) -- StockLevelsWidget's one-shot snapshot of every
      *  medicine with stock tracking active, across all profiles (matches the
      *  cache's own profile-agnostic observeAllWithReminders() above). */
-    @Query("SELECT * FROM medicines WHERE unit IS NOT NULL")
+    @Query("SELECT * FROM medicines WHERE unit IS NOT NULL AND archived = 0")
     suspend fun getAllTracked(): List<Medicine>
 
     /** Direct set, not a relative +/- like decrementStock/incrementStock --

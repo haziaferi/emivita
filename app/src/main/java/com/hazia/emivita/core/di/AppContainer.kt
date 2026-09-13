@@ -58,6 +58,7 @@ class AppContainer(context: Context) {
             tagDao = database.tagDao(),
             doseEventDao = database.doseEventDao(),
             reminderDao = database.reminderDao(),
+            medicineNoteDao = database.medicineNoteDao(),
             schedulingCoordinator = schedulingCoordinator,
             occurrenceProjectionCache = occurrenceProjectionCache,
             autoSyncManager = autoSyncManager,
@@ -155,6 +156,7 @@ class AppContainer(context: Context) {
             doseGroupDao = database.doseGroupDao(),
             reminderDao = database.reminderDao(),
             doseEventDao = database.doseEventDao(),
+            medicineNoteDao = database.medicineNoteDao(),
             schedulingCoordinator = schedulingCoordinator,
             occurrenceProjectionCache = occurrenceProjectionCache,
         )
@@ -181,6 +183,7 @@ class AppContainer(context: Context) {
             schedulingCoordinator = schedulingCoordinator,
             occurrenceProjectionCache = occurrenceProjectionCache,
             autoSyncManager = autoSyncManager,
+            reminderDao = database.reminderDao(),
         )
     }
 }

@@ -6,6 +6,7 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
+import androidx.room.ColumnInfo
 
 // @Serializable: backup/restore JSON snapshot (spec §9 #9) serializes entities
 // directly rather than through a parallel DTO layer.
@@ -69,5 +70,15 @@ data class Medicine(
     // Short free-text, deliberately low visual weight in the Add form (spec §6).
     val indication: String? = null,
     val storageNote: String? = null,
+    /** Archived (§9 #26, the owner's reversal of the delete cascade): hidden
+     *  from Medicines, Today and the projection, reminders removed, dose
+     *  history kept for History and the exports. Restorable from Settings >
+     *  Data; "Delete permanently" there is the old cascade. */
+    @ColumnInfo(defaultValue = "0") val archived: Boolean = false,
+    /** The as-needed ceiling (§9 #26; Pill Time PT-01): at most [prnMaxDoses]
+     *  in any rolling [prnWindowHours]. Both null = no ceiling. Warns with a
+     *  confirm at the ceiling, never refuses (the owner's choice). */
+    val prnMaxDoses: Int? = null,
+    val prnWindowHours: Int? = null,
     val createdAtEpochMillis: Long,
 )

@@ -267,4 +267,13 @@ class MedTimerEngineParityTest {
         coVerify(exactly = 1) { alarms2.schedule(1L, on(5, 480)) }
         coVerify(exactly = 0) { alarms2.schedulePreAlarm(any(), any(), any()) }
     }
+
+    @Test
+    fun `a dose-count course with nothing remaining arms nothing, one with doses left is unaffected`() = runTest {
+        // §9 #26 (MediTrak MT-07): the end condition lives next to activeUntil.
+        val r = reminder(1L, ReminderConfig.FixedTime(hour = 8, minute = 0, dose = 1.0), ReminderType.FIXED_TIME)
+        assertNull(engine().nextOccurrenceFor(r.copy(dosesRemaining = 0), on(1, 0)))
+        assertAt(on(1, 480), engine().nextOccurrenceFor(r.copy(dosesRemaining = 1), on(1, 0)))
+        assertAt(on(1, 480), engine().nextOccurrenceFor(r, on(1, 0)))
+    }
 }

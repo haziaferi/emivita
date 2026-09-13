@@ -61,6 +61,7 @@ class CrossAppBehaviourTest {
             database = database,
             doseEventDao = database.doseEventDao(),
             medicineDao = database.medicineDao(),
+            reminderDao = database.reminderDao(),
             schedulingCoordinator = mockk<SchedulingCoordinator>(relaxed = true),
             occurrenceProjectionCache = mockk<OccurrenceProjectionCache>(relaxed = true),
             autoSyncManager = mockk<AutoSyncManager>(relaxed = true),

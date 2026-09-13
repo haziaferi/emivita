@@ -244,7 +244,7 @@ fun MedicineDetailScreen(
                     showDeleteConfirm = false
                     val toDelete = currentMedicine ?: return@TextButton
                     scope.launch {
-                        medicineRepository.delete(toDelete)
+                        medicineRepository.archive(toDelete)
                         onDeleted()
                     }
                 }) { Text(stringResource(R.string.medicine_detail_delete)) }

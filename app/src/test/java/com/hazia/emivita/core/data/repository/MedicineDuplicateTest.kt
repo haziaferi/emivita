@@ -47,6 +47,7 @@ class MedicineDuplicateTest {
         medicines = MedicineRepository(
             database = database, medicineDao = database.medicineDao(), tagDao = database.tagDao(),
             doseEventDao = database.doseEventDao(), reminderDao = database.reminderDao(),
+            medicineNoteDao = database.medicineNoteDao(),
             schedulingCoordinator = coordinator, occurrenceProjectionCache = mockk(relaxed = true),
             autoSyncManager = mockk(relaxed = true),
         )

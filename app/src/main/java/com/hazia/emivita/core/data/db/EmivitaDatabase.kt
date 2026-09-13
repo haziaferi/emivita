@@ -19,6 +19,8 @@ import com.hazia.emivita.core.data.entity.Profile
 import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.entity.Tag
 import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
+import com.hazia.emivita.core.data.dao.MedicineNoteDao
+import com.hazia.emivita.core.data.entity.MedicineNote
 
 @Database(
     entities = [
@@ -29,8 +31,9 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         DoseGroup::class,
         Reminder::class,
         DoseEvent::class,
+        MedicineNote::class,
     ],
-    version = 7,
+    version = 8,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -41,6 +44,7 @@ abstract class EmivitaDatabase : RoomDatabase() {
     abstract fun doseGroupDao(): DoseGroupDao
     abstract fun reminderDao(): ReminderDao
     abstract fun doseEventDao(): DoseEventDao
+    abstract fun medicineNoteDao(): MedicineNoteDao
 
     companion object {
         @Volatile private var instance: EmivitaDatabase? = null
@@ -62,6 +66,7 @@ abstract class EmivitaDatabase : RoomDatabase() {
                     Migrations.MIGRATION_4_5,
                     Migrations.MIGRATION_5_6,
                     Migrations.MIGRATION_6_7,
+                    Migrations.MIGRATION_7_8,
                 )
                 .build()
         }

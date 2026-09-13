@@ -34,6 +34,13 @@ interface ReminderDao {
 
     /** LowStockAlert/ExpirationAlert trigger-mode bookkeeping (spec §9 #8) --
      *  see LowStockExpirationAlertEvaluator. */
+    /** Dose-count course (§9 #26): one fewer after a TAKEN, floored at 0. */
+    @Query("UPDATE reminders SET dosesRemaining = MAX(0, dosesRemaining - 1) WHERE id = :reminderId AND dosesRemaining IS NOT NULL")
+    suspend fun decrementDosesRemaining(reminderId: Long)
+
+    @Query("DELETE FROM reminders WHERE id = :id")
+    suspend fun deleteById(id: Long)
+
     @Query("UPDATE reminders SET lastAlertNotifiedEpochDay = :epochDay WHERE id = :reminderId")
     suspend fun updateLastAlertNotifiedEpochDay(reminderId: Long, epochDay: Long?)
 

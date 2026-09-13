@@ -12,6 +12,7 @@ import kotlinx.serialization.json.Json
 import kotlinx.serialization.json.int
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import com.hazia.emivita.core.data.entity.MedicineNote
 
 /** Current backup schema version -- bump when a field is added/removed in a
  *  way [BackupRepository.restoreSnapshot] can't already tolerate (kotlinx
@@ -70,4 +71,8 @@ data class BackupData(
     val doseGroups: List<DoseGroup>,
     val reminders: List<Reminder>,
     val doseEvents: List<DoseEvent>,
+    /** Since §9 #26. Defaulted so a pre-#26 file still decodes; the schema
+     *  version stays 1 because an older build can read a file that carries
+     *  this (`ignoreUnknownKeys`), which is what a version bump would deny. */
+    val medicineNotes: List<MedicineNote> = emptyList(),
 )

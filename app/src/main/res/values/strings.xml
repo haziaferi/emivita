@@ -519,4 +519,5 @@
     <string name="snooze_picker_custom">Other (minutes)</string>
     <string name="settings_snooze_ask_each_time">Ask how long each time</string>
     <string name="settings_snooze_ask_each_time_desc">The Snooze button opens a quick picker instead of using the duration above.</string>
+    <string name="status_deleted">Deleted</string>
 </resources>

@@ -33,6 +33,7 @@ fun doseStatusLabelRes(status: DoseStatus): Int = when (status) {
     DoseStatus.TAKEN -> R.string.status_taken
     DoseStatus.SKIPPED -> R.string.status_skipped
     DoseStatus.REFILLED -> R.string.status_refilled
+    DoseStatus.DELETED -> R.string.status_deleted
 }
 
 /**
@@ -46,6 +47,7 @@ fun csvStatusLabel(status: DoseStatus): String = when (status) {
     DoseStatus.TAKEN -> "Taken"
     DoseStatus.SKIPPED -> "Skipped"
     DoseStatus.REFILLED -> "Refilled"
+    DoseStatus.DELETED -> "Deleted"
 }
 
 /** Display name of a reminder type, as a resource id (spec §9 #19). Shared by

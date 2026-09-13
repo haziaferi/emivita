@@ -118,6 +118,9 @@ class SchedulingEngine(
     ): NextOccurrence? {
         if (!reminder.enabled) return null
         if (reminder.type !in supportedTypes) return null
+        // A dose-count course that has run out (§9 #26, MT-07) is over the way
+        // a passed activeUntil is over: nothing more to arm, nothing projected.
+        if (reminder.dosesRemaining == 0) return null
 
         var base = computeBase(reminder, notBeforeEpochMillis, assumeOutstandingResolved) ?: return null
 

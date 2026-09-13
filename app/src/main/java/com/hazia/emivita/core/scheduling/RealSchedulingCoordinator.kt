@@ -59,6 +59,14 @@ class RealSchedulingCoordinator(
 
     override suspend fun cancelNag(reminderId: Long, doseEventId: Long) = alarmScheduler.cancelNag(reminderId, doseEventId)
 
+    override suspend fun onDoseRescheduled(reminderId: Long, doseEventId: Long, atEpochMillis: Long) {
+        // The snooze slot: a one-off re-notification for an existing dose. The
+        // receiver looks the dose up by (reminder, slot), so the slot passed is
+        // the new scheduled time, which the repository has already written.
+        alarmScheduler.scheduleSnooze(reminderId, doseEventId, originalScheduledEpochMillis = atEpochMillis, fireAtEpochMillis = atEpochMillis)
+        occurrenceProjectionCache.invalidate()
+    }
+
     override suspend fun onMedicineChanged(medicineId: Long) {
         val now = System.currentTimeMillis()
         reminderDao.getEnabledForMedicine(medicineId)

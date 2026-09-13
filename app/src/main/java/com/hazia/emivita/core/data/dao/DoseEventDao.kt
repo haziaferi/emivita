@@ -41,6 +41,9 @@ private const val JOINED_SELECT = """
       medicines.barcodeValue AS medicine_barcodeValue,
       medicines.indication AS medicine_indication,
       medicines.storageNote AS medicine_storageNote,
+      medicines.archived AS medicine_archived,
+      medicines.prnMaxDoses AS medicine_prnMaxDoses,
+      medicines.prnWindowHours AS medicine_prnWindowHours,
       medicines.createdAtEpochMillis AS medicine_createdAtEpochMillis
     FROM dose_events
     INNER JOIN medicines ON dose_events.medicineId = medicines.id
@@ -50,7 +53,7 @@ private const val JOINED_SELECT = """
 interface DoseEventDao {
 
     @Query(
-        "$JOINED_SELECT WHERE medicines.profileId = :profileId " +
+        "$JOINED_SELECT WHERE medicines.profileId = :profileId AND dose_events.status != 'DELETED' " +
             "AND dose_events.scheduledEpochMillis BETWEEN :startEpochMillis AND :endEpochMillis " +
             "ORDER BY dose_events.scheduledEpochMillis ASC"
     )
@@ -71,7 +74,7 @@ interface DoseEventDao {
      *  ReminderScheduling.kt's doc comment on why this replaces a persisted
      *  "current anchor" field. Null if the reminder has never been resolved. */
     @Query(
-        "SELECT * FROM dose_events WHERE reminderId = :reminderId AND status != 'PENDING' " +
+        "SELECT * FROM dose_events WHERE reminderId = :reminderId AND status NOT IN ('PENDING', 'DELETED') " +
             "ORDER BY resolvedAtEpochMillis DESC LIMIT 1"
     )
     suspend fun getLastResolved(reminderId: Long): DoseEvent?
@@ -98,7 +101,7 @@ interface DoseEventDao {
      *  for that medicine, so without this filter the first Log dose after
      *  any refill suggested the pack size (30) instead of the dose (1). */
     @Query(
-        "SELECT * FROM dose_events WHERE medicineId = :medicineId AND status != 'REFILLED' " +
+        "SELECT * FROM dose_events WHERE medicineId = :medicineId AND status NOT IN ('REFILLED', 'DELETED') " +
             "ORDER BY createdAtEpochMillis DESC LIMIT 1"
     )
     suspend fun getMostRecentForMedicine(medicineId: Long): DoseEvent?
@@ -126,6 +129,35 @@ interface DoseEventDao {
      *  [updateResolvedAt]. */
     @Query("UPDATE dose_events SET doseAmount = :doseAmount WHERE id = :id")
     suspend fun updateDoseAmount(id: Long, doseAmount: Double)
+
+    @Query("UPDATE dose_events SET notes = :notes WHERE id = :id")
+    suspend fun updateNotes(id: Long, notes: String?)
+
+    /** Reopen (§9 #26): back to PENDING with the resolution and the stock
+     *  pair cleared; the caller has already given the stock back. */
+    @Query("UPDATE dose_events SET status = 'PENDING', resolvedAtEpochMillis = NULL, stockBefore = -1.0, stockAfter = -1.0 WHERE id = :id")
+    suspend fun reopen(id: Long)
+
+    @Query("UPDATE dose_events SET scheduledEpochMillis = :scheduledEpochMillis WHERE id = :id")
+    suspend fun updateScheduledAt(id: Long, scheduledEpochMillis: Long)
+
+    /** A ranged read for the export (§9 #26; Appendix F MK-03), independent
+     *  of History's display window; DELETED excluded like every read. */
+    @Query(
+        "$JOINED_SELECT WHERE medicines.profileId = :profileId AND dose_events.status != 'DELETED' " +
+            "AND dose_events.scheduledEpochMillis BETWEEN :startEpochMillis AND :endEpochMillis " +
+            "AND (:medicineId IS NULL OR dose_events.medicineId = :medicineId) " +
+            "ORDER BY dose_events.scheduledEpochMillis DESC"
+    )
+    suspend fun getInRangeOnce(profileId: Long, startEpochMillis: Long, endEpochMillis: Long, medicineId: Long?): List<DoseEventWithMedicine>
+
+    /** As-needed doses of one medicine inside a rolling window (§9 #26 PRN
+     *  ceiling and headroom): TAKEN only, any reminder or none. */
+    @Query(
+        "SELECT * FROM dose_events WHERE medicineId = :medicineId AND status = 'TAKEN' " +
+            "AND resolvedAtEpochMillis >= :sinceEpochMillis ORDER BY resolvedAtEpochMillis ASC"
+    )
+    suspend fun getTakenSince(medicineId: Long, sinceEpochMillis: Long): List<DoseEvent>
 
     /** Nagging (spec §3/§4 `repeatOnUnanswered`) -- one nag fire, one
      *  increment, matching the field's own doc comment ("Incremented per

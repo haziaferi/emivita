@@ -18,6 +18,8 @@ import kotlinx.coroutines.flow.first
 import com.hazia.emivita.core.data.entity.StockInfo
 import com.hazia.emivita.core.data.config.decodeReminderConfig
 import com.hazia.emivita.core.data.dao.MedicineWithReminders
+import com.hazia.emivita.core.data.entity.MedicineNote
+import com.hazia.emivita.core.data.dao.MedicineNoteDao
 
 class MedicineRepository(
     private val database: EmivitaDatabase,
@@ -25,6 +27,7 @@ class MedicineRepository(
     private val tagDao: TagDao,
     private val doseEventDao: DoseEventDao,
     private val reminderDao: ReminderDao,
+    private val medicineNoteDao: MedicineNoteDao,
     private val schedulingCoordinator: SchedulingCoordinator,
     private val occurrenceProjectionCache: OccurrenceProjectionCache,
     private val autoSyncManager: AutoSyncManager,
@@ -111,6 +114,8 @@ class MedicineRepository(
                     repeatOnUnanswered = r.repeatOnUnanswered,
                     weekendModeOptIn = r.weekendModeOptIn,
                     preAlarmMinutes = r.preAlarmMinutes,
+                    instructions = r.instructions,
+                    dosesRemaining = r.dosesRemaining,
                 )
                 idMap[r.id] = copiedId
             }
@@ -131,6 +136,52 @@ class MedicineRepository(
      *  Room's cascade can't touch AlarmManager, so every reminder's pending
      *  alarm (regular + nag) is explicitly cancelled first via
      *  [SchedulingCoordinator.onReminderRemoved]. */
+    /** "Delete" since §9 #26 (the owner's reversal of the cascade below,
+     *  which is now [deletePermanently]): the medicine is archived -- out of
+     *  Medicines, Today, the projection and the widgets; its reminders are
+     *  removed and their alarms cancelled -- and its dose history stays for
+     *  History and the exports, which is what a clinician-facing record is
+     *  for. medTimer keeps history as snapshots for the same reason. */
+    suspend fun archive(medicine: Medicine) {
+        val reminders = reminderDao.observeForMedicine(medicine.id).first()
+        database.withTransaction {
+            medicineDao.setArchived(medicine.id, true)
+            // Disabled, not deleted: `dose_events.reminderId` cascades on a
+            // reminder delete, which would take the very history archiving
+            // exists to keep -- the test for this method found it. A restored
+            // medicine gets its reminders back paused, to re-enable by hand.
+            for (r in reminders) if (r.enabled) reminderDao.update(r.copy(enabled = false))
+        }
+        for (r in reminders) schedulingCoordinator.onReminderRemoved(r.id)
+        occurrenceProjectionCache.invalidate()
+        autoSyncManager.notifyChanged()
+    }
+
+    suspend fun unarchive(medicineId: Long) {
+        medicineDao.setArchived(medicineId, false)
+        occurrenceProjectionCache.invalidate()
+        autoSyncManager.notifyChanged()
+    }
+
+    fun observeArchivedForProfile(profileId: Long): Flow<List<Medicine>> = medicineDao.observeArchivedForProfile(profileId)
+
+    // ---- notes journal (§9 #26; Appendix F MT-04) ----
+    fun observeNotes(medicineId: Long): Flow<List<MedicineNote>> = medicineNoteDao.observeForMedicine(medicineId)
+    suspend fun addNote(medicineId: Long, text: String): Long =
+        medicineNoteDao.insert(MedicineNote(medicineId = medicineId, text = text.trim(), createdAtEpochMillis = System.currentTimeMillis()))
+            .also { autoSyncManager.notifyChanged() }
+    suspend fun editNote(note: MedicineNote, text: String) {
+        medicineNoteDao.update(note.copy(text = text.trim(), editedAtEpochMillis = System.currentTimeMillis()))
+        autoSyncManager.notifyChanged()
+    }
+    suspend fun deleteNote(noteId: Long) {
+        medicineNoteDao.delete(noteId)
+        autoSyncManager.notifyChanged()
+    }
+
+    /** The old cascade, kept for the archive's "Delete permanently". */
+    suspend fun deletePermanently(medicine: Medicine) = delete(medicine)
+
     suspend fun delete(medicine: Medicine) {
         val reminderIds = reminderDao.observeForMedicine(medicine.id).first().map { it.id }
 

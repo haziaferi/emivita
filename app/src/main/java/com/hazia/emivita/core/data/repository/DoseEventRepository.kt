@@ -11,6 +11,7 @@ import com.hazia.emivita.core.data.entity.DoseStatus
 import com.hazia.emivita.core.scheduling.OccurrenceProjectionCache
 import com.hazia.emivita.core.scheduling.SchedulingCoordinator
 import kotlinx.coroutines.flow.Flow
+import com.hazia.emivita.core.data.dao.ReminderDao
 
 /**
  * The ONLY place a DoseEvent's status should ever be written from -- the
@@ -27,6 +28,7 @@ class DoseEventRepository(
     private val schedulingCoordinator: SchedulingCoordinator,
     private val occurrenceProjectionCache: OccurrenceProjectionCache,
     private val autoSyncManager: AutoSyncManager,
+    private val reminderDao: ReminderDao,
 ) {
     fun observeInRange(profileId: Long, startEpochMillis: Long, endEpochMillis: Long): Flow<List<DoseEventWithMedicine>> =
         doseEventDao.observeInRange(profileId, startEpochMillis, endEpochMillis)
@@ -132,6 +134,9 @@ class DoseEventRepository(
         // (reminderId == null) aren't tied to any scheduled occurrence, so
         // there's nothing to reschedule.
         resolvedEvent.reminderId?.let {
+            // A dose-count course counts down on Taken only (§9 #26, MT-07);
+            // the engine stops at 0. Before the coordinator recomputes.
+            if (status == DoseStatus.TAKEN) reminderDao.decrementDosesRemaining(it)
             schedulingCoordinator.onDoseResolved(it)
             // Nagging stops the moment a dose is genuinely answered (spec
             // §3/§4 repeatOnUnanswered) -- the other way it stops is hitting
@@ -242,13 +247,104 @@ class DoseEventRepository(
         autoSyncManager.notifyChanged()
     }
 
-    /** Event editing (spec §3/§9 #3) -- corrects the logged dose amount.
-     *  Same "doesn't touch stock" scope as [editRecordedTime]. */
+    /** Event editing (spec §3/§9 #3) -- corrects the logged dose amount, and
+     *  since §9 #26 the stock with it (Appendix F PT-F1). A Taken dose whose
+     *  amount is edited from 1 to 2 used to leave the bottle short by one
+     *  forever; now the difference is applied and the stock pair re-written
+     *  so a later status switch reverses the right amount. A Skipped dose
+     *  only re-writes its hypothetical pair; a Pending or untracked one
+     *  changes the number alone. */
     suspend fun editDoseAmount(doseEventId: Long, newDoseAmount: Double) {
-        doseEventDao.updateDoseAmount(doseEventId, newDoseAmount)
+        var medicineId = -1L
+        database.withTransaction {
+            val event = doseEventDao.getById(doseEventId) ?: error("No DoseEvent with id=$doseEventId")
+            medicineId = event.medicineId
+            doseEventDao.updateDoseAmount(doseEventId, newDoseAmount)
+            val tracked = event.stockBefore != event.stockAfter || (event.stockBefore >= 0.0 && event.stockAfter >= 0.0)
+            if (!tracked || event.stockBefore < 0.0) return@withTransaction
+            val oldConsumed = event.stockBefore - event.stockAfter
+            val newAfter = (event.stockBefore - newDoseAmount).coerceAtLeast(0.0)
+            val newConsumed = event.stockBefore - newAfter
+            doseEventDao.updateStockSentinels(doseEventId, event.stockBefore, newAfter)
+            if (event.status == DoseStatus.TAKEN) {
+                val delta = newConsumed - oldConsumed
+                if (delta > 0) medicineDao.decrementStock(event.medicineId, delta)
+                if (delta < 0) medicineDao.incrementStock(event.medicineId, -delta)
+            }
+        }
+        if (medicineId >= 0) schedulingCoordinator.onMedicineChanged(medicineId)
         occurrenceProjectionCache.invalidate()
         autoSyncManager.notifyChanged()
     }
+
+    suspend fun setNotes(doseEventId: Long, notes: String?) {
+        doseEventDao.updateNotes(doseEventId, notes?.trim()?.ifBlank { null })
+        autoSyncManager.notifyChanged()
+    }
+
+    /** Reopen a Taken or Skipped dose (§9 #26; medTimer's RERAISE): back to
+     *  Pending, the stock a Taken one consumed given back, the sentinel pair
+     *  cleared. Returns the reopened event so the caller can re-post its
+     *  notification -- this layer has no access to the builder. */
+    suspend fun reopen(doseEventId: Long): DoseEvent? {
+        val reopened = database.withTransaction {
+            val event = doseEventDao.getById(doseEventId) ?: return@withTransaction null
+            if (event.status != DoseStatus.TAKEN && event.status != DoseStatus.SKIPPED) return@withTransaction null
+            if (event.status == DoseStatus.TAKEN && event.stockBefore != event.stockAfter) {
+                medicineDao.incrementStock(event.medicineId, event.stockBefore - event.stockAfter)
+            }
+            doseEventDao.reopen(doseEventId)
+            doseEventDao.getById(doseEventId)
+        } ?: return null
+        reopened.reminderId?.let { schedulingCoordinator.onReminderChanged(it, System.currentTimeMillis()) }
+        schedulingCoordinator.onMedicineChanged(reopened.medicineId)
+        occurrenceProjectionCache.invalidate()
+        autoSyncManager.notifyChanged()
+        return reopened
+    }
+
+    /** Soft delete (§9 #26): the row stays so its slot cannot come back and
+     *  History's exclusion is a status, not an absence; a Taken dose gives its
+     *  stock back. Not for refills -- a refill's stock is undone by its own
+     *  removal path when one exists; until then it is not deletable. */
+    suspend fun softDelete(doseEventId: Long) {
+        var medicineId = -1L
+        val done = database.withTransaction {
+            val event = doseEventDao.getById(doseEventId) ?: return@withTransaction false
+            if (event.status == DoseStatus.REFILLED || event.status == DoseStatus.DELETED) return@withTransaction false
+            medicineId = event.medicineId
+            if (event.status == DoseStatus.TAKEN && event.stockBefore != event.stockAfter) {
+                medicineDao.incrementStock(event.medicineId, event.stockBefore - event.stockAfter)
+            }
+            doseEventDao.updateStatus(doseEventId, DoseStatus.DELETED, event.resolvedAtEpochMillis ?: System.currentTimeMillis())
+            true
+        }
+        if (!done) return
+        schedulingCoordinator.onMedicineChanged(medicineId)
+        occurrenceProjectionCache.invalidate()
+        autoSyncManager.notifyChanged()
+    }
+
+    /** Move a pending dose to a chosen instant (§9 #26; medTimer's RESCHEDULE,
+     *  Medisafe's "reschedule"): the row's slot moves and a one-off alarm is
+     *  armed there. Its old notification is the caller's to cancel. */
+    suspend fun reschedule(doseEventId: Long, newScheduledEpochMillis: Long): Boolean {
+        val event = doseEventDao.getById(doseEventId) ?: return false
+        if (event.status != DoseStatus.PENDING) return false
+        val reminderId = event.reminderId ?: return false
+        doseEventDao.updateScheduledAt(doseEventId, newScheduledEpochMillis)
+        schedulingCoordinator.onDoseRescheduled(reminderId, doseEventId, newScheduledEpochMillis)
+        occurrenceProjectionCache.invalidate()
+        autoSyncManager.notifyChanged()
+        return true
+    }
+
+    /** Doses taken inside the rolling window ending now (§9 #26 PRN ceiling). */
+    suspend fun takenSince(medicineId: Long, sinceEpochMillis: Long): List<DoseEvent> =
+        doseEventDao.getTakenSince(medicineId, sinceEpochMillis)
+
+    suspend fun getInRangeOnce(profileId: Long, startEpochMillis: Long, endEpochMillis: Long, medicineId: Long?): List<DoseEventWithMedicine> =
+        doseEventDao.getInRangeOnce(profileId, startEpochMillis, endEpochMillis, medicineId)
 
     /** Source for the "suggest the medicine's last-used amount" default on
      *  the Log dose entry point (spec §3) -- simpler than medTimer's

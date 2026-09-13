@@ -48,4 +48,9 @@ interface SchedulingCoordinator {
      *  answer, so any pending nag re-fire for *that dose* should stop. Keyed
      *  by dose event since §7 R60: a reminder can have two outstanding doses. */
     suspend fun cancelNag(reminderId: Long, doseEventId: Long)
+
+    /** A pending dose moved to a chosen time (§9 #26; medTimer's RESCHEDULE):
+     *  re-notify at that instant through the snooze slot. Default no-op so
+     *  the test fakes need not care. */
+    suspend fun onDoseRescheduled(reminderId: Long, doseEventId: Long, atEpochMillis: Long) {}
 }

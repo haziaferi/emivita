@@ -264,6 +264,33 @@ object Migrations {
     /** v6 -> v7 (§9 #25): the optional pre-alarm lead on a reminder. Nullable
      *  with no default, like the medical-id columns: absent is "no pre-alarm",
      *  which a NOT NULL 0 would have to mean by convention instead. */
+    /** v7 -> v8 (§9 #26, history as a record). Six nullable columns and one
+     *  NOT NULL DEFAULT 0 flag, and the notes-journal table. The flag is the
+     *  weekendModeOptIn shape: `@ColumnInfo(defaultValue = "0")` on the
+     *  entity so Room's own CREATE TABLE matches this ALTER on a fresh
+     *  install. The journal's FK cascades with the medicine and carries an
+     *  index on medicineId, as Room's schema for the entity requires. */
+    val MIGRATION_7_8 = object : Migration(7, 8) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE dose_events ADD COLUMN notes TEXT")
+            db.execSQL("ALTER TABLE reminders ADD COLUMN instructions TEXT")
+            db.execSQL("ALTER TABLE reminders ADD COLUMN dosesRemaining INTEGER")
+            db.execSQL("ALTER TABLE medicines ADD COLUMN archived INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE medicines ADD COLUMN prnMaxDoses INTEGER")
+            db.execSQL("ALTER TABLE medicines ADD COLUMN prnWindowHours INTEGER")
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS medicine_notes (" +
+                    "id INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, " +
+                    "medicineId INTEGER NOT NULL, " +
+                    "text TEXT NOT NULL, " +
+                    "createdAtEpochMillis INTEGER NOT NULL, " +
+                    "editedAtEpochMillis INTEGER, " +
+                    "FOREIGN KEY(medicineId) REFERENCES medicines(id) ON UPDATE NO ACTION ON DELETE CASCADE)"
+            )
+            db.execSQL("CREATE INDEX IF NOT EXISTS index_medicine_notes_medicineId ON medicine_notes (medicineId)")
+        }
+    }
+
     val MIGRATION_6_7 = object : Migration(6, 7) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE reminders ADD COLUMN preAlarmMinutes INTEGER")

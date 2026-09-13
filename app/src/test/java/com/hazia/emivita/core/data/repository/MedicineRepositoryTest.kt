@@ -45,6 +45,7 @@ class MedicineRepositoryTest {
             tagDao = database.tagDao(),
             doseEventDao = database.doseEventDao(),
             reminderDao = database.reminderDao(),
+            medicineNoteDao = database.medicineNoteDao(),
             schedulingCoordinator = mockk<SchedulingCoordinator>(relaxed = true),
             occurrenceProjectionCache = mockk<OccurrenceProjectionCache>(relaxed = true),
             autoSyncManager = mockk<AutoSyncManager>(relaxed = true),

@@ -7,7 +7,10 @@ import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
 
 @Serializable
-enum class DoseStatus { PENDING, TAKEN, SKIPPED, REFILLED }
+/** DELETED (§9 #26): a soft delete. The row stays -- its slot cannot be
+ *  re-materialised, its stock effect was reversed -- but it is out of every
+ *  list, count and export. medTimer's `DELETED` has the same shape. */
+enum class DoseStatus { PENDING, TAKEN, SKIPPED, REFILLED, DELETED }
 
 @Serializable
 @Entity(
@@ -64,5 +67,8 @@ data class DoseEvent(
     // Incremented per "nag" fire, capped at Reminder.repeatOnUnanswered.maxRepeats
     // (spec §3/§4). See ReminderAlarmReceiver.handleNagFire.
     val repeatCount: Int = 0,
+    /** Free text on one dose (§9 #26; MediTrak/medTimer event notes):
+     *  "took it late, was travelling". Exported in the CSV. */
+    val notes: String? = null,
     val createdAtEpochMillis: Long,
 )

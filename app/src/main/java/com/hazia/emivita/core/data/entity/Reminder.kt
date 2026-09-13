@@ -95,6 +95,14 @@ data class Reminder(
      *  (§9 #25; Appendix F HM-19). Null = none. Read by RealSchedulingCoordinator
      *  when it arms the regular slot; the pre-alarm has its own slot. */
     val preAlarmMinutes: Int? = null,
+    /** Per-reminder instructions (§9 #26; medTimer's `instructions`) --
+     *  "with food", "not with the iron" -- shown in the notification body and
+     *  on the Today row. The one text that belongs on the notification. */
+    val instructions: String? = null,
+    /** A dose-count-limited course (§9 #26; Appendix F MT-07): "N doses then
+     *  stop". Null = unlimited. Decremented on TAKEN; at 0 the engine arms
+     *  nothing more, next to the activeUntil clamp (MT finding 3). */
+    val dosesRemaining: Int? = null,
     // LOW_STOCK_ALERT / EXPIRATION_ALERT only (spec §9 #8) -- the epoch day this
     // alert last posted a notification, so Once/Daily trigger modes don't
     // re-notify on every cache recompute. Null = never notified (or, for
