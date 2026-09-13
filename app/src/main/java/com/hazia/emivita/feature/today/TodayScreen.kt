@@ -476,6 +476,7 @@ private fun LogDoseDialog(
     onDismiss: () -> Unit,
     onLogged: () -> Unit,
 ) {
+    val resources = LocalResources.current
     var medicines by remember { mutableStateOf<List<MedicineWithTags>?>(null) }
     var selected by remember { mutableStateOf<Medicine?>(null) }
     var doseAmount by remember { mutableStateOf("1") }
@@ -572,7 +573,7 @@ private fun LogDoseDialog(
                             onLogged()
                         } catch (e: Exception) {
                             saving = false
-                            saveError = "Couldn't log dose: ${e.message ?: "unknown error"}"
+                            saveError = resources.getString(R.string.error_could_not_log_dose, e.message ?: resources.getString(R.string.error_unknown))
                         }
                     }
                 },

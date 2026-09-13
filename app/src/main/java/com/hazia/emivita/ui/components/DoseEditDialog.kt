@@ -32,6 +32,7 @@ import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.platform.LocalResources
 
 /**
  * Event editing (spec §3/§9 #3) -- shared between Today and History, since
@@ -75,6 +76,7 @@ fun DoseEditDialog(
     doseUnit: String? = null,
 ) {
     val zone = remember { ZoneId.systemDefault() }
+    val resources = LocalResources.current
     // Falls back to the dose's own scheduled slot, not to now: for a PENDING
     // ("Missed") event there is no recorded time yet, and the scheduled time is
     // the closest thing to the truth the app knows.
@@ -171,7 +173,7 @@ fun DoseEditDialog(
                             onDismiss()
                         } catch (e: Exception) {
                             saving = false
-                            saveError = "Couldn't save: ${e.message ?: "unknown error"}"
+                            saveError = resources.getString(R.string.error_could_not_save, e.message ?: resources.getString(R.string.error_unknown))
                         }
                     }
                 },

@@ -194,7 +194,7 @@ fun StockExpirationScreen(
             Spacer(Modifier.height(8.dp))
             val runOut = runOutDate.stockRunOutDates[medicineId]
             Text(
-                if (runOut != null) "Runs out: ${runOut.format(RUN_OUT_FORMAT)}" else "Runs out: not tracked yet",
+                if (runOut != null) stringResource(R.string.stock_runs_out, runOut.format(RUN_OUT_FORMAT)) else stringResource(R.string.stock_runs_out_not_tracked),
                 style = MaterialTheme.typography.bodyMedium,
             )
             Spacer(Modifier.height(8.dp))

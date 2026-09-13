@@ -188,7 +188,7 @@ private fun AlarmScreen(reminderId: Long, doseEventId: Long, onFinished: () -> U
             }
 
             Text(
-                text = medicine?.name ?: "Loading\u2026",
+                text = medicine?.name ?: stringResource(R.string.common_loading),
                 style = MaterialTheme.typography.headlineMedium,
             )
             Spacer(Modifier.height(32.dp))

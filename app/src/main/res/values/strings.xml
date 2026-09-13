@@ -424,4 +424,16 @@
         <item quantity="other">%1$s doses</item>
     </plurals>
     <string name="add_medicine_notification_priority">Notification priority</string>
+    <!-- Stage A part 4 (§7 R60): literals that were assigned to a val before
+         reaching a sink, which the gate cannot see and the R59 sweep did not
+         render (error paths, a cold widget, a stock screen with a run-out). -->
+    <string name="notif_dose_body">Dose of %1$s at %2$s</string>
+    <string name="widget_runs_out">Runs out %1$s</string>
+    <string name="widget_no_imminent_run_out">No imminent run-out</string>
+    <string name="stock_runs_out">Runs out: %1$s</string>
+    <string name="stock_runs_out_not_tracked">Runs out: not tracked yet</string>
+    <string name="error_could_not_save">Couldn\'t save: %1$s</string>
+    <string name="error_could_not_log_dose">Couldn\'t log dose: %1$s</string>
+    <string name="error_unknown">unknown error</string>
+    <string name="backup_wrong_password">Wrong password — try again.</string>
 </resources>

@@ -118,8 +118,9 @@ private fun StockLevelsContent(rows: List<StockRow>) {
 
 @Composable
 private fun StockRowItem(row: StockRow, showRefillAction: Boolean) {
-    val subtitle = row.runOutDate?.let { "Runs out ${it.format(DateTimeFormatter.ofPattern("MMM d"))}" }
-        ?: "No imminent run-out"
+    val context = LocalContext.current
+    val subtitle = row.runOutDate?.let { context.getString(R.string.widget_runs_out, it.format(DateTimeFormatter.ofPattern("MMM d"))) }
+        ?: context.getString(R.string.widget_no_imminent_run_out)
     Row(
         modifier = GlanceModifier.fillMaxWidth().padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,

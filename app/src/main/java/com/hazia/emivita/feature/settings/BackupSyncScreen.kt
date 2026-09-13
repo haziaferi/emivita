@@ -172,7 +172,7 @@ fun BackupSyncScreen(
                 }
                 BackupZipReadResult.WrongPassword -> {
                     pendingRestoreUri = uri
-                    restorePasswordError = "Wrong password -- try again."
+                    restorePasswordError = resources.getString(R.string.backup_wrong_password)
                     showRestorePasswordDialog = true
                 }
                 BackupZipReadResult.Corrupt -> {
