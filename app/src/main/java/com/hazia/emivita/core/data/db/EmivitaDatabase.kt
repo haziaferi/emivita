@@ -30,7 +30,7 @@ import net.zetetic.database.sqlcipher.SupportOpenHelperFactory
         Reminder::class,
         DoseEvent::class,
     ],
-    version = 6,
+    version = 7,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -61,6 +61,7 @@ abstract class EmivitaDatabase : RoomDatabase() {
                     Migrations.MIGRATION_3_4,
                     Migrations.MIGRATION_4_5,
                     Migrations.MIGRATION_5_6,
+                    Migrations.MIGRATION_6_7,
                 )
                 .build()
         }

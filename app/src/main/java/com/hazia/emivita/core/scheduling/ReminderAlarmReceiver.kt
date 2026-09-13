@@ -49,6 +49,7 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
         }
         val scheduledEpochMillis = intent.getLongExtra(EXTRA_TRIGGER_AT_EPOCH_MILLIS, System.currentTimeMillis())
         val isNag = intent.getBooleanExtra(EXTRA_IS_NAG, false)
+        val isPreAlarm = intent.getBooleanExtra(EXTRA_IS_PRE_ALARM, false)
         // Safe cast, not `as` -- this runs synchronously in onReceive(), before
         // goAsync()/the coroutine's own try/catch exist to catch anything. An
         // unexpected Application type here should log and drop this one
@@ -62,10 +63,10 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
             try {
-                if (isNag) {
-                    handleNagFire(reminderId, scheduledEpochMillis, container)
-                } else {
-                    handleAlarm(reminderId, scheduledEpochMillis, container)
+                when {
+                    isPreAlarm -> handlePreAlarm(context, reminderId, scheduledEpochMillis, container)
+                    isNag -> handleNagFire(reminderId, scheduledEpochMillis, container)
+                    else -> handleAlarm(reminderId, scheduledEpochMillis, container)
                 }
             } catch (t: Throwable) {
                 Log.e(TAG, "Failed handling alarm for reminder $reminderId", t)
@@ -299,5 +300,16 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
                 container.schedulingCoordinator.onReminderChanged(child.id, System.currentTimeMillis())
             }
         }
+    }
+
+    /** The silent "coming up" notification (§9 #25; HM-19). Posted only if
+     *  the reminder still exists, is enabled, and still wants a pre-alarm --
+     *  the alarm may have been armed before an edit. Its id is derived from
+     *  the reminder, not a dose, and the regular fire cancels it. */
+    private suspend fun handlePreAlarm(context: Context, reminderId: Long, doseEpochMillis: Long, container: AppContainer) {
+        val reminder = container.reminderRepository.getById(reminderId) ?: return
+        if (!reminder.enabled || reminder.preAlarmMinutes == null) return
+        val medicine = container.medicineRepository.getById(reminder.medicineId) ?: return
+        container.notificationBuilder.postPreAlarm(reminder, medicine, doseEpochMillis)
     }
 }

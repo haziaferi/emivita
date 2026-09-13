@@ -16,6 +16,9 @@ const val EXTRA_TRIGGER_AT_EPOCH_MILLIS = "com.hazia.emivita.extra.TRIGGER_AT_EP
 // reschedule/cascade side effects (see ReminderAlarmReceiver.handleNagFire's
 // doc comment for why those two paths can't share the same handling).
 const val EXTRA_IS_NAG = "com.hazia.emivita.extra.IS_NAG"
+/** A pre-alarm fire (§9 #25): post the silent "coming up" notification and
+ *  nothing else -- no dose is materialised, nothing is rescheduled. */
+const val EXTRA_IS_PRE_ALARM = "com.hazia.emivita.extra.IS_PRE_ALARM"
 
 // The fresh-install default only. SettingsRepository.snoozeDurationMinutes
 // persists the user's own choice (Settings > Alarms & Snooze); every caller
@@ -134,11 +137,24 @@ class AlarmScheduler(private val context: Context) {
         )
     }
 
+    /** The silent "coming up in N minutes" slot (§9 #25, HM-19), keyed by
+     *  reminder like the regular one -- there is one next dose, so one
+     *  pre-alarm. Re-armed and cancelled with the regular slot. */
+    fun schedulePreAlarm(reminderId: Long, doseEpochMillis: Long, fireAtEpochMillis: Long) {
+        val pendingIntent = buildPendingIntent(preAlarmRequestCode(reminderId), reminderId, doseEpochMillis, isNag = false, isPreAlarm = true)
+        if (canScheduleExact()) {
+            alarmManager.setExactAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAtEpochMillis, pendingIntent)
+        } else {
+            alarmManager.setAndAllowWhileIdle(AlarmManager.RTC_WAKEUP, fireAtEpochMillis, pendingIntent)
+        }
+    }
+
     /** Cancels any pending *regular* alarm for [reminderId] (e.g. reminder
-     *  disabled or deleted). A pending snooze, if any, is left alone --
-     *  see ReminderActionReceiver's doc comment on why that's safe. */
+     *  disabled or deleted), and its pre-alarm with it. A pending snooze, if
+     *  any, is left alone -- see ReminderActionReceiver's doc comment. */
     fun cancel(reminderId: Long) {
         alarmManager.cancel(buildPendingIntent(regularRequestCode(reminderId), reminderId, null, isNag = false))
+        alarmManager.cancel(buildPendingIntent(preAlarmRequestCode(reminderId), reminderId, null, isNag = false, isPreAlarm = true))
     }
 
     /** Cancels any pending nag re-fire for [doseEventId] -- called the moment
@@ -167,11 +183,12 @@ class AlarmScheduler(private val context: Context) {
         }
     }
 
-    private fun buildPendingIntent(requestCode: Int, reminderId: Long, scheduledEpochMillis: Long?, isNag: Boolean): PendingIntent {
+    private fun buildPendingIntent(requestCode: Int, reminderId: Long, scheduledEpochMillis: Long?, isNag: Boolean, isPreAlarm: Boolean = false): PendingIntent {
         val intent = Intent(context, ReminderAlarmReceiver::class.java).apply {
             putExtra(EXTRA_REMINDER_ID, reminderId)
             scheduledEpochMillis?.let { putExtra(EXTRA_TRIGGER_AT_EPOCH_MILLIS, it) }
             putExtra(EXTRA_IS_NAG, isNag)
+            putExtra(EXTRA_IS_PRE_ALARM, isPreAlarm)
         }
         return PendingIntent.getBroadcast(
             context,
@@ -195,5 +212,7 @@ class AlarmScheduler(private val context: Context) {
         // as above. Dose-event ids grow faster than reminder ids (one per
         // firing), so the headroom is ~647 million events.
         private fun nagRequestCode(doseEventId: Long): Int = 1_500_000_000 + doseEventId.toInt()
+        // Its own namespace below the snooze codes: -(1_000_000_000 + reminderId).
+        private fun preAlarmRequestCode(reminderId: Long): Int = -(1_000_000_000 + reminderId.toInt())
     }
 }

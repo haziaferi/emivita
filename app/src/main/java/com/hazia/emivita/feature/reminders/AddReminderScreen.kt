@@ -84,6 +84,7 @@ import com.hazia.emivita.core.format.parseDecimal
 import com.hazia.emivita.core.format.formatDecimalLocalized
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.selection.toggleable
 
 // @StringRes: reminderTypeOptions is a top-level val (§9 #19).
 private data class ReminderTypeOption(
@@ -147,7 +148,7 @@ fun AddReminderScreen(
                     medicineId, null, ReminderType.FIXED_TIME, config,
                     autoResolve = advanced.autoResolve, activeFromEpochDay = advanced.activeFromEpochDay,
                     activeUntilEpochDay = advanced.activeUntilEpochDay, repeatOnUnanswered = advanced.repeatOnUnanswered,
-                    weekendModeOptIn = advanced.weekendModeOptIn,
+                    weekendModeOptIn = advanced.weekendModeOptIn, preAlarmMinutes = advanced.preAlarmMinutes,
                 )
                 onDone()
             },
@@ -168,7 +169,7 @@ fun AddReminderScreen(
                     medicineId, null, ReminderType.REPEATING_INTERVAL, config,
                     autoResolve = advanced.autoResolve, activeFromEpochDay = advanced.activeFromEpochDay,
                     activeUntilEpochDay = advanced.activeUntilEpochDay, repeatOnUnanswered = advanced.repeatOnUnanswered,
-                    weekendModeOptIn = advanced.weekendModeOptIn,
+                    weekendModeOptIn = advanced.weekendModeOptIn, preAlarmMinutes = advanced.preAlarmMinutes,
                 )
                 onDone()
             },
@@ -192,7 +193,7 @@ fun AddReminderScreen(
                     medicineId, null, ReminderType.DAILY_WINDOW, config,
                     autoResolve = advanced.autoResolve, activeFromEpochDay = advanced.activeFromEpochDay,
                     activeUntilEpochDay = advanced.activeUntilEpochDay, repeatOnUnanswered = advanced.repeatOnUnanswered,
-                    weekendModeOptIn = advanced.weekendModeOptIn,
+                    weekendModeOptIn = advanced.weekendModeOptIn, preAlarmMinutes = advanced.preAlarmMinutes,
                 )
                 onDone()
             },
@@ -219,7 +220,7 @@ fun AddReminderScreen(
                     medicineId, null, ReminderType.LINKED_FOLLOWING, config, parentReminderId = parentId,
                     autoResolve = advanced.autoResolve, activeFromEpochDay = advanced.activeFromEpochDay,
                     activeUntilEpochDay = advanced.activeUntilEpochDay, repeatOnUnanswered = advanced.repeatOnUnanswered,
-                    weekendModeOptIn = advanced.weekendModeOptIn,
+                    weekendModeOptIn = advanced.weekendModeOptIn, preAlarmMinutes = advanced.preAlarmMinutes,
                 )
                 onDone()
             },
@@ -295,6 +296,7 @@ fun EditReminderScreen(
                 reminderRepository.updateConfigAndAdvancedFields(
                     current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
                     advanced.activeUntilEpochDay, advanced.repeatOnUnanswered, advanced.weekendModeOptIn,
+                    preAlarmMinutes = advanced.preAlarmMinutes,
                 )
                 onDone()
             },
@@ -311,6 +313,7 @@ fun EditReminderScreen(
                 reminderRepository.updateConfigAndAdvancedFields(
                     current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
                     advanced.activeUntilEpochDay, advanced.repeatOnUnanswered, advanced.weekendModeOptIn,
+                    preAlarmMinutes = advanced.preAlarmMinutes,
                 )
                 onDone()
             },
@@ -327,6 +330,7 @@ fun EditReminderScreen(
                 reminderRepository.updateConfigAndAdvancedFields(
                     current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
                     advanced.activeUntilEpochDay, advanced.repeatOnUnanswered, advanced.weekendModeOptIn,
+                    preAlarmMinutes = advanced.preAlarmMinutes,
                 )
                 onDone()
             },
@@ -363,6 +367,7 @@ fun EditReminderScreen(
                 reminderRepository.updateConfigAndAdvancedFields(
                     current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
                     advanced.activeUntilEpochDay, advanced.repeatOnUnanswered, advanced.weekendModeOptIn,
+                    preAlarmMinutes = advanced.preAlarmMinutes,
                     parentReminderId = parentId,
                 )
                 onDone()
@@ -465,6 +470,7 @@ private data class AdvancedFields(
     val activeUntilEpochDay: Long?,
     val repeatOnUnanswered: RepeatConfig?,
     val weekendModeOptIn: Boolean,
+    val preAlarmMinutes: Int?,
 )
 
 /** State holder for [AdvancedReminderFieldsSection] -- a plain class with
@@ -479,6 +485,8 @@ private class AdvancedReminderFieldsState(initialReminder: Reminder?) {
     var nagDelayMinutes by mutableStateOf(initialReminder?.repeatOnUnanswered?.delayMinutes?.toString() ?: "30")
     var nagMaxRepeats by mutableStateOf(initialReminder?.repeatOnUnanswered?.maxRepeats?.toString() ?: "3")
     var weekendModeOptIn by mutableStateOf(initialReminder?.weekendModeOptIn ?: false)
+    var preAlarmEnabled by mutableStateOf(initialReminder?.preAlarmMinutes != null)
+    var preAlarmMinutes by mutableStateOf(initialReminder?.preAlarmMinutes?.toString() ?: "30")
 
     fun snapshot(): AdvancedFields = AdvancedFields(
         autoResolve = autoResolve,
@@ -490,6 +498,7 @@ private class AdvancedReminderFieldsState(initialReminder: Reminder?) {
             null
         },
         weekendModeOptIn = weekendModeOptIn,
+        preAlarmMinutes = if (preAlarmEnabled) preAlarmMinutes.toIntOrNull()?.takeIf { it > 0 } else null,
     )
 }
 
@@ -585,6 +594,34 @@ private fun AdvancedReminderFieldsSection(state: AdvancedReminderFieldsState) {
                 modifier = Modifier.weight(1f),
             )
         }
+    }
+
+    // Pre-alarm (§9 #25, HM-19): one toggleable node, then the lead field.
+    Spacer(Modifier.height(12.dp))
+    Row(
+        Modifier.fillMaxWidth().toggleable(value = state.preAlarmEnabled, role = Role.Switch) { state.preAlarmEnabled = it },
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.add_reminder_pre_alarm), style = MaterialTheme.typography.bodyMedium)
+            Text(
+                stringResource(R.string.add_reminder_pre_alarm_desc),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(checked = state.preAlarmEnabled, onCheckedChange = null)
+    }
+    if (state.preAlarmEnabled) {
+        OutlinedTextField(
+            value = state.preAlarmMinutes,
+            onValueChange = { state.preAlarmMinutes = it },
+            label = { Text(stringResource(R.string.add_reminder_pre_alarm_minutes)) },
+            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth(),
+        )
     }
 
     Spacer(Modifier.height(12.dp))

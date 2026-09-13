@@ -504,4 +504,9 @@
     <string name="settings_test_reminder_desc">Posts a real notification so you can see and hear how a reminder arrives on this phone.</string>
     <string name="notif_test_title">Test reminder</string>
     <string name="notif_test_text">This is how a reminder arrives. Nothing to take.</string>
+    <string name="add_reminder_pre_alarm">Heads-up before the dose</string>
+    <string name="add_reminder_pre_alarm_desc">A silent notification some minutes ahead, so the dose is not a surprise.</string>
+    <string name="add_reminder_pre_alarm_minutes">Minutes before</string>
+    <string name="notif_pre_alarm_title">%1$s coming up</string>
+    <string name="notif_pre_alarm_text">Dose at %1$s</string>
 </resources>

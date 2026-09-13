@@ -1,0 +1,49 @@
+package com.hazia.emivita.core.notification
+
+import android.content.Context
+import android.util.Log
+import androidx.core.app.NotificationManagerCompat
+import com.hazia.emivita.core.data.dao.DoseEventDao
+import com.hazia.emivita.core.data.dao.MedicineDao
+import com.hazia.emivita.core.data.dao.ReminderDao
+
+/**
+ * Re-post the notifications of doses that fired, were never answered, and
+ * whose notification is gone (§9 #25; Appendix E B-20, medTimer's
+ * `AutostartService.restoreNotifications`). A reboot clears the shade; a
+ * user force-stop clears it too. `rescheduleAll()` re-arms the *future*
+ * (§7 R61), so a dose left Due before either had no notification until now
+ * -- it survived only as a row on Today.
+ *
+ * Window: the last [LOOKBACK_MILLIS]. Older unanswered doses are Missed on
+ * Today and in History already; re-posting a three-day-old reminder helps
+ * no one. Only doses with no active notification are posted, so calling
+ * this on every launch cannot re-chime a reminder that is still showing.
+ */
+class UnansweredDoseReposter(
+    private val context: Context,
+    private val doseEventDao: DoseEventDao,
+    private val reminderDao: ReminderDao,
+    private val medicineDao: MedicineDao,
+    private val notificationBuilder: ReminderNotificationBuilder,
+) {
+    suspend fun repost(nowEpochMillis: Long = System.currentTimeMillis()): Int {
+        val active = NotificationManagerCompat.from(context).activeNotifications.map { it.id }.toSet()
+        var posted = 0
+        for (event in doseEventDao.getPendingScheduledBetween(nowEpochMillis - LOOKBACK_MILLIS, nowEpochMillis)) {
+            if (event.id.toInt() in active) continue
+            val reminderId = event.reminderId ?: continue
+            val reminder = reminderDao.getById(reminderId) ?: continue
+            if (!reminder.enabled) continue
+            val medicine = medicineDao.getById(event.medicineId) ?: continue
+            runCatching { notificationBuilder.buildAndPost(event, reminder, medicine); posted++ }
+                .onFailure { Log.w(TAG, "Could not re-post dose ${event.id}", it) }
+        }
+        return posted
+    }
+
+    companion object {
+        const val LOOKBACK_MILLIS = 24L * 60 * 60 * 1000
+        private const val TAG = "UnansweredDoseReposter"
+    }
+}

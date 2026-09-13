@@ -21,6 +21,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
+import com.hazia.emivita.core.notification.UnansweredDoseReposter
 
 /** Single-maintainer personal app -- a plain composition root reads more clearly
  *  here than Hilt's codegen for the size this project is at. Revisit if it
@@ -125,7 +126,14 @@ class AppContainer(context: Context) {
         applicationScope.launch {
             runCatching { schedulingCoordinator.rescheduleAll() }
                 .onFailure { android.util.Log.e("AppContainer", "rescheduleOnLaunch failed", it) }
+            // And the past: a force-stop cleared the shade as well as the alarms.
+            runCatching { unansweredDoseReposter.repost() }
+                .onFailure { android.util.Log.e("AppContainer", "repost on launch failed", it) }
         }
+    }
+
+    val unansweredDoseReposter: UnansweredDoseReposter by lazy {
+        UnansweredDoseReposter(appContext, database.doseEventDao(), database.reminderDao(), database.medicineDao(), notificationBuilder)
     }
 
     val schedulingCoordinator: SchedulingCoordinator by lazy {

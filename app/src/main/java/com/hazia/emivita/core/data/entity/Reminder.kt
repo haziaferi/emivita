@@ -91,6 +91,10 @@ data class Reminder(
     // Room's validation. Declared so a migrated table and a freshly-created
     // one are identical.
     @ColumnInfo(defaultValue = "0") val weekendModeOptIn: Boolean = false,
+    /** A silent "coming up" notification this many minutes before the dose
+     *  (§9 #25; Appendix F HM-19). Null = none. Read by RealSchedulingCoordinator
+     *  when it arms the regular slot; the pre-alarm has its own slot. */
+    val preAlarmMinutes: Int? = null,
     // LOW_STOCK_ALERT / EXPIRATION_ALERT only (spec §9 #8) -- the epoch day this
     // alert last posted a notification, so Once/Daily trigger modes don't
     // re-notify on every cache recompute. Null = never notified (or, for

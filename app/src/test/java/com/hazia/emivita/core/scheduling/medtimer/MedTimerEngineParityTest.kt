@@ -246,4 +246,25 @@ class MedTimerEngineParityTest {
 
         coVerify(exactly = 1) { alarms.schedule(1L, on(5, 480)) }
     }
+
+    @Test
+    fun `a reminder with a pre-alarm lead arms the silent heads-up ahead of the dose, unless that instant has passed`() = runTest {
+        // §9 #25 (HomeMedkit HM-19): the pre-alarm rides on the regular slot.
+        val r = reminder(1L, ReminderConfig.FixedTime(hour = 8, minute = 0, dose = 1.0), ReminderType.FIXED_TIME).copy(preAlarmMinutes = 30)
+        val reminderDao = mockk<ReminderDao>().also { coEvery { it.getById(1L) } returns r }
+        val alarms = mockk<AlarmScheduler>(relaxed = true)
+        val cache = mockk<OccurrenceProjectionCache>(relaxed = true)
+
+        val early = on(4, 600)
+        RealSchedulingCoordinator(reminderDao, engine(now = early), alarms, cache, nowEpochMillis = { early }).onReminderChanged(1L, early)
+        coVerify(exactly = 1) { alarms.schedule(1L, on(5, 480)) }
+        coVerify(exactly = 1) { alarms.schedulePreAlarm(1L, on(5, 480), on(5, 450)) }
+
+        // ten minutes before the dose: the lead instant is already behind us
+        val late = on(5, 470)
+        val alarms2 = mockk<AlarmScheduler>(relaxed = true)
+        RealSchedulingCoordinator(reminderDao, engine(now = late), alarms2, cache, nowEpochMillis = { late }).onReminderChanged(1L, late)
+        coVerify(exactly = 1) { alarms2.schedule(1L, on(5, 480)) }
+        coVerify(exactly = 0) { alarms2.schedulePreAlarm(any(), any(), any()) }
+    }
 }

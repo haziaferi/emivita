@@ -24,6 +24,7 @@ import com.hazia.emivita.core.format.formatDecimal
 import com.hazia.emivita.core.format.formatDecimalLocalized
 import com.hazia.emivita.core.format.maskedMedicineName
 import kotlinx.coroutines.flow.first
+import com.hazia.emivita.core.format.LocaleFormats
 
 const val ACTION_TAKE = "com.hazia.emivita.action.TAKE"
 const val ACTION_SKIP = "com.hazia.emivita.action.SKIP"
@@ -109,6 +110,27 @@ class ReminderNotificationBuilder(
         }
 
         postIfPermitted(context, TAG, notificationId, builder.build())
+        // The real reminder replaces its own pre-alarm.
+        androidx.core.app.NotificationManagerCompat.from(context).cancel(preAlarmNotificationId(reminder.id))
+    }
+
+    /** The silent pre-alarm (§9 #25): the medicine and the dose time, on the
+     *  Standard channel, no sound, no actions, gone on tap or when the real
+     *  reminder fires. Id in its own negative range so it cannot collide with
+     *  a dose (positive) or an alert (negative reminder id). */
+    suspend fun postPreAlarm(reminder: Reminder, medicine: Medicine, doseEpochMillis: Long) {
+        val hideNames = settingsRepository.hideMedicineNames.first()
+        val time = LocaleFormats.time(doseEpochMillis)
+        val notification = NotificationCompat.Builder(context, ReminderNotificationChannels.CHANNEL_STANDARD)
+            .setSmallIcon(R.drawable.ic_notification_reminder)
+            .setContentTitle(context.getString(R.string.notif_pre_alarm_title, maskedMedicineName(medicine.name, hideNames)))
+            .setContentText(context.getString(R.string.notif_pre_alarm_text, time))
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setSilent(true)
+            .setAutoCancel(true)
+            .setContentIntent(openAppPendingIntent(context, preAlarmNotificationId(reminder.id)))
+            .build()
+        postIfPermitted(context, TAG, preAlarmNotificationId(reminder.id), notification)
     }
 
     private suspend fun effectivePriority(reminder: Reminder, medicine: Medicine): NotificationPriority =
@@ -188,3 +210,6 @@ class ReminderNotificationBuilder(
         )
     }
 }
+
+/** Negative, below the alert range (-reminderId) by a fixed offset. */
+fun preAlarmNotificationId(reminderId: Long): Int = -(2_000_000 + reminderId.toInt())

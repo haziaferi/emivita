@@ -261,6 +261,15 @@ object Migrations {
      *  fields are absent rather than printing an empty heading. Null is what
      *  carries that distinction without every call site having to test for
      *  blankness as well. */
+    /** v6 -> v7 (§9 #25): the optional pre-alarm lead on a reminder. Nullable
+     *  with no default, like the medical-id columns: absent is "no pre-alarm",
+     *  which a NOT NULL 0 would have to mean by convention instead. */
+    val MIGRATION_6_7 = object : Migration(6, 7) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE reminders ADD COLUMN preAlarmMinutes INTEGER")
+        }
+    }
+
     val MIGRATION_5_6 = object : Migration(5, 6) {
         override fun migrate(db: SupportSQLiteDatabase) {
             for (column in listOf(

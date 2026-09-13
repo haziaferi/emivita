@@ -113,6 +113,13 @@ class RealSchedulingCoordinator(
         val next = schedulingEngine.nextOccurrenceFor(reminder, floor)
         if (next != null) {
             alarmScheduler.schedule(reminder.id, next.epochMillis)
+            // The pre-alarm rides on the regular slot's answer (§9 #25): armed
+            // only when its own instant is still ahead, so a reminder edited
+            // twenty minutes before a dose with a thirty-minute lead gets no
+            // pre-alarm for that dose rather than one in the past.
+            val lead = reminder.preAlarmMinutes
+            val preAt = lead?.let { next.epochMillis - it * 60_000L }
+            if (preAt != null && preAt > nowEpochMillis()) alarmScheduler.schedulePreAlarm(reminder.id, next.epochMillis, preAt)
         } else {
             alarmScheduler.cancel(reminder.id)
         }

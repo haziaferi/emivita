@@ -110,6 +110,7 @@ class MedicineRepository(
                     activeUntilEpochDay = r.activeUntilEpochDay,
                     repeatOnUnanswered = r.repeatOnUnanswered,
                     weekendModeOptIn = r.weekendModeOptIn,
+                    preAlarmMinutes = r.preAlarmMinutes,
                 )
                 idMap[r.id] = copiedId
             }

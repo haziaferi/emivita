@@ -66,6 +66,7 @@ class ReminderRepository(
         activeUntilEpochDay: Long? = null,
         repeatOnUnanswered: RepeatConfig? = null,
         weekendModeOptIn: Boolean = false,
+        preAlarmMinutes: Int? = null,
     ): Long {
         val id = reminderDao.insert(
             Reminder(
@@ -79,6 +80,7 @@ class ReminderRepository(
                 activeUntilEpochDay = activeUntilEpochDay,
                 repeatOnUnanswered = repeatOnUnanswered,
                 weekendModeOptIn = weekendModeOptIn,
+                preAlarmMinutes = preAlarmMinutes,
                 createdAtEpochMillis = System.currentTimeMillis(),
             )
         )
@@ -113,6 +115,7 @@ class ReminderRepository(
         repeatOnUnanswered: RepeatConfig?,
         weekendModeOptIn: Boolean,
         parentReminderId: Long? = reminder.parentReminderId,
+        preAlarmMinutes: Int? = reminder.preAlarmMinutes,
     ) {
         reminderDao.update(
             reminder.copy(
@@ -123,6 +126,7 @@ class ReminderRepository(
                 activeUntilEpochDay = activeUntilEpochDay,
                 repeatOnUnanswered = repeatOnUnanswered,
                 weekendModeOptIn = weekendModeOptIn,
+                preAlarmMinutes = preAlarmMinutes,
             )
         )
         schedulingCoordinator.onReminderChanged(reminder.id, System.currentTimeMillis())
@@ -144,6 +148,7 @@ class ReminderRepository(
         activeUntilEpochDay: Long?,
         repeatOnUnanswered: RepeatConfig?,
         weekendModeOptIn: Boolean,
+        preAlarmMinutes: Int? = reminder.preAlarmMinutes,
     ) {
         reminderDao.update(
             reminder.copy(
@@ -152,6 +157,7 @@ class ReminderRepository(
                 activeUntilEpochDay = activeUntilEpochDay,
                 repeatOnUnanswered = repeatOnUnanswered,
                 weekendModeOptIn = weekendModeOptIn,
+                preAlarmMinutes = preAlarmMinutes,
             )
         )
         schedulingCoordinator.onReminderChanged(reminder.id, System.currentTimeMillis())

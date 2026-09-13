@@ -56,6 +56,13 @@ interface DoseEventDao {
     )
     fun observeInRange(profileId: Long, startEpochMillis: Long, endEpochMillis: Long): Flow<List<DoseEventWithMedicine>>
 
+    /** Scheduled doses still unanswered inside a window (§9 #25 re-raise). */
+    @Query(
+        "SELECT * FROM dose_events WHERE status = 'PENDING' AND reminderId IS NOT NULL " +
+            "AND scheduledEpochMillis BETWEEN :startEpochMillis AND :endEpochMillis ORDER BY scheduledEpochMillis ASC"
+    )
+    suspend fun getPendingScheduledBetween(startEpochMillis: Long, endEpochMillis: Long): List<DoseEvent>
+
     @Query("SELECT * FROM dose_events WHERE reminderId = :reminderId AND scheduledEpochMillis = :scheduledEpochMillis LIMIT 1")
     suspend fun findByReminderAndTime(reminderId: Long, scheduledEpochMillis: Long): DoseEvent?
 
