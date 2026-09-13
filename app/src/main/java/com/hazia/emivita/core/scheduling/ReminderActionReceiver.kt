@@ -108,6 +108,7 @@ class ReminderActionReceiver : BroadcastReceiver() {
                 val snoozeMinutes = container.settingsRepository.snoozeDurationMinutes.first()
                 container.alarmScheduler.scheduleSnooze(
                     reminderId = reminderId,
+                    doseEventId = doseEventId,
                     originalScheduledEpochMillis = doseEvent.scheduledEpochMillis,
                     fireAtEpochMillis = System.currentTimeMillis() + snoozeMinutes * 60_000L,
                 )

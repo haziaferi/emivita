@@ -20,6 +20,7 @@ import com.hazia.emivita.core.scheduling.SchedulingEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.launch
 
 /** Single-maintainer personal app -- a plain composition root reads more clearly
  *  here than Hilt's codegen for the size this project is at. Revisit if it
@@ -96,6 +97,20 @@ class AppContainer(context: Context) {
     // of its own recompute pass. See OccurrenceProjectionCache's own doc comment.
     val occurrenceProjectionCache: OccurrenceProjectionCache by lazy {
         OccurrenceProjectionCache(database.medicineDao(), schedulingEngine, alertEvaluator, applicationScope)
+    }
+
+    /** Re-arm every enabled reminder from scratch, off the calling thread.
+     *  Called from MainActivity.onCreate (§7 R60 B F-3): a user force-stop
+     *  drops every alarm the app holds, and until now nothing re-armed them
+     *  short of a reboot, a backup restore, or editing a reminder -- the app
+     *  opened onto a populated Today screen with no alarm behind any row.
+     *  medTimer restarts its scheduler service on every resume. Idempotent:
+     *  the same request codes with FLAG_UPDATE_CURRENT replace, not stack. */
+    fun rescheduleOnLaunch() {
+        applicationScope.launch {
+            runCatching { schedulingCoordinator.rescheduleAll() }
+                .onFailure { android.util.Log.e("AppContainer", "rescheduleOnLaunch failed", it) }
+        }
     }
 
     val schedulingCoordinator: SchedulingCoordinator by lazy {

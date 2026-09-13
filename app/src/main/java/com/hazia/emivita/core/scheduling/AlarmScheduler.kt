@@ -25,20 +25,30 @@ const val DEFAULT_SNOOZE_MINUTES = 10L
 private const val TAG = "AlarmScheduler"
 
 /**
- * Thin wrapper around [AlarmManager] for reminder alarms. Three alarm "slots"
- * per reminder, each its own PendingIntent request code so they can't clobber
- * each other -- the same "each concern gets its own slot" idea medTimer's
- * own `AlarmProcessor` uses (slot 0 for the next-scheduled alarm, a separate
- * per-event slot for snooze/repeat/show), ported onto Emivita's per-reminder
- * request-code scheme rather than medTimer's per-event one, since Emivita
- * keys everything else here by reminderId already:
- *  - the regular recurring slot (`reminderId.toInt()`), managed by
- *    [schedule]/[cancel] via [RealSchedulingCoordinator];
- *  - a snooze slot (`-reminderId.toInt()`), a one-off re-notification for an
- *    already-materialized dose event that doesn't touch the recurring chain;
- *  - a nag slot (`1_500_000_000 + reminderId.toInt()`, spec §3/§4
- *    `repeatOnUnanswered`), a re-fire for a still-unanswered dose that
- *    doesn't touch the recurring chain either -- see [scheduleNag].
+ * Thin wrapper around [AlarmManager] for reminder alarms. Three alarm "slots",
+ * each its own PendingIntent request code so they can't clobber each other --
+ * the same "each concern gets its own slot" idea medTimer's own
+ * `AlarmProcessor` uses (slot 0 for the next-scheduled alarm, a separate
+ * per-event slot for snooze/repeat/show):
+ *  - the regular recurring slot, keyed by **reminder** (`reminderId.toInt()`),
+ *    managed by [schedule]/[cancel] via [RealSchedulingCoordinator] -- one
+ *    next firing per reminder is the whole point of it;
+ *  - a snooze slot, keyed by **dose event** (`-doseEventId.toInt()`), a
+ *    one-off re-notification for an already-materialized dose that doesn't
+ *    touch the recurring chain;
+ *  - a nag slot, keyed by **dose event** (`1_500_000_000 + doseEventId.toInt()`,
+ *    spec §3/§4 `repeatOnUnanswered`), a re-fire for a still-unanswered dose
+ *    that doesn't touch the recurring chain either -- see [scheduleNag].
+ *
+ * The last two used to be keyed by reminder as well (§7 R60). That was fine
+ * while a reminder had one outstanding dose, and an ON_REMINDED interval
+ * reminder reschedules the moment it fires, so it can have two: snoozing the
+ * second silently cancelled the first's pending snooze, and arming the
+ * second's nag overwrote the first's chain. medTimer keys these by event
+ * (`PendingIntentFactory`); so does this now. A pre-R60 install may still
+ * hold per-reminder snooze/nag alarms; they fire once into
+ * [ReminderAlarmReceiver], which looks the dose up by (reminder, slot) and
+ * ignores it unless it is still PENDING -- harmless, and gone after that.
  *
  * Handles the API 31+ exact-alarm permission split (audit item, gating
  * exact vs. inexact) -- below API 31 SCHEDULE_EXACT_ALARM is a normal,
@@ -74,9 +84,9 @@ class AlarmScheduler(private val context: Context) {
      *  still pending) -- [originalScheduledEpochMillis] must be the dose
      *  event's original slot, not [fireAtEpochMillis], so the receiver looks
      *  up the same DoseEvent rather than trying to materialize a new one. */
-    fun scheduleSnooze(reminderId: Long, originalScheduledEpochMillis: Long, fireAtEpochMillis: Long) {
+    fun scheduleSnooze(reminderId: Long, doseEventId: Long, originalScheduledEpochMillis: Long, fireAtEpochMillis: Long) {
         setAlarm(
-            requestCode = snoozeRequestCode(reminderId),
+            requestCode = snoozeRequestCode(doseEventId),
             reminderId = reminderId,
             triggerAtEpochMillis = fireAtEpochMillis,
             embeddedScheduledEpochMillis = originalScheduledEpochMillis,
@@ -95,9 +105,9 @@ class AlarmScheduler(private val context: Context) {
      *  not re-fire on every nag). `FLAG_UPDATE_CURRENT` means a fresh call
      *  (e.g. the user snoozes while a nag is already pending) simply resets
      *  this same slot to the new time rather than leaving two nags pending. */
-    fun scheduleNag(reminderId: Long, originalScheduledEpochMillis: Long, fireAtEpochMillis: Long) {
+    fun scheduleNag(reminderId: Long, doseEventId: Long, originalScheduledEpochMillis: Long, fireAtEpochMillis: Long) {
         setAlarm(
-            requestCode = nagRequestCode(reminderId),
+            requestCode = nagRequestCode(doseEventId),
             reminderId = reminderId,
             triggerAtEpochMillis = fireAtEpochMillis,
             embeddedScheduledEpochMillis = originalScheduledEpochMillis,
@@ -112,13 +122,14 @@ class AlarmScheduler(private val context: Context) {
         alarmManager.cancel(buildPendingIntent(regularRequestCode(reminderId), reminderId, null, isNag = false))
     }
 
-    /** Cancels any pending nag re-fire for [reminderId] -- called the moment
+    /** Cancels any pending nag re-fire for [doseEventId] -- called the moment
      *  a dose is genuinely answered (Taken/Skipped), spec §3/§4's "capped at
      *  maxRepeats" cap being reached is the *other* way nagging stops; this
      *  is the "answered before that" way. Not called on snooze -- snoozing
-     *  isn't answering, so a nag mid-snooze-window is intended, not a bug. */
-    fun cancelNag(reminderId: Long) {
-        alarmManager.cancel(buildPendingIntent(nagRequestCode(reminderId), reminderId, null, isNag = true))
+     *  isn't answering, so a nag mid-snooze-window is intended, not a bug.
+     *  [reminderId] only shapes the intent so it `filterEquals` the armed one. */
+    fun cancelNag(reminderId: Long, doseEventId: Long) {
+        alarmManager.cancel(buildPendingIntent(nagRequestCode(doseEventId), reminderId, null, isNag = true))
     }
 
     private fun setAlarm(
@@ -157,12 +168,13 @@ class AlarmScheduler(private val context: Context) {
         // did, two reminders would collide on the same alarm slot --
         // documented, not silent.
         private fun regularRequestCode(reminderId: Long): Int = reminderId.toInt()
-        private fun snoozeRequestCode(reminderId: Long): Int = -(reminderId.toInt())
+        private fun snoozeRequestCode(doseEventId: Long): Int = -(doseEventId.toInt())
 
         // Large fixed offset, not a sign flip like snooze -- guarantees no
         // overlap with either regular or snooze codes for any realistic
-        // personal-app reminderId range, same "practically never collides"
-        // reasoning as above.
-        private fun nagRequestCode(reminderId: Long): Int = 1_500_000_000 + reminderId.toInt()
+        // personal-app id range, same "practically never collides" reasoning
+        // as above. Dose-event ids grow faster than reminder ids (one per
+        // firing), so the headroom is ~647 million events.
+        private fun nagRequestCode(doseEventId: Long): Int = 1_500_000_000 + doseEventId.toInt()
     }
 }

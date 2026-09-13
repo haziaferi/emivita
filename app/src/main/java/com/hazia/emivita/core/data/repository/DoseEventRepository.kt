@@ -139,7 +139,7 @@ class DoseEventRepository(
             // (ReminderAlarmReceiver.handleNagFire). Not called from
             // switchStatus() -- by the time that runs the event is already
             // resolved, so nagging already stopped here.
-            schedulingCoordinator.cancelNag(it)
+            schedulingCoordinator.cancelNag(it, doseEventId)
         }
 
         // An alert reminder's next firing is computed from this medicine's

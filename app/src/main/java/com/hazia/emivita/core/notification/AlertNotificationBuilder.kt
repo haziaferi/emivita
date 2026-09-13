@@ -43,6 +43,7 @@ class AlertNotificationBuilder(private val context: Context) {
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
+            .setContentIntent(openAppPendingIntent(context, notificationId))
 
         // One-tap restock (spec §3/§9 #2/#8) -- only offered when a refill
         // amount is actually configured; otherwise there's nothing to log
@@ -65,6 +66,7 @@ class AlertNotificationBuilder(private val context: Context) {
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setAutoCancel(true)
+            .setContentIntent(openAppPendingIntent(context, notificationId))
 
         postIfPermitted(context, TAG, notificationId, builder.build())
     }

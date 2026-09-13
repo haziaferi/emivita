@@ -36,9 +36,16 @@ class SchedulingEngine(
     // avoid applies unchanged.
     private val medicineDao: MedicineDao,
     private val settingsRepository: SettingsRepository,
-    private val zone: ZoneId = ZoneId.systemDefault(),
+    private val fixedZone: ZoneId? = null,
     private val nowEpochMillis: () -> Long = System::currentTimeMillis,
 ) {
+    // Read on every use, never captured (§7 R60 B F-4). These are lazy
+    // singletons in AppContainer; a `ZoneId.systemDefault()` default parameter
+    // evaluated once at construction meant every computation after a zone
+    // change used the old zone until the process died. Tests pin a zone by
+    // passing [fixedZone]; production leaves it null.
+    private val zone: ZoneId get() = fixedZone ?: ZoneId.systemDefault()
+
     /** The types that materialize a DoseEvent when they fire. These are the
      *  ones [OccurrenceProjectionCache] projects onto Today, History and the
      *  widgets, and the only ones whose occurrences carry a real dose amount. */

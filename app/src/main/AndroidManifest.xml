@@ -185,6 +185,19 @@
             </intent-filter>
         </receiver>
 
+        <!-- Clock or zone changed: every armed instant was computed in the old
+             zone, so re-arm from now (§7 R60). Both actions are system-only
+             broadcasts; TIMEZONE_CHANGED is on the implicit-broadcast exception
+             list, and medTimer declares the pair the same way. -->
+        <receiver
+            android:name=".core.scheduling.TimeChangeReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.TIME_SET" />
+                <action android:name="android.intent.action.TIMEZONE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
         <!-- Home-screen widgets (spec §9 #7, Glance-based; see
              feature/widget/NextRemindersWidget.kt and StockLevelsWidget.kt). -->
         <receiver

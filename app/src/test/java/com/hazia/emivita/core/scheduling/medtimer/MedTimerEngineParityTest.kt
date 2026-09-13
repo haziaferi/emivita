@@ -62,7 +62,7 @@ class MedTimerEngineParityTest {
         doseEventDao = dao,
         medicineDao = mockk<MedicineDao>().also { coEvery { it.getById(any()) } returns null },
         settingsRepository = fakeSettings(),
-        zone = zone,
+        fixedZone = zone,
         nowEpochMillis = { now },
     )
 

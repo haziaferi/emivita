@@ -25,7 +25,7 @@ import org.robolectric.RobolectricTestRunner
 
 private class FakeSchedulingCoordinator : SchedulingCoordinator {
     val resolvedReminderIds = mutableListOf<Long>()
-    val nagCancelledReminderIds = mutableListOf<Long>()
+    val nagCancelledDoseEventIds = mutableListOf<Long>()
     val medicineChangedIds = mutableListOf<Long>()
     override suspend fun onDoseResolved(reminderId: Long) {
         resolvedReminderIds += reminderId
@@ -39,8 +39,8 @@ private class FakeSchedulingCoordinator : SchedulingCoordinator {
         medicineChangedIds += medicineId
     }
     override suspend fun rescheduleAll() = Unit
-    override suspend fun cancelNag(reminderId: Long) {
-        nagCancelledReminderIds += reminderId
+    override suspend fun cancelNag(reminderId: Long, doseEventId: Long) {
+        nagCancelledDoseEventIds += doseEventId
     }
 }
 
@@ -205,7 +205,7 @@ class DoseEventRepositoryTest {
         assertEquals(8.0, updated.stockAfter, 0.001)
         assertEquals(8.0, database.medicineDao().getById(medicineId)!!.stockInfo.quantity, 0.001)
         assertEquals(listOf(reminderId), schedulingCoordinator.resolvedReminderIds)
-        assertEquals(listOf(reminderId), schedulingCoordinator.nagCancelledReminderIds)
+        assertEquals(listOf(eventId), schedulingCoordinator.nagCancelledDoseEventIds)
     }
 
     @Test

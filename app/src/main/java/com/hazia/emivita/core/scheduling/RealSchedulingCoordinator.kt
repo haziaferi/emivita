@@ -50,11 +50,14 @@ class RealSchedulingCoordinator(
 
     override suspend fun onReminderRemoved(reminderId: Long) {
         alarmScheduler.cancel(reminderId)
-        alarmScheduler.cancelNag(reminderId)
+        // Snooze and nag slots are per dose event (§7 R60) and this path has
+        // no dose-event access; a pending one fires into ReminderAlarmReceiver,
+        // which finds no enabled reminder and returns. One spurious wake-up
+        // at most, no notification.
         occurrenceProjectionCache.invalidate()
     }
 
-    override suspend fun cancelNag(reminderId: Long) = alarmScheduler.cancelNag(reminderId)
+    override suspend fun cancelNag(reminderId: Long, doseEventId: Long) = alarmScheduler.cancelNag(reminderId, doseEventId)
 
     override suspend fun onMedicineChanged(medicineId: Long) {
         val now = System.currentTimeMillis()

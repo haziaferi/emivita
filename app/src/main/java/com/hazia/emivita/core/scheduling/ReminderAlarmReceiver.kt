@@ -231,6 +231,7 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
         if (doseEvent.repeatCount >= repeatConfig.maxRepeats) return
         container.alarmScheduler.scheduleNag(
             reminderId = reminder.id,
+            doseEventId = doseEvent.id,
             originalScheduledEpochMillis = scheduledEpochMillis,
             fireAtEpochMillis = System.currentTimeMillis() + repeatConfig.delayMinutes * 60_000L,
         )
@@ -279,6 +280,7 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
         if (newRepeatCount < repeatConfig.maxRepeats) {
             container.alarmScheduler.scheduleNag(
                 reminderId = reminderId,
+                doseEventId = doseEvent.id,
                 originalScheduledEpochMillis = scheduledEpochMillis,
                 fireAtEpochMillis = System.currentTimeMillis() + repeatConfig.delayMinutes * 60_000L,
             )

@@ -57,8 +57,8 @@ import java.time.ZoneId
 class LowStockExpirationAlertEvaluator(
     private val reminderDao: ReminderDao,
     private val notificationBuilder: AlertNotificationBuilder,
-    private val zone: ZoneId = ZoneId.systemDefault(),
-    private val today: () -> LocalDate = { LocalDate.now(zone) },
+    private val fixedZone: ZoneId? = null,
+    private val today: () -> LocalDate = { LocalDate.now(fixedZone ?: ZoneId.systemDefault()) },
 ) {
     suspend fun evaluate(medicines: List<MedicineWithReminders>) {
         val todayEpochDay = today().toEpochDay()

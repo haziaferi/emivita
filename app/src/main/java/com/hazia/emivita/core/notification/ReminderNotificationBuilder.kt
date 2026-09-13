@@ -70,6 +70,12 @@ class ReminderNotificationBuilder(
 
         if (priority == NotificationPriority.ALARM) {
             configureAlarmPresentation(builder, reminder.id, doseEvent.id)
+        } else {
+            // Tapping the body opens the app (§7 R60 B F-1). Only the ALARM
+            // tier had a content intent -- the full-screen one -- so a tap on
+            // a Standard or High reminder did nothing at all. medTimer sets
+            // one on every kind (`NotificationFactory.getStartAppIntent`).
+            builder.setContentIntent(openAppPendingIntent(context, doseEvent.id.toInt()))
         }
 
         postIfPermitted(context, TAG, notificationId, builder.build())

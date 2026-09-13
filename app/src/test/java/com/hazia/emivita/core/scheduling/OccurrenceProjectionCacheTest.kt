@@ -113,7 +113,7 @@ class OccurrenceProjectionCacheTest {
             schedulingEngine = SchedulingEngine(doseEventDao, medicineDao, settings, zone) { now },
             alertEvaluator = mockk(relaxed = true),
             scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler) + Job()).also { cacheScopes += it },
-            zone = zone,
+            fixedZone = zone,
             nowEpochMillis = { now },
             dispatcher = UnconfinedTestDispatcher(testScheduler),
         )

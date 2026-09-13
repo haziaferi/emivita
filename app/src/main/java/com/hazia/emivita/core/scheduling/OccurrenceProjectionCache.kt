@@ -109,13 +109,20 @@ class OccurrenceProjectionCache(
     private val schedulingEngine: SchedulingEngine,
     private val alertEvaluator: LowStockExpirationAlertEvaluator,
     private val scope: CoroutineScope,
-    private val zone: ZoneId = ZoneId.systemDefault(),
+    private val fixedZone: ZoneId? = null,
     private val nowEpochMillis: () -> Long = System::currentTimeMillis,
-    // Injectable for the same reason [zone] and [nowEpochMillis] already are:
+    // Injectable for the same reason [fixedZone] and [nowEpochMillis] already are:
     // the debounce below is real wall-clock time on Dispatchers.Default, which
     // a test cannot advance. Production never passes this.
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
 ) {
+    // Read on every use, never captured (§7 R60 B F-4). These are lazy
+    // singletons in AppContainer; a `ZoneId.systemDefault()` default parameter
+    // evaluated once at construction meant every computation after a zone
+    // change used the old zone until the process died. Tests pin a zone by
+    // passing [fixedZone]; production leaves it null.
+    private val zone: ZoneId get() = fixedZone ?: ZoneId.systemDefault()
+
     private val windowRequests = ConcurrentHashMap<String, Long>()
     private val trigger = Channel<Unit>(capacity = Channel.CONFLATED)
 

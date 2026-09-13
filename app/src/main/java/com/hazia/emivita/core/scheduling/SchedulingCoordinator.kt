@@ -45,6 +45,7 @@ interface SchedulingCoordinator {
 
     /** Called by DoseEventRepository.resolve() -- a dose that was being
      *  nagged about (spec §3/§4 `repeatOnUnanswered`) just got a real
-     *  answer, so any pending nag re-fire for its reminder should stop. */
-    suspend fun cancelNag(reminderId: Long)
+     *  answer, so any pending nag re-fire for *that dose* should stop. Keyed
+     *  by dose event since §7 R60: a reminder can have two outstanding doses. */
+    suspend fun cancelNag(reminderId: Long, doseEventId: Long)
 }

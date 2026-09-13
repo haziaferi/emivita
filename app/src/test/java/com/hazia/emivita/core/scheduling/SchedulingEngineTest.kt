@@ -115,7 +115,7 @@ class SchedulingEngineTest {
         doseEventDao = dao,
         medicineDao = medicines,
         settingsRepository = settings,
-        zone = zone,
+        fixedZone = zone,
         nowEpochMillis = { at("2026-06-01T00:00") },
     )
 

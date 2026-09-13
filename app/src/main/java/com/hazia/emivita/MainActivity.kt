@@ -18,6 +18,7 @@ class MainActivity : FragmentActivity() {
         enableEdgeToEdge()
 
         val container = (application as EmivitaApplication).container
+        container.rescheduleOnLaunch()
 
         setContent {
             EmivitaApp(container)

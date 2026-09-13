@@ -1,5 +1,9 @@
 package com.hazia.emivita.core.notification
 
+import android.app.PendingIntent
+import android.content.Intent
+import com.hazia.emivita.MainActivity
+
 import android.Manifest
 import android.app.Notification
 import android.content.Context
@@ -30,4 +34,16 @@ internal fun postIfPermitted(context: Context, tag: String, notificationId: Int,
         return
     }
     NotificationManagerCompat.from(context).notify(notificationId, notification)
+}
+
+/** A content intent that brings the app to the front -- Today, which is where
+ *  a reminder or an alert is acted on. `CLEAR_TOP or SINGLE_TOP` re-uses the
+ *  running MainActivity rather than stacking a second one over the alarm
+ *  screen or the settings page. [requestCode] keeps one PendingIntent per
+ *  notification so `FLAG_UPDATE_CURRENT` on one cannot rewrite another's. */
+internal fun openAppPendingIntent(context: android.content.Context, requestCode: Int): PendingIntent {
+    val intent = Intent(context, MainActivity::class.java).apply {
+        flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP or Intent.FLAG_ACTIVITY_SINGLE_TOP
+    }
+    return PendingIntent.getActivity(context, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 }

@@ -261,6 +261,7 @@ private suspend fun snoozeAndDismiss(container: AppContainer, context: Context, 
     if (event != null && reminderId != null) {
         container.alarmScheduler.scheduleSnooze(
             reminderId = reminderId,
+            doseEventId = doseEventId,
             originalScheduledEpochMillis = event.scheduledEpochMillis,
             fireAtEpochMillis = System.currentTimeMillis() + snoozeMinutes * 60_000L,
         )
