@@ -147,6 +147,14 @@ fun MedicineDetailScreen(
                         }
                     }
                 }
+                currentMedicine.notes?.let {
+                    Text(
+                        it,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                    )
+                }
                 currentMedicine.storageNote?.let {
                     Text(
                         stringResource(R.string.medicine_detail_storage, it),

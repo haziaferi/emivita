@@ -90,11 +90,12 @@ fun AddMedicineScreen(
         initialTagNames = emptyList(),
         initialIndication = "",
         initialStorageNote = "",
+        initialNotes = "",
         initialDoseUnit = "",
         initialLockOverride = null,
         initialPriority = NotificationPriority.STANDARD,
         colorsInUse = colorsInUse,
-        onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, doseUnit, lockOverride, priority ->
+        onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, notes, doseUnit, lockOverride, priority ->
             val id = medicineRepository.create(
                 Medicine(
                     profileId = profileId,
@@ -107,6 +108,7 @@ fun AddMedicineScreen(
                     barcodeValue = barcodeValue,
                     indication = indication,
                     storageNote = storageNote,
+                    notes = notes,
                     doseUnit = doseUnit,
                     createdAtEpochMillis = System.currentTimeMillis(),
                 )
@@ -171,11 +173,12 @@ fun EditMedicineScreen(
         initialTagNames = tagsSnapshot.map { it.name },
         initialIndication = current.indication ?: "",
         initialStorageNote = current.storageNote ?: "",
+        initialNotes = current.notes ?: "",
         initialDoseUnit = current.doseUnit ?: "",
         initialLockOverride = current.remindersLockedUntilTaken,
         initialPriority = current.notificationPriority,
         colorsInUse = colorsInUse,
-        onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, doseUnit, lockOverride, priority ->
+        onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, notes, doseUnit, lockOverride, priority ->
             medicineRepository.update(
                 current.copy(
                     name = name,
@@ -186,6 +189,7 @@ fun EditMedicineScreen(
                     barcodeValue = barcodeValue,
                     indication = indication,
                     storageNote = storageNote,
+                    notes = notes,
                     doseUnit = doseUnit,
                 )
             )
@@ -244,6 +248,7 @@ private fun MedicineFormBody(
     initialTagNames: List<String>,
     initialIndication: String,
     initialStorageNote: String,
+    initialNotes: String,
     initialDoseUnit: String,
     initialLockOverride: Boolean?,
     initialPriority: NotificationPriority,
@@ -259,6 +264,7 @@ private fun MedicineFormBody(
         tagNames: List<String>,
         indication: String?,
         storageNote: String?,
+        notes: String?,
         doseUnit: String?,
         lockOverride: Boolean?,
         priority: NotificationPriority,
@@ -275,6 +281,7 @@ private fun MedicineFormBody(
     var pendingTags by remember { mutableStateOf(initialTagNames) }
     var indication by remember { mutableStateOf(initialIndication) }
     var storageNote by remember { mutableStateOf(initialStorageNote) }
+    var notes by remember { mutableStateOf(initialNotes) }
     var doseUnit by remember { mutableStateOf(initialDoseUnit) }
     // null = inherit global default, true/false = explicit override
     var lockOverride by remember { mutableStateOf(initialLockOverride) }
@@ -445,6 +452,20 @@ private fun MedicineFormBody(
             textStyle = MaterialTheme.typography.bodySmall,
             modifier = Modifier.fillMaxWidth(),
         )
+        // Free-text notes (§6's inline section; the column existed from the
+        // first schema and nothing wrote it -- §7 R60 C F-4, wired at the
+        // owner's call). Multi-line: side effects, what the pharmacist said,
+        // anything that is not a storage instruction or an indication.
+        Spacer(Modifier.height(8.dp))
+        OutlinedTextField(
+            value = notes,
+            onValueChange = { notes = it },
+            label = { Text(stringResource(R.string.add_medicine_notes_optional)) },
+            minLines = 2,
+            maxLines = 6,
+            textStyle = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.fillMaxWidth(),
+        )
 
         // Notification priority (spec §7 R59). Medicine.notificationPriority
         // existed from the start and picked the channel a reminder posts to,
@@ -501,6 +522,7 @@ private fun MedicineFormBody(
                                 pendingTags,
                                 indication.ifBlank { null },
                                 storageNote.ifBlank { null },
+                                notes.trim().ifBlank { null },
                                 doseUnit.trim().ifBlank { null },
                                 lockOverride,
                                 priority,

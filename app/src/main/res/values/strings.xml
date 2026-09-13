@@ -444,4 +444,5 @@
     <string name="settings_lock_until_taken_default">Lock reminders until taken by default</string>
     <string name="settings_lock_until_taken_default_desc">New medicines inherit this; each medicine can override it in its own form.</string>
     <string name="stock_production_date">Production date</string>
+    <string name="add_medicine_notes_optional">Notes (optional)</string>
 </resources>
