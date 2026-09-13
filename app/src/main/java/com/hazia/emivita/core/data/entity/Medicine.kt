@@ -80,5 +80,11 @@ data class Medicine(
      *  confirm at the ceiling, never refuses (the owner's choice). */
     val prnMaxDoses: Int? = null,
     val prnWindowHours: Int? = null,
+    /** "50 mg", "5 mg/ml" -- the strength printed on the box (§9 #27; HM-14),
+     *  under the name on the card and on the emergency card's line. A label,
+     *  never a dose: the dose lives on the reminder. */
+    val strength: String? = null,
+    /** The prescription number for the refill phone call (§9 #27; DT-10). */
+    val rxNumber: String? = null,
     val createdAtEpochMillis: Long,
 )

@@ -37,6 +37,8 @@ private const val JOINED_SELECT = """
       medicines.refillQuantity AS medicine_refillQuantity,
       medicines.productionDateEpochDay AS medicine_productionDateEpochDay,
       medicines.expirationDateEpochDay AS medicine_expirationDateEpochDay,
+      medicines.openedDateEpochDay AS medicine_openedDateEpochDay,
+      medicines.useWithinDaysAfterOpening AS medicine_useWithinDaysAfterOpening,
       medicines.sortOrder AS medicine_sortOrder,
       medicines.barcodeValue AS medicine_barcodeValue,
       medicines.indication AS medicine_indication,
@@ -44,6 +46,8 @@ private const val JOINED_SELECT = """
       medicines.archived AS medicine_archived,
       medicines.prnMaxDoses AS medicine_prnMaxDoses,
       medicines.prnWindowHours AS medicine_prnWindowHours,
+      medicines.strength AS medicine_strength,
+      medicines.rxNumber AS medicine_rxNumber,
       medicines.createdAtEpochMillis AS medicine_createdAtEpochMillis
     FROM dose_events
     INNER JOIN medicines ON dose_events.medicineId = medicines.id

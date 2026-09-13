@@ -14,4 +14,18 @@ data class StockInfo(
     val refillQuantity: Double? = null,
     val productionDateEpochDay: Long? = null,
     val expirationDateEpochDay: Long? = null,
-)
+    /** Package opened on this day, and usable for this many days after
+     *  (§9 #27; HM-10 stored the date and did nothing with it -- here it
+     *  feeds [effectiveExpirationEpochDay], so eye drops opened in March
+     *  expire in April whatever the box says). Either alone does nothing. */
+    val openedDateEpochDay: Long? = null,
+    val useWithinDaysAfterOpening: Int? = null,
+) {
+    /** The earlier of the printed expiry and opened + shelf life; the one
+     *  date the expiry alert, the card and the sort read. */
+    val effectiveExpirationEpochDay: Long?
+        get() {
+            val afterOpening = if (openedDateEpochDay != null && useWithinDaysAfterOpening != null) openedDateEpochDay + useWithinDaysAfterOpening else null
+            return listOfNotNull(expirationDateEpochDay, afterOpening).minOrNull()
+        }
+}

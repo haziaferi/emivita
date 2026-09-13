@@ -270,6 +270,15 @@ object Migrations {
      *  entity so Room's own CREATE TABLE matches this ALTER on a fresh
      *  install. The journal's FK cascades with the medicine and carries an
      *  index on medicineId, as Room's schema for the entity requires. */
+    val MIGRATION_8_9 = object : Migration(8, 9) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE medicines ADD COLUMN openedDateEpochDay INTEGER")
+            db.execSQL("ALTER TABLE medicines ADD COLUMN useWithinDaysAfterOpening INTEGER")
+            db.execSQL("ALTER TABLE medicines ADD COLUMN strength TEXT")
+            db.execSQL("ALTER TABLE medicines ADD COLUMN rxNumber TEXT")
+        }
+    }
+
     val MIGRATION_7_8 = object : Migration(7, 8) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE dose_events ADD COLUMN notes TEXT")

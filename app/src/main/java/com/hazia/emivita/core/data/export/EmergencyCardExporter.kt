@@ -135,9 +135,12 @@ object EmergencyCardExporter {
                 // printed one would be asserting a regimen this exporter has
                 // not read. Name, form and reason are what a clinician needs
                 // from a card; the amounts are in the dose-history export.
+                // Strength before the form (§9 #27): "Sertraline 50 mg (tablets)"
+                // is how a clinician reads a box; still no dose amount.
+                val strength = m.strength?.takeIf { it.isNotBlank() }?.let { " $it" } ?: ""
                 val form = m.doseUnit?.takeIf { it.isNotBlank() }?.let { " ($it)" } ?: ""
                 val indication = m.indication?.takeIf { it.isNotBlank() }?.let { labels.indication(it) } ?: ""
-                lines += "  ${m.name}$form$indication"
+                lines += "  ${m.name}$strength$form$indication"
             }
             val hidden = medicines.size - MAX_MEDICINES
             if (hidden > 0) lines += labels.andMore(hidden)

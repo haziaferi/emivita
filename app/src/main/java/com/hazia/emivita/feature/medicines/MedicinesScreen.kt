@@ -413,6 +413,9 @@ internal fun MedicineCard(entry: MedicineListEntry, onClick: () -> Unit, dragHan
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(medicine.name, style = MaterialTheme.typography.titleMedium)
+                medicine.strength?.takeIf { it.isNotBlank() }?.let {
+                    Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 if (stateLine.isNotEmpty()) {
                     Text(
                         stateLine,

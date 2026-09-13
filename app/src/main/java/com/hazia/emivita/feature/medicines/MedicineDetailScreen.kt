@@ -63,6 +63,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.contentDescription
 import com.hazia.emivita.core.data.entity.MedicineNote
 import com.hazia.emivita.core.format.LocaleFormats
+import androidx.compose.foundation.text.selection.SelectionContainer
 
 /**
  * Medicine detail: read-only summary + its reminders list + "Add reminder",
@@ -178,6 +179,9 @@ fun MedicineDetailScreen(
                     Spacer(Modifier.width(12.dp))
                     Column {
                         Text(currentMedicine.name, style = MaterialTheme.typography.titleLarge)
+                        currentMedicine.strength?.takeIf { it.isNotBlank() }?.let {
+                            Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                         currentMedicine.indication?.let {
                             Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
@@ -190,6 +194,17 @@ fun MedicineDetailScreen(
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
                     )
+                }
+                currentMedicine.rxNumber?.takeIf { it.isNotBlank() }?.let {
+                    // Selectable so it can be read out to the pharmacy or copied.
+                    SelectionContainer {
+                        Text(
+                            stringResource(R.string.medicine_detail_rx, it),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(horizontal = 16.dp),
+                        )
+                    }
                 }
                 currentMedicine.storageNote?.let {
                     Text(

@@ -568,4 +568,20 @@
     <string name="history_export_range_all">Everything</string>
     <string name="history_export_medicine">Medicine</string>
     <string name="history_export_all_medicines">All</string>
+    <string name="unit_tablet">tablet</string>
+    <string name="unit_capsule">capsule</string>
+    <string name="unit_ml">ml</string>
+    <string name="unit_injection">injection</string>
+    <string name="unit_drop">drop</string>
+    <string name="unit_puff">puff</string>
+    <string name="unit_application">application</string>
+    <string name="add_medicine_strength_optional">Strength (optional)</string>
+    <string name="add_medicine_strength_hint">50 mg</string>
+    <string name="add_medicine_rx_number_optional">Prescription number (optional)</string>
+    <string name="medicine_detail_rx">Rx %1$s</string>
+    <string name="stock_expiry_exact_day">Exact day</string>
+    <string name="stock_opened_on">Opened on</string>
+    <string name="stock_use_within_days">Use within this many days of opening</string>
+    <string name="stock_effective_expiry">Counts as expired from %1$s</string>
+    <string name="common_clear">Clear</string>
 </resources>

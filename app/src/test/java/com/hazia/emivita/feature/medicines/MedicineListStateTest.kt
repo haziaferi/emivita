@@ -68,6 +68,8 @@ class MedicineListStateTest {
     fun `expired is strictly before today and runs-out only within the week`() {
         assertTrue(state(medicine(1, stock = StockInfo(expirationDateEpochDay = today.minusDays(1).toEpochDay()))).expired)
         assertFalse(state(medicine(1, stock = StockInfo(expirationDateEpochDay = today.toEpochDay()))).expired)
+        // §9 #27: opened + shelf life makes an in-date pack expired
+        assertTrue(state(medicine(1, stock = StockInfo(expirationDateEpochDay = today.plusDays(300).toEpochDay(), openedDateEpochDay = today.minusDays(30).toEpochDay(), useWithinDaysAfterOpening = 28))).expired)
         assertEquals(3L, state(medicine(1), runOut = today.plusDays(3)).runsOutInDays)
         assertEquals(0L, state(medicine(1), runOut = today).runsOutInDays)
         assertNull(state(medicine(1), runOut = today.plusDays(RUN_OUT_SOON_DAYS + 1)).runsOutInDays)

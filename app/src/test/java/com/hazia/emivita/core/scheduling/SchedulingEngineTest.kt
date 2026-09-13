@@ -255,6 +255,19 @@ class SchedulingEngineTest {
     }
 
     @Test
+    fun `an expiration alert arms on the opened-plus-shelf-life date when that comes first`() = runTest {
+        // §9 #27: printed expiry 2026-12-31, opened 2026-06-01, use within 28
+        // days -> effective 2026-06-29; 7 days lead -> first alert 06-22.
+        val engine = engine(medicines = fakeMedicineDao(medicine(expirationDateEpochDay = epochDay("2026-12-31")).let {
+            it.copy(stockInfo = it.stockInfo.copy(openedDateEpochDay = epochDay("2026-06-01"), useWithinDaysAfterOpening = 28))
+        }))
+        assertOccursAt(
+            "2026-06-22T09:00",
+            engine.nextOccurrenceFor(expirationReminder(ExpirationTriggerFrequency.DAILY), at("2026-06-01T06:00")),
+        )
+    }
+
+    @Test
     fun `a daily expiration alert keeps firing past the expiry date`() = runTest {
         // An expired medicine is more worth mentioning than one about to
         // expire, not less.

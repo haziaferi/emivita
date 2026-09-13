@@ -344,7 +344,7 @@ class SchedulingEngine(
             is ReminderConfig.ExpirationAlert -> nextExpirationAlertOccurrence(
                 config = config,
                 notBeforeEpochMillis = notBeforeEpochMillis,
-                expirationEpochDay = medicineDao.getById(reminder.medicineId)?.stockInfo?.expirationDateEpochDay,
+                expirationEpochDay = medicineDao.getById(reminder.medicineId)?.stockInfo?.effectiveExpirationEpochDay,
                 lastNotifiedEpochDay = reminder.lastAlertNotifiedEpochDay,
                 zone = zone,
             )

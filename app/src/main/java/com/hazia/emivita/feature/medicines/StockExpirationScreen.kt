@@ -62,6 +62,10 @@ import androidx.compose.ui.platform.LocalResources
 import com.hazia.emivita.core.format.LocaleFormats
 import com.hazia.emivita.core.format.parseDecimal
 import com.hazia.emivita.core.format.formatDecimalLocalized
+import com.hazia.emivita.ui.components.MonthYearField
+import com.hazia.emivita.ui.components.isEndOfMonth
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 
 
 /**
@@ -116,6 +120,12 @@ fun StockExpirationScreen(
     // A column no screen could set (§7 R60 C F-5), the shape R59's rule 18
     // names; carried forward unchanged on every save until now.
     var productionDateEpochDay by remember { mutableStateOf<Long?>(null) }
+    // §9 #27: the pack's "EXP 03/2027" by default, an exact day on request;
+    // opened-on plus "use within N days" makes the effective expiry the
+    // earlier of the two.
+    var exactExpiryDay by remember { mutableStateOf(false) }
+    var openedDateEpochDay by remember { mutableStateOf<Long?>(null) }
+    var useWithinDays by remember { mutableStateOf("") }
     var leadDays by remember { mutableStateOf("") }
     var frequency by remember { mutableStateOf(ExpirationTriggerFrequency.ONCE) }
 
@@ -133,7 +143,10 @@ fun StockExpirationScreen(
         trackingSaved = medicine.stockInfo.unit != null
         refillQuantity = medicine.stockInfo.refillQuantity?.let { formatDecimalLocalized(it) } ?: ""
         expirationDateEpochDay = medicine.stockInfo.expirationDateEpochDay
+        exactExpiryDay = medicine.stockInfo.expirationDateEpochDay?.let { !isEndOfMonth(it) } == true
         productionDateEpochDay = medicine.stockInfo.productionDateEpochDay
+        openedDateEpochDay = medicine.stockInfo.openedDateEpochDay
+        useWithinDays = medicine.stockInfo.useWithinDaysAfterOpening?.toString() ?: ""
 
         val reminders = reminderRepository.observeForMedicine(medicineId).first()
         reminders.find { it.type == ReminderType.LOW_STOCK_ALERT }?.let { reminder ->
@@ -291,7 +304,42 @@ fun StockExpirationScreen(
             Spacer(Modifier.height(8.dp))
             DateField(stringResource(R.string.stock_production_date), productionDateEpochDay) { productionDateEpochDay = it }
             Spacer(Modifier.height(8.dp))
-            DateField(stringResource(R.string.stock_expiration_expiration_date), expirationDateEpochDay) { expirationDateEpochDay = it }
+            if (exactExpiryDay) {
+                DateField(stringResource(R.string.stock_expiration_expiration_date), expirationDateEpochDay) { expirationDateEpochDay = it }
+            } else {
+                MonthYearField(stringResource(R.string.stock_expiration_expiration_date), expirationDateEpochDay) { expirationDateEpochDay = it }
+            }
+            Row(
+                Modifier.fillMaxWidth().toggleable(value = exactExpiryDay, role = Role.Switch) { exactExpiryDay = it },
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                Text(stringResource(R.string.stock_expiry_exact_day), style = MaterialTheme.typography.bodyMedium)
+                Switch(checked = exactExpiryDay, onCheckedChange = null)
+            }
+            Spacer(Modifier.height(8.dp))
+            DateField(stringResource(R.string.stock_opened_on), openedDateEpochDay) { openedDateEpochDay = it }
+            Spacer(Modifier.height(8.dp))
+            OutlinedTextField(
+                value = useWithinDays,
+                onValueChange = { useWithinDays = it },
+                label = { Text(stringResource(R.string.stock_use_within_days)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                singleLine = true,
+                modifier = Modifier.fillMaxWidth(),
+            )
+            val effective = StockInfo(
+                expirationDateEpochDay = expirationDateEpochDay,
+                openedDateEpochDay = openedDateEpochDay,
+                useWithinDaysAfterOpening = useWithinDays.toIntOrNull()?.takeIf { it > 0 },
+            ).effectiveExpirationEpochDay
+            if (effective != null && effective != expirationDateEpochDay) {
+                Text(
+                    stringResource(R.string.stock_effective_expiry, LocaleFormats.monthDayYear(java.time.LocalDate.ofEpochDay(effective))),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
             if (expirationEnabled) {
                 Spacer(Modifier.height(8.dp))
                 OutlinedTextField(
@@ -331,6 +379,8 @@ fun StockExpirationScreen(
                             refillQuantity = parseDecimal(refillQuantity),
                             productionDateEpochDay = productionDateEpochDay,
                             expirationDateEpochDay = expirationDateEpochDay,
+                            openedDateEpochDay = openedDateEpochDay,
+                            useWithinDaysAfterOpening = useWithinDays.toIntOrNull()?.takeIf { it > 0 },
                         )
                     )
                 )

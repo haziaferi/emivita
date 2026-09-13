@@ -192,7 +192,7 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
             }
 
             is ReminderConfig.ExpirationAlert -> {
-                val expiry = medicine.stockInfo.expirationDateEpochDay
+                val expiry = medicine.stockInfo.effectiveExpirationEpochDay
                 val stillDue = expiry != null && todayEpochDay >= expiry - config.leadDays
                 if (stillDue) container.alertNotificationBuilder.postExpiration(medicine, reminder, expiry!!)
                 stillDue

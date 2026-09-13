@@ -66,6 +66,7 @@ import com.hazia.emivita.core.notification.ReminderNotificationChannels
 import androidx.annotation.StringRes
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.platform.LocalResources
 
 /**
  * Add Medicine (spec §6 field order: name + barcode -> appearance (icon +
@@ -97,7 +98,7 @@ fun AddMedicineScreen(
         initialLockOverride = null,
         initialPriority = NotificationPriority.STANDARD,
         colorsInUse = colorsInUse,
-        onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, notes, doseUnit, lockOverride, priority, prnMax, prnHours ->
+        onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, notes, doseUnit, lockOverride, priority, prnMax, prnHours, strength, rxNumber ->
             val id = medicineRepository.create(
                 Medicine(
                     profileId = profileId,
@@ -114,6 +115,8 @@ fun AddMedicineScreen(
                     doseUnit = doseUnit,
                     prnMaxDoses = prnMax,
                     prnWindowHours = prnHours,
+                    strength = strength,
+                    rxNumber = rxNumber,
                     createdAtEpochMillis = System.currentTimeMillis(),
                 )
             )
@@ -180,11 +183,13 @@ fun EditMedicineScreen(
         initialNotes = current.notes ?: "",
         initialPrnMaxDoses = current.prnMaxDoses,
         initialPrnWindowHours = current.prnWindowHours,
+        initialStrength = current.strength ?: "",
+        initialRxNumber = current.rxNumber ?: "",
         initialDoseUnit = current.doseUnit ?: "",
         initialLockOverride = current.remindersLockedUntilTaken,
         initialPriority = current.notificationPriority,
         colorsInUse = colorsInUse,
-        onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, notes, doseUnit, lockOverride, priority, prnMax, prnHours ->
+        onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, notes, doseUnit, lockOverride, priority, prnMax, prnHours, strength, rxNumber ->
             medicineRepository.update(
                 current.copy(
                     name = name,
@@ -199,6 +204,8 @@ fun EditMedicineScreen(
                     doseUnit = doseUnit,
                     prnMaxDoses = prnMax,
                     prnWindowHours = prnHours,
+                    strength = strength,
+                    rxNumber = rxNumber,
                 )
             )
             val previousNames = tagsSnapshot.associateBy { it.name }
@@ -259,6 +266,8 @@ private fun MedicineFormBody(
     initialNotes: String,
     initialPrnMaxDoses: Int? = null,
     initialPrnWindowHours: Int? = null,
+    initialStrength: String = "",
+    initialRxNumber: String = "",
     initialDoseUnit: String,
     initialLockOverride: Boolean?,
     initialPriority: NotificationPriority,
@@ -280,6 +289,8 @@ private fun MedicineFormBody(
         priority: NotificationPriority,
         prnMaxDoses: Int?,
         prnWindowHours: Int?,
+        strength: String?,
+        rxNumber: String?,
     ) -> Unit,
     onCancel: () -> Unit,
 ) {
@@ -296,6 +307,9 @@ private fun MedicineFormBody(
     var notes by remember { mutableStateOf(initialNotes) }
     var prnMax by remember { mutableStateOf(initialPrnMaxDoses?.toString() ?: "") }
     var prnHours by remember { mutableStateOf(initialPrnWindowHours?.toString() ?: "") }
+    var strength by remember { mutableStateOf(initialStrength) }
+    var rxNumber by remember { mutableStateOf(initialRxNumber) }
+    val resources = LocalResources.current
     var doseUnit by remember { mutableStateOf(initialDoseUnit) }
     // null = inherit global default, true/false = explicit override
     var lockOverride by remember { mutableStateOf(initialLockOverride) }
@@ -336,14 +350,26 @@ private fun MedicineFormBody(
         // display label threaded into every dose-amount entry/display point
         // (see Medicine.doseUnit's own doc comment), set once here rather
         // than re-typed at each of those points.
-        OutlinedTextField(
-            value = doseUnit,
-            onValueChange = { doseUnit = it },
-            label = { Text(stringResource(R.string.add_medicine_measurement_optional)) },
-            placeholder = { Text(stringResource(R.string.add_medicine_e_g_capsules_drops_tablet)) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            OutlinedTextField(
+                value = doseUnit,
+                onValueChange = { doseUnit = it },
+                label = { Text(stringResource(R.string.add_medicine_measurement_optional)) },
+                placeholder = { Text(stringResource(R.string.add_medicine_e_g_capsules_drops_tablet)) },
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+            // Strength (§9 #27; HM-14): the "50 mg" on the box. A label for
+            // the card and the emergency card, never a dose amount.
+            OutlinedTextField(
+                value = strength,
+                onValueChange = { strength = it },
+                label = { Text(stringResource(R.string.add_medicine_strength_optional)) },
+                placeholder = { Text(stringResource(R.string.add_medicine_strength_hint)) },
+                singleLine = true,
+                modifier = Modifier.weight(1f),
+            )
+        }
         Spacer(Modifier.height(8.dp))
 
         Row(verticalAlignment = Alignment.CenterVertically) {
@@ -381,7 +407,12 @@ private fun MedicineFormBody(
                     color = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceVariant,
                     modifier = Modifier
                         .size(52.dp)
-                        .selectable(selected = selected, role = Role.RadioButton) { iconKey = option.key },
+                        .selectable(selected = selected, role = Role.RadioButton) {
+                            iconKey = option.key
+                            // The icon is the dosage form (§9 #27; HM-05): it
+                            // fills a blank unit and never overwrites a typed one.
+                            doseUnit = MedicineIcons.unitAfterPickingForm(doseUnit, option.defaultUnit?.let { resources.getString(it) })
+                        },
                 ) {
                     Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                         Icon(
@@ -462,6 +493,16 @@ private fun MedicineFormBody(
             value = storageNote,
             onValueChange = { storageNote = it },
             label = { Text(stringResource(R.string.add_medicine_storage_note_optional)) },
+            singleLine = true,
+            textStyle = MaterialTheme.typography.bodySmall,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        // Rx number (§9 #27; DT-10): what the pharmacy asks for on the phone.
+        Spacer(Modifier.height(8.dp))
+        OutlinedTextField(
+            value = rxNumber,
+            onValueChange = { rxNumber = it },
+            label = { Text(stringResource(R.string.add_medicine_rx_number_optional)) },
             singleLine = true,
             textStyle = MaterialTheme.typography.bodySmall,
             modifier = Modifier.fillMaxWidth(),
@@ -571,6 +612,8 @@ private fun MedicineFormBody(
                                 priority,
                                 prnMax.toIntOrNull()?.takeIf { it > 0 },
                                 prnHours.toIntOrNull()?.takeIf { it > 0 },
+                                strength.trim().ifBlank { null },
+                                rxNumber.trim().ifBlank { null },
                             )
                         } catch (e: Exception) {
                             // Reset on failure, not just success -- otherwise a

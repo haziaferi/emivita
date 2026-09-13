@@ -69,7 +69,7 @@ fun cardStateFor(
         else -> TodayStatus.NONE
     }
     val tracked = medicine.stockInfo.unit != null
-    val expired = medicine.stockInfo.expirationDateEpochDay?.let { it < today.toEpochDay() } == true
+    val expired = medicine.stockInfo.effectiveExpirationEpochDay?.let { it < today.toEpochDay() } == true
     val empty = tracked && medicine.stockInfo.quantity <= 0.0
     val runsOutInDays = runOutDate?.let { java.time.temporal.ChronoUnit.DAYS.between(today, it) }?.takeIf { it in 0..RUN_OUT_SOON_DAYS }
     val nextDose = projected.filter { it.medicineId == medicine.id && it.epochMillis >= nowEpochMillis }.minOfOrNull { it.epochMillis }
@@ -129,7 +129,7 @@ fun sortEntries(entries: List<MedicineListEntry>, sort: MedicinesSort, locale: j
     MedicinesSort.EXPIRY_STOCK -> entries.sortedWith(
         compareBy<MedicineListEntry> { !it.state.empty }
             .thenBy { it.state.runsOutInDays ?: Long.MAX_VALUE }
-            .thenBy { it.medicine.stockInfo.expirationDateEpochDay ?: Long.MAX_VALUE }
+            .thenBy { it.medicine.stockInfo.effectiveExpirationEpochDay ?: Long.MAX_VALUE }
             .thenBy { it.medicine.sortOrder },
     )
 }

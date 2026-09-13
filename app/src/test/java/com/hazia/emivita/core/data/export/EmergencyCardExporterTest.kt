@@ -39,12 +39,19 @@ class EmergencyCardExporterTest {
         createdAtEpochMillis = 0L,
     )
 
-    private fun medicine(name: String, doseUnit: String? = null, indication: String? = null) = Medicine(
+    @Test
+    fun `strength sits between the name and the form`() {
+        val out = lines(profile(), listOf(medicine("Sertraline", doseUnit = "tablets", strength = "50 mg")))
+        assertTrue(out.contains("  Sertraline 50 mg (tablets)"))
+    }
+
+    private fun medicine(name: String, doseUnit: String? = null, indication: String? = null, strength: String? = null) = Medicine(
         id = 0L,
         profileId = 1L,
         name = name,
         iconKey = "pill",
         doseUnit = doseUnit,
+        strength = strength,
         indication = indication,
         sortOrder = 0.0,
         createdAtEpochMillis = 0L,

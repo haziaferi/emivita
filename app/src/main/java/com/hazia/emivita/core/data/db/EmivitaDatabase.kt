@@ -33,7 +33,7 @@ import com.hazia.emivita.core.data.entity.MedicineNote
         DoseEvent::class,
         MedicineNote::class,
     ],
-    version = 8,
+    version = 9,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)
@@ -67,6 +67,7 @@ abstract class EmivitaDatabase : RoomDatabase() {
                     Migrations.MIGRATION_5_6,
                     Migrations.MIGRATION_6_7,
                     Migrations.MIGRATION_7_8,
+                    Migrations.MIGRATION_8_9,
                 )
                 .build()
         }
