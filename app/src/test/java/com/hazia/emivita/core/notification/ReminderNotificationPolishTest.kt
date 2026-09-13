@@ -51,7 +51,7 @@ class ReminderNotificationPolishTest {
     @After
     fun tearDown() = database.close()
 
-    private suspend fun post(hideNames: Boolean, tracked: Boolean, eventId: Long = 1L): Notification {
+    private suspend fun post(hideNames: Boolean, tracked: Boolean, eventId: Long = 1L, askEachTime: Boolean = false): Notification {
         val profileId = database.profileDao().insert(Profile(name = "P", createdAtEpochMillis = 0))
         val medicineId = database.medicineDao().insert(
             Medicine(
@@ -74,6 +74,7 @@ class ReminderNotificationPolishTest {
         val settings = mockk<SettingsRepository>().also {
             coEvery { it.isLockedUntilTaken(any()) } returns false
             every { it.hideMedicineNames } returns flowOf(hideNames)
+            every { it.snoozeAskEachTime } returns flowOf(askEachTime)
         }
         val groups = mockk<DoseGroupDao>().also { coEvery { it.getById(any()) } returns null }
         ReminderNotificationBuilder(context, groups, settings).buildAndPost(event, reminder, medicine)
@@ -118,5 +119,36 @@ class ReminderNotificationPolishTest {
         assertEquals(ReminderNotificationChannels.CHANNEL_STANDARD, n.channelId)
         assertEquals(0, n.actions?.size ?: 0)
         assertEquals("Test reminder", n.extras.getString(Notification.EXTRA_TITLE))
+    }
+
+    @Test
+    fun `two showing reminders get a summary with Take all over exactly those, one does not`() = runTest {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        post(hideNames = false, tracked = false, eventId = 11L)
+        assertEquals("a lone reminder is a lone card", null, shadowOf(nm).getNotification(REMINDER_GROUP_SUMMARY_ID))
+        post(hideNames = false, tracked = false, eventId = 12L)
+        val summary = shadowOf(nm).getNotification(REMINDER_GROUP_SUMMARY_ID)
+        assertEquals("2 doses due", summary.extras.getString(Notification.EXTRA_TITLE))
+        assertEquals("Take all", summary.actions.single().title)
+        val ids = shadowOf(summary.actions.single().actionIntent).savedIntent.getLongArrayExtra(EXTRA_DOSE_EVENT_IDS)!!.toList()
+        assertEquals(listOf(11L, 12L), ids)
+        // one answered and dismissed: the summary goes with it
+        nm.cancel(11)
+        val settings = mockk<SettingsRepository>().also {
+            every { it.hideMedicineNames } returns flowOf(false)
+            every { it.snoozeAskEachTime } returns flowOf(false)
+        }
+        ReminderNotificationBuilder(context, mockk(relaxed = true), settings).updateGroupSummary()
+        assertEquals(null, shadowOf(nm).getNotification(REMINDER_GROUP_SUMMARY_ID))
+    }
+
+    @Test
+    fun `with ask-each-time on, the Snooze action opens the picker instead of snoozing`() = runTest {
+        val n = post(hideNames = false, tracked = false, eventId = 21L, askEachTime = true)
+        val snooze = n.actions.first { it.title == "Snooze" }
+        val target = shadowOf(snooze.actionIntent).savedIntent.component!!.className
+        assertTrue(target, target.endsWith("SnoozePickerActivity"))
+        val plain = post(hideNames = false, tracked = false, eventId = 22L, askEachTime = false)
+        assertEquals(null, shadowOf(plain.actions.first { it.title == "Snooze" }.actionIntent).savedIntent.component?.className?.takeIf { it.endsWith("SnoozePickerActivity") })
     }
 }

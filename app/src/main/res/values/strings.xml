@@ -509,4 +509,14 @@
     <string name="add_reminder_pre_alarm_minutes">Minutes before</string>
     <string name="notif_pre_alarm_title">%1$s coming up</string>
     <string name="notif_pre_alarm_text">Dose at %1$s</string>
+    <string name="notif_take_all">Take all</string>
+    <plurals name="notif_group_summary">
+        <item quantity="one">%1$d dose due</item>
+        <item quantity="other">%1$d doses due</item>
+    </plurals>
+    <string name="snooze_picker_title">Snooze for how long?</string>
+    <string name="snooze_picker_minutes">%1$d min</string>
+    <string name="snooze_picker_custom">Other (minutes)</string>
+    <string name="settings_snooze_ask_each_time">Ask how long each time</string>
+    <string name="settings_snooze_ask_each_time_desc">The Snooze button opens a quick picker instead of using the duration above.</string>
 </resources>

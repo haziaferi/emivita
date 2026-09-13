@@ -19,6 +19,8 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import com.hazia.emivita.core.notification.ACTION_SWIPED
 import com.hazia.emivita.core.data.settings.SwipeAction
+import com.hazia.emivita.core.notification.ACTION_TAKE_ALL
+import com.hazia.emivita.core.notification.EXTRA_DOSE_EVENT_IDS
 
 private const val TAG = "ReminderActionReceiver"
 
@@ -36,12 +38,29 @@ private const val TAG = "ReminderActionReceiver"
  */
 class ReminderActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
+        val action = intent.action
+        if (action == ACTION_TAKE_ALL) {
+            val ids = intent.getLongArrayExtra(EXTRA_DOSE_EVENT_IDS)?.toList().orEmpty()
+            val container = (context.applicationContext as? EmivitaApplication)?.container ?: return
+            val pendingResult = goAsync()
+            CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
+                try {
+                    // Each dose independently: one already answered does not stop the rest.
+                    for (id in ids) {
+                        runCatching { handleAction(context, ACTION_TAKE, id, container) }
+                            .onFailure { Log.w(TAG, "Take-all: dose $id failed", it) }
+                    }
+                } finally {
+                    pendingResult.finish()
+                }
+            }
+            return
+        }
         val doseEventId = intent.getLongExtra(EXTRA_DOSE_EVENT_ID, -1L)
         if (doseEventId < 0) {
             Log.w(TAG, "Received an action with no valid dose event id -- ignoring.")
             return
         }
-        val action = intent.action
         if (action == null || (action != ACTION_TAKE && action != ACTION_SKIP && action != ACTION_SNOOZE && action != ACTION_SWIPED)) {
             Log.w(TAG, "Received an unrecognized action: $action -- ignoring.")
             return
@@ -141,5 +160,7 @@ class ReminderActionReceiver : BroadcastReceiver() {
 
     private fun dismissNotification(context: Context, doseEventId: Long) {
         NotificationManagerCompat.from(context).cancel(doseEventId.toInt())
+        // The summary's "Take all" must list only what is still showing.
+        (context.applicationContext as? EmivitaApplication)?.container?.notificationBuilder?.updateGroupSummary()
     }
 }

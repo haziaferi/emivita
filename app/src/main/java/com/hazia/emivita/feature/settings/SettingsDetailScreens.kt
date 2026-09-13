@@ -158,6 +158,14 @@ fun AlarmsSnoozeScreen(settingsRepository: SettingsRepository, onBack: () -> Uni
             },
         ) { Text(stringResource(R.string.common_save)) }
 
+        Spacer(Modifier.height(8.dp))
+        val askEachTime by settingsRepository.snoozeAskEachTime.collectAsState(initial = false)
+        SettingSwitchRow(
+            title = stringResource(R.string.settings_snooze_ask_each_time),
+            description = stringResource(R.string.settings_snooze_ask_each_time_desc),
+            checked = askEachTime,
+        ) { scope.launch { settingsRepository.setSnoozeAskEachTime(it) } }
+
         // §9 #25 -- what a swipe records. Saved on tap; one selectable node
         // per option (Stage B).
         Spacer(Modifier.height(24.dp))

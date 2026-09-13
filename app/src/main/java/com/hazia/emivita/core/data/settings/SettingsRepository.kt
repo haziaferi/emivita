@@ -72,6 +72,9 @@ class SettingsRepository(context: Context) {
         val ALARM_NO_SOUND_WHEN_SILENT = booleanPreferencesKey("alarm_no_sound_when_silent")
         val ALARM_NO_VIBRATION_WHEN_SILENT = booleanPreferencesKey("alarm_no_vibration_when_silent")
         val USE_ALARM_CLOCK = booleanPreferencesKey("use_alarm_clock")
+        // §9 #25: the notification's Snooze action opens a duration picker
+        // instead of snoozing for the saved duration (medTimer's "Custom…").
+        val SNOOZE_ASK_EACH_TIME = booleanPreferencesKey("snooze_ask_each_time")
     }
 
     val palette: Flow<MedPalette> = dataStore.data.map { prefs ->
@@ -215,6 +218,11 @@ class SettingsRepository(context: Context) {
     val useAlarmClock: Flow<Boolean> = dataStore.data.map { prefs -> prefs[Keys.USE_ALARM_CLOCK] ?: false }
     suspend fun setUseAlarmClock(value: Boolean) {
         dataStore.edit { it[Keys.USE_ALARM_CLOCK] = value }
+    }
+
+    val snoozeAskEachTime: Flow<Boolean> = dataStore.data.map { prefs -> prefs[Keys.SNOOZE_ASK_EACH_TIME] ?: false }
+    suspend fun setSnoozeAskEachTime(value: Boolean) {
+        dataStore.edit { it[Keys.SNOOZE_ASK_EACH_TIME] = value }
     }
     suspend fun setMedicinesHideEmpty(hide: Boolean) {
         dataStore.edit { it[Keys.MEDICINES_HIDE_EMPTY] = hide }

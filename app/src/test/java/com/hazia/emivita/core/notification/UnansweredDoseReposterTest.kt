@@ -51,6 +51,7 @@ class UnansweredDoseReposterTest {
         val settings = mockk<SettingsRepository>().also {
             coEvery { it.isLockedUntilTaken(any()) } returns false
             every { it.hideMedicineNames } returns flowOf(false)
+            every { it.snoozeAskEachTime } returns flowOf(false)
         }
         val groups = mockk<DoseGroupDao>().also { coEvery { it.getById(any()) } returns null }
         val builder = ReminderNotificationBuilder(context, groups, settings)

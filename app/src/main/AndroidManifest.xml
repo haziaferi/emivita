@@ -137,6 +137,16 @@
             android:excludeFromRecents="true"
             android:launchMode="singleTask" />
 
+        <!-- "Snooze for how long?" is a dialog-themed activity a notification
+             action can open, since an action cannot show a dialog itself (§9
+             #25). Not exported; only this app's PendingIntents launch it. -->
+        <activity
+            android:name=".feature.alarm.SnoozePickerActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Emivita.Dialog"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask" />
+
         <!-- Fired by AlarmManager (see core/scheduling/AlarmScheduler.kt). -->
         <receiver
             android:name=".core.scheduling.ReminderAlarmReceiver"

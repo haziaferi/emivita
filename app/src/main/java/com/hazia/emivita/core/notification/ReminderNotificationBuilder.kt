@@ -32,6 +32,11 @@ const val ACTION_SNOOZE = "com.hazia.emivita.action.SNOOZE"
 /** Fired by the notification's deleteIntent when the user swipes it away
  *  (§9 #25); what it records is [com.hazia.emivita.core.data.settings.SwipeAction]. */
 const val ACTION_SWIPED = "com.hazia.emivita.action.SWIPED"
+/** The group summary's one action (§9 #25): every listed dose is taken. */
+const val ACTION_TAKE_ALL = "com.hazia.emivita.action.TAKE_ALL"
+const val EXTRA_DOSE_EVENT_IDS = "com.hazia.emivita.extra.DOSE_EVENT_IDS"
+const val REMINDER_GROUP_KEY = "com.hazia.emivita.group.REMINDERS"
+const val REMINDER_GROUP_SUMMARY_ID = -3_000_000
 const val EXTRA_DOSE_EVENT_ID = "com.hazia.emivita.extra.DOSE_EVENT_ID"
 
 private const val TAG = "ReminderNotification"
@@ -70,6 +75,11 @@ class ReminderNotificationBuilder(
             .addAction(0, context.getString(R.string.common_snooze), actionPendingIntent(ACTION_SNOOZE, doseEvent.id, requestCodeSalt = 3))
             .build()
 
+        // Snooze: one tap for the saved duration, or the picker when the user
+        // asked to choose each time (§9 #25; medTimer's "Custom…" preference).
+        val askEachTime = settingsRepository.snoozeAskEachTime.first()
+        val snoozeIntent = if (askEachTime) snoozePickerPendingIntent(doseEvent.id) else actionPendingIntent(ACTION_SNOOZE, doseEvent.id, requestCodeSalt = 3)
+
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification_reminder)
             .setContentTitle(title)
@@ -80,6 +90,10 @@ class ReminderNotificationBuilder(
             .setAutoCancel(false)
             .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
             .setPublicVersion(publicVersion)
+            // Every reminder joins one group; the summary below carries
+            // "Take all" once two or more are showing (§9 #25; medTimer's
+            // combine, HomeMedkit's "Intake all"). Each keeps its own actions.
+            .setGroup(REMINDER_GROUP_KEY)
             // Back-to-back reminders alert once (§9 #25, E B-06); the ALARM tier
             // is exempt -- an alarm that does not sound is not an alarm.
             .setSilent(priority != NotificationPriority.ALARM && NotificationRateLimit.shouldBeSilent())
@@ -87,7 +101,7 @@ class ReminderNotificationBuilder(
             // the receiver reads the setting at swipe time, not post time.
             .setDeleteIntent(actionPendingIntent(ACTION_SWIPED, doseEvent.id, requestCodeSalt = 4))
             .addAction(0, context.getString(R.string.common_take), actionPendingIntent(ACTION_TAKE, doseEvent.id, requestCodeSalt = 1))
-            .addAction(0, context.getString(R.string.common_snooze), actionPendingIntent(ACTION_SNOOZE, doseEvent.id, requestCodeSalt = 3))
+            .addAction(0, context.getString(R.string.common_snooze), snoozeIntent)
 
         // Lock-until-taken (spec §3's own bug writeup: this field was typed as
         // a plain Boolean and nothing read the resolved value at all -- both
@@ -112,6 +126,55 @@ class ReminderNotificationBuilder(
         postIfPermitted(context, TAG, notificationId, builder.build())
         // The real reminder replaces its own pre-alarm.
         androidx.core.app.NotificationManagerCompat.from(context).cancel(preAlarmNotificationId(reminder.id))
+        updateGroupSummary()
+    }
+
+    /** Post, refresh or remove the group summary from what is actually
+     *  showing: the dose-event notifications (positive ids) in the group.
+     *  Two or more -> a summary with "Take all" over exactly those ids; fewer
+     *  -> no summary, so a lone reminder is a lone card. Called after every
+     *  post and every dismissal, which is what keeps the id list honest. */
+    fun updateGroupSummary() {
+        val nm = androidx.core.app.NotificationManagerCompat.from(context)
+        val showing = nm.activeNotifications
+            .filter { it.id > 0 && it.notification.group == REMINDER_GROUP_KEY }
+            .map { it.id.toLong() }
+            .sorted()
+        if (showing.size < 2) {
+            nm.cancel(REMINDER_GROUP_SUMMARY_ID)
+            return
+        }
+        val takeAllIntent = Intent(context, ReminderActionReceiver::class.java).apply {
+            action = ACTION_TAKE_ALL
+            putExtra(EXTRA_DOSE_EVENT_IDS, showing.toLongArray())
+        }
+        val takeAll = PendingIntent.getBroadcast(
+            context, REMINDER_GROUP_SUMMARY_ID, takeAllIntent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
+        val summary = NotificationCompat.Builder(context, ReminderNotificationChannels.CHANNEL_STANDARD)
+            .setSmallIcon(R.drawable.ic_notification_reminder)
+            .setContentTitle(context.resources.getQuantityString(R.plurals.notif_group_summary, showing.size, showing.size))
+            .setCategory(NotificationCompat.CATEGORY_REMINDER)
+            .setGroup(REMINDER_GROUP_KEY)
+            .setGroupSummary(true)
+            .setSilent(true)
+            .setAutoCancel(false)
+            .setContentIntent(openAppPendingIntent(context, REMINDER_GROUP_SUMMARY_ID))
+            .addAction(0, context.getString(R.string.notif_take_all), takeAll)
+            .build()
+        postIfPermitted(context, TAG, REMINDER_GROUP_SUMMARY_ID, summary)
+    }
+
+    private fun snoozePickerPendingIntent(doseEventId: Long): PendingIntent {
+        val intent = Intent(context, com.hazia.emivita.feature.alarm.SnoozePickerActivity::class.java).apply {
+            flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP
+            putExtra(EXTRA_DOSE_EVENT_ID, doseEventId)
+        }
+        return PendingIntent.getActivity(
+            context, (doseEventId * 10 + 5).toInt(), intent,
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
     }
 
     /** The silent pre-alarm (§9 #25): the medicine and the dose time, on the
