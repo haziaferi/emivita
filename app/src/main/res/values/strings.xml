@@ -489,4 +489,19 @@
     <string name="settings_swipe_skip">Record it as skipped</string>
     <string name="settings_hide_names">Hide medicine names in notifications</string>
     <string name="settings_hide_names_desc">Shows only the first letter, so a glance at the shade says a dose is due without saying of what.</string>
+    <string name="settings_alarm_tier_title">Alarm tier</string>
+    <string name="settings_alarm_tier_desc">Applies to medicines set to the Alarm tier: the full-screen alarm that rings until answered.</string>
+    <string name="settings_alarm_tone">Alarm sound</string>
+    <string name="settings_alarm_tone_default">System default alarm</string>
+    <string name="settings_alarm_tone_pick">Choose an alarm sound</string>
+    <string name="settings_alarm_no_sound_when_silent">No sound when the phone is silent</string>
+    <string name="settings_alarm_no_sound_when_silent_desc">Alarms normally ring through silent mode. Turn this on to respect the switch.</string>
+    <string name="settings_alarm_no_vibration_when_silent">No vibration when the phone is silent</string>
+    <string name="settings_alarm_no_vibration_when_silent_desc">Same, for the vibration.</string>
+    <string name="settings_use_alarm_clock">Show the next reminder as an alarm</string>
+    <string name="settings_use_alarm_clock_desc">The status bar shows the alarm icon and the lock screen the next reminder time. Android also defers such alarms less.</string>
+    <string name="settings_test_reminder">Send a test reminder</string>
+    <string name="settings_test_reminder_desc">Posts a real notification so you can see and hear how a reminder arrives on this phone.</string>
+    <string name="notif_test_title">Test reminder</string>
+    <string name="notif_test_text">This is how a reminder arrives. Nothing to take.</string>
 </resources>

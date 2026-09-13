@@ -59,6 +59,15 @@ class AlarmScheduler(private val context: Context) {
     private val alarmManager: AlarmManager =
         context.getSystemService(Context.ALARM_SERVICE) as AlarmManager
 
+    /** Arm the *regular* slot with `setAlarmClock` instead of
+     *  `setExactAndAllowWhileIdle` (§9 #25, Appendix F HM-21): the status bar
+     *  shows the alarm icon, the lock screen the next reminder, and the OS
+     *  exempts it from most deferral as a user-visible alarm. Kept in sync
+     *  with the setting by AppContainer; a change re-arms everything. Snooze
+     *  and nag slots stay exact alarms -- they are not "the next alarm". */
+    @Volatile
+    var useAlarmClock: Boolean = false
+
     /** Whether exact alarms can be scheduled right now. The manifest declares
      *  `USE_EXACT_ALARM`, which is granted at install and makes this return
      *  true without any user interaction -- see AndroidManifest.xml for why
@@ -71,6 +80,16 @@ class AlarmScheduler(private val context: Context) {
     /** Schedules (replacing any prior alarm for the same reminder) the next
      *  regular firing at [triggerAtEpochMillis]. */
     fun schedule(reminderId: Long, triggerAtEpochMillis: Long) {
+        if (useAlarmClock) {
+            val pendingIntent = buildPendingIntent(regularRequestCode(reminderId), reminderId, triggerAtEpochMillis, isNag = false)
+            val show = PendingIntent.getActivity(
+                context, regularRequestCode(reminderId),
+                Intent(context, com.hazia.emivita.MainActivity::class.java).apply { flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_CLEAR_TOP },
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+            alarmManager.setAlarmClock(AlarmManager.AlarmClockInfo(triggerAtEpochMillis, show), pendingIntent)
+            return
+        }
         setAlarm(
             requestCode = regularRequestCode(reminderId),
             reminderId = reminderId,

@@ -86,6 +86,12 @@ import com.hazia.emivita.ui.theme.labelRes
 import androidx.compose.runtime.collectAsState
 import com.hazia.emivita.core.data.settings.SwipeAction
 import androidx.compose.material3.RadioButton
+import android.media.RingtoneManager
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.material3.OutlinedButton
+import com.hazia.emivita.core.notification.postTestReminder
+import androidx.core.net.toUri
 
 /** Shared by every Settings detail screen in this package, including
  *  BackupSyncScreen's -- `internal`, not `private`, because a file-private
@@ -195,6 +201,104 @@ fun AlarmsSnoozeScreen(settingsRepository: SettingsRepository, onBack: () -> Uni
             }
             Switch(checked = hideNames, onCheckedChange = null)
         }
+
+        AlarmSettingsSection(settingsRepository)
+    }
+}
+
+@Composable
+private fun AlarmSettingsSection(settingsRepository: SettingsRepository) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val toneUri by settingsRepository.alarmRingtoneUri.collectAsState(initial = null)
+    val noSound by settingsRepository.alarmNoSoundWhenSilent.collectAsState(initial = false)
+    val noVibration by settingsRepository.alarmNoVibrationWhenSilent.collectAsState(initial = false)
+    val alarmClock by settingsRepository.useAlarmClock.collectAsState(initial = false)
+
+    // The system ringtone picker, filtered to alarm tones (medTimer uses the
+    // preferencex picker for the same). The chosen Uri is a content grant we
+    // hold as a string; AlarmActivity falls back to the default if it dies.
+    val pickTone = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
+        if (result.resultCode == android.app.Activity.RESULT_OK) {
+            @Suppress("DEPRECATION")
+            val picked: Uri? = result.data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
+            scope.launch { settingsRepository.setAlarmRingtoneUri(picked?.toString()) }
+        }
+    }
+    val toneTitle = remember(toneUri) {
+        val uri = toneUri?.let { it.toUri() } ?: Settings.System.DEFAULT_ALARM_ALERT_URI
+        runCatching { RingtoneManager.getRingtone(context, uri)?.getTitle(context) }.getOrNull()
+    }
+
+    Spacer(Modifier.height(24.dp))
+    Text(stringResource(R.string.settings_alarm_tier_title), style = MaterialTheme.typography.labelLarge)
+    Text(
+        stringResource(R.string.settings_alarm_tier_desc),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+    Spacer(Modifier.height(8.dp))
+    Row(
+        Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = stringResource(R.string.settings_alarm_tone_pick)) {
+            val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
+                putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
+                putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
+                putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
+                putExtra(RingtoneManager.EXTRA_RINGTONE_DEFAULT_URI, Settings.System.DEFAULT_ALARM_ALERT_URI)
+                putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, toneUri?.let { it.toUri() } ?: Settings.System.DEFAULT_ALARM_ALERT_URI)
+            }
+            runCatching { pickTone.launch(intent) }
+        }.padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.settings_alarm_tone), style = MaterialTheme.typography.bodyLarge)
+            Text(
+                toneTitle ?: stringResource(R.string.settings_alarm_tone_default),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+    SettingSwitchRow(
+        title = stringResource(R.string.settings_alarm_no_sound_when_silent),
+        description = stringResource(R.string.settings_alarm_no_sound_when_silent_desc),
+        checked = noSound,
+    ) { scope.launch { settingsRepository.setAlarmNoSoundWhenSilent(it) } }
+    SettingSwitchRow(
+        title = stringResource(R.string.settings_alarm_no_vibration_when_silent),
+        description = stringResource(R.string.settings_alarm_no_vibration_when_silent_desc),
+        checked = noVibration,
+    ) { scope.launch { settingsRepository.setAlarmNoVibrationWhenSilent(it) } }
+    SettingSwitchRow(
+        title = stringResource(R.string.settings_use_alarm_clock),
+        description = stringResource(R.string.settings_use_alarm_clock_desc),
+        checked = alarmClock,
+    ) { scope.launch { settingsRepository.setUseAlarmClock(it) } }
+
+    Spacer(Modifier.height(16.dp))
+    OutlinedButton(onClick = { postTestReminder(context) }) { Text(stringResource(R.string.settings_test_reminder)) }
+    Text(
+        stringResource(R.string.settings_test_reminder_desc),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
+}
+
+/** One toggleable node per switch row (Stage B pattern). */
+@Composable
+private fun SettingSwitchRow(title: String, description: String, checked: Boolean, onChange: (Boolean) -> Unit) {
+    Row(
+        Modifier.fillMaxWidth().toggleable(value = checked, role = Role.Switch, onValueChange = onChange).padding(vertical = 6.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(description, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+        Switch(checked = checked, onCheckedChange = null)
     }
 }
 

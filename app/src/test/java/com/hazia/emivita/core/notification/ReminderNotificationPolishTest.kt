@@ -109,4 +109,14 @@ class ReminderNotificationPolishTest {
         assertEquals("Sertraline", maskedMedicineName("Sertraline", hide = false))
         assertEquals("X", maskedMedicineName("X", hide = true))
     }
+
+    @Test
+    fun `the test reminder posts one real notification on the Standard channel with nothing to take`() {
+        postTestReminder(context)
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        val n = shadowOf(nm).getNotification(TEST_NOTIFICATION_ID)
+        assertEquals(ReminderNotificationChannels.CHANNEL_STANDARD, n.channelId)
+        assertEquals(0, n.actions?.size ?: 0)
+        assertEquals("Test reminder", n.extras.getString(Notification.EXTRA_TITLE))
+    }
 }

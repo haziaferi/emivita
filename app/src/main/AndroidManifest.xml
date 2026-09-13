@@ -198,6 +198,16 @@
             </intent-filter>
         </receiver>
 
+        <!-- Language changed: channel names and descriptions follow it (§9 #25).
+             LOCALE_CHANGED is on the implicit-broadcast exception list. -->
+        <receiver
+            android:name=".core.notification.LocaleChangeReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="android.intent.action.LOCALE_CHANGED" />
+            </intent-filter>
+        </receiver>
+
         <!-- Home-screen widgets (spec §9 #7, Glance-based; see
              feature/widget/NextRemindersWidget.kt and StockLevelsWidget.kt). -->
         <receiver

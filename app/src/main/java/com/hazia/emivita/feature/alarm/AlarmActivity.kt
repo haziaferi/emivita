@@ -53,6 +53,11 @@ import android.provider.Settings
 import android.util.Log
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
+import android.media.AudioManager
+import android.net.Uri
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.Job
+import androidx.core.net.toUri
 
 /**
  * Full-screen target for ALARM-priority reminders (see
@@ -107,32 +112,52 @@ class AlarmActivity : ComponentActivity() {
     override fun onStop() { stopRinging(); super.onStop() }
     override fun onDestroy() { stopRinging(); super.onDestroy() }
 
-    private fun startRinging() {
-        if (player != null) return
-        val attrs = AudioAttributes.Builder()
-            .setUsage(AudioAttributes.USAGE_ALARM)
-            .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-            .build()
-        // The system's alarm tone, not its notification tone: this is what the
-        // user hears from their clock app, which is what "alarm" means to them.
-        player = runCatching {
-            MediaPlayer.create(this, Settings.System.DEFAULT_ALARM_ALERT_URI, null, attrs, 0)
-        }.getOrNull()?.apply {
-            isLooping = true
-            start()
-        }
-        if (player == null) Log.w(TAG, "Could not create the alarm MediaPlayer -- ringing without sound.")
+    private var ringingJob: Job? = null
 
-        vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager)?.defaultVibrator
-        } else {
-            @Suppress("DEPRECATION")
-            getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+    private fun startRinging() {
+        if (player != null || ringingJob?.isActive == true) return
+        val settings = (application as EmivitaApplication).container.settingsRepository
+        // The three settings are read once per ring (§9 #25; medTimer's
+        // AlarmSettingsFragment): the chosen tone, and whether the phone's
+        // silent switch should be respected for sound and for vibration.
+        // USAGE_ALARM rings through vibrate mode by design; these two switches
+        // are the user's way of saying "not when I have silenced the phone".
+        ringingJob = lifecycleScope.launch {
+            val toneUri = settings.alarmRingtoneUri.first()?.let { it.toUri() } ?: Settings.System.DEFAULT_ALARM_ALERT_URI
+            val noSoundWhenSilent = settings.alarmNoSoundWhenSilent.first()
+            val noVibrationWhenSilent = settings.alarmNoVibrationWhenSilent.first()
+            val ringerSilent = (getSystemService(Context.AUDIO_SERVICE) as? AudioManager)?.ringerMode == AudioManager.RINGER_MODE_SILENT
+            if (isDestroyed || isFinishing) return@launch
+
+            if (!(noSoundWhenSilent && ringerSilent)) {
+                val attrs = AudioAttributes.Builder()
+                    .setUsage(AudioAttributes.USAGE_ALARM)
+                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
+                    .build()
+                // The chosen tone, else the system's alarm tone -- and if the
+                // chosen one cannot be opened (deleted file, revoked grant), the
+                // default again rather than silence: medTimer's double fallback.
+                player = runCatching { MediaPlayer.create(this@AlarmActivity, toneUri, null, attrs, 0) }.getOrNull()
+                    ?: runCatching { MediaPlayer.create(this@AlarmActivity, Settings.System.DEFAULT_ALARM_ALERT_URI, null, attrs, 0) }.getOrNull()
+                player?.apply { isLooping = true; start() }
+                if (player == null) Log.w(TAG, "Could not create the alarm MediaPlayer -- ringing without sound.")
+            }
+
+            if (!(noVibrationWhenSilent && ringerSilent)) {
+                vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                    (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager)?.defaultVibrator
+                } else {
+                    @Suppress("DEPRECATION")
+                    getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
+                }
+                vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(500, 500), 0))
+            }
         }
-        vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(500, 500), 0))
     }
 
     private fun stopRinging() {
+        ringingJob?.cancel()
+        ringingJob = null
         runCatching { player?.stop() }
         player?.release()
         player = null

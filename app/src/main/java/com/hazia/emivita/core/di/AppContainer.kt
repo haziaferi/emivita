@@ -106,6 +106,21 @@ class AppContainer(context: Context) {
      *  opened onto a populated Today screen with no alarm behind any row.
      *  medTimer restarts its scheduler service on every resume. Idempotent:
      *  the same request codes with FLAG_UPDATE_CURRENT replace, not stack. */
+    /** Mirror the setAlarmClock setting onto the scheduler and re-arm when it
+     *  flips (§9 #25). Started once from EmivitaApplication; the first value
+     *  arrives before any alarm is armed on a warm start, and rescheduleOnLaunch
+     *  covers the cold one. */
+    fun observeAlarmClockSetting() {
+        applicationScope.launch {
+            var first = true
+            settingsRepository.useAlarmClock.collect { on ->
+                alarmScheduler.useAlarmClock = on
+                if (!first) runCatching { schedulingCoordinator.rescheduleAll() }
+                first = false
+            }
+        }
+    }
+
     fun rescheduleOnLaunch() {
         applicationScope.launch {
             runCatching { schedulingCoordinator.rescheduleAll() }

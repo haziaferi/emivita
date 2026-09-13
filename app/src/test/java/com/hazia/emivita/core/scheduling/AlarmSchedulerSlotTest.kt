@@ -75,4 +75,17 @@ class AlarmSchedulerSlotTest {
         assertEquals(1, alarms.size)
         assertEquals(9_000L, alarms.single().triggerAtMs)
     }
+
+    @Test
+    fun `with the alarm-clock setting on, the regular slot is an AlarmClock and re-arming still replaces`() {
+        scheduler.useAlarmClock = true
+        scheduler.schedule(reminderId = 7L, triggerAtEpochMillis = 4_000L)
+        scheduler.schedule(reminderId = 7L, triggerAtEpochMillis = 9_000L)
+        val alarms = shadowOf(alarmManager).scheduledAlarms
+        assertEquals(1, alarms.size)
+        assertEquals(9_000L, alarms.single().triggerAtMs)
+        // snooze and nag stay ordinary exact alarms beside it
+        scheduler.scheduleSnooze(reminderId = 7L, doseEventId = 1L, originalScheduledEpochMillis = 1L, fireAtEpochMillis = 5_000L)
+        assertEquals(2, shadowOf(alarmManager).scheduledAlarms.size)
+    }
 }

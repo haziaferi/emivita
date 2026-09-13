@@ -67,6 +67,11 @@ class SettingsRepository(context: Context) {
         // the owner's choice) and whether notifications mask the medicine name.
         val SWIPE_ACTION = stringPreferencesKey("notification_swipe_action")
         val HIDE_MEDICINE_NAMES = booleanPreferencesKey("hide_medicine_names")
+        // §9 #25 alarm settings (medTimer's AlarmSettingsFragment, HomeMedkit HM-21).
+        val ALARM_RINGTONE_URI = stringPreferencesKey("alarm_ringtone_uri")           // null = system default alarm
+        val ALARM_NO_SOUND_WHEN_SILENT = booleanPreferencesKey("alarm_no_sound_when_silent")
+        val ALARM_NO_VIBRATION_WHEN_SILENT = booleanPreferencesKey("alarm_no_vibration_when_silent")
+        val USE_ALARM_CLOCK = booleanPreferencesKey("use_alarm_clock")
     }
 
     val palette: Flow<MedPalette> = dataStore.data.map { prefs ->
@@ -183,6 +188,33 @@ class SettingsRepository(context: Context) {
     val hideMedicineNames: Flow<Boolean> = dataStore.data.map { prefs -> prefs[Keys.HIDE_MEDICINE_NAMES] ?: false }
     suspend fun setHideMedicineNames(hide: Boolean) {
         dataStore.edit { it[Keys.HIDE_MEDICINE_NAMES] = hide }
+    }
+
+    /** The Alarm tier's ringtone as a Uri string; null = the system's default
+     *  alarm sound. Only AlarmActivity plays it -- a channel's sound is fixed
+     *  at creation (§7 R59), so the heads-up keeps the default. */
+    val alarmRingtoneUri: Flow<String?> = dataStore.data.map { prefs -> prefs[Keys.ALARM_RINGTONE_URI] }
+    suspend fun setAlarmRingtoneUri(uri: String?) {
+        dataStore.edit { if (uri == null) it.remove(Keys.ALARM_RINGTONE_URI) else it[Keys.ALARM_RINGTONE_URI] = uri }
+    }
+
+    val alarmNoSoundWhenSilent: Flow<Boolean> = dataStore.data.map { prefs -> prefs[Keys.ALARM_NO_SOUND_WHEN_SILENT] ?: false }
+    suspend fun setAlarmNoSoundWhenSilent(value: Boolean) {
+        dataStore.edit { it[Keys.ALARM_NO_SOUND_WHEN_SILENT] = value }
+    }
+
+    val alarmNoVibrationWhenSilent: Flow<Boolean> = dataStore.data.map { prefs -> prefs[Keys.ALARM_NO_VIBRATION_WHEN_SILENT] ?: false }
+    suspend fun setAlarmNoVibrationWhenSilent(value: Boolean) {
+        dataStore.edit { it[Keys.ALARM_NO_VIBRATION_WHEN_SILENT] = value }
+    }
+
+    /** Arm reminders with `setAlarmClock` (HM-21): the status bar shows the
+     *  alarm icon and the lock screen the next reminder's time, and the OS
+     *  treats it as a user-visible alarm for battery purposes. Off by default:
+     *  a person with six medicines may not want six lock-screen times. */
+    val useAlarmClock: Flow<Boolean> = dataStore.data.map { prefs -> prefs[Keys.USE_ALARM_CLOCK] ?: false }
+    suspend fun setUseAlarmClock(value: Boolean) {
+        dataStore.edit { it[Keys.USE_ALARM_CLOCK] = value }
     }
     suspend fun setMedicinesHideEmpty(hide: Boolean) {
         dataStore.edit { it[Keys.MEDICINES_HIDE_EMPTY] = hide }

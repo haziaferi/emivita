@@ -19,5 +19,6 @@ class EmivitaApplication : Application() {
         System.loadLibrary("sqlcipher")
         container = AppContainer(this)
         ReminderNotificationChannels.createAll(this)
+        container.observeAlarmClockSetting()
     }
 }

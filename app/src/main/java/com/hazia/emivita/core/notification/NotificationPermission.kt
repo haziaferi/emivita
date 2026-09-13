@@ -47,3 +47,22 @@ internal fun openAppPendingIntent(context: android.content.Context, requestCode:
     }
     return PendingIntent.getActivity(context, requestCode, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
 }
+
+/** A real notification on the Standard channel with no dose behind it (§9
+ *  #25; Appendix F DP-05, HM-38): the one way to see what a reminder looks
+ *  and sounds like on this phone -- channel sound, lock-screen redaction,
+ *  battery deferral -- without waiting for one. No actions: there is nothing
+ *  to take. Id far below any dose event's. */
+fun postTestReminder(context: android.content.Context) {
+    val notification = androidx.core.app.NotificationCompat.Builder(context, ReminderNotificationChannels.CHANNEL_STANDARD)
+        .setSmallIcon(com.hazia.emivita.R.drawable.ic_notification_reminder)
+        .setContentTitle(context.getString(com.hazia.emivita.R.string.notif_test_title))
+        .setContentText(context.getString(com.hazia.emivita.R.string.notif_test_text))
+        .setCategory(androidx.core.app.NotificationCompat.CATEGORY_REMINDER)
+        .setAutoCancel(true)
+        .setContentIntent(openAppPendingIntent(context, TEST_NOTIFICATION_ID))
+        .build()
+    postIfPermitted(context, "TestReminder", TEST_NOTIFICATION_ID, notification)
+}
+
+const val TEST_NOTIFICATION_ID = -1_000_000
