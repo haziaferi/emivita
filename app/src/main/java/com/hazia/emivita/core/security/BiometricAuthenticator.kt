@@ -9,8 +9,11 @@ import androidx.fragment.app.FragmentActivity
 import kotlinx.coroutines.suspendCancellableCoroutine
 import kotlin.coroutines.resume
 import com.hazia.emivita.R
+import androidx.biometric.BiometricManager.Authenticators.DEVICE_CREDENTIAL
 
-enum class BiometricAvailability { AVAILABLE, NO_HARDWARE, NOT_ENROLLED }
+/** [CREDENTIAL_ONLY]: no usable biometric, but the phone has a PIN, pattern
+ *  or password the prompt can fall back to (§9 #29, MK-16). */
+enum class BiometricAvailability { AVAILABLE, CREDENTIAL_ONLY, NO_HARDWARE, NOT_ENROLLED }
 
 /** Small, near-verbatim port of medTimer's `Biometrics.kt` (spec §5/§9 #11) --
  *  a thin wrapper around [androidx.biometric.BiometricPrompt], adapted to a
@@ -19,16 +22,24 @@ enum class BiometricAvailability { AVAILABLE, NO_HARDWARE, NOT_ENROLLED }
  *  credential/PIN fallback) -- matches spec §9 #11's scope of "biometric
  *  app-lock," not "app lock with a PIN fallback." */
 object BiometricAuthenticator {
-    fun availability(context: Context): BiometricAvailability = when (BiometricManager.from(context).canAuthenticate(BIOMETRIC_STRONG)) {
-        BiometricManager.BIOMETRIC_SUCCESS -> BiometricAvailability.AVAILABLE
-        BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> BiometricAvailability.NOT_ENROLLED
-        // Everything else -- no hardware, hardware busy, security update
-        // required, unsupported, status unknown -- resolves to NO_HARDWARE,
-        // which AppLockGate fails open on. Deliberate: spec §9 #11 scopes this
-        // to biometric-only with no PIN/pattern fallback, so treating a
-        // "can't tell right now" code as "stay locked" would strand the user
-        // with no way to reach Settings and turn the lock back off. Revisit if
-        // a fallback unlock path is ever added.
+    /** Strong biometrics, or the device credential (§9 #29, MK-16): a phone
+     *  with a PIN and no enrolled finger locks with the PIN. */
+    const val ALLOWED = BIOMETRIC_STRONG or DEVICE_CREDENTIAL
+
+    fun availability(context: Context): BiometricAvailability {
+        val manager = BiometricManager.from(context)
+        return availabilityOf(manager.canAuthenticate(BIOMETRIC_STRONG), manager.canAuthenticate(DEVICE_CREDENTIAL))
+    }
+
+    /** The rule, pure: a strong biometric wins; otherwise the phone's own
+     *  credential; otherwise "not enrolled" when the biometric hardware is
+     *  there but empty, and NO_HARDWARE for everything else (busy, security
+     *  update required, unknown) -- the gate fails open on those two so a
+     *  transient "can't tell" never strands the user outside Settings. */
+    fun availabilityOf(strongCode: Int, credentialCode: Int): BiometricAvailability = when {
+        strongCode == BiometricManager.BIOMETRIC_SUCCESS -> BiometricAvailability.AVAILABLE
+        credentialCode == BiometricManager.BIOMETRIC_SUCCESS -> BiometricAvailability.CREDENTIAL_ONLY
+        strongCode == BiometricManager.BIOMETRIC_ERROR_NONE_ENROLLED -> BiometricAvailability.NOT_ENROLLED
         else -> BiometricAvailability.NO_HARDWARE
     }
 
@@ -55,10 +66,11 @@ object BiometricAuthenticator {
                 }
             },
         )
+        // No negative button: the platform forbids one when DEVICE_CREDENTIAL
+        // is allowed (the credential path takes its place).
         val promptInfo = BiometricPrompt.PromptInfo.Builder()
             .setTitle(activity.getString(R.string.biometric_unlock_title))
-            .setAllowedAuthenticators(BIOMETRIC_STRONG)
-            .setNegativeButtonText(activity.getString(R.string.common_cancel))
+            .setAllowedAuthenticators(ALLOWED)
             .build()
         continuation.invokeOnCancellation { prompt.cancelAuthentication() }
         prompt.authenticate(promptInfo)

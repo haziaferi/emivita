@@ -67,6 +67,8 @@ import androidx.annotation.StringRes
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.platform.LocalResources
+import com.hazia.emivita.ui.components.unsavedChangesGuard
+import com.hazia.emivita.ui.components.rememberDirty
 
 /**
  * Add Medicine (spec §6 field order: name + barcode -> appearance (icon +
@@ -313,6 +315,9 @@ private fun MedicineFormBody(
     var doseUnit by remember { mutableStateOf(initialDoseUnit) }
     // null = inherit global default, true/false = explicit override
     var lockOverride by remember { mutableStateOf(initialLockOverride) }
+    // §9 #29 (HM-40): every field a save would persist, against its first value.
+    val dirty = rememberDirty(Unit, name, priority, barcodeValue, iconKey, color, pendingTags, indication, storageNote, notes, prnMax, prnHours, strength, rxNumber, doseUnit, lockOverride)
+    val cancel = unsavedChangesGuard(dirty, onCancel)
     var saving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
@@ -621,12 +626,12 @@ private fun MedicineFormBody(
                             // Save permanently disabled with no explanation and
                             // no way to retry short of leaving the screen.
                             saving = false
-                            saveError = "Couldn't save: ${e.message ?: "unknown error"}"
+                            saveError = resources.getString(R.string.error_could_not_save, e.message ?: resources.getString(R.string.error_unknown))
                         }
                     }
                 },
             ) { Text(saveLabel) }
-            Button(onClick = onCancel) { Text(stringResource(R.string.common_cancel)) }
+            Button(onClick = cancel) { Text(stringResource(R.string.common_cancel)) }
         }
         saveError?.let {
             Spacer(Modifier.height(8.dp))

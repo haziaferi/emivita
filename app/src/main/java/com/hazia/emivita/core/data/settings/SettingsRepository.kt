@@ -73,6 +73,8 @@ class SettingsRepository(context: Context) {
         // §9 #28 (MT-20): System follows the phone's own 24-hour switch, which
         // java.time's localized time never did; the other two override it.
         val TIME_FORMAT = stringPreferencesKey("time_format")
+        // §9 #29 (MT-21): the medical disclaimer, accepted once on first launch.
+        val DISCLAIMER_ACCEPTED = booleanPreferencesKey("disclaimer_accepted")
         val HIDE_MEDICINE_NAMES = booleanPreferencesKey("hide_medicine_names")
         // §9 #25 alarm settings (medTimer's AlarmSettingsFragment, HomeMedkit HM-21).
         val ALARM_RINGTONE_URI = stringPreferencesKey("alarm_ringtone_uri")           // null = system default alarm
@@ -194,6 +196,11 @@ class SettingsRepository(context: Context) {
     }
     suspend fun setSwipeAction(action: SwipeAction) {
         dataStore.edit { it[Keys.SWIPE_ACTION] = action.name }
+    }
+
+    val disclaimerAccepted: Flow<Boolean> = dataStore.data.map { prefs -> prefs[Keys.DISCLAIMER_ACCEPTED] ?: false }
+    suspend fun setDisclaimerAccepted() {
+        dataStore.edit { it[Keys.DISCLAIMER_ACCEPTED] = true }
     }
 
     val timeFormat: Flow<TimeFormat> = dataStore.data.map { prefs ->

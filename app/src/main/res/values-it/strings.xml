@@ -253,7 +253,7 @@
     <string name="settings_row_appearance_desc">Tema, tavolozza, preferenze di visualizzazione</string>
     <string name="settings_group_privacy">Privacy e sicurezza</string>
     <string name="settings_row_biometric">Blocco biometrico</string>
-    <string name="settings_row_biometric_desc">Richiedi impronta o volto per aprire Emivita</string>
+    <string name="settings_row_biometric_desc">Richiedi impronta, volto o il PIN del telefono per aprire Emivita</string>
     <string name="settings_biometric_not_enrolled">Su questo dispositivo non è configurato lo sblocco con impronta o volto</string>
     <string name="settings_biometric_no_hardware">Questo dispositivo non supporta l’autenticazione biometrica</string>
     <string name="settings_group_data">Dati e backup</string>
@@ -551,4 +551,13 @@
         <item quantity="many">%1$d farmaci da controllare</item>
         <item quantity="other">%1$d farmaci da controllare</item>
     </plurals>
+    <string name="settings_biometric_credential_only">Nessuna impronta o volto configurati: sblocca il PIN, la sequenza o la password del telefono</string>
+    <string name="unsaved_title">Scartare le modifiche?</string>
+    <string name="unsaved_text">Quello che hai scritto qui non è stato salvato.</string>
+    <string name="unsaved_discard">Scarta</string>
+    <string name="unsaved_keep">Continua a modificare</string>
+    <string name="disclaimer_title">Prima di iniziare</string>
+    <string name="disclaimer_body">Emivita è un’app per ricordare e annotare, non un dispositivo medico. Non sostituisce il medico o il farmacista e non controlla dosi, interazioni o altro di ciò che inserisci. I promemoria dipendono dal telefono: un telefono spento, silenzioso o in risparmio energetico può perderne uno. Continua a prendere i farmaci come prescritto, qualunque cosa l’app dica o non dica.</string>
+    <string name="disclaimer_understood">Ho capito</string>
+    <string name="disclaimer_continue">Continua</string>
 </resources>

@@ -30,6 +30,7 @@ import com.hazia.emivita.ui.theme.EmivitaTheme
 import com.hazia.emivita.ui.theme.MedPalette
 import com.hazia.emivita.ui.theme.ThemeMode
 import kotlinx.coroutines.launch
+import com.hazia.emivita.feature.disclaimer.DisclaimerDialog
 
 /** Name given to the silently auto-created first [Profile] -- never shown
  *  anywhere in the UI (confirmed by search: only the profile's `id`, via
@@ -99,8 +100,19 @@ fun EmivitaApp(container: AppContainer) {
 
                 else -> CompositionLocalProvider(LocalCurrentProfileId provides profiles!!.first().id) {
                     NotificationPermissionEffect(container.settingsRepository)
-                    AppLockGate(settingsRepository = container.settingsRepository) {
-                        EmivitaNavHost()
+                    // The disclaimer (§9 #29, MT-21) comes before the lock: it
+                    // is the one thing a person must read before the app is
+                    // theirs at all. null = not loaded yet, no flash either way.
+                    val disclaimerAccepted by produceState<Boolean?>(initialValue = null, container) {
+                        container.settingsRepository.disclaimerAccepted.collect { value = it }
+                    }
+                    val scope = rememberCoroutineScope()
+                    when (disclaimerAccepted) {
+                        null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                        false -> DisclaimerDialog(onAccept = { scope.launch { container.settingsRepository.setDisclaimerAccepted() } })
+                        true -> AppLockGate(settingsRepository = container.settingsRepository) {
+                            EmivitaNavHost()
+                        }
                     }
                 }
             }

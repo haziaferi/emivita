@@ -222,9 +222,10 @@ fun SettingsScreen(settingsRepository: SettingsRepository, onOpenDetail: (Settin
                             RowKind.TOGGLE -> SettingsToggleRowItem(
                                 row = row,
                                 checked = biometricEnabled,
-                                enabled = availability == BiometricAvailability.AVAILABLE,
+                                enabled = availability == BiometricAvailability.AVAILABLE || availability == BiometricAvailability.CREDENTIAL_ONLY,
                                 description = when (availability) {
                                     BiometricAvailability.AVAILABLE -> stringResource(row.description)
+                                    BiometricAvailability.CREDENTIAL_ONLY -> stringResource(R.string.settings_biometric_credential_only)
                                     BiometricAvailability.NOT_ENROLLED -> stringResource(R.string.settings_biometric_not_enrolled)
                                     BiometricAvailability.NO_HARDWARE -> stringResource(R.string.settings_biometric_no_hardware)
                                 },

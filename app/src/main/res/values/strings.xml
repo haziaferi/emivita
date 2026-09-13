@@ -300,7 +300,7 @@
     <string name="settings_row_appearance_desc">Theme, palette, display preferences</string>
     <string name="settings_group_privacy">Privacy &amp; Security</string>
     <string name="settings_row_biometric">Biometric lock</string>
-    <string name="settings_row_biometric_desc">Require fingerprint or face unlock to open Emivita</string>
+    <string name="settings_row_biometric_desc">Require fingerprint, face, or the phone\'s PIN to open Emivita</string>
     <string name="settings_biometric_not_enrolled">No fingerprint or face unlock set up on this device</string>
     <string name="settings_biometric_no_hardware">This device doesn\'t support biometric authentication</string>
     <string name="settings_group_data">Data &amp; Backup</string>
@@ -608,4 +608,13 @@
     <string name="settings_time_format_system">Follow the phone</string>
     <string name="settings_time_format_12">12-hour</string>
     <string name="settings_time_format_24">24-hour</string>
+    <string name="settings_biometric_credential_only">No fingerprint or face set up — the phone\'s PIN, pattern or password unlocks instead</string>
+    <string name="unsaved_title">Discard changes?</string>
+    <string name="unsaved_text">What you typed here has not been saved.</string>
+    <string name="unsaved_discard">Discard</string>
+    <string name="unsaved_keep">Keep editing</string>
+    <string name="disclaimer_title">Before you start</string>
+    <string name="disclaimer_body">Emivita is a reminder and record-keeping app, not a medical device. It does not replace your doctor or pharmacist, and it does not check doses, interactions or anything else you enter. Reminders depend on the phone: a phone that is off, silenced, or saving battery can miss one. Keep taking your medicines as prescribed, whatever the app says or does not say.</string>
+    <string name="disclaimer_understood">I understand</string>
+    <string name="disclaimer_continue">Continue</string>
 </resources>

@@ -85,6 +85,8 @@ import com.hazia.emivita.core.format.formatDecimalLocalized
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
 import androidx.compose.foundation.selection.toggleable
+import com.hazia.emivita.ui.components.unsavedChangesGuard
+import com.hazia.emivita.ui.components.rememberDirty
 
 // @StringRes: reminderTypeOptions is a top-level val (§9 #19).
 private data class ReminderTypeOption(
@@ -423,8 +425,11 @@ private fun ReminderFormScaffold(
     saveEnabled: Boolean,
     saveLabel: String,
     onDelete: (() -> Unit)? = null,
+    dirty: Boolean = false,
     content: @Composable () -> Unit,
 ) {
+    // Back and Cancel both ask once the form has been touched (§9 #29, HM-40).
+    val cancel = unsavedChangesGuard(dirty, onCancel)
     Column(
         Modifier
             .fillMaxWidth()
@@ -437,7 +442,7 @@ private fun ReminderFormScaffold(
         Spacer(Modifier.height(24.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(onClick = onSave, enabled = saveEnabled) { Text(saveLabel) }
-            Button(onClick = onCancel) { Text(stringResource(R.string.common_cancel)) }
+            Button(onClick = cancel) { Text(stringResource(R.string.common_cancel)) }
         }
         // Edit only (§9 #24, owner's choice: delete lives at the bottom of the
         // edit form, pause on the detail row). Until R62 the only way to be
@@ -774,7 +779,9 @@ private fun FixedTimeFormBody(
     // patterns already are. See docs/SPEC.md §7 R23.
     val everyNValue = everyN.toIntOrNull()
 
+    val dirty = rememberDirty(Unit, hour, minute, dose, patternKind, selectedDays, everyN, activeDays, pauseDays, advanced.snapshot())
     ReminderFormScaffold(
+        dirty = dirty,
         title = title,
         onDelete = onDelete,
         saveLabel = saveLabel,
@@ -892,7 +899,9 @@ private fun RepeatingIntervalFormBody(
     // BackupRepository.restoreSnapshot bypasses this form entirely.
     val intervalMinutesValue = hoursValue?.let { (it * 60).toInt() }
 
+    val dirty = rememberDirty(Unit, intervalHours, dose, startBehavior, advanced.snapshot())
     ReminderFormScaffold(
+        dirty = dirty,
         title = title,
         onDelete = onDelete,
         saveLabel = saveLabel,
@@ -967,7 +976,9 @@ private fun DailyWindowFormBody(
     // BackupRepository.restoreSnapshot bypasses this form entirely.
     val intervalMinutesValue = hoursValue?.let { (it * 60).toInt() }
 
+    val dirty = rememberDirty(Unit, intervalHours, dose, startHour, startMinute, endHour, endMinute, startBehavior, advanced.snapshot())
     ReminderFormScaffold(
+        dirty = dirty,
         title = title,
         onDelete = onDelete,
         saveLabel = saveLabel,
@@ -1031,7 +1042,9 @@ private fun LowStockAlertFormBody(
     val scope = rememberCoroutineScope()
     val thresholdValue = parseDecimal(threshold)
 
+    val dirty = rememberDirty(Unit, threshold, triggerMode, hour, minute)
     ReminderFormScaffold(
+        dirty = dirty,
         title = title,
         onDelete = onDelete,
         saveLabel = saveLabel,
@@ -1113,7 +1126,9 @@ private fun ExpirationAlertFormBody(
     val scope = rememberCoroutineScope()
     val leadDaysValue = leadDays.toIntOrNull()
 
+    val dirty = rememberDirty(Unit, leadDays, frequency, hour, minute)
     ReminderFormScaffold(
+        dirty = dirty,
         title = title,
         onDelete = onDelete,
         saveLabel = saveLabel,
@@ -1223,7 +1238,9 @@ private fun LinkedFollowingFormBody(
     val doseValue = parseDecimal(dose)
     val currentSiblings = siblings
 
+    val dirty = rememberDirty(siblings, selectedParent?.id, delayMinutes, dose, startBehavior, advanced.snapshot())
     ReminderFormScaffold(
+        dirty = dirty,
         title = title,
         onDelete = onDelete,
         saveLabel = saveLabel,

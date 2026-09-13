@@ -35,6 +35,7 @@ import com.hazia.emivita.core.security.BiometricAvailability
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
+import androidx.compose.material.icons.filled.Lock
 
 /**
  * Gates [content] behind a BiometricPrompt challenge (spec §9 #11) whenever
@@ -87,7 +88,9 @@ fun AppLockGate(settingsRepository: SettingsRepository, content: @Composable () 
     // otherwise wrongly keep failing open (or keep gating) for the rest of
     // the session regardless of the device's real current state.
     val availability = remember(activity, authenticated) { BiometricAuthenticator.availability(activity) }
-    if (availability != BiometricAvailability.AVAILABLE) {
+    // Gate on a biometric or on the phone's credential (§9 #29, MK-16); fail
+    // open only when neither exists -- see availabilityOf.
+    if (availability != BiometricAvailability.AVAILABLE && availability != BiometricAvailability.CREDENTIAL_ONLY) {
         content()
         return
     }
@@ -115,7 +118,7 @@ fun AppLockGate(settingsRepository: SettingsRepository, content: @Composable () 
             horizontalAlignment = Alignment.CenterHorizontally,
             verticalArrangement = Arrangement.Center,
         ) {
-            Icon(Icons.Filled.Fingerprint, contentDescription = null, modifier = Modifier.height(64.dp))
+            Icon(if (availability == BiometricAvailability.CREDENTIAL_ONLY) Icons.Filled.Lock else Icons.Filled.Fingerprint, contentDescription = null, modifier = Modifier.height(64.dp))
             Text(stringResource(R.string.app_lock_emivita_is_locked), style = MaterialTheme.typography.titleLarge)
             Box(Modifier.height(16.dp))
             Button(onClick = { scope.launch { authenticated = BiometricAuthenticator.authenticate(activity) } }) {
