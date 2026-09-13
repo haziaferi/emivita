@@ -631,4 +631,14 @@
     <string name="permission_granted">Allowed</string>
     <string name="permission_blocked">Blocked</string>
     <string name="permission_fix">Fix</string>
+    <string name="theme_mode_amoled">AMOLED black</string>
+    <string name="settings_start_page">Open on</string>
+    <string name="settings_start_page_desc">The tab the app opens on, from the next launch.</string>
+    <string name="purge_title">Delete everything</string>
+    <string name="purge_desc">Every medicine, reminder, dose and note on this phone. Settings, language and the lock stay.</string>
+    <string name="purge_button">Delete everything</string>
+    <string name="purge_confirm_title">Delete everything?</string>
+    <string name="purge_confirm_text">This cannot be undone. Export a backup first if there is anything you might want back.</string>
+    <string name="purge_confirm_check">Every medicine, reminder, dose and note on this phone</string>
+    <string name="purge_done">Everything deleted.</string>
 </resources>

@@ -103,6 +103,7 @@ import com.hazia.emivita.core.scheduling.AlarmWatchdog
 import android.app.AlarmManager
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
+import com.hazia.emivita.core.data.settings.StartPage
 
 /** Shared by every Settings detail screen in this package, including
  *  BackupSyncScreen's -- `internal`, not `private`, because a file-private
@@ -845,6 +846,26 @@ fun AppearanceScreen(settingsRepository: SettingsRepository, onBack: () -> Unit)
                 }
             }
         }
+
+        Spacer(Modifier.height(20.dp))
+        // Open on (§9 #29, HM-33): applies at the next launch, saved on tap.
+        val startPage by settingsRepository.startPage.collectAsState(initial = StartPage.TODAY)
+        Text(stringResource(R.string.settings_start_page), style = MaterialTheme.typography.labelLarge)
+        Spacer(Modifier.height(8.dp))
+        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+            StartPage.entries.forEach { page ->
+                FilterChip(
+                    selected = startPage == page,
+                    onClick = { scope.launch { settingsRepository.setStartPage(page) } },
+                    label = { Text(stringResource(when (page) { StartPage.TODAY -> R.string.nav_today; StartPage.MEDICINES -> R.string.nav_medicines; StartPage.HISTORY -> R.string.nav_history })) },
+                )
+            }
+        }
+        Text(
+            stringResource(R.string.settings_start_page_desc),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
 
         Spacer(Modifier.height(20.dp))
         // Language and time format (§9 #28) apply on the spot, unlike the

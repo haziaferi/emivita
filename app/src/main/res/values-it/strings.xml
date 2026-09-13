@@ -574,4 +574,14 @@
     <string name="permission_granted">Consentito</string>
     <string name="permission_blocked">Bloccato</string>
     <string name="permission_fix">Sistema</string>
+    <string name="theme_mode_amoled">Nero AMOLED</string>
+    <string name="settings_start_page">Apri su</string>
+    <string name="settings_start_page_desc">La scheda su cui si apre l’app, dal prossimo avvio.</string>
+    <string name="purge_title">Elimina tutto</string>
+    <string name="purge_desc">Ogni farmaco, promemoria, dose e nota su questo telefono. Impostazioni, lingua e blocco restano.</string>
+    <string name="purge_button">Elimina tutto</string>
+    <string name="purge_confirm_title">Eliminare tutto?</string>
+    <string name="purge_confirm_text">Non si può annullare. Esporta prima un backup se c’è qualcosa che potresti rivolere.</string>
+    <string name="purge_confirm_check">Ogni farmaco, promemoria, dose e nota su questo telefono</string>
+    <string name="purge_done">Tutto eliminato.</string>
 </resources>

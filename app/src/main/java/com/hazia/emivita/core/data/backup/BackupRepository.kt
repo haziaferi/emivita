@@ -50,16 +50,36 @@ class BackupRepository(
      *  then inserts in the reverse order via REPLACE so every restored row
      *  keeps its original id -- the cross-references (medicineId, reminderId,
      *  parentReminderId, ...) only stay correct if ids round-trip exactly. */
+    /** Every table, in dependency order -- the restore's first half, and the
+     *  whole of "Delete everything" (§9 #29, MT-22). Inside a transaction. */
+    private suspend fun deleteEverything() {
+        medicineNoteDao.deleteAll()
+        doseEventDao.deleteAll()
+        reminderDao.deleteAll()
+        tagDao.deleteAllCrossRefs()
+        doseGroupDao.deleteAll()
+        medicineDao.deleteAll()
+        tagDao.deleteAll()
+        profileDao.deleteAll()
+    }
+
+    /**
+     * Back to the first-run state (§9 #29; Appendix F MT-22): every row gone,
+     * every alarm cancelled (rescheduleAll only re-arms *enabled* reminders,
+     * so the removed ones are cancelled one by one first), the projection
+     * dropped. Settings, the app language and the lock stay: they are the
+     * phone's, not the data's. EmivitaApp recreates the default profile.
+     */
+    suspend fun purgeAll() {
+        val reminderIds = reminderDao.getAllOnce().map { it.id }
+        database.withTransaction { deleteEverything() }
+        reminderIds.forEach { runCatching { schedulingCoordinator.onReminderRemoved(it) } }
+        occurrenceProjectionCache.invalidate()
+    }
+
     suspend fun restoreSnapshot(data: BackupData) {
         database.withTransaction {
-            medicineNoteDao.deleteAll()
-            doseEventDao.deleteAll()
-            reminderDao.deleteAll()
-            tagDao.deleteAllCrossRefs()
-            doseGroupDao.deleteAll()
-            medicineDao.deleteAll()
-            tagDao.deleteAll()
-            profileDao.deleteAll()
+            deleteEverything()
 
             profileDao.restoreAll(data.profiles)
             tagDao.restoreAll(data.tags)

@@ -181,6 +181,27 @@ class DoseRecordOperationsTest {
     }
 
     @Test
+    fun `delete everything empties every table, cancels every reminder's alarm, and restore still works`() = runTest {
+        val m = medicine(); val r = reminder(m); val e = pending(m, r)
+        doses.resolve(e, DoseStatus.TAKEN); medicines.addNote(m, "n")
+        val backup = com.hazia.emivita.core.data.backup.BackupRepository(
+            database = database, profileDao = database.profileDao(), medicineDao = database.medicineDao(), tagDao = database.tagDao(),
+            doseGroupDao = database.doseGroupDao(), reminderDao = database.reminderDao(), doseEventDao = database.doseEventDao(),
+            medicineNoteDao = database.medicineNoteDao(), schedulingCoordinator = coordinator, occurrenceProjectionCache = mockk(relaxed = true),
+        )
+        val snapshot = backup.exportSnapshot(0L)
+        backup.purgeAll()
+        assertTrue(database.medicineDao().getAllOnce().isEmpty())
+        assertTrue(database.reminderDao().getAllOnce().isEmpty())
+        assertTrue(database.doseEventDao().getPendingScheduledBetween(0L, Long.MAX_VALUE).isEmpty())
+        assertTrue(database.medicineNoteDao().getForMedicine(m).isEmpty())
+        assertTrue(database.profileDao().getAllOnce().isEmpty())
+        coVerify(exactly = 1) { coordinator.onReminderRemoved(r) }
+        backup.restoreSnapshot(snapshot)
+        assertEquals(1, database.medicineDao().getAllOnce().size)
+    }
+
+    @Test
     fun `the notes journal adds, edits with an edited stamp, deletes, and cascades with the medicine`() = runTest {
         val m = medicine()
         val id = medicines.addNote(m, "  Dizzy after the dose went up  ")

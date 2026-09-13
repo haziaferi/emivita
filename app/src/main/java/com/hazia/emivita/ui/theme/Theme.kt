@@ -27,7 +27,9 @@ enum class MedPalette {
     PERIWINKLE,
 }
 
-enum class ThemeMode { LIGHT, DARK, SYSTEM }
+/** [AMOLED] (§9 #29, HM-34): the dark scheme on pure black -- an OLED panel
+ *  switches those pixels off. Contrast-checked with the rest. */
+enum class ThemeMode { LIGHT, DARK, SYSTEM, AMOLED }
 
 /**
  * The palette a fresh install gets, named once so the three places that need it
@@ -64,6 +66,7 @@ fun ThemeMode.labelRes(): Int = when (this) {
     ThemeMode.LIGHT -> R.string.theme_mode_light
     ThemeMode.DARK -> R.string.theme_mode_dark
     ThemeMode.SYSTEM -> R.string.theme_mode_system
+    ThemeMode.AMOLED -> R.string.theme_mode_amoled
 }
 
 fun MedPalette.displayName(): String = when (this) {
@@ -306,8 +309,15 @@ private fun ColorScheme.withDerivedSurfaces(background: Color, surface: Color, o
 // `internal`, not `private`: PaletteContrastTest reads every palette's resolved
 // scheme to assert Appendix A's audited ratios hold in the built ColorScheme
 // rather than only in the spec's tables (§7 R47).
-internal fun colorSchemeFor(palette: MedPalette, dark: Boolean): ColorScheme {
+internal fun colorSchemeFor(palette: MedPalette, dark: Boolean, amoled: Boolean = false): ColorScheme {
     val t = tokensFor(palette, dark)
+    if (dark && amoled) {
+        // The dark scheme with its ground switched off: black background and
+        // surface, the container tiers re-derived from black so cards still
+        // step up from the page (§9 #29, HM-34).
+        return colorSchemeFor(palette, dark = true).copy(background = Color.Black, surface = Color.Black)
+            .withDerivedSurfaces(Color.Black, Color.Black, t.onBackground, t.outline, t.primary)
+    }
     return if (dark) {
         darkColorScheme(
             background = t.background,
@@ -409,10 +419,10 @@ fun EmivitaTheme(
 ) {
     val useDark = when (themeMode) {
         ThemeMode.LIGHT -> false
-        ThemeMode.DARK -> true
+        ThemeMode.DARK, ThemeMode.AMOLED -> true
         ThemeMode.SYSTEM -> isSystemInDarkTheme()
     }
-    val colorScheme = colorSchemeFor(palette, useDark)
+    val colorScheme = colorSchemeFor(palette, useDark, amoled = themeMode == ThemeMode.AMOLED)
     val extended = emivitaColorsFor(palette, useDark)
 
     CompositionLocalProvider(LocalEmivitaColors provides extended) {

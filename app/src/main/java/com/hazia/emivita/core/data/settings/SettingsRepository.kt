@@ -75,6 +75,8 @@ class SettingsRepository(context: Context) {
         val TIME_FORMAT = stringPreferencesKey("time_format")
         // §9 #29 (MT-21): the medical disclaimer, accepted once on first launch.
         val DISCLAIMER_ACCEPTED = booleanPreferencesKey("disclaimer_accepted")
+        // §9 #29 (HM-33): the tab the app opens on.
+        val START_PAGE = stringPreferencesKey("start_page")
         val HIDE_MEDICINE_NAMES = booleanPreferencesKey("hide_medicine_names")
         // §9 #25 alarm settings (medTimer's AlarmSettingsFragment, HomeMedkit HM-21).
         val ALARM_RINGTONE_URI = stringPreferencesKey("alarm_ringtone_uri")           // null = system default alarm
@@ -198,6 +200,13 @@ class SettingsRepository(context: Context) {
         dataStore.edit { it[Keys.SWIPE_ACTION] = action.name }
     }
 
+    val startPage: Flow<StartPage> = dataStore.data.map { prefs ->
+        prefs[Keys.START_PAGE]?.let { n -> StartPage.entries.firstOrNull { it.name == n } } ?: StartPage.TODAY
+    }
+    suspend fun setStartPage(page: StartPage) {
+        dataStore.edit { it[Keys.START_PAGE] = page.name }
+    }
+
     val disclaimerAccepted: Flow<Boolean> = dataStore.data.map { prefs -> prefs[Keys.DISCLAIMER_ACCEPTED] ?: false }
     suspend fun setDisclaimerAccepted() {
         dataStore.edit { it[Keys.DISCLAIMER_ACCEPTED] = true }
@@ -296,3 +305,6 @@ enum class SwipeAction { NOTHING, SNOOZE, SKIP }
 
 /** §9 #28: how times render. SYSTEM = the phone's 24-hour switch. */
 enum class TimeFormat { SYSTEM, H12, H24 }
+
+/** §9 #29 (HM-33): where the app opens. */
+enum class StartPage { TODAY, MEDICINES, HISTORY }

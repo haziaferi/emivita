@@ -64,6 +64,11 @@ import com.hazia.emivita.core.data.backup.BACKUP_SCHEMA_VERSION
 import com.hazia.emivita.core.data.entity.Medicine
 import com.hazia.emivita.core.data.repository.MedicineRepository
 import androidx.compose.runtime.produceState
+import androidx.fragment.app.FragmentActivity
+import com.hazia.emivita.core.security.BiometricAuthenticator
+import androidx.core.app.NotificationManagerCompat
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.ui.semantics.Role
 
 private val EXPORT_FILE_STAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
@@ -320,6 +325,11 @@ fun BackupSyncScreen(
             }
         }
 
+        // ---- Delete everything (§9 #29, MT-22) --------------------------------
+        // Behind the app lock when it is on, and a checkbox that names what
+        // goes. Reuses the restore's delete block, so the two cannot drift.
+        DeleteEverythingSection(backupRepository = backupRepository, settingsRepository = settingsRepository)
+
         // ---- Archived medicines (§9 #26) --------------------------------------
         // Delete on a medicine archives it: its record stays, its reminders
         // pause, it leaves every list but this one. From here it comes back,
@@ -480,4 +490,69 @@ private fun ArchivedMedicinesSection(profileId: Long, medicineRepository: Medici
             dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
+}
+
+@Composable
+private fun DeleteEverythingSection(backupRepository: BackupRepository, settingsRepository: SettingsRepository) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    var asking by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf<String?>(null) }
+    val resources = LocalResources.current
+
+    Spacer(Modifier.height(24.dp))
+    Text(stringResource(R.string.purge_title), style = MaterialTheme.typography.titleMedium)
+    Text(stringResource(R.string.purge_desc), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+    Spacer(Modifier.height(8.dp))
+    OutlinedButton(onClick = { asking = true }) { Text(stringResource(R.string.purge_button), color = MaterialTheme.colorScheme.error) }
+    status?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+
+    if (asking) {
+        PurgeConfirmDialog(
+            onDismiss = { asking = false },
+            onConfirm = {
+                asking = false
+                scope.launch {
+                    val locked = settingsRepository.biometricLockEnabled.first()
+                    val activity = context as? FragmentActivity
+                    val allowed = !locked || activity == null || BiometricAuthenticator.authenticate(activity)
+                    if (!allowed) return@launch
+                    try {
+                        backupRepository.purgeAll()
+                        NotificationManagerCompat.from(context).cancelAll()
+                        status = resources.getString(R.string.purge_done)
+                    } catch (e: Exception) {
+                        status = resources.getString(R.string.error_could_not_save, e.message ?: resources.getString(R.string.error_unknown))
+                    }
+                }
+            },
+        )
+    }
+}
+
+/** One checkbox node naming what goes, Delete enabled only by it (§9 #29, MT-22). */
+@Composable
+internal fun PurgeConfirmDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
+    var understood by remember { mutableStateOf(false) }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.purge_confirm_title)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.purge_confirm_text))
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    Modifier.fillMaxWidth().toggleable(value = understood, role = Role.Checkbox) { understood = it },
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Checkbox(checked = understood, onCheckedChange = null)
+                    Text(stringResource(R.string.purge_confirm_check), modifier = Modifier.padding(start = 8.dp))
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(enabled = understood, onClick = onConfirm) { Text(stringResource(R.string.purge_button), color = MaterialTheme.colorScheme.error) }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } },
+    )
 }

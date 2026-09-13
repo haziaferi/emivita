@@ -44,9 +44,10 @@ import androidx.compose.ui.res.pluralStringResource
 import com.hazia.emivita.feature.medicines.stockAttentionCount
 import com.hazia.emivita.ui.components.rememberCurrentDate
 import com.hazia.emivita.R
+import com.hazia.emivita.core.data.settings.StartPage
 
 @Composable
-fun EmivitaNavHost() {
+fun EmivitaNavHost(startPage: StartPage = StartPage.TODAY) {
     val navController: NavHostController = rememberNavController()
     val container = LocalAppContainer.current
     val profileId = LocalCurrentProfileId.current
@@ -96,7 +97,13 @@ fun EmivitaNavHost() {
     ) { innerPadding ->
         NavHost(
             navController = navController,
-            startDestination = EmivitaRoute.Today,
+            // Read once by EmivitaApp before this composes (§9 #29, HM-33): the
+            // graph is built with the chosen root and never re-rooted.
+            startDestination = when (startPage) {
+                StartPage.TODAY -> EmivitaRoute.Today
+                StartPage.MEDICINES -> EmivitaRoute.Medicines
+                StartPage.HISTORY -> EmivitaRoute.History
+            },
             modifier = Modifier.padding(innerPadding),
         ) {
             composable<EmivitaRoute.Today> {

@@ -31,6 +31,8 @@ import com.hazia.emivita.ui.theme.MedPalette
 import com.hazia.emivita.ui.theme.ThemeMode
 import kotlinx.coroutines.launch
 import com.hazia.emivita.feature.disclaimer.DisclaimerDialog
+import com.hazia.emivita.core.data.settings.StartPage
+import kotlinx.coroutines.flow.first
 
 /** Name given to the silently auto-created first [Profile] -- never shown
  *  anywhere in the UI (confirmed by search: only the profile's `id`, via
@@ -106,12 +108,18 @@ fun EmivitaApp(container: AppContainer) {
                     val disclaimerAccepted by produceState<Boolean?>(initialValue = null, container) {
                         container.settingsRepository.disclaimerAccepted.collect { value = it }
                     }
+                    // The start page is read once (§9 #29, HM-33): a NavHost must not
+                    // be re-rooted while it is showing.
+                    val startPage by produceState<StartPage?>(initialValue = null, container) {
+                        value = container.settingsRepository.startPage.first()
+                    }
                     val scope = rememberCoroutineScope()
-                    when (disclaimerAccepted) {
-                        null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-                        false -> DisclaimerDialog(onAccept = { scope.launch { container.settingsRepository.setDisclaimerAccepted() } })
-                        true -> AppLockGate(settingsRepository = container.settingsRepository) {
-                            EmivitaNavHost()
+                    val page = startPage
+                    when {
+                        disclaimerAccepted == null || page == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                        disclaimerAccepted == false -> DisclaimerDialog(onAccept = { scope.launch { container.settingsRepository.setDisclaimerAccepted() } })
+                        else -> AppLockGate(settingsRepository = container.settingsRepository) {
+                            EmivitaNavHost(startPage = page)
                         }
                     }
                 }

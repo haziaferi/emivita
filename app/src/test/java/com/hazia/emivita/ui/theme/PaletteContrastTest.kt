@@ -42,6 +42,8 @@ class PaletteContrastTest {
             for (dark in listOf(false, true)) {
                 check("${palette.name} ${if (dark) "dark" else "light"}", colorSchemeFor(palette, dark))
             }
+            // §9 #29 (HM-34): the black variant holds the same floors.
+            check("${palette.name} amoled", colorSchemeFor(palette, dark = true, amoled = true))
         }
     }
 
