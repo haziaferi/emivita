@@ -34,9 +34,10 @@ class BootRescheduleReceiver : BroadcastReceiver() {
         CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
             try {
                 container.schedulingCoordinator.rescheduleAll()
-                // The future is re-armed; now the recent past (§9 #25): a dose
-                // that fired before the reboot and was never answered gets its
-                // notification back. medTimer's Autostart does the same.
+                // The future is re-armed; now the past (§9 #25, #26): slots that
+                // passed while the phone was off become Missed rows, and the
+                // last day's unanswered doses get their notification back.
+                container.missedDoseBackfiller.backfill()
                 container.unansweredDoseReposter.repost()
             } catch (t: Throwable) {
                 Log.e(TAG, "Failed to reschedule reminders after ${intent.action}", t)

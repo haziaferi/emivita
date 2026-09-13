@@ -22,6 +22,7 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import com.hazia.emivita.core.notification.UnansweredDoseReposter
+import com.hazia.emivita.core.scheduling.MissedDoseBackfiller
 
 /** Single-maintainer personal app -- a plain composition root reads more clearly
  *  here than Hilt's codegen for the size this project is at. Revisit if it
@@ -127,10 +128,18 @@ class AppContainer(context: Context) {
         applicationScope.launch {
             runCatching { schedulingCoordinator.rescheduleAll() }
                 .onFailure { android.util.Log.e("AppContainer", "rescheduleOnLaunch failed", it) }
-            // And the past: a force-stop cleared the shade as well as the alarms.
+            // The past, in two steps (§9 #25, #26): slots that passed while
+            // the app was not running become Missed rows, then the last day's
+            // unanswered doses get their notification back.
+            runCatching { missedDoseBackfiller.backfill() }
+                .onFailure { android.util.Log.e("AppContainer", "backfill on launch failed", it) }
             runCatching { unansweredDoseReposter.repost() }
                 .onFailure { android.util.Log.e("AppContainer", "repost on launch failed", it) }
         }
+    }
+
+    val missedDoseBackfiller: MissedDoseBackfiller by lazy {
+        MissedDoseBackfiller(database.reminderDao(), schedulingEngine, doseEventRepository, settingsRepository)
     }
 
     val unansweredDoseReposter: UnansweredDoseReposter by lazy {

@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
+import androidx.datastore.preferences.core.longPreferencesKey
 
 private val Context.settingsDataStore by preferencesDataStore(name = "emivita_settings")
 private val TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm")
@@ -75,6 +76,10 @@ class SettingsRepository(context: Context) {
         // §9 #25: the notification's Snooze action opens a duration picker
         // instead of snoozing for the saved duration (medTimer's "Custom…").
         val SNOOZE_ASK_EACH_TIME = booleanPreferencesKey("snooze_ask_each_time")
+        // §9 #26: the last instant the app is known to have been running --
+        // launch, boot, an alarm firing. The Missed back-fill covers what lies
+        // between this and now, so a pause-and-resume while alive is not a gap.
+        val APP_LAST_SEEN_EPOCH_MILLIS = longPreferencesKey("app_last_seen_epoch_millis")
     }
 
     val palette: Flow<MedPalette> = dataStore.data.map { prefs ->
@@ -218,6 +223,11 @@ class SettingsRepository(context: Context) {
     val useAlarmClock: Flow<Boolean> = dataStore.data.map { prefs -> prefs[Keys.USE_ALARM_CLOCK] ?: false }
     suspend fun setUseAlarmClock(value: Boolean) {
         dataStore.edit { it[Keys.USE_ALARM_CLOCK] = value }
+    }
+
+    val appLastSeenEpochMillis: Flow<Long?> = dataStore.data.map { prefs -> prefs[Keys.APP_LAST_SEEN_EPOCH_MILLIS] }
+    suspend fun setAppLastSeenEpochMillis(epochMillis: Long) {
+        dataStore.edit { it[Keys.APP_LAST_SEEN_EPOCH_MILLIS] = epochMillis }
     }
 
     val snoozeAskEachTime: Flow<Boolean> = dataStore.data.map { prefs -> prefs[Keys.SNOOZE_ASK_EACH_TIME] ?: false }

@@ -63,6 +63,8 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
             try {
+                // The app was alive at this instant (§9 #26 back-fill window).
+                runCatching { container.settingsRepository.setAppLastSeenEpochMillis(System.currentTimeMillis()) }
                 when {
                     isPreAlarm -> handlePreAlarm(context, reminderId, scheduledEpochMillis, container)
                     isNag -> handleNagFire(reminderId, scheduledEpochMillis, container)

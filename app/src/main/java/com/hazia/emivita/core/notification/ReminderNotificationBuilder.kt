@@ -83,7 +83,8 @@ class ReminderNotificationBuilder(
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification_reminder)
             .setContentTitle(title)
-            .setContentText(contentText(doseEvent, medicine))
+            .setContentText(contentText(doseEvent, reminder, medicine))
+            .setStyle(NotificationCompat.BigTextStyle().bigText(contentText(doseEvent, reminder, medicine)))
             .setPriority(compatPriorityFor(priority))
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setOnlyAlertOnce(false)
@@ -204,17 +205,22 @@ class ReminderNotificationBuilder(
         NotificationPriority.HIGH, NotificationPriority.ALARM -> NotificationCompat.PRIORITY_HIGH
     }
 
-    private fun contentText(doseEvent: DoseEvent, medicine: Medicine): String {
+    private fun contentText(doseEvent: DoseEvent, reminder: Reminder, medicine: Medicine): String {
         val time = Instant.ofEpochMilli(doseEvent.scheduledEpochMillis)
             .atZone(ZoneId.systemDefault())
             .format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
-        val dose = context.getString(R.string.notif_dose_body, formatDecimalLocalized(doseEvent.doseAmount), time)
+        val parts = mutableListOf(context.getString(R.string.notif_dose_body, formatDecimalLocalized(doseEvent.doseAmount), time))
+        // Instructions first (§9 #26; medTimer MT-06): "with food" is the one
+        // line that belongs on the notification, before the stock count.
+        reminder.instructions?.takeIf { it.isNotBlank() }?.let { parts += it }
         // "N left after this dose" when stock is tracked (§9 #25; Appendix F
         // HM-18) -- the text only, never the take-blocking HomeMedkit does.
         val stock = medicine.stockInfo
-        if (stock.unit == null) return dose
-        val left = (stock.quantity - doseEvent.doseAmount).coerceAtLeast(0.0)
-        return dose + " · " + context.getString(R.string.notif_left_after_dose, formatDecimalLocalized(left), stock.unit)
+        if (stock.unit != null) {
+            val left = (stock.quantity - doseEvent.doseAmount).coerceAtLeast(0.0)
+            parts += context.getString(R.string.notif_left_after_dose, formatDecimalLocalized(left), stock.unit)
+        }
+        return parts.joinToString(" · ")
     }
 
     /**
