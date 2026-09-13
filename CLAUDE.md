@@ -54,7 +54,7 @@ leftover literal renders plain English. The debug build has
 `isPseudoLocalesEnabled = true`; the locale is set per app, not system-wide:
 
 ```bash
-adb shell cmd locale set-app-locales com.hazia.emivita --locales en-XA   # or ar-XB; "" to reset
+adb shell cmd locale set-app-locales com.hazia.emivita --locales en-XA   # or ar-XB, or it (§9 #28); "" to reset
 adb shell uiautomator dump /sdcard/ui.xml && adb pull /sdcard/ui.xml      # the real accessibility tree
 adb exec-out screencap -p > screen.png
 ```
@@ -64,7 +64,13 @@ A dump does not surface `onClickLabel`; that half stays Robolectric-only.
 
 ## User-visible text (§9 #19)
 
-Every string a user sees lives in `app/src/main/res/values/strings.xml`.
+Every string a user sees lives in `app/src/main/res/values/strings.xml`,
+and every translation in `values-xx/strings.xml` is **complete or it does not
+ship**: `TranslationCompletenessTest` fails on a missing or extra key, a
+changed format argument, a plurals without one/other, or a value left in
+English (its `identical` list is the record of deliberate same-word cases).
+Italian needs `many` as well as `one`/`other` (CLDR 42). A new language is one
+folder plus one entry in `AppLocale.SHIPPED`.
 `HardcodedUiTextGateTest` fails the build on a literal handed to `Text()`,
 `contentDescription`, a notification builder, or a `title`/`label` argument
 in the UI layers. Its blind spot is a literal assigned to a `val` first;
