@@ -23,6 +23,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.launch
 import com.hazia.emivita.core.notification.UnansweredDoseReposter
 import com.hazia.emivita.core.scheduling.MissedDoseBackfiller
+import com.hazia.emivita.core.format.LocaleFormats
+import com.hazia.emivita.core.data.settings.TimeFormat
 
 /** Single-maintainer personal app -- a plain composition root reads more clearly
  *  here than Hilt's codegen for the size this project is at. Revisit if it
@@ -113,6 +115,17 @@ class AppContainer(context: Context) {
      *  flips (§9 #25). Started once from EmivitaApplication; the first value
      *  arrives before any alarm is armed on a warm start, and rescheduleOnLaunch
      *  covers the cold one. */
+    /** §9 #28: the time-format choice and the phone's 24-hour switch reach
+     *  every formatter through LocaleFormats' two hooks. */
+    fun observeTimeFormatSetting() {
+        LocaleFormats.systemHour24 = { android.text.format.DateFormat.is24HourFormat(appContext) }
+        applicationScope.launch {
+            settingsRepository.timeFormat.collect { format ->
+                LocaleFormats.hour24Override = when (format) { TimeFormat.SYSTEM -> null; TimeFormat.H12 -> false; TimeFormat.H24 -> true }
+            }
+        }
+    }
+
     fun observeAlarmClockSetting() {
         applicationScope.launch {
             var first = true

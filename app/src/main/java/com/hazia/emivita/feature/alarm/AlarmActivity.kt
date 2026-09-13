@@ -58,6 +58,7 @@ import android.net.Uri
 import androidx.lifecycle.lifecycleScope
 import kotlinx.coroutines.Job
 import androidx.core.net.toUri
+import com.hazia.emivita.core.locale.AppLocale
 
 /**
  * Full-screen target for ALARM-priority reminders (see
@@ -71,6 +72,7 @@ import androidx.core.net.toUri
  * this app. Don't mistake this Composable for a design decision.
  */
 class AlarmActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: Context) = super.attachBaseContext(AppLocale.wrap(newBase))
 
     // The half of medTimer's ReminderAlarmActivity that the port left out
     // (§7 R59): this screen showed over the lock screen and turned the

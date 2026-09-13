@@ -70,6 +70,9 @@ class SettingsRepository(context: Context) {
         // §9 #25: what a swiped-away reminder records (enum name; default SNOOZE,
         // the owner's choice) and whether notifications mask the medicine name.
         val SWIPE_ACTION = stringPreferencesKey("notification_swipe_action")
+        // §9 #28 (MT-20): System follows the phone's own 24-hour switch, which
+        // java.time's localized time never did; the other two override it.
+        val TIME_FORMAT = stringPreferencesKey("time_format")
         val HIDE_MEDICINE_NAMES = booleanPreferencesKey("hide_medicine_names")
         // §9 #25 alarm settings (medTimer's AlarmSettingsFragment, HomeMedkit HM-21).
         val ALARM_RINGTONE_URI = stringPreferencesKey("alarm_ringtone_uri")           // null = system default alarm
@@ -193,6 +196,13 @@ class SettingsRepository(context: Context) {
         dataStore.edit { it[Keys.SWIPE_ACTION] = action.name }
     }
 
+    val timeFormat: Flow<TimeFormat> = dataStore.data.map { prefs ->
+        prefs[Keys.TIME_FORMAT]?.let { n -> TimeFormat.entries.firstOrNull { it.name == n } } ?: TimeFormat.SYSTEM
+    }
+    suspend fun setTimeFormat(format: TimeFormat) {
+        dataStore.edit { it[Keys.TIME_FORMAT] = format.name }
+    }
+
     /** Mask the medicine's name in every notification (§9 #11, #25): first
      *  letter and asterisks, so a shade glanced at across a table says a dose
      *  is due without saying of what. The idea is medTimer's; re-implemented. */
@@ -276,3 +286,6 @@ class SettingsRepository(context: Context) {
  *  offers the same three and defaults to Skip; the owner chose Snooze -- a
  *  swipe is closer to "not now" than to "no". NOTHING leaves the dose Due. */
 enum class SwipeAction { NOTHING, SNOOZE, SKIP }
+
+/** §9 #28: how times render. SYSTEM = the phone's 24-hour switch. */
+enum class TimeFormat { SYSTEM, H12, H24 }

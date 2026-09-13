@@ -92,6 +92,12 @@ import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.material3.OutlinedButton
 import com.hazia.emivita.core.notification.postTestReminder
 import androidx.core.net.toUri
+import android.app.Activity
+import com.hazia.emivita.core.data.settings.TimeFormat
+import com.hazia.emivita.core.locale.AppLocale
+import com.hazia.emivita.core.format.LocaleFormats
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.TextButton
 
 /** Shared by every Settings detail screen in this package, including
  *  BackupSyncScreen's -- `internal`, not `private`, because a file-private
@@ -770,6 +776,9 @@ fun AppearanceScreen(settingsRepository: SettingsRepository, onBack: () -> Unit)
     var selectedPalette by remember { mutableStateOf(MedPalette.DAYLIGHT) }
     var themeMode by remember { mutableStateOf(ThemeMode.SYSTEM) }
     val scope = rememberCoroutineScope()
+    val context = LocalContext.current
+    val timeFormat by settingsRepository.timeFormat.collectAsState(initial = TimeFormat.SYSTEM)
+    var languageTag by remember { mutableStateOf(AppLocale.current(context)) }
 
     LaunchedEffect(Unit) {
         selectedPalette = settingsRepository.palette.first()
@@ -816,6 +825,22 @@ fun AppearanceScreen(settingsRepository: SettingsRepository, onBack: () -> Unit)
             }
         }
 
+        Spacer(Modifier.height(20.dp))
+        // Language and time format (§9 #28) apply on the spot, unlike the
+        // palette and theme above which wait for Save: a language change
+        // recreates the screen, so a pending Save would be lost anyway.
+        LanguageAndTimeSection(
+            languageTag = languageTag,
+            languages = AppLocale.supported(context),
+            onLanguage = { tag ->
+                languageTag = tag
+                AppLocale.set(context, tag)
+                if (AppLocale.needsRecreate) (context as? Activity)?.recreate()
+            },
+            timeFormat = timeFormat,
+            onTimeFormat = { scope.launch { settingsRepository.setTimeFormat(it) } },
+        )
+
         Spacer(Modifier.height(24.dp))
         Button(onClick = {
             scope.launch {
@@ -824,6 +849,103 @@ fun AppearanceScreen(settingsRepository: SettingsRepository, onBack: () -> Unit)
                 onBack()
             }
         }) { Text(stringResource(R.string.common_save)) }
+    }
+}
+
+/** A language is named in itself ("Italiano", not "Italian"), the platform
+ *  convention, so a person who cannot read the current language still finds
+ *  theirs; the pseudolocales show their tags. */
+internal fun languageDisplayName(tag: String?, systemLabel: String): String {
+    if (tag == null) return systemLabel
+    val locale = java.util.Locale.forLanguageTag(tag)
+    val name = locale.getDisplayName(locale)
+    return if (tag.contains("-X")) "$name ($tag)" else name.replaceFirstChar { it.titlecase(locale) }
+}
+
+@Composable
+internal fun LanguageAndTimeSection(
+    languageTag: String?,
+    languages: List<String>,
+    onLanguage: (String?) -> Unit,
+    timeFormat: TimeFormat,
+    onTimeFormat: (TimeFormat) -> Unit,
+) {
+    var pickingLanguage by remember { mutableStateOf(false) }
+    val systemLabel = stringResource(R.string.settings_language_system)
+
+    Text(stringResource(R.string.settings_language), style = MaterialTheme.typography.labelLarge)
+    Spacer(Modifier.height(4.dp))
+    Row(
+        Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = stringResource(R.string.settings_language_change)) { pickingLanguage = true }.padding(vertical = 8.dp),
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Text(languageDisplayName(languageTag, systemLabel), style = MaterialTheme.typography.bodyLarge)
+        Text(stringResource(R.string.settings_language_change), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
+    }
+
+    Spacer(Modifier.height(16.dp))
+    Text(stringResource(R.string.settings_time_format), style = MaterialTheme.typography.labelLarge)
+    // A live example beside each option, so the choice is seen, not inferred.
+    val example = remember { java.time.LocalDate.now().atTime(20, 5).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli() }
+    TimeFormat.entries.forEach { option ->
+        val label = when (option) {
+            TimeFormat.SYSTEM -> stringResource(R.string.settings_time_format_system)
+            TimeFormat.H12 -> stringResource(R.string.settings_time_format_12)
+            TimeFormat.H24 -> stringResource(R.string.settings_time_format_24)
+        }
+        Row(
+            Modifier.fillMaxWidth().selectable(selected = timeFormat == option, role = Role.RadioButton) { onTimeFormat(option) }.padding(vertical = 6.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            RadioButton(selected = timeFormat == option, onClick = null)
+            Spacer(Modifier.width(8.dp))
+            Text(label, modifier = Modifier.weight(1f))
+            Text(
+                exampleTime(option, example),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+
+    if (pickingLanguage) {
+        AlertDialog(
+            onDismissRequest = { pickingLanguage = false },
+            title = { Text(stringResource(R.string.settings_language)) },
+            text = { LanguageList(languageTag, languages) { pickingLanguage = false; onLanguage(it) } },
+            confirmButton = { TextButton(onClick = { pickingLanguage = false }) { Text(stringResource(R.string.common_cancel)) } },
+        )
+    }
+}
+
+/** One radio node per language, "System default" first (§9 #28). */
+@Composable
+internal fun LanguageList(languageTag: String?, languages: List<String>, onLanguage: (String?) -> Unit) {
+    val systemLabel = stringResource(R.string.settings_language_system)
+    Column {
+        (listOf<String?>(null) + languages).forEach { tag ->
+            Row(
+                Modifier.fillMaxWidth().selectable(selected = languageTag == tag, role = Role.RadioButton) { onLanguage(tag) }.padding(vertical = 6.dp),
+                verticalAlignment = Alignment.CenterVertically,
+            ) {
+                RadioButton(selected = languageTag == tag, onClick = null)
+                Spacer(Modifier.width(8.dp))
+                Text(languageDisplayName(tag, systemLabel))
+            }
+        }
+    }
+}
+
+/** The example rendered the way [option] would render it, without touching
+ *  the process-wide hooks. */
+internal fun exampleTime(option: TimeFormat, epochMillis: Long): String {
+    val saved = LocaleFormats.hour24Override
+    return try {
+        LocaleFormats.hour24Override = when (option) { TimeFormat.SYSTEM -> null; TimeFormat.H12 -> false; TimeFormat.H24 -> true }
+        LocaleFormats.time(epochMillis)
+    } finally {
+        LocaleFormats.hour24Override = saved
     }
 }
 

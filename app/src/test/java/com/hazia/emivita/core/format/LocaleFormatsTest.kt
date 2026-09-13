@@ -32,6 +32,25 @@ class LocaleFormatsTest {
         assertEquals("20:05", it)
     }
 
+    // ---- §9 #28: the 24-hour switch ----
+
+    @Test
+    fun `the phone's 24-hour switch wins over the locale, and the user's choice wins over both`() {
+        try {
+            LocaleFormats.systemHour24 = { true }
+            assertEquals("US locale, phone on 24-hour", "20:05", LocaleFormats.time(eightPm, zone, Locale.US))
+            LocaleFormats.systemHour24 = { false }
+            assertTrue("Italian locale, phone on 12-hour", LocaleFormats.time(eightPm, zone, Locale.ITALY).contains("8:05"))
+            LocaleFormats.hour24Override = true
+            assertEquals("24-hour chosen in the app", "20:05", LocaleFormats.time(eightPm, zone, Locale.ITALY))
+            LocaleFormats.hour24Override = false
+            assertTrue("12-hour chosen in the app", LocaleFormats.time(eightPm, zone, Locale.US).uppercase().contains("PM"))
+        } finally {
+            LocaleFormats.hour24Override = null
+            LocaleFormats.systemHour24 = { null }
+        }
+    }
+
     @Test
     fun `weekday and month-day come out in the locale's own order`() {
         val date = LocalDate.of(2026, 9, 12)

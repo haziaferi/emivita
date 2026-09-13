@@ -30,6 +30,8 @@ import com.hazia.emivita.R
 import com.hazia.emivita.core.notification.EXTRA_DOSE_EVENT_ID
 import com.hazia.emivita.ui.theme.EmivitaTheme
 import kotlinx.coroutines.launch
+import android.content.Context
+import com.hazia.emivita.core.locale.AppLocale
 
 /**
  * "Snooze for how long?" (spec §9 #25; medTimer's custom snooze). Opened by
@@ -41,6 +43,7 @@ import kotlinx.coroutines.launch
  * call the one-tap path makes.
  */
 class SnoozePickerActivity : ComponentActivity() {
+    override fun attachBaseContext(newBase: Context) = super.attachBaseContext(AppLocale.wrap(newBase))
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         val doseEventId = intent.getLongExtra(EXTRA_DOSE_EVENT_ID, -1L)

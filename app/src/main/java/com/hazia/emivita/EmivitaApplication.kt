@@ -3,10 +3,17 @@ package com.hazia.emivita
 import android.app.Application
 import com.hazia.emivita.core.di.AppContainer
 import com.hazia.emivita.core.notification.ReminderNotificationChannels
+import android.content.Context
+import com.hazia.emivita.core.locale.AppLocale
 
 class EmivitaApplication : Application() {
     lateinit var container: AppContainer
         private set
+
+    // The app's own language on Android 11-12 (§9 #28): every context the
+    // container hands out -- receivers, notification builders -- descends
+    // from this one, so wrapping here is what makes a notification Italian.
+    override fun attachBaseContext(base: Context) = super.attachBaseContext(AppLocale.wrap(base))
 
     override fun onCreate() {
         super.onCreate()
@@ -20,5 +27,6 @@ class EmivitaApplication : Application() {
         container = AppContainer(this)
         ReminderNotificationChannels.createAll(this)
         container.observeAlarmClockSetting()
+        container.observeTimeFormatSetting()
     }
 }

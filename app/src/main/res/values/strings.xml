@@ -601,4 +601,11 @@
         <item quantity="one">%1$d medicine needs attention</item>
         <item quantity="other">%1$d medicines need attention</item>
     </plurals>
+    <string name="settings_language">Language</string>
+    <string name="settings_language_system">System default</string>
+    <string name="settings_language_change">Change</string>
+    <string name="settings_time_format">Time format</string>
+    <string name="settings_time_format_system">Follow the phone</string>
+    <string name="settings_time_format_12">12-hour</string>
+    <string name="settings_time_format_24">24-hour</string>
 </resources>

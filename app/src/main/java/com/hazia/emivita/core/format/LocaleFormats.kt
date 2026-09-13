@@ -16,7 +16,10 @@ import java.util.Locale
  * on purpose: a CSV column and a PDF for a clinician are data, and `0.5` /
  * `2026-09-12` read the same in every country.
  *
- * Time uses `ofLocalizedTime(SHORT)`, which is what decides 12- vs 24-hour.
+ * Time is a skeleton too (§9 #28): `Hm` / `hm` when the app or the phone
+ * has said 24- or 12-hour, `jm` -- the locale's own preference -- when
+ * neither has. `ofLocalizedTime(SHORT)` used to decide it from the locale
+ * alone, so a US-locale phone set to 24-hour still read "8:05 PM" here.
  * Dates use skeletons through [DateFormat.getBestDateTimePattern], the
  * Android way to get "weekday, month day" in the locale's own order rather
  * than a hard-coded `EEE, MMM d` that reads as English everywhere. Every
@@ -24,8 +27,19 @@ import java.util.Locale
  * pattern string, which is how they survived Stage A.
  */
 object LocaleFormats {
-    fun time(epochMillis: Long, zone: ZoneId = ZoneId.systemDefault(), locale: Locale = Locale.getDefault()): String =
-        Instant.ofEpochMilli(epochMillis).atZone(zone).format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT).withLocale(locale))
+    /** The user's choice (TimeFormat.H12/H24 → false/true), null for System;
+     *  mirrored from the DataStore by AppContainer, the AlarmScheduler.useAlarmClock shape. */
+    @Volatile var hour24Override: Boolean? = null
+    /** The phone's own 24-hour switch, installed by AppContainer as
+     *  `DateFormat.is24HourFormat(context)`; null (the default, and the test
+     *  default) means "ask the locale". */
+    @Volatile var systemHour24: () -> Boolean? = { null }
+
+    fun time(epochMillis: Long, zone: ZoneId = ZoneId.systemDefault(), locale: Locale = Locale.getDefault()): String {
+        val hour24 = hour24Override ?: systemHour24()
+        val skeletonName = when (hour24) { true -> "Hm"; false -> "hm"; null -> "jm" }
+        return Instant.ofEpochMilli(epochMillis).atZone(zone).format(skeleton(skeletonName, locale))
+    }
 
     /** "Fri, Sep 12" / "ven 12 set". */
     fun weekdayMonthDay(date: LocalDate, locale: Locale = Locale.getDefault()): String =

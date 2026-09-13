@@ -206,9 +206,7 @@ class ReminderNotificationBuilder(
     }
 
     private fun contentText(doseEvent: DoseEvent, reminder: Reminder, medicine: Medicine): String {
-        val time = Instant.ofEpochMilli(doseEvent.scheduledEpochMillis)
-            .atZone(ZoneId.systemDefault())
-            .format(DateTimeFormatter.ofLocalizedTime(FormatStyle.SHORT))
+        val time = LocaleFormats.time(doseEvent.scheduledEpochMillis)
         val parts = mutableListOf(context.getString(R.string.notif_dose_body, formatDecimalLocalized(doseEvent.doseAmount), time))
         // Instructions first (§9 #26; medTimer MT-06): "with food" is the one
         // line that belongs on the notification, before the stock count.

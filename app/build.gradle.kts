@@ -82,6 +82,20 @@ android {
         compose = true
     }
 
+    // §9 #28 (Appendix F F-31 / HM-35): AGP writes _generated_res_locale_config
+    // from the values-* folders and points android:localeConfig at it, so
+    // Android 13+'s per-app language page lists exactly the shipped languages.
+    // The base locale comes from res/resources.properties.
+    androidResources {
+        generateLocaleConfig = true
+    }
+    // An in-app language choice needs every language in the installed
+    // package (lint AppBundleLocaleChanges): no per-language bundle splits.
+    // Moot for a sideloaded APK (§1: no Play Store), right for a bundle.
+    bundle {
+        language { enableSplit = false }
+    }
+
     // EmivitaDatabase (@Database) declares exportSchema = true so future Room
     // migrations have a baseline schema to diff against. Without this KSP arg,
     // Room has nowhere to write that schema JSON and silently skips the export.
