@@ -166,7 +166,10 @@ interface DoseEventDao {
     suspend fun incrementRepeatCount(id: Long)
 
     /** Cascade-delete support (spec §9 #1's deferred "what happens to a
-     *  deleted medicine's history" question, resolved: cascade). Reminder's
+     *  deleted medicine's history" question, resolved: cascade -- and then
+     *  reversed by §9 #26 / §7 R65: Delete on a medicine now *archives* it and
+     *  the history stays; this cascade is reached only from "Delete for good"
+     *  on the archived list, behind a confirm). Reminder's
      *  own FK (reminders.medicineId, CASCADE) already deletes reminder-linked
      *  DoseEvents transitively via dose_events.reminderId's own CASCADE FK --
      *  but PRN/refill events (reminderId = null) are only ever linked by this
