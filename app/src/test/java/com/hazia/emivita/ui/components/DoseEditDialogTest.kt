@@ -7,10 +7,13 @@ import androidx.compose.ui.test.assertIsNotEnabled
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performTextClearance
+import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.isSelectable
 import com.hazia.emivita.core.data.entity.DoseStatus
 import com.hazia.emivita.core.data.repository.DoseEventRepository
 import io.mockk.coVerify
+import io.mockk.coVerifyOrder
 import io.mockk.mockk
 import org.junit.Rule
 import org.junit.Test
@@ -105,5 +108,27 @@ class DoseEditDialogTest {
         show(DoseStatus.TAKEN, resolvedAt = scheduled)
         compose.onAllNodes(isSelectable())[0].assertIsSelected()
         compose.onNodeWithText("Save").assertIsEnabled()
+    }
+
+    /**
+     * §7 R60 C F-1: resolve() takes the stock change from the stored
+     * doseAmount and editDoseAmount() never touches stock, so for a Missed
+     * dose corrected with a different amount the edit must land first --
+     * otherwise the bottle is charged the reminder's default, not the amount
+     * the user just typed.
+     */
+    @Test
+    fun missedDoseWithANewAmountWritesTheAmountBeforeResolving() {
+        val repository = mockk<DoseEventRepository>(relaxed = true)
+        show(DoseStatus.PENDING, repository = repository)
+        compose.onNodeWithText("Taken").performClick()
+        compose.onNodeWithText("Dose amount").performTextClearance()
+        compose.onNodeWithText("Dose amount").performTextInput("2")
+        compose.onNodeWithText("Save").performClick()
+        compose.waitForIdle()
+        coVerifyOrder {
+            repository.editDoseAmount(7L, 2.0)
+            repository.resolve(7L, DoseStatus.TAKEN, scheduled)
+        }
     }
 }

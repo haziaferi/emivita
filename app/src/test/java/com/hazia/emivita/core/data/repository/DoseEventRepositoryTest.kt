@@ -18,6 +18,7 @@ import io.mockk.mockk
 import kotlinx.coroutines.test.runTest
 import org.junit.After
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertNull
 import org.junit.Before
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -351,5 +352,23 @@ class DoseEventRepositoryTest {
         repository.switchStatus(eventId, DoseStatus.SKIPPED)
 
         assertEquals(1.0, stockOf(medicineId), 0.001)
+    }
+
+    @Test
+    fun `logRefill on a medicine with no unit records nothing and returns null`() = runTest {
+        // §7 R60 C F-2: withStockSentinels skips an untracked medicine, so this
+        // used to insert a REFILLED row whose sentinels said "not tracked" while
+        // the quantity stayed put -- History said refilled, the count did not move.
+        val profileId = database.profileDao().insert(Profile(name = "P", createdAtEpochMillis = 0))
+        val medicineId = database.medicineDao().insert(
+            Medicine(profileId = profileId, name = "Vitamin D", iconKey = "pill",
+                stockInfo = StockInfo(quantity = 0.0, unit = null), sortOrder = 0.0, createdAtEpochMillis = 0),
+        )
+
+        val id = repository.logRefill(medicineId, refillAmount = 30.0, atEpochMillis = 1)
+
+        assertNull(id)
+        assertNull(database.doseEventDao().getMostRecentForMedicine(medicineId))
+        assertEquals(0.0, stockOf(medicineId), 0.001)
     }
 }

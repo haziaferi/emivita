@@ -292,7 +292,16 @@ class DoseEventRepository(
      *  the other direction (After > Before instead of <) -- one mechanism for
      *  both directions of stock change, not two. Shows up in History as an
      *  ordinary DoseEvent row distinguished by DoseStatus.REFILLED. */
-    suspend fun logRefill(medicineId: Long, refillAmount: Double, atEpochMillis: Long): Long {
+    suspend fun logRefill(medicineId: Long, refillAmount: Double, atEpochMillis: Long): Long? {
+        // Refuse rather than record a no-op (§7 R60 C F-2). withStockSentinels
+        // returns early for an untracked medicine (no unit), so this used to
+        // insert a REFILLED row with -1/-1 sentinels and change nothing --
+        // History said "refilled", the bottle count did not move. medTimer's
+        // RefillProcessor adds the size unconditionally; here tracking is
+        // explicit (§3), so the honest answer is null and the screen gates
+        // the button on a saved unit.
+        val medicine = medicineDao.getById(medicineId) ?: return null
+        if (medicine.stockInfo.unit == null) return null
         val id = database.withTransaction {
             doseEventDao.insert(
                 DoseEvent(

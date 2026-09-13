@@ -436,4 +436,5 @@
     <string name="error_could_not_log_dose">Couldn\'t log dose: %1$s</string>
     <string name="error_unknown">unknown error</string>
     <string name="backup_wrong_password">Wrong password — try again.</string>
+    <string name="stock_refill_needs_unit">Save a unit first — stock is only tracked once it has one.</string>
 </resources>

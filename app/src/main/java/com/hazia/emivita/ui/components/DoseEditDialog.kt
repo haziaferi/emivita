@@ -159,6 +159,14 @@ fun DoseEditDialog(
                         try {
                             val newResolvedAt = originalZoned.withHour(hour).withMinute(minute).toInstant().toEpochMilli()
                             if (wasUnresolved) {
+                                // The amount FIRST (§7 R60 C F-1): resolve() computes the
+                                // stock change from the event's stored doseAmount, and
+                                // editDoseAmount() deliberately never touches stock. In
+                                // the old order a Missed dose corrected to Taken with a
+                                // different amount decremented the reminder's default,
+                                // not the amount just typed. medTimer's
+                                // VariableAmountHandler does it this way round too.
+                                if (amount != originalDoseAmount) doseEventRepository.editDoseAmount(doseEventId, amount)
                                 // resolve(), not switchStatus(): the latter requires an
                                 // already-resolved event, and this one never was. It
                                 // also applies the stock change, which is right --
@@ -168,8 +176,8 @@ fun DoseEditDialog(
                             } else {
                                 if (chosenStatus != originalStatus) doseEventRepository.switchStatus(doseEventId, chosenStatus)
                                 if (newResolvedAt != originalResolvedAtEpochMillis) doseEventRepository.editRecordedTime(doseEventId, newResolvedAt)
+                                if (amount != originalDoseAmount) doseEventRepository.editDoseAmount(doseEventId, amount)
                             }
-                            if (amount != originalDoseAmount) doseEventRepository.editDoseAmount(doseEventId, amount)
                             onDismiss()
                         } catch (e: Exception) {
                             saving = false

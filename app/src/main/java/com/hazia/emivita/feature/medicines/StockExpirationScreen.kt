@@ -96,6 +96,10 @@ fun StockExpirationScreen(
     // Current stock
     var quantity by remember { mutableStateOf("") }
     var unit by remember { mutableStateOf("") }
+    // Whether the SAVED row has a unit -- the tracking switch (§3), and what
+    // "Refill now" is gated on (§7 R60 C F-2): a refill applied before the
+    // unit was saved used to insert a history row and change nothing.
+    var trackingSaved by remember { mutableStateOf(false) }
     var refillQuantity by remember { mutableStateOf("") }
 
     // Low-stock alert (mirrors a LowStockAlert Reminder for this medicine)
@@ -122,6 +126,7 @@ fun StockExpirationScreen(
         val medicine = medicineRepository.getById(medicineId) ?: return@LaunchedEffect
         quantity = formatDecimal(medicine.stockInfo.quantity)
         unit = medicine.stockInfo.unit ?: ""
+        trackingSaved = medicine.stockInfo.unit != null
         refillQuantity = medicine.stockInfo.refillQuantity?.let { formatDecimal(it) } ?: ""
         expirationDateEpochDay = medicine.stockInfo.expirationDateEpochDay
 
@@ -198,18 +203,28 @@ fun StockExpirationScreen(
                 style = MaterialTheme.typography.bodyMedium,
             )
             Spacer(Modifier.height(8.dp))
+            val refillAmount = refillQuantity.toDoubleOrNull()?.takeIf { it > 0 }
             OutlinedButton(
-                enabled = refillQuantity.toDoubleOrNull()?.let { it > 0 } == true,
+                enabled = refillAmount != null && trackingSaved,
                 onClick = {
-                    val amount = refillQuantity.toDoubleOrNull() ?: return@OutlinedButton
+                    val amount = refillAmount ?: return@OutlinedButton
                     scope.launch {
-                        doseEventRepository.logRefill(medicineId, amount, System.currentTimeMillis())
+                        val logged = doseEventRepository.logRefill(medicineId, amount, System.currentTimeMillis())
                         val fresh = medicineRepository.getById(medicineId)
                         quantity = formatDecimal(fresh?.stockInfo?.quantity ?: 0.0)
-                        saveStatus = resources.getString(R.string.stock_refilled_status)
+                        saveStatus = resources.getString(
+                            if (logged != null) R.string.stock_refilled_status else R.string.stock_refill_needs_unit,
+                        )
                     }
                 },
             ) { Text(stringResource(R.string.stock_refill_now, refillQuantity.toString())) }
+            if (!trackingSaved) {
+                Text(
+                    stringResource(R.string.stock_refill_needs_unit),
+                    style = MaterialTheme.typography.labelMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
         }
 
         Spacer(Modifier.height(16.dp))
@@ -312,6 +327,7 @@ fun StockExpirationScreen(
                         )
                     )
                 )
+                trackingSaved = unit.isNotBlank()
 
                 val thresholdValue = threshold.toDoubleOrNull()
                 if (lowStockEnabled && thresholdValue != null) {
