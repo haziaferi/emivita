@@ -51,6 +51,18 @@ interface MedicineDao {
     @Query("SELECT * FROM medicines WHERE id = :id")
     fun observeById(id: Long): Flow<Medicine?>
 
+    /** The Medicines tab's read (§9 #24): a medicine and its reminders, in
+     *  manual order; the screen re-sorts in memory for the other keys. */
+    @Transaction
+    @Query("SELECT * FROM medicines WHERE profileId = :profileId ORDER BY sortOrder ASC")
+    fun observeWithRemindersForProfile(profileId: Long): Flow<List<MedicineWithReminders>>
+
+    /** One row, one column (§9 #24 drag-reorder). The narrow-update shape
+     *  [decrementStock] uses, for the same reason: a full-row update would
+     *  race an edit of any other field. */
+    @Query("UPDATE medicines SET sortOrder = :sortOrder WHERE id = :medicineId")
+    suspend fun updateSortOrder(medicineId: Long, sortOrder: Double)
+
     @Query("SELECT * FROM medicines WHERE id = :id")
     suspend fun getById(id: Long): Medicine?
 

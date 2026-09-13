@@ -90,6 +90,9 @@ fun EmivitaNavHost() {
                 MedicinesScreen(
                     profileId = profileId,
                     medicineRepository = container.medicineRepository,
+                    doseEventRepository = container.doseEventRepository,
+                    occurrenceProjectionCache = container.occurrenceProjectionCache,
+                    settingsRepository = container.settingsRepository,
                     onAddMedicine = { navController.navigate(EmivitaRoute.AddMedicine()) },
                     onAddMedicineWithBarcode = { barcode -> navController.navigate(EmivitaRoute.AddMedicine(prefilledBarcode = barcode)) },
                     onOpenMedicine = { medicineId -> navController.navigate(EmivitaRoute.MedicineDetail(medicineId)) },

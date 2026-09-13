@@ -60,6 +60,9 @@ class SettingsRepository(context: Context) {
         // Which of History's three views was open last (§7 R60 D F5); the
         // enum name, tolerant of a value from a removed case.
         val HISTORY_VIEW_MODE = stringPreferencesKey("history_view_mode")
+        // The Medicines tab's sort key (enum name) and hide-empty filter (§9 #24).
+        val MEDICINES_SORT = stringPreferencesKey("medicines_sort")
+        val MEDICINES_HIDE_EMPTY = booleanPreferencesKey("medicines_hide_empty")
     }
 
     val palette: Flow<MedPalette> = dataStore.data.map { prefs ->
@@ -154,6 +157,16 @@ class SettingsRepository(context: Context) {
 
     suspend fun setHistoryViewModeName(name: String) {
         dataStore.edit { it[Keys.HISTORY_VIEW_MODE] = name }
+    }
+
+    val medicinesSortName: Flow<String?> = dataStore.data.map { prefs -> prefs[Keys.MEDICINES_SORT] }
+    suspend fun setMedicinesSortName(name: String) {
+        dataStore.edit { it[Keys.MEDICINES_SORT] = name }
+    }
+
+    val medicinesHideEmpty: Flow<Boolean> = dataStore.data.map { prefs -> prefs[Keys.MEDICINES_HIDE_EMPTY] ?: false }
+    suspend fun setMedicinesHideEmpty(hide: Boolean) {
+        dataStore.edit { it[Keys.MEDICINES_HIDE_EMPTY] = hide }
     }
 
     /** Null clears the setting (the "Stop syncing" action) -- callers also

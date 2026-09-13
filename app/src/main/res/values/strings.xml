@@ -455,4 +455,28 @@
     <string name="medicine_detail_pause_all">Pause all reminders</string>
     <string name="medicine_detail_resume_all">Resume all reminders</string>
     <string name="medicine_detail_copy_suffix">(copy)</string>
+    <string name="medicines_sort">Sort</string>
+    <string name="medicines_sort_manual">Manual order</string>
+    <string name="medicines_sort_name">Name</string>
+    <string name="medicines_sort_next_dose">Next dose</string>
+    <string name="medicines_sort_expiry_stock">Expiry and stock</string>
+    <string name="medicines_hide_empty">Hide empty</string>
+    <string name="medicines_drag_to_reorder">Drag to reorder</string>
+    <string name="medicines_move_up">Move up</string>
+    <string name="medicines_move_down">Move down</string>
+    <string name="medicines_position_of">Position %1$d of %2$d</string>
+    <string name="medicines_status_due">Due now</string>
+    <string name="medicines_status_done_today">Done for today</string>
+    <string name="medicines_status_upcoming">Later today</string>
+    <string name="medicines_state_empty">Out of stock</string>
+    <string name="medicines_state_expired">Expired</string>
+    <string name="medicines_runs_out_today">Runs out today</string>
+    <string name="medicines_runs_out_tomorrow">Runs out tomorrow</string>
+    <plurals name="medicines_runs_out_in_days">
+        <item quantity="one">Runs out in %1$d day</item>
+        <item quantity="other">Runs out in %1$d days</item>
+    </plurals>
+    <string name="medicines_course_starts_on">Starts %1$s</string>
+    <string name="medicines_course_until">Until %1$s</string>
+    <string name="medicines_course_cycle_day">Cycle day %1$d of %2$d</string>
 </resources>

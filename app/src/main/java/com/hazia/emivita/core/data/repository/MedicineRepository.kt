@@ -17,6 +17,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import com.hazia.emivita.core.data.entity.StockInfo
 import com.hazia.emivita.core.data.config.decodeReminderConfig
+import com.hazia.emivita.core.data.dao.MedicineWithReminders
 
 class MedicineRepository(
     private val database: EmivitaDatabase,
@@ -32,6 +33,16 @@ class MedicineRepository(
         medicineDao.observeForProfile(profileId)
 
     fun observeById(id: Long): Flow<Medicine?> = medicineDao.observeById(id)
+    fun observeWithRemindersForProfile(profileId: Long): Flow<List<MedicineWithReminders>> =
+        medicineDao.observeWithRemindersForProfile(profileId)
+
+    /** Persist a drag (§9 #24): one row's sortOrder, computed by the caller
+     *  from its new neighbours (`sortOrderForMove`). Nothing else is
+     *  renumbered -- medTimer's `move()` idea. */
+    suspend fun setSortOrder(medicineId: Long, sortOrder: Double) {
+        medicineDao.updateSortOrder(medicineId, sortOrder)
+        autoSyncManager.notifyChanged()
+    }
     suspend fun getById(id: Long): Medicine? = medicineDao.getById(id)
     suspend fun getByBarcodeValue(barcodeValue: String): Medicine? = medicineDao.getByBarcodeValue(barcodeValue)
     suspend fun getAllTracked(): List<Medicine> = medicineDao.getAllTracked()

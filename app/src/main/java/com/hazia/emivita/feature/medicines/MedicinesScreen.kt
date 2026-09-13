@@ -6,6 +6,8 @@ import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -18,24 +20,34 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.DragHandle
 import androidx.compose.material.icons.filled.QrCodeScanner
+import androidx.compose.material.icons.filled.Sort
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FilterChip
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -44,38 +56,91 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.res.pluralStringResource
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.CustomAccessibilityAction
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.customActions
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.stateDescription
+import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.unit.dp
-import com.hazia.emivita.core.data.dao.MedicineWithTags
+import androidx.compose.ui.zIndex
+import com.hazia.emivita.R
+import com.hazia.emivita.core.data.repository.DoseEventRepository
 import com.hazia.emivita.core.data.repository.MedicineRepository
+import com.hazia.emivita.core.data.settings.SettingsRepository
+import com.hazia.emivita.core.format.LocaleFormats
+import com.hazia.emivita.core.scheduling.OccurrenceProjectionCache
 import com.hazia.emivita.ui.components.parseHexColor
+import com.hazia.emivita.ui.components.rememberCurrentDate
 import com.hazia.emivita.ui.icons.MedicineIcons
+import com.hazia.emivita.ui.theme.EmivitaTheme
 import com.hazia.emivita.ui.theme.NeutralMedicineAccent
 import kotlinx.coroutines.launch
-import androidx.compose.ui.res.stringResource
-import com.hazia.emivita.R
-import androidx.compose.ui.semantics.Role
-import androidx.compose.foundation.layout.Arrangement
+import java.time.ZoneId
 
+/**
+ * The Medicines tab (spec §9 #24). What each card says and how the list is
+ * ordered are pure functions in MedicineListState.kt; this file renders them
+ * and owns the two gestures the owner asked for -- a sort menu and, in manual
+ * order, drag-to-reorder by the handle. The drag is hand-rolled on
+ * `detectDragGestures` (Appendix F HM-03 is the reference shape; the
+ * `reorderable` library is not in the offline cache) and every handle also
+ * carries "Move up" / "Move down" accessibility actions, since a screen
+ * reader cannot drag.
+ */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun MedicinesScreen(
     profileId: Long,
     medicineRepository: MedicineRepository,
+    doseEventRepository: DoseEventRepository,
+    occurrenceProjectionCache: OccurrenceProjectionCache,
+    settingsRepository: SettingsRepository,
     onAddMedicine: () -> Unit,
     onAddMedicineWithBarcode: (barcode: String) -> Unit,
     onOpenMedicine: (medicineId: Long) -> Unit,
 ) {
-    val medicines by produceState<List<MedicineWithTags>>(initialValue = emptyList(), profileId) {
-        medicineRepository.observeForProfile(profileId).collect { value = it }
+    val zone = remember { ZoneId.systemDefault() }
+    val today = rememberCurrentDate(zone)
+    val todayStart = remember(today) { today.atStartOfDay(zone).toInstant().toEpochMilli() }
+    val todayEnd = remember(today) { today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() }
+    val withReminders by produceState(initialValue = emptyList(), profileId) {
+        medicineRepository.observeWithRemindersForProfile(profileId).collect { value = it }
     }
+    val tagsByMedicine by produceState(initialValue = emptyMap<Long, List<String>>(), profileId) {
+        medicineRepository.observeForProfile(profileId).collect { list -> value = list.associate { it.medicine.id to it.tags.map { t -> t.name } } }
+    }
+    val todayEvents by produceState(initialValue = emptyList(), profileId, todayStart) {
+        doseEventRepository.observeInRange(profileId, todayStart, todayEnd).collect { value = it.map { e -> e.doseEvent } }
+    }
+    val projection by occurrenceProjectionCache.state.collectAsState()
+    val sortName by settingsRepository.medicinesSortName.collectAsState(initial = null)
+    val hideEmpty by settingsRepository.medicinesHideEmpty.collectAsState(initial = false)
+    val sort = remember(sortName) { sortName?.let { n -> MedicinesSort.entries.firstOrNull { it.name == n } } ?: MedicinesSort.MANUAL }
+    val locale = Locale.current.platformLocale
     val scope = rememberCoroutineScope()
-    var notFoundCode by remember { mutableStateOf<String?>(null) }
 
-    // "Scan to find" (spec §3/§9 item 1) -- purely local: scan a code, look it
-    // up against Medicine.barcodeValue in the on-device DB. No internet
-    // permission needed or declared; scanning itself is delegated to whatever
-    // scanner app is installed (e.g. Binary Eye), same as "Scan barcode" on
-    // the Add form.
+    val entries = remember(withReminders, tagsByMedicine, todayEvents, projection, today, sort, hideEmpty) {
+        val now = System.currentTimeMillis()
+        val built = withReminders.map { mw ->
+            MedicineListEntry(
+                medicine = mw.medicine,
+                tagNames = tagsByMedicine[mw.medicine.id].orEmpty(),
+                state = cardStateFor(
+                    mw.medicine, mw.reminders, todayEvents, projection.occurrences,
+                    projection.stockRunOutDates[mw.medicine.id], today, now, todayStart, todayEnd,
+                ),
+            )
+        }.filter { !hideEmpty || !it.state.empty }
+        sortEntries(built, sort, locale)
+    }
+
+    var notFoundCode by remember { mutableStateOf<String?>(null) }
     val scanLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             val code = result.data?.getStringExtra("SCAN_RESULT") ?: return@rememberLauncherForActivityResult
@@ -86,79 +151,128 @@ fun MedicinesScreen(
         }
     }
     var scanUnavailable by remember { mutableStateOf(false) }
+    var showSortMenu by remember { mutableStateOf(false) }
 
-    // The same header the other three tabs use: a headline in a padded row on
-    // the page background, with this tab's one action at the end of the row.
-    // This screen used to be the only tab wrapped in its own Scaffold with a
-    // Material TopAppBar, which drew a 64dp bar on the container colour and
-    // then added its own status-bar inset on top of the one the NavHost's
-    // Scaffold had already consumed -- so the header was not just a bar but a
-    // much taller one. Spotted on the device, not in a test (§7 R59).
+    // Local order while a drag is in flight; persisted on drop. Keyed on the
+    // sorted entries so any data change resets it.
+    var order by remember(entries) { mutableStateOf(entries) }
+    val listState = rememberLazyListState()
+    val drag = remember(listState) { DragReorderState(listState) }
+
+    fun persistMove(fromId: Long, toIndex: Int) {
+        val orders = order.map { it.medicine.sortOrder }
+        val newOrder = sortOrderForMove(orders, toIndex)
+        scope.launch { medicineRepository.setSortOrder(fromId, newOrder) }
+    }
+
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            // The header row is byte-for-byte Today's: padding(16.dp) and the
-            // headline alone. The scan button floats over the row's end in a
-            // Box so it adds no height -- an IconButton carries a 48dp minimum
-            // touch target, and putting it IN the row made the row that tall
-            // and centred the headline 34px lower than Today's (measured on
-            // the device, second report from the owner).
+            // The header row is byte-for-byte Today's (§7 R59); the actions
+            // float over its end so they add no height.
             Box(Modifier.fillMaxWidth()) {
-                Row(
-                    Modifier.fillMaxWidth().padding(16.dp),
-                    horizontalArrangement = Arrangement.SpaceBetween,
-                ) {
+                Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
                     Text(stringResource(R.string.medicines_medicines), style = MaterialTheme.typography.headlineSmall)
                 }
-                IconButton(
-                    onClick = {
-                        try {
-                            scanLauncher.launch(Intent("com.google.zxing.client.android.SCAN"))
-                            scanUnavailable = false
-                        } catch (_: ActivityNotFoundException) {
-                            scanUnavailable = true
+                Row(Modifier.align(Alignment.CenterEnd).padding(end = 4.dp)) {
+                    Box {
+                        IconButton(onClick = { showSortMenu = true }) {
+                            Icon(Icons.Filled.Sort, contentDescription = stringResource(R.string.medicines_sort))
                         }
-                    },
-                    modifier = Modifier.align(Alignment.CenterEnd).padding(end = 4.dp),
-                ) {
-                    Icon(Icons.Filled.QrCodeScanner, contentDescription = stringResource(R.string.medicines_scan_to_find))
+                        DropdownMenu(expanded = showSortMenu, onDismissRequest = { showSortMenu = false }) {
+                            MedicinesSort.entries.forEach { option ->
+                                DropdownMenuItem(
+                                    text = { Text(stringResource(option.labelRes())) },
+                                    leadingIcon = { RadioButton(selected = sort == option, onClick = null) },
+                                    onClick = {
+                                        showSortMenu = false
+                                        scope.launch { settingsRepository.setMedicinesSortName(option.name) }
+                                    },
+                                )
+                            }
+                        }
+                    }
+                    IconButton(
+                        onClick = {
+                            try {
+                                scanLauncher.launch(Intent("com.google.zxing.client.android.SCAN"))
+                                scanUnavailable = false
+                            } catch (_: ActivityNotFoundException) {
+                                scanUnavailable = true
+                            }
+                        },
+                    ) {
+                        Icon(Icons.Filled.QrCodeScanner, contentDescription = stringResource(R.string.medicines_scan_to_find))
+                    }
                 }
             }
             if (scanUnavailable) {
                 Text(
                     stringResource(R.string.common_no_barcode_scanner_app_installed_e_g_binary),
                     style = MaterialTheme.typography.labelSmall,
-                    // A note about an OPTIONAL convenience, not a failure. `error`
-                    // here told the reader something had gone wrong when nothing had.
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(16.dp),
                 )
             }
-            if (medicines.isEmpty()) {
-                Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-                    Text(
-                        stringResource(R.string.medicines_no_medicines_yet_tap_to_add_your_first_one),
-                        style = MaterialTheme.typography.bodyMedium,
+            // The one filter the owner picked (HM-07). Shown only when it can
+            // do something, so an empty-stock-free list has no dead chip.
+            if (withReminders.any { it.medicine.stockInfo.unit != null && it.medicine.stockInfo.quantity <= 0.0 }) {
+                Row(Modifier.padding(horizontal = 16.dp)) {
+                    FilterChip(
+                        selected = hideEmpty,
+                        onClick = { scope.launch { settingsRepository.setMedicinesHideEmpty(!hideEmpty) } },
+                        label = { Text(stringResource(R.string.medicines_hide_empty)) },
                     )
+                }
+                Spacer(Modifier.height(4.dp))
+            }
+            if (withReminders.isEmpty()) {
+                Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+                    Text(stringResource(R.string.medicines_no_medicines_yet_tap_to_add_your_first_one), style = MaterialTheme.typography.bodyMedium)
                 }
             } else {
                 LazyColumn(
+                    state = listState,
                     modifier = Modifier.fillMaxSize(),
-                    // Today's list padding, so the first card starts where Today's does.
                     contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp),
                 ) {
-                    items(medicines, key = { it.medicine.id }) { entry ->
-                        MedicineCard(entry, onClick = { onOpenMedicine(entry.medicine.id) })
+                    itemsIndexed(order, key = { _, e -> e.medicine.id }) { index, entry ->
+                        val dragging = drag.draggingIndex == index
+                        Box(
+                            Modifier
+                                .zIndex(if (dragging) 1f else 0f)
+                                .graphicsLayer { translationY = if (dragging) drag.offsetY else 0f },
+                        ) {
+                            MedicineCard(
+                                entry = entry,
+                                onClick = { onOpenMedicine(entry.medicine.id) },
+                                dragHandle = if (sort == MedicinesSort.MANUAL && order.size > 1) {
+                                    {
+                                        DragHandle(
+                                            index = index,
+                                            count = order.size,
+                                            drag = drag,
+                                            onMoveBy = { delta ->
+                                                val to = (index + delta).coerceIn(0, order.lastIndex)
+                                                if (to != index) {
+                                                    order = order.toMutableList().also { it.add(to, it.removeAt(index)) }
+                                                    persistMove(entry.medicine.id, to)
+                                                }
+                                            },
+                                            onReorder = { from, to ->
+                                                order = order.toMutableList().also { it.add(to, it.removeAt(from)) }
+                                            },
+                                            onDrop = { finalIndex -> persistMove(entry.medicine.id, finalIndex) },
+                                        )
+                                    }
+                                } else null,
+                            )
+                        }
                         Spacer(Modifier.height(10.dp))
                     }
                 }
             }
         }
-        // Placed the way Today places its own action, rather than through a
-        // Scaffold slot, for the reason above.
-        FloatingActionButton(
-            onClick = onAddMedicine,
-            modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
-        ) {
+        FloatingActionButton(onClick = onAddMedicine, modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
             Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.medicines_add_medicine))
         }
     }
@@ -170,27 +284,125 @@ fun MedicinesScreen(
             title = { Text(stringResource(R.string.medicines_not_found)) },
             text = { Text(stringResource(R.string.medicines_no_medicine_matches_that_code_yet_add_it_as)) },
             confirmButton = {
-                TextButton(onClick = {
-                    notFoundCode = null
-                    onAddMedicineWithBarcode(pendingCode)
-                }) { Text(stringResource(R.string.medicines_add_new)) }
+                TextButton(onClick = { notFoundCode = null; onAddMedicineWithBarcode(pendingCode) }) { Text(stringResource(R.string.medicines_add_new)) }
             },
             dismissButton = { TextButton(onClick = { notFoundCode = null }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
 }
 
+fun MedicinesSort.labelRes(): Int = when (this) {
+    MedicinesSort.MANUAL -> R.string.medicines_sort_manual
+    MedicinesSort.NAME -> R.string.medicines_sort_name
+    MedicinesSort.NEXT_DOSE -> R.string.medicines_sort_next_dose
+    MedicinesSort.EXPIRY_STOCK -> R.string.medicines_sort_expiry_stock
+}
+
+/** Which item is being dragged and how far; the list re-orders as the
+ *  dragged card's centre crosses a neighbour, the way a user expects. */
+internal class DragReorderState(private val listState: LazyListState) {
+    var draggingIndex by mutableStateOf<Int?>(null)
+    var offsetY by mutableFloatStateOf(0f)
+
+    fun start(index: Int) { draggingIndex = index; offsetY = 0f }
+
+    /** Returns the new index if the drag crossed a neighbour, else null. */
+    fun drag(deltaY: Float): Pair<Int, Int>? {
+        val from = draggingIndex ?: return null
+        offsetY += deltaY
+        val items = listState.layoutInfo.visibleItemsInfo
+        val me = items.firstOrNull { it.index == from } ?: return null
+        val centre = me.offset + offsetY + me.size / 2f
+        val target = items.firstOrNull { it.index != from && centre >= it.offset && centre < it.offset + it.size } ?: return null
+        offsetY -= (target.index - from) * me.size
+        draggingIndex = target.index
+        return from to target.index
+    }
+
+    fun end(): Int? = draggingIndex.also { draggingIndex = null; offsetY = 0f }
+}
+
 @Composable
-private fun MedicineCard(entry: MedicineWithTags, onClick: () -> Unit) {
+internal fun DragHandle(
+    index: Int,
+    count: Int,
+    drag: DragReorderState,
+    onMoveBy: (Int) -> Unit,
+    onReorder: (from: Int, to: Int) -> Unit,
+    onDrop: (finalIndex: Int) -> Unit,
+) {
+    val moveUp = stringResource(R.string.medicines_move_up)
+    val moveDown = stringResource(R.string.medicines_move_down)
+    val label = stringResource(R.string.medicines_drag_to_reorder)
+    val position = stringResource(R.string.medicines_position_of, index + 1, count)
+    Icon(
+        Icons.Filled.DragHandle,
+        contentDescription = null,
+        tint = MaterialTheme.colorScheme.onSurfaceVariant,
+        modifier = Modifier
+            .size(28.dp)
+            .semantics {
+                contentDescription = label
+                stateDescription = position
+                customActions = listOfNotNull(
+                    if (index > 0) CustomAccessibilityAction(moveUp) { onMoveBy(-1); true } else null,
+                    if (index < count - 1) CustomAccessibilityAction(moveDown) { onMoveBy(1); true } else null,
+                )
+            }
+            .pointerInput(index) {
+                detectDragGestures(
+                    onDragStart = { drag.start(index) },
+                    onDrag = { change, delta ->
+                        change.consume()
+                        drag.drag(delta.y)?.let { (from, to) -> onReorder(from, to) }
+                    },
+                    onDragEnd = { drag.end()?.let(onDrop) },
+                    onDragCancel = { drag.end() },
+                )
+            },
+    )
+}
+
+@Composable
+internal fun MedicineCard(entry: MedicineListEntry, onClick: () -> Unit, dragHandle: (@Composable () -> Unit)?) {
     val medicine = entry.medicine
+    val state = entry.state
     val accent = medicine.color?.let { parseHexColor(it) } ?: NeutralMedicineAccent
+    // Expired or empty tints the whole card with `attention` (HM-08) -- the
+    // warm, non-red role §6 reserves for "look at this", never `error`.
+    val needsAttention = state.expired || state.empty
+    val background = if (needsAttention) EmivitaTheme.colors.attention.copy(alpha = 0.16f) else accent.copy(alpha = 0.14f)
+
+    val statusText = when (state.today) {
+        TodayStatus.DUE -> stringResource(R.string.medicines_status_due)
+        TodayStatus.DONE -> stringResource(R.string.medicines_status_done_today)
+        TodayStatus.UPCOMING -> stringResource(R.string.medicines_status_upcoming)
+        TodayStatus.NONE -> null
+    }
+    val stockText = when {
+        state.empty -> stringResource(R.string.medicines_state_empty)
+        state.runsOutInDays == 0L -> stringResource(R.string.medicines_runs_out_today)
+        state.runsOutInDays == 1L -> stringResource(R.string.medicines_runs_out_tomorrow)
+        state.runsOutInDays != null -> pluralStringResource(R.plurals.medicines_runs_out_in_days, state.runsOutInDays.toInt(), state.runsOutInDays.toInt())
+        else -> null
+    }
+    val expiryText = if (state.expired) stringResource(R.string.medicines_state_expired) else null
+    val courseText = when (val c = state.course) {
+        is CourseState.StartsOn -> stringResource(R.string.medicines_course_starts_on, LocaleFormats.monthDay(c.date))
+        is CourseState.Until -> stringResource(R.string.medicines_course_until, LocaleFormats.monthDay(c.date))
+        is CourseState.CycleDay -> stringResource(R.string.medicines_course_cycle_day, c.day, c.activeDays)
+        CourseState.None -> null
+    }
+    val stateLine = listOfNotNull(statusText, stockText, expiryText, courseText).joinToString(" · ")
 
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = accent.copy(alpha = 0.14f),
+        color = background,
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(role = Role.Button, onClick = onClick),
+            .clickable(role = Role.Button, onClick = onClick)
+            // One node for the reader: name, then the state line as its state.
+            .semantics(mergeDescendants = true) { if (stateLine.isNotEmpty()) stateDescription = stateLine },
     ) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
             Surface(shape = CircleShape, color = accent, modifier = Modifier.size(44.dp)) {
@@ -201,14 +413,25 @@ private fun MedicineCard(entry: MedicineWithTags, onClick: () -> Unit) {
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(medicine.name, style = MaterialTheme.typography.titleMedium)
-                if (entry.tags.isNotEmpty()) {
+                if (stateLine.isNotEmpty()) {
+                    Text(
+                        stateLine,
+                        style = MaterialTheme.typography.labelMedium,
+                        color = if (needsAttention) EmivitaTheme.colors.onAttention.copy(alpha = 0.9f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
+                if (entry.tagNames.isNotEmpty()) {
                     Row {
-                        entry.tags.take(3).forEach { tag ->
-                            AssistChip(onClick = {}, enabled = false, label = { Text(tag.name, style = MaterialTheme.typography.labelSmall) })
+                        entry.tagNames.take(3).forEach { tag ->
+                            AssistChip(onClick = {}, enabled = false, label = { Text(tag, style = MaterialTheme.typography.labelSmall) })
                             Spacer(Modifier.width(6.dp))
                         }
                     }
                 }
+            }
+            if (dragHandle != null) {
+                Spacer(Modifier.width(8.dp))
+                dragHandle()
             }
         }
     }
