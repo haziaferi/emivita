@@ -3,6 +3,7 @@ package com.hazia.emivita.core.data.repository
 import com.hazia.emivita.core.data.dao.ProfileDao
 import com.hazia.emivita.core.data.entity.Profile
 import kotlinx.coroutines.flow.Flow
+import com.hazia.emivita.core.data.backup.AutoSyncManager
 
 /** Deliberately only the operations the app actually performs: EmivitaApp
  *  observes the profile list and silently creates the one profile on first
@@ -12,7 +13,10 @@ import kotlinx.coroutines.flow.Flow
  *  path will need to cancel each cascaded reminder's pending AlarmManager
  *  alarm the way MedicineRepository.delete does -- Room's cascade can't reach
  *  OS state. */
-class ProfileRepository(private val profileDao: ProfileDao) {
+class ProfileRepository(
+    private val profileDao: ProfileDao,
+    private val autoSyncManager: AutoSyncManager,
+) {
     fun observeAll(): Flow<List<Profile>> = profileDao.observeAll()
 
     /** Live, unlike [MedicineRepository]'s one-shot tag snapshot: the medical
@@ -23,7 +27,13 @@ class ProfileRepository(private val profileDao: ProfileDao) {
 
     suspend fun getById(id: Long): Profile? = profileDao.getById(id)
 
-    suspend fun update(profile: Profile) = profileDao.update(profile)
+    suspend fun update(profile: Profile) {
+        profileDao.update(profile)
+        // The one mutation that did not notify (§7 R60 E F2): allergies and
+        // contacts edited on the Medical ID screen reached the sync folder
+        // only after some unrelated dose or medicine change.
+        autoSyncManager.notifyChanged()
+    }
 
     suspend fun create(name: String, color: String? = null): Long =
         profileDao.insert(

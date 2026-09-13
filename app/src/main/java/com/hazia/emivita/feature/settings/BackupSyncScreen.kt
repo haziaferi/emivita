@@ -57,6 +57,10 @@ import java.time.format.DateTimeFormatter
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
 import androidx.compose.ui.platform.LocalResources
+import com.hazia.emivita.core.data.backup.BackupJson
+import com.hazia.emivita.core.data.backup.BackupDecodeResult
+import com.hazia.emivita.core.data.backup.decodeBackup
+import com.hazia.emivita.core.data.backup.BACKUP_SCHEMA_VERSION
 
 private val EXPORT_FILE_STAMP = DateTimeFormatter.ofPattern("yyyy-MM-dd")
 
@@ -102,7 +106,7 @@ fun BackupSyncScreen(
                 // rememberCoroutineScope(), which dispatches on Main. Only the
                 // status writes below belong there.
                 withContext(Dispatchers.IO) {
-                    val json = Json.encodeToString(BackupData.serializer(), backupRepository.exportSnapshot(System.currentTimeMillis()))
+                    val json = BackupJson.encodeToString(BackupData.serializer(), backupRepository.exportSnapshot(System.currentTimeMillis()))
                     BackupZipWriter.write(tempFile, json, password)
                     // Not `?.use { }`: a null stream made the whole block a
                     // no-op that fell through to "Backup exported." below,
@@ -157,13 +161,18 @@ fun BackupSyncScreen(
                 is BackupZipReadResult.Success -> {
                     // restoreSnapshot goes through Room's withTransaction, which
                     // dispatches off Main itself; parsing the snapshot JSON does not.
-                    val data = withContext(Dispatchers.IO) {
-                        Json.decodeFromString(BackupData.serializer(), readResult.json)
+                    when (val decoded = withContext(Dispatchers.IO) { decodeBackup(readResult.json) }) {
+                        is BackupDecodeResult.NewerThanApp -> {
+                            restoreStatus = resources.getString(R.string.backup_newer_than_app, decoded.fileVersion, BACKUP_SCHEMA_VERSION)
+                            return
+                        }
+                        is BackupDecodeResult.Ok -> {
+                            backupRepository.restoreSnapshot(decoded.data)
+                            showRestorePasswordDialog = false
+                            restorePasswordInput = ""
+                            restoreStatus = resources.getString(R.string.backup_restore_complete)
+                        }
                     }
-                    backupRepository.restoreSnapshot(data)
-                    showRestorePasswordDialog = false
-                    restorePasswordInput = ""
-                    restoreStatus = resources.getString(R.string.backup_restore_complete)
                 }
                 BackupZipReadResult.PasswordRequired -> {
                     pendingRestoreUri = uri

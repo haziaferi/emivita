@@ -118,6 +118,7 @@ fun HistoryScreen(
     doseEventRepository: DoseEventRepository,
 ) {
     val zone = remember { ZoneId.systemDefault() }
+    val resources = LocalResources.current
     // Keyed on the real current date, not on first composition -- otherwise
     // this rolling window silently stops rolling once the screen has been
     // open across midnight. See rememberCurrentDate.
@@ -142,21 +143,39 @@ fun HistoryScreen(
     // through the SAF stream are real work over the whole visible window, and
     // rememberCoroutineScope() dispatches on Main, so without this they block
     // the frame that's drawing the file picker's dismissal.
+    // Not `?.use { }` (§7 R60 E F3): a null stream made the write a silent
+    // no-op with no message either way -- the shape §7 R23 fixed for backup
+    // export. Both paths now fail loudly and report either outcome.
+    var exportStatus by remember { mutableStateOf<String?>(null) }
     val exportCsvLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri: Uri? ->
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
-            withContext(Dispatchers.IO) {
-                val csv = HistoryExporter.buildCsv(exportRows, zone)
-                context.contentResolver.openOutputStream(uri)?.use { it.write(csv.toByteArray(Charsets.UTF_8)) }
+            exportStatus = try {
+                withContext(Dispatchers.IO) {
+                    val csv = HistoryExporter.buildCsv(exportRows, zone)
+                    val out = context.contentResolver.openOutputStream(uri)
+                        ?: error(resources.getString(R.string.history_export_no_stream))
+                    out.use { it.write(csv.toByteArray(Charsets.UTF_8)) }
+                }
+                resources.getString(R.string.history_export_done)
+            } catch (e: Exception) {
+                resources.getString(R.string.history_export_failed, e.message ?: resources.getString(R.string.error_unknown))
             }
         }
     }
     val exportPdfLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/pdf")) { uri: Uri? ->
         if (uri == null) return@rememberLauncherForActivityResult
         scope.launch {
-            withContext(Dispatchers.IO) {
-                val document = HistoryExporter.buildPdf(context, exportRows, adherenceSubtitle(context, exportRows), zone)
-                context.contentResolver.openOutputStream(uri)?.use { HistoryExporter.writePdf(document, it) }
+            exportStatus = try {
+                withContext(Dispatchers.IO) {
+                    val document = HistoryExporter.buildPdf(context, exportRows, adherenceSubtitle(context, exportRows), zone)
+                    val out = context.contentResolver.openOutputStream(uri)
+                        ?: error(resources.getString(R.string.history_export_no_stream))
+                    out.use { HistoryExporter.writePdf(document, it) }
+                }
+                resources.getString(R.string.history_export_done)
+            } catch (e: Exception) {
+                resources.getString(R.string.history_export_failed, e.message ?: resources.getString(R.string.error_unknown))
             }
         }
     }
@@ -191,6 +210,15 @@ fun HistoryScreen(
                     }
                 }
             }
+        }
+
+        exportStatus?.let {
+            Text(
+                it,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
         }
 
         Row(

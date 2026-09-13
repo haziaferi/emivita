@@ -8,6 +8,10 @@ import com.hazia.emivita.core.data.entity.Profile
 import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.entity.Tag
 import kotlinx.serialization.Serializable
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonObject
+import kotlinx.serialization.json.jsonPrimitive
 
 /** Current backup schema version -- bump when a field is added/removed in a
  *  way [BackupRepository.restoreSnapshot] can't already tolerate (kotlinx
@@ -15,6 +19,38 @@ import kotlinx.serialization.Serializable
  *  rare breaking case). Not yet consulted by restore -- one version exists
  *  so far, nothing to migrate between. */
 const val BACKUP_SCHEMA_VERSION = 1
+
+/** The one Json every backup path uses (§7 R60 E F1). The default `Json`
+ *  rejects an unknown key and omits defaulted fields, so a file written by a
+ *  newer Emivita -- any added entity field -- failed on restore at the first
+ *  key it did not know, and [BackupData.schemaVersion], being a default,
+ *  was never written at all: the version field existed and no file carried
+ *  it. `ignoreUnknownKeys` makes an older app read a newer file's known
+ *  half; `encodeDefaults` makes the version (and every defaulted entity
+ *  field) explicit on disk, which is what a snapshot is for. medTimer's
+ *  Gson path has both properties by default. */
+val BackupJson: Json = Json {
+    ignoreUnknownKeys = true
+    encodeDefaults = true
+}
+
+sealed interface BackupDecodeResult {
+    data class Ok(val data: BackupData) : BackupDecodeResult
+    /** The file was written by a build with a higher schema version. Its
+     *  known fields could be read, but a snapshot restored half-understood
+     *  is worse than one refused with the version named. */
+    data class NewerThanApp(val fileVersion: Int) : BackupDecodeResult
+}
+
+/** Decode a snapshot, refusing one from a newer schema. A file with no
+ *  version field (written before R60) is version 1 by definition. */
+fun decodeBackup(json: String): BackupDecodeResult {
+    val version = runCatching {
+        BackupJson.parseToJsonElement(json).jsonObject["schemaVersion"]?.jsonPrimitive?.int
+    }.getOrNull() ?: BACKUP_SCHEMA_VERSION
+    if (version > BACKUP_SCHEMA_VERSION) return BackupDecodeResult.NewerThanApp(version)
+    return BackupDecodeResult.Ok(BackupJson.decodeFromString(BackupData.serializer(), json))
+}
 
 /** The whole-database JSON snapshot for spec §9 #9's shared writer -- both
  *  (a) manual export/restore and (b) the auto-sync folder zip the exact same

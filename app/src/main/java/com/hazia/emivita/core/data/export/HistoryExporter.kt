@@ -38,13 +38,20 @@ object HistoryExporter {
         // Table view, which folds the unit into the Dose cell) -- CSV is a
         // structured/spreadsheet format, where a plain numeric Dose column
         // stays usable for SUM()/sorting and Measurement carries the label.
-        builder.append("Date,Time,Medicine,Status,Dose,Measurement\n")
+        // Date and Time are the SCHEDULED slot; Recorded is when the dose was
+        // actually answered, blank while it is still unanswered (§7 R60 E F8).
+        // The old row paired the scheduled date with the resolved time, so a
+        // 23:30 dose taken at 00:10 exported as a timestamp that never
+        // happened. medTimer writes reminded and taken as two full columns.
+        builder.append("Date,Time,Recorded,Medicine,Status,Dose,Measurement\n")
         for (row in rows) {
             val scheduled = Instant.ofEpochMilli(row.doseEvent.scheduledEpochMillis).atZone(zone)
-            val resolvedEpoch = row.doseEvent.resolvedAtEpochMillis ?: row.doseEvent.scheduledEpochMillis
-            val time = Instant.ofEpochMilli(resolvedEpoch).atZone(zone).format(TIME_FORMAT)
+            val recorded = row.doseEvent.resolvedAtEpochMillis
+                ?.let { Instant.ofEpochMilli(it).atZone(zone).format(DATE_FORMAT) + " " + Instant.ofEpochMilli(it).atZone(zone).format(TIME_FORMAT) }
+                ?: ""
             builder.append(scheduled.format(DATE_FORMAT)).append(',')
-            builder.append(time).append(',')
+            builder.append(scheduled.format(TIME_FORMAT)).append(',')
+            builder.append(recorded).append(',')
             builder.append(csvEscape(row.medicine.name)).append(',')
             builder.append(csvStatusLabel(row.doseEvent.status)).append(',')
             builder.append(formatDecimal(row.doseEvent.doseAmount)).append(',')

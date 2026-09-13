@@ -43,7 +43,7 @@ class AppContainer(context: Context) {
     private val database: EmivitaDatabase by lazy { EmivitaDatabase.getInstance(context) }
 
     val profileRepository: ProfileRepository by lazy {
-        ProfileRepository(database.profileDao())
+        ProfileRepository(database.profileDao(), autoSyncManager)
     }
 
     val settingsRepository: SettingsRepository by lazy {

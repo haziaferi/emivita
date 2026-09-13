@@ -437,4 +437,8 @@
     <string name="error_unknown">unknown error</string>
     <string name="backup_wrong_password">Wrong password — try again.</string>
     <string name="stock_refill_needs_unit">Save a unit first — stock is only tracked once it has one.</string>
+    <string name="backup_newer_than_app">This backup was made by a newer Emivita (format %1$d; this app reads up to %2$d). Update the app, then restore.</string>
+    <string name="history_export_done">Exported.</string>
+    <string name="history_export_failed">Couldn\'t export: %1$s</string>
+    <string name="history_export_no_stream">the chosen location could not be opened for writing</string>
 </resources>

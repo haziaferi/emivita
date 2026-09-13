@@ -79,7 +79,7 @@ class AutoSyncManager(
         // matching the "no user present" framing of this whole write path.
         if (!treeDoc.canWrite()) return
 
-        val json = Json.encodeToString(BackupData.serializer(), backupRepository.exportSnapshot(nowEpochMillis()))
+        val json = BackupJson.encodeToString(BackupData.serializer(), backupRepository.exportSnapshot(nowEpochMillis()))
         val tempFile = File.createTempFile("emivita_autosync", ".zip", appContext.cacheDir)
         try {
             BackupZipWriter.write(tempFile, json, password)
