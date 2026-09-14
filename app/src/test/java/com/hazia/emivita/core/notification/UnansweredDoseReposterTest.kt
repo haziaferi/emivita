@@ -17,6 +17,7 @@ import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.entity.StockInfo
 import com.hazia.emivita.core.data.settings.SettingsRepository
 import io.mockk.coEvery
+import com.hazia.emivita.ui.theme.DEFAULT_PALETTE
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
@@ -51,6 +52,7 @@ class UnansweredDoseReposterTest {
         val settings = mockk<SettingsRepository>().also {
             coEvery { it.isLockedUntilTaken(any()) } returns false
             every { it.hideMedicineNames } returns flowOf(false)
+            every { it.palette } returns flowOf(DEFAULT_PALETTE)
             every { it.snoozeAskEachTime } returns flowOf(false)
         }
         val groups = mockk<DoseGroupDao>().also { coEvery { it.getById(any()) } returns null }

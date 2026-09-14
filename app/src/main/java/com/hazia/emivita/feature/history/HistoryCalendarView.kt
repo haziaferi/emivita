@@ -256,7 +256,7 @@ internal fun CalendarDayCell(day: CalendarDay, today: LocalDate, statuses: List<
                 // fired and never resolved -- so it takes the same pair as
                 // AdherenceChart's series rather than a second opinion about the
                 // same two states. Neither is an error: see Color.kt.
-                if (statuses.contains(DoseStatus.SKIPPED)) DayDot(EmivitaTheme.colors.neutralFill)
+                if (statuses.contains(DoseStatus.SKIPPED)) DayDot(MaterialTheme.colorScheme.outline)
                 if (statuses.contains(DoseStatus.PENDING)) DayDot(EmivitaTheme.colors.attention)
             }
         }

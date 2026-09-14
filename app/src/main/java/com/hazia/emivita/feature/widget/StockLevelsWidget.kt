@@ -83,8 +83,9 @@ class StockLevelsWidget : GlanceAppWidget() {
             .take(MAX_ROWS)
             .toList()
 
+        val palette = container.settingsRepository.widgetPalette()
         provideContent {
-            GlanceTheme {
+            WidgetTheme(palette) {
                 StockLevelsContent(rows)
             }
         }

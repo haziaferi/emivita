@@ -25,6 +25,7 @@ import com.hazia.emivita.core.scheduling.OccurrenceProjectionCache
 import com.hazia.emivita.core.scheduling.SchedulingCoordinator
 import com.hazia.emivita.core.scheduling.nextExpirationAlertOccurrence
 import io.mockk.coEvery
+import com.hazia.emivita.ui.theme.DEFAULT_PALETTE
 import io.mockk.every
 import kotlinx.coroutines.flow.flowOf
 import io.mockk.mockk
@@ -138,6 +139,7 @@ class CrossAppBehaviourTest {
         val settings = mockk<SettingsRepository>().also {
             coEvery { it.isLockedUntilTaken(any()) } returns false
             every { it.hideMedicineNames } returns flowOf(false)
+            every { it.palette } returns flowOf(DEFAULT_PALETTE)
             every { it.snoozeAskEachTime } returns flowOf(false)
         }
         val groups = mockk<DoseGroupDao>().also { coEvery { it.getById(any()) } returns null }

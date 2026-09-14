@@ -38,7 +38,7 @@ import com.hazia.emivita.core.di.AppContainer
 import com.hazia.emivita.core.notification.EXTRA_DOSE_EVENT_ID
 import com.hazia.emivita.core.scheduling.DEFAULT_SNOOZE_MINUTES
 import com.hazia.emivita.core.scheduling.EXTRA_REMINDER_ID
-import com.hazia.emivita.ui.theme.EmivitaTheme
+import com.hazia.emivita.ui.theme.SavedEmivitaTheme
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
@@ -97,7 +97,7 @@ class AlarmActivity : ComponentActivity() {
         val doseEventId = intent.getLongExtra(EXTRA_DOSE_EVENT_ID, -1L)
 
         setContent {
-            EmivitaTheme {
+            SavedEmivitaTheme((application as EmivitaApplication).container.settingsRepository) {
                 AlarmScreen(
                     reminderId = reminderId,
                     doseEventId = doseEventId,

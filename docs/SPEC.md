@@ -1832,212 +1832,166 @@ non-events, nothing left to discuss.)
 
 ## Appendix A — Palette token reference (full tables)
 
-Referenced from §6's Palettes bullet. Every hex here is computed, not
-eyeballed — contrast ratios are WCAG relative-luminance calculations from
-`designkit`, and perceptual distances are CIEDE2000 with deuteranopia and
-protanopia simulated rather than assumed. Nothing in this appendix is an
-estimate.
+Referenced from §6's Palettes bullet. Every hex here is derived, not
+eyeballed: the four palettes are three agreed colours per register — ground,
+text, primary — from named, contrast-verified pairs in the visual-craft
+lexicon, chosen by the owner from ten candidates (§7 R76), and every other
+role is derived from those three by the same rules for all four in
+`tools/palette_derive.py`. **The tables below are printed by that tool**
+(`--tables`), as is `Color.kt` (`--kotlin`); `python tools/palette_derive.py
+--check` fails when this appendix drifts from the tool, and
+`PaletteSpecConsistencyTest` fails when the code drifts from this appendix.
+Nothing in this appendix is typed by hand.
 
-**This table replaced the eight-palette set (Golden Hour → Velvet Ribbon)
-on 2026-09-06 — see §7 R56.** The six below are what `Color.kt` carries.
+**This set replaced R56's six (Daylight → Periwinkle) on 2026-09-14 — see
+§7 R76.** The six came from the lexicon's *Health* entry, whose pairs are
+named Daylight and Linen; the owner's verdict was that they read as stock.
 
-**Role legend:**
+**Role legend** (Material 3's names, so a screen reaches for the role the
+tables audit):
 
-- **bg** — page-level background
-- **surface** — elevated card/container background
-- **outline** — border/divider color, solved to clear **3:1 against both
-  bg and surface** (WCAG 1.4.11) — the fix for T1 (§7)
-- **primary** — brand/CTA color, and the *dose taken* state
-- **secondary** — supporting role, and the *dose due* state
-- **tertiary** — the temperature counterweight: a cool tone in the warm
-  palettes, a warm one in the cool ones, so no palette reads monotone
-- **attention** — *a missed dose, low stock, an approaching expiry.* Warm
-  clay or amber, deliberately **not red**: a hazard light rather than a
-  fire alarm. New in R56
-- **neutralFill** — *a skipped dose and other deliberate non-events.*
-  Near-achromatic on purpose. New in R56
-- **error** — **genuine failures only**: form validation, a failed backup,
-  a destructive confirmation. R56 narrowed this from the four jobs it had
-  accumulated, three of which were not errors
-- **text** — primary reading color, always ≥8.5:1 against surface (AAA)
-- **muted** — the real, audited `mutedText` token at ≥4.5:1 against
-  surface — the fix for T2 (§7)
+- **background / surface** — the page ground; one colour, never a hue
+- **surfaceContainer / surfaceContainerHigh** — the two card tiers, the
+  ground blended 4.5 % and 9 % toward the text (6 % and 11 % in dark). Every
+  card in the app is one of these two: the reference app's grammar (§6)
+- **onSurface / onSurfaceVariant** — text and muted text; muted is fitted to
+  ≥ 4.5:1 against the *high* card, not the ground
+- **outline / outlineVariant** — a border that should be seen (≥ 3:1 on the
+  ground) and a hairline divider that should not compete
+- **primary / onPrimary** — the palette's hue as a solid: the toggle, the
+  timeline rail, a filled button; fitted to ≥ 4.5:1 against the high card
+  so it can also be text (the Salta chip)
+- **primaryContainer / onPrimaryContainer** — the pale tint the hue mostly
+  appears as: the state disc, the Prendi chip, the tab pill, the FAB, the
+  selected day; its text at ≥ 7:1
+- **attention** — *a missed dose, low stock, an approaching expiry*, drawn as
+  a glyph beside the text and never as a fill. Burnt orange in all four —
+  the owner rules out yellow — and deliberately **not red**
+- **error / onError / errorContainer / onErrorContainer** — **genuine
+  failures only**: validation, a failed backup, a permission the app cannot
+  work without (the three permission cards are the one `errorContainer`)
 
-Every `on*` colour is computed rather than tabled: whichever of pure black
-or white clears more contrast against its base. Two tests hold this appendix
-to the code, which is the failure mode §7 R47 was opened to close:
-`PaletteContrastTest` asserts every ratio against the `ColorScheme` the app
-actually builds, and `PaletteSpecConsistencyTest` asserts all 132 hexes in the
-tables below against that same resolved scheme — so editing one without the
-other is a red build rather than a discrepancy someone notices later. The same
-test pins `res/values/colors.xml`'s `splash_background` to the default
-palette's light background, a coupling nothing else enforces.
+Retired with R76: `secondary`, `tertiary` (aliased to the primary roles and
+the high card in `colorSchemeFor` — nothing asks for a third hue),
+`neutralFill` (a skip is drawn with `outline`) and `onAttention` (nothing
+is filled with `attention`).
 
-**`docs/palette-mockup.html`** renders all six on the app's real screens, in
-both themes, and is generated from these same values.
+**Checks.** Every line under a table is what the tool measured for that
+register: text on the ground and on the high card, muted text on both,
+outline on the ground, primary on the ground, the two `on*Container` pairs,
+the pale container against the ground (≥ 1.3:1, so the tint is visible),
+attention and error on the ground and on the high card, `onError` on error.
+`PaletteContrastTest` asserts the same pairs against the `ColorScheme` the
+app actually builds, in light, dark **and AMOLED** (the dark register with
+`background`/`surface` at `#000000`, the cards keeping their dark tone).
+The consistency test also pins **both** `splash_background` resources
+(`values/`, `values-night/`) to the default palette's grounds — the night
+one had sat at a warm brown matching no palette from R56 to R75.
 
-**Register.** All six are Health / Consumer Wellbeing — patient-facing,
-not practitioner-facing. That register's governing rule is that **red is
-reserved for genuine emergencies** and must never be an accent, a brand
-colour, or the marker of an ordinary event; and that grounds stay warm,
-because the clinical blue-grey that reassures a professional reads as
-institutional to someone managing their own medication. Both cool
-palettes (Mallow, Periwinkle) keep a warm ground for exactly that reason.
+**Register.** The ground is near-neutral in all four and the hue is
+carried by the controls, so a medicine's own colour — any hue, from a free
+HSV picker — is the one saturated thing on a card and reads as *the
+medicine's*, never as the theme's. Dark grounds stay above 5 % lightness
+except in AMOLED, where the ground is switched off on purpose; no pure
+white text anywhere; dark-mode text/ground contrast held near 13–15:1
+rather than pushed to extremes.
 
-**OLED note:** every dark `bg` stays above 5% lightness rather than
-reaching for black — on the OLED panels most phones ship, `#000000`
-switches the pixel off, so content smears as it scrolls and light text
-haloes around its own edges.
-
-**Astigmatism/eye-comfort note** (reasoned extension, not in any consulted
-skill file): no pure `#000000`/`#FFFFFF` anywhere, and peak dark-mode
-text/surface contrast kept near 15:1 rather than pushed to extremes. Pair
-this in implementation with no glow/blur box-shadows on bright dark-mode
-elements, and regular/medium body-text weight rather than thin.
-
-**How these values were chosen.** The two new roles, and the token
-assignment behind them, are the winner of an `optimization-engines` run —
-a fully computable spec, zero model judgements — over four measured
-components: register_calm 1.000, state_separation 0.988, legibility
-0.809, error_reserve 0.852, total fitness **0.9265**, beating the
-runner-up assignment by 0.15. Saturation was **pinned** to the register's
-band and only lightness searched: lightness is the axis colour-vision
-deficiency spares, chroma is the axis that reads as alarm, so optimising
-the one that is actually free beats letting a search trade away the
-constraint that mattered. Two corrections during that run are recorded in
-§7 R56 because both changed the answer. The clay hue offset (+4° off each
-palette's own anchor) is shared across all six deliberately — tuned per
-palette it drifted to wine and gold, and the six stopped looking like one
-family.
-
-
-### 1 · Daylight — "the quiet default"
-
-Health / Consumer Wellbeing -> **Daylight**. Taken verbatim from the register's own verified pair. Bone paper and a green that reads as calm rather than clinical.
+### 1 · Porcellana — Ming blue-and-white (visual-craft lexicon, world traditions)
 
 | Role | Light | Dark |
 |---|---|---|
-| bg | `#FBF9F5` | `#121412` |
-| surface | `#F1EEE5` | `#1C201D` |
-| outline | `#847E70` | `#787D75` |
-| primary | `#2C6050` | `#7CBAA2` |
-| secondary | `#4F7365` | `#9AB4A9` |
-| tertiary | `#7E5E3C` | `#CDA97E` |
-| attention | `#B97B34` | `#CA8C44` |
-| neutralFill | `#A69C89` | `#8C7F69` |
-| error | `#A32F29` | `#E8837B` |
-| text | `#22211D` | `#E9E7E1` |
-| muted | `#5E5A51` | `#9A978F` |
+| background | `#F5F6F8` | `#0F141C` |
+| surface | `#F5F6F8` | `#0F141C` |
+| surfaceContainer | `#EBEDF1` | `#1C2129` |
+| surfaceContainerHigh | `#E1E5EB` | `#262B33` |
+| onSurface | `#143667` | `#E4E8EF` |
+| onSurfaceVariant | `#4F6A78` | `#8E9296` |
+| outline | `#7691A6` | `#60656C` |
+| outlineVariant | `#CDD3DE` | `#353A42` |
+| primary | `#17488C` | `#8FB0E0` |
+| onPrimary | `#FFFFFF` | `#1A2028` |
+| primaryContainer | `#BBC9DC` | `#45566E` |
+| onPrimaryContainer | `#143767` | `#F9F9FD` |
+| attention | `#A05027` | `#E0925F` |
+| error | `#9E2A25` | `#F09590` |
+| onError | `#FFFFFF` | `#3A0B08` |
+| errorContainer | `#E2C9CA` | `#654548` |
+| onErrorContainer | `#572F45` | `#F8E8E9` |
 
-Checks — Light: text/surface 13.9:1 · muted/surface 5.9:1 · outline/surface 3.5:1 · outline/bg 3.8:1 · on-attention/attention 5.9:1 · chart triple ΔE 17.1 worst case incl. CVD  
-Dark: text/surface 13.3:1 · muted/surface 5.7:1 · outline/surface 3.9:1 · outline/bg 4.4:1 · on-attention/attention 7.3:1 · chart triple ΔE 15.7 worst case incl. CVD · bg lightness 7.5%
+Checks — Light: text on ground 11.08 · text on the high card 9.47 · muted on ground 5.3 · muted on the high card 4.53 · outline on ground 3.05 · primary on ground 8.29 · onPrimary on primary 8.97 · onPrimaryContainer on primaryContainer 7.05 · primaryContainer against ground 1.55 · attention on ground 5.29 · attention on the high card 4.52 · error on ground 6.91 · error on the high card 5.91 · onError on error 7.47 · onErrorContainer on errorContainer 7.08. Dark: text on ground 15.03 · text on the high card 11.58 · muted on ground 5.89 · muted on the high card 4.54 · outline on ground 3.14 · primary on ground 8.31 · onPrimary on primary 7.38 · onPrimaryContainer on primaryContainer 7.12 · primaryContainer against ground 2.47 · attention on ground 7.43 · attention on the high card 5.72 · error on ground 8.27 · error on the high card 6.37 · onError on error 7.64 · onErrorContainer on errorContainer 7.09.
 
-### 2 · Sage — "softest of the six"
-
-Health / Consumer Wellbeing, hue-anchored to Naturecore's herbal band. A windowsill herb pot. The one palette whose primary is an olive, which is also why its chart triple needed the widest lightness ladder -- olive and clay are the pair deuteranopia collapses hardest.
-
-| Role | Light | Dark |
-|---|---|---|
-| bg | `#F6F6F0` | `#12140F` |
-| surface | `#EBEDE2` | `#1C1F18` |
-| outline | `#7C856A` | `#767C6B` |
-| primary | `#4F6733` | `#A3BE7B` |
-| secondary | `#6B7D4A` | `#AFBC94` |
-| tertiary | `#6E583F` | `#C6A987` |
-| attention | `#C69762` | `#A4743C` |
-| neutralFill | `#999692` | `#C9C7C5` |
-| error | `#A32F29` | `#E8837B` |
-| text | `#23261C` | `#E7E9DF` |
-| muted | `#585E4C` | `#95998A` |
-
-Checks — Light: text/surface 13.0:1 · muted/surface 5.7:1 · outline/surface 3.3:1 · outline/bg 3.6:1 · on-attention/attention 8.0:1 · chart triple ΔE 17.4 worst case incl. CVD  
-Dark: text/surface 13.6:1 · muted/surface 5.7:1 · outline/surface 3.9:1 · outline/bg 4.3:1 · on-attention/attention 5.1:1 · chart triple ΔE 16.0 worst case incl. CVD · bg lightness 6.9%
-
-### 3 · Honeycomb — "warm without glare"
-
-Health / Consumer Wellbeing, hue-anchored to Cozy's amber band. A cool green tertiary is the temperature counterweight; without it the palette goes sticky.
+### 2 · Ardesia — Slate Scholastic (lexicon, contexts)
 
 | Role | Light | Dark |
 |---|---|---|
-| bg | `#FDF8EE` | `#15120B` |
-| surface | `#F6EFDE` | `#201C13` |
-| outline | `#8C7B62` | `#867D64` |
-| primary | `#7E5A1B` | `#D8B26A` |
-| secondary | `#9C7B36` | `#BFA57C` |
-| tertiary | `#3F5A4E` | `#86B39F` |
-| attention | `#B28875` | `#906350` |
-| neutralFill | `#696763` | `#918F8B` |
-| error | `#A32F29` | `#E8837B` |
-| text | `#2A2318` | `#F0E9DA` |
-| muted | `#655B49` | `#9D9480` |
+| background | `#EEF4F6` | `#152328` |
+| surface | `#EEF4F6` | `#152328` |
+| surfaceContainer | `#E4EBED` | `#223034` |
+| surfaceContainerHigh | `#DBE2E4` | `#2D3A3F` |
+| onSurface | `#19282E` | `#F3F5F6` |
+| onSurfaceVariant | `#5D656A` | `#9BA2A3` |
+| outline | `#818E96` | `#697376` |
+| outlineVariant | `#C8CFD2` | `#3D494D` |
+| primary | `#2D6276` | `#7FB2C6` |
+| onPrimary | `#FFFFFF` | `#172024` |
+| primaryContainer | `#BCCED5` | `#425F6A` |
+| onPrimaryContainer | `#1C3E49` | `#FFFFFF` |
+| attention | `#9C4E26` | `#E0925F` |
+| error | `#9E2A25` | `#F09590` |
+| onError | `#FFFFFF` | `#3A0B08` |
+| errorContainer | `#DCC8C8` | `#684E50` |
+| onErrorContainer | `#5C292A` | `#FDF6F6` |
 
-Checks — Light: text/surface 13.5:1 · muted/surface 5.8:1 · outline/surface 3.6:1 · outline/bg 3.9:1 · on-attention/attention 6.7:1 · chart triple ΔE 18.2 worst case incl. CVD  
-Dark: text/surface 14.0:1 · muted/surface 5.6:1 · outline/surface 4.1:1 · outline/bg 4.6:1 · on-attention/attention 5.1:1 · chart triple ΔE 17.0 worst case incl. CVD · bg lightness 6.3%
+Checks — Light: text on ground 13.66 · text on the high card 11.57 · muted on ground 5.35 · muted on the high card 4.53 · outline on ground 3.03 · primary on ground 6.06 · onPrimary on primary 6.73 · onPrimaryContainer on primaryContainer 7.05 · primaryContainer against ground 1.46 · attention on ground 5.35 · attention on the high card 4.53 · error on ground 6.72 · error on the high card 5.69 · onError on error 7.47 · onErrorContainer on errorContainer 7.28. Dark: text on ground 14.74 · text on the high card 10.74 · muted on ground 6.21 · muted on the high card 4.52 · outline on ground 3.31 · primary on ground 6.97 · onPrimary on primary 7.16 · onPrimaryContainer on primaryContainer 6.83 · primaryContainer against ground 2.36 · attention on ground 6.48 · attention on the high card 4.72 · error on ground 7.22 · error on the high card 5.26 · onError on error 7.64 · onErrorContainer on errorContainer 7.05.
 
-### 4 · Linen — "warmest of the six"
-
-Health / Consumer Wellbeing -> **Linen**. The register's second verified pair. Its `error` is the only one pushed to oxblood, because a terracotta primary and an ordinary red error are otherwise too close to tell apart.
-
-| Role | Light | Dark |
-|---|---|---|
-| bg | `#F8F5F1` | `#191614` |
-| surface | `#EFE8E0` | `#231E1A` |
-| outline | `#877364` | `#857569` |
-| primary | `#8E4826` | `#D9906A` |
-| secondary | `#A05F3C` | `#C29B80` |
-| tertiary | `#3E5B5B` | `#86B0AC` |
-| attention | `#C47464` | `#A24F3E` |
-| neutralFill | `#696763` | `#878480` |
-| error | `#8E1F38` | `#EE7E93` |
-| text | `#26221E` | `#EAE5DF` |
-| muted | `#645A4F` | `#9E948A` |
-
-Checks — Light: text/surface 13.0:1 · muted/surface 5.5:1 · outline/surface 3.7:1 · outline/bg 4.1:1 · on-attention/attention 6.0:1 · chart triple ΔE 16.7 worst case incl. CVD  
-Dark: text/surface 13.2:1 · muted/surface 5.5:1 · outline/surface 3.7:1 · outline/bg 4.1:1 · on-attention/attention 5.6:1 · chart triple ΔE 17.9 worst case incl. CVD · bg lightness 8.8%
-
-### 5 · Mallow — "soft, not sweet"
-
-Health / Consumer Wellbeing, hue-anchored to Coquette/Girly's muted register. Dried plum. The only palette whose brand colour is a true violet-red.
+### 3 · Sangue di bue — Tense · Held Breath (lexicon, moods)
 
 | Role | Light | Dark |
 |---|---|---|
-| bg | `#FAF6F8` | `#161215` |
-| surface | `#F2EAEF` | `#201A1F` |
-| outline | `#87737F` | `#7E6F79` |
-| primary | `#7A3F63` | `#C595B4` |
-| secondary | `#8E5C7C` | `#B79FB0` |
-| tertiary | `#6E5A32` | `#C3B07A` |
-| attention | `#7C5A2E` | `#BC8B4A` |
-| neutralFill | `#948C80` | `#898173` |
-| error | `#A32F29` | `#E8837B` |
-| text | `#251E23` | `#EDE5EA` |
-| muted | `#615560` | `#9A8D98` |
+| background | `#E9E7E4` | `#0E0F11` |
+| surface | `#E9E7E4` | `#0E0F11` |
+| surfaceContainer | `#E0DEDB` | `#1A1B1D` |
+| surfaceContainerHigh | `#D6D4D2` | `#242526` |
+| onSurface | `#17181A` | `#D8D6D2` |
+| onSurfaceVariant | `#5C5C5C` | `#8C8C8C` |
+| outline | `#858483` | `#60605F` |
+| outlineVariant | `#C3C2C0` | `#323334` |
+| primary | `#6E241F` | `#D96B5E` |
+| onPrimary | `#FFFFFF` | `#271311` |
+| primaryContainer | `#C9B4B1` | `#633631` |
+| onPrimaryContainer | `#471F1D` | `#F1D1CF` |
+| attention | `#904823` | `#E0925F` |
+| error | `#9E2A25` | `#F09590` |
+| onError | `#FFFFFF` | `#3A0B08` |
+| errorContainer | `#D8BDBA` | `#644241` |
+| onErrorContainer | `#5A2120` | `#F6E2E2` |
 
-Checks — Light: text/surface 13.8:1 · muted/surface 6.0:1 · outline/surface 3.7:1 · outline/bg 4.1:1 · on-attention/attention 6.3:1 · chart triple ΔE 21.3 worst case incl. CVD  
-Dark: text/surface 13.8:1 · muted/surface 5.4:1 · outline/surface 3.6:1 · outline/bg 3.9:1 · on-attention/attention 6.9:1 · chart triple ΔE 16.5 worst case incl. CVD · bg lightness 7.8%
+Checks — Light: text on ground 14.4 · text on the high card 12.02 · muted on ground 5.42 · muted on the high card 4.52 · outline on ground 3.02 · primary on ground 8.79 · onPrimary on primary 10.85 · onPrimaryContainer on primaryContainer 7.19 · primaryContainer against ground 1.6 · attention on ground 5.42 · attention on the high card 4.53 · error on ground 6.05 · error on the high card 5.05 · onError on error 7.47 · onErrorContainer on errorContainer 7.12. Dark: text on ground 13.21 · text on the high card 10.58 · muted on ground 5.7 · muted on the high card 4.57 · outline on ground 3.05 · primary on ground 5.68 · onPrimary on primary 5.23 · onPrimaryContainer on primaryContainer 7.02 · primaryContainer against ground 1.92 · attention on ground 7.71 · attention on the high card 6.18 · error on ground 8.59 · error on the high card 6.88 · onError on error 7.64 · onErrorContainer on errorContainer 7.05.
 
-### 6 · Periwinkle — "the one cool option"
-
-Health / Consumer Wellbeing, hue-anchored to Scholastic's indigo, warmed. A tan tertiary and a warm ground are what stop a cool primary reading institutional -- the register's own stated failure mode.
+### 4 · Sabbia — Serene · Chalk (lexicon, moods)
 
 | Role | Light | Dark |
 |---|---|---|
-| bg | `#F8F7FB` | `#131319` |
-| surface | `#ECEBF3` | `#1D1D25` |
-| outline | `#77758C` | `#73728A` |
-| primary | `#4E4590` | `#A3A0DC` |
-| secondary | `#6A6296` | `#A8A5C2` |
-| tertiary | `#7A5A3E` | `#C9A57E` |
-| attention | `#B98952` | `#A57742` |
-| neutralFill | `#B4AFA6` | `#BCB7AF` |
-| error | `#A32F29` | `#E8837B` |
-| text | `#1F1E2A` | `#E6E5EE` |
-| muted | `#565469` | `#918FA0` |
+| background | `#F5F3EF` | `#1B1917` |
+| surface | `#F5F3EF` | `#1B1917` |
+| surfaceContainer | `#ECEAE6` | `#272522` |
+| surfaceContainerHigh | `#E4E2DE` | `#312F2C` |
+| onSurface | `#35322D` | `#E4DFD6` |
+| onSurfaceVariant | `#696361` | `#999791` |
+| outline | `#8F8A84` | `#686561` |
+| outlineVariant | `#D2D0CC` | `#3F3D39` |
+| primary | `#6F634B` | `#C0AE8E` |
+| onPrimary | `#FFFFFF` | `#231F1A` |
+| primaryContainer | `#D2CEC4` | `#605849` |
+| onPrimaryContainer | `#413B31` | `#FFFFFF` |
+| attention | `#9C4E26` | `#E0925F` |
+| error | `#9E2A25` | `#F09590` |
+| onError | `#FFFFFF` | `#3A0B08` |
+| errorContainer | `#E2C7C3` | `#6C4845` |
+| onErrorContainer | `#612925` | `#FBF0EF` |
 
-Checks — Light: text/surface 13.9:1 · muted/surface 6.2:1 · outline/surface 3.8:1 · outline/bg 4.2:1 · on-attention/attention 6.8:1 · chart triple ΔE 18.7 worst case incl. CVD  
-Dark: text/surface 13.4:1 · muted/surface 5.3:1 · outline/surface 3.6:1 · outline/bg 4.0:1 · on-attention/attention 5.3:1 · chart triple ΔE 23.6 worst case incl. CVD · bg lightness 8.6%
+Checks — Light: text on ground 11.52 · text on the high card 9.86 · muted on ground 5.33 · muted on the high card 4.56 · outline on ground 3.09 · primary on ground 5.32 · onPrimary on primary 5.9 · onPrimaryContainer on primaryContainer 7.05 · primaryContainer against ground 1.42 · attention on ground 5.37 · attention on the high card 4.6 · error on ground 6.74 · error on the high card 5.77 · onError on error 7.47 · onErrorContainer on errorContainer 7.12. Dark: text on ground 13.21 · text on the high card 10.06 · muted on ground 6.0 · muted on the high card 4.57 · outline on ground 3.02 · primary on ground 8.09 · onPrimary on primary 7.55 · onPrimaryContainer on primaryContainer 7.02 · primaryContainer against ground 2.5 · attention on ground 7.05 · attention on the high card 5.37 · error on ground 7.85 · error on the high card 5.98 · onError on error 7.64 · onErrorContainer on errorContainer 7.1.
 
----
 
 ## Appendix B — UX audit of the reference app (source findings)
 

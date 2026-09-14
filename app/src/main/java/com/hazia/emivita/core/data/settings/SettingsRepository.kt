@@ -11,6 +11,7 @@ import com.hazia.emivita.core.data.entity.Medicine
 import com.hazia.emivita.core.scheduling.DEFAULT_SNOOZE_MINUTES
 import com.hazia.emivita.ui.theme.DEFAULT_PALETTE
 import com.hazia.emivita.ui.theme.MedPalette
+import com.hazia.emivita.ui.theme.legacyPaletteNames
 import com.hazia.emivita.ui.theme.ThemeMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -93,8 +94,11 @@ class SettingsRepository(context: Context) {
         val APP_LAST_SEEN_EPOCH_MILLIS = longPreferencesKey("app_last_seen_epoch_millis")
     }
 
+    // A name from R56's six maps to its nearest of the four (§7 R76) so an
+    // upgrade keeps the temperature the owner had chosen; anything else is
+    // the default.
     val palette: Flow<MedPalette> = dataStore.data.map { prefs ->
-        prefs[Keys.PALETTE]?.let { runCatching { MedPalette.valueOf(it) }.getOrNull() }
+        prefs[Keys.PALETTE]?.let { name -> legacyPaletteNames[name] ?: runCatching { MedPalette.valueOf(name) }.getOrNull() }
             ?: DEFAULT_PALETTE
     }
 

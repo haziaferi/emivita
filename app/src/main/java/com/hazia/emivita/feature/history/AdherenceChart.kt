@@ -81,10 +81,11 @@ data class DayAdherenceCounts(
  * worse than a deliberate Skip and should be the louder of the two, but it is
  * a fact about last Tuesday, not an emergency, and the patient-facing register
  * reserves red for genuine failures. `attention` is the warm clay that says
- * "look at this" without saying "something is wrong". Skip moves off `tertiary`
- * -- a chromatic accent made a deliberate choice shout as loudly as a taken
- * dose -- onto the near-achromatic `neutralFill`, which is also what holds the
- * three series apart under colour-vision deficiency (see Color.kt).
+ * "look at this" without saying "something is wrong". Skip is drawn with
+ * `outline` -- a deliberate choice, near-achromatic on purpose so it never
+ * shouts as loudly as a taken dose (R56's `neutralFill`, retired in R76 for
+ * the same role under the reference app's grammar) -- which is also what
+ * holds the three series apart under colour-vision deficiency (see Color.kt).
  *
  * **Colour is no longer load-bearing here (spec §7 R54/R55.)** This was the one
  * surface in the app where state was conveyed by hue alone -- stacked bars read
@@ -119,7 +120,7 @@ fun AdherenceChart(counts: List<DayAdherenceCounts>) {
     }
 
     val takenColor = MaterialTheme.colorScheme.primary
-    val skippedColor = EmivitaTheme.colors.neutralFill
+    val skippedColor = MaterialTheme.colorScheme.outline
     val missedColor = EmivitaTheme.colors.attention
     val surfaceColor = MaterialTheme.colorScheme.surface
     val density = LocalDensity.current.density

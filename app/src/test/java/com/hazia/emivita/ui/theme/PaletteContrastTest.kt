@@ -84,6 +84,51 @@ class PaletteContrastTest {
     }
 
     /**
+     * R76: the containers are real tints with their own text, so each pair is
+     * a text pair to check -- until R76 every container *was* its base role and
+     * `onPrimaryContainer` was `onPrimary`, so nothing here could fail and the
+     * Stock screen's panels were never measured (§7 R75).
+     */
+    @Test
+    fun containerTextClearsAaAgainstItsContainer() = eachScheme { name, s ->
+        assertAtLeast(4.5, ratio(s.onPrimary, s.primary), "$name onPrimary/primary")
+        assertAtLeast(4.5, ratio(s.onPrimaryContainer, s.primaryContainer), "$name onPrimaryContainer/primaryContainer")
+        assertAtLeast(4.5, ratio(s.onErrorContainer, s.errorContainer), "$name onErrorContainer/errorContainer")
+        assertAtLeast(4.5, ratio(s.onSecondaryContainer, s.secondaryContainer), "$name onSecondaryContainer/secondaryContainer")
+        assertAtLeast(4.5, ratio(s.onTertiaryContainer, s.tertiaryContainer), "$name onTertiaryContainer/tertiaryContainer")
+    }
+
+    /** A pale container must still read as a tint against the ground it sits
+     *  on: the state disc, the Prendi chip and the FAB are drawn with it. */
+    @Test
+    fun primaryContainerIsVisibleAgainstTheGround() = eachScheme { name, s ->
+        assertAtLeast(1.3, ratio(s.primaryContainer, s.surface), "$name primaryContainer/surface")
+        assertAtLeast(1.3, ratio(s.primaryContainer, s.surfaceContainer), "$name primaryContainer/surfaceContainer")
+    }
+
+    /**
+     * Everything that can sit on a card is checked against the darkest card
+     * tier, not only the ground: muted text, the primary used as text (the
+     * Salta chip), the attention and error glyphs.
+     */
+    @Test
+    fun cardBorneColoursClearAaOnTheHighCard() {
+        for (palette in MedPalette.entries) {
+            for (dark in listOf(false, true)) {
+                val name = "${palette.name} ${if (dark) "dark" else "light"}"
+                val s = colorSchemeFor(palette, dark)
+                val e = emivitaColorsFor(palette, dark)
+                for ((tier, colour) in listOf("surface" to s.surface, "surfaceContainer" to s.surfaceContainer, "surfaceContainerHigh" to s.surfaceContainerHigh)) {
+                    assertAtLeast(4.5, ratio(s.onSurfaceVariant, colour), "$name onSurfaceVariant/$tier")
+                    assertAtLeast(4.5, ratio(s.primary, colour), "$name primary/$tier")
+                    assertAtLeast(4.5, ratio(e.attention, colour), "$name attention/$tier")
+                    assertAtLeast(4.5, ratio(s.error, colour), "$name error/$tier")
+                }
+            }
+        }
+    }
+
+    /**
      * R44's derived surface ladder. Body text sits on these containers -- the
      * navigation bar, dialogs, dropdowns -- so blending surface toward
      * onSurface must not walk a container far enough to break its own text.

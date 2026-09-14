@@ -525,7 +525,7 @@ internal fun MedicineCard(entry: MedicineListEntry, onClick: () -> Unit, dragHan
                     Text(
                         stateLine,
                         style = MaterialTheme.typography.labelMedium,
-                        color = if (needsAttention) EmivitaTheme.colors.onAttention.copy(alpha = 0.9f) else MaterialTheme.colorScheme.onSurfaceVariant,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
                 if (entry.tagNames.isNotEmpty()) {

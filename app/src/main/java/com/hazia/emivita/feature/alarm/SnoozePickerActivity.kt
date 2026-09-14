@@ -28,7 +28,7 @@ import androidx.lifecycle.lifecycleScope
 import com.hazia.emivita.EmivitaApplication
 import com.hazia.emivita.R
 import com.hazia.emivita.core.notification.EXTRA_DOSE_EVENT_ID
-import com.hazia.emivita.ui.theme.EmivitaTheme
+import com.hazia.emivita.ui.theme.SavedEmivitaTheme
 import kotlinx.coroutines.launch
 import android.content.Context
 import com.hazia.emivita.core.locale.AppLocale
@@ -50,7 +50,7 @@ class SnoozePickerActivity : ComponentActivity() {
         if (doseEventId < 0) { finish(); return }
         val container = (application as EmivitaApplication).container
         setContent {
-            EmivitaTheme {
+            SavedEmivitaTheme(container.settingsRepository) {
                 var custom by remember { mutableStateOf("") }
                 val choices = listOf(5, 15, 30, 60)
                 fun snooze(minutes: Int) {

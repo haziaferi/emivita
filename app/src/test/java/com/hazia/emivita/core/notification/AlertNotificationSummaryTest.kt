@@ -10,6 +10,7 @@ import com.hazia.emivita.core.data.entity.Medicine
 import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.entity.StockInfo
 import com.hazia.emivita.core.data.settings.SettingsRepository
+import com.hazia.emivita.ui.theme.DEFAULT_PALETTE
 import io.mockk.every
 import io.mockk.mockk
 import kotlinx.coroutines.flow.flowOf
@@ -33,7 +34,7 @@ class AlertNotificationSummaryTest {
     fun setUp() {
         ReminderNotificationChannels.createAll(context)
         shadowOf(context.applicationContext as android.app.Application).grantPermissions(android.Manifest.permission.POST_NOTIFICATIONS)
-        val settings = mockk<SettingsRepository>().also { every { it.hideMedicineNames } returns flowOf(false) }
+        val settings = mockk<SettingsRepository>().also { every { it.hideMedicineNames } returns flowOf(false); every { it.palette } returns flowOf(DEFAULT_PALETTE) }
         builder = AlertNotificationBuilder(context, settings)
     }
 

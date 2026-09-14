@@ -3,311 +3,240 @@ package com.hazia.emivita.ui.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * Six palettes, light and dark, replacing the previous eight outright.
+ * Four palettes, light and dark, replacing the previous six (spec §6, §7 R76).
  *
- * They are drawn for the Health / Consumer-Wellbeing register -- patient-facing
- * rather than practitioner-facing -- whose governing rule is that red is
- * reserved for genuine emergencies and must never be an accent, a brand colour,
- * or the marker of an ordinary event. Grounds stay warm even under the two cool
- * palettes: the clinical blue-grey that reassures a professional reads as
- * institutional to someone managing their own medication.
+ * Each is three agreed colours per register -- ground, text, primary -- from a
+ * named visual-craft lexicon pair the owner chose from ten candidates, and
+ * everything else is derived from those three by the same rules for all four
+ * in `tools/palette_derive.py`. This file is printed by that tool (`--kotlin`),
+ * as is SPEC Appendix A (`--tables`); `PaletteSpecConsistencyTest` pins the
+ * two to each other and `tools/palette_derive.py --check` pins Appendix A to
+ * the tool, so a value edited by hand on any side fails a gate.
  *
- * TWO ROLES ARE NEW, and they exist to end an overload rather than to decorate.
- * `error` was doing four jobs, three of which are not errors: it painted the
- * missed-dose chart series (AdherenceChart), the past-due day dot
- * (HistoryCalendarView, where PENDING is displayed as "Missed"), and a note
- * saying an OPTIONAL barcode-scanner app is not installed.
+ * HOW COLOUR IS APPLIED (the reference app's grammar, adopted in R76): every
+ * card is tonal -- `surfaceContainer`, one step off the ground -- and never a
+ * hue; the palette's hue lives in controls, mostly as the pale
+ * `primaryContainer` (the state disc, the Prendi chip, the tab pill, the FAB),
+ * with solid `primary` only on the toggle and the timeline rail; a medicine's
+ * own colour is the one saturated thing on a card, its icon tile; and a
+ * warning is a glyph, never a fill.
  *
- *   attention    a missed dose, low stock, an approaching expiry. Warm clay or
- *                amber -- a hazard light, not a fire alarm. Deliberately NOT red.
- *   neutralFill  a skipped dose and other deliberate non-events. Near-achromatic
- *                on purpose: a skip is a choice the user made, not an outcome to
- *                flag, and it should not compete with the states that matter.
- *   error        now narrowed to genuine failures only -- form validation, a
- *                failed backup, a destructive confirmation.
+ *   attention   a missed dose, low stock, an approaching expiry: a burnt
+ *               orange glyph beside the text. Not amber -- the owner rules
+ *               out yellow -- and deliberately NOT red.
+ *   error       genuine failures only: validation, a failed backup, a
+ *               permission the app cannot work without. `errorContainer`
+ *               is a real tint now, for the three permission cards.
  *
- * The near-achromatic `neutralFill` is also what holds the chart apart under
- * colour-vision deficiency. Every state in this register is warm and
- * desaturated, and that is exactly the band where deuteranopia and protanopia
- * collapse hues together; an earlier draft had taken and missed at dE 0.9 --
- * indistinguishable. Chromatic / neutral / chromatic survives it, because
- * lightness and chroma do the separating rather than hue alone.
- *
- * HOW THE VALUES WERE CHOSEN. The token assignment and the two new colours came
- * out of an optimisation run (optimization-engines portfolio, fully computable
- * spec, zero model judgements) over four measured components: register_calm
- * 1.000, state_separation 0.988, legibility 0.809, error_reserve 0.852, total
- * fitness 0.9265. Saturation was pinned to the register's band and only
- * lightness searched -- lightness is the axis colour-vision deficiency spares,
- * chroma is the axis that reads as alarm, so optimising the one that is
- * actually free beats letting a search trade away the constraint. The clay hue
- * offset (+4 degrees off each palette's own anchor) is shared across all six on
- * purpose: tuned per palette it drifted to wine and gold, and the family
- * stopped looking related.
- *
- * on* colours are computed, not specified: whichever of pure black or white
- * clears more WCAG contrast against the base, the same rule the previous eight
- * used. Every pair here is verified in PaletteContrastTest against the
- * ColorScheme the app actually builds.
+ * Every colour that can sit on a card is fitted against the darkest card
+ * tier, `surfaceContainerHigh`, not the ground -- muted text, the primary,
+ * the attention and error glyphs -- and `onPrimaryContainer` against its own
+ * container at 7:1. `PaletteContrastTest` asserts every pair against the
+ * ColorScheme the app actually builds, in light, dark and AMOLED.
  */
 
-// ---------- Daylight ----------
-// warm bone + deep sea green. The quiet default. Bone paper, a green that reads as calm rather than clinical.
-object DaylightPalette {
-    // Light
-    val LightBackground = Color(0xFFFBF9F5)
-    val LightSurface = Color(0xFFF1EEE5)
-    val LightOutline = Color(0xFF847E70)
-    val LightOnBackground = Color(0xFF22211D)
-    val LightOnSurfaceVariant = Color(0xFF5E5A51)
-    val LightPrimary = Color(0xFF2C6050)
-    val LightOnPrimary = Color(0xFFFFFFFF)
-    val LightSecondary = Color(0xFF4F7365)
-    val LightOnSecondary = Color(0xFFFFFFFF)
-    val LightTertiary = Color(0xFF7E5E3C)
-    val LightOnTertiary = Color(0xFFFFFFFF)
-    val LightAttention = Color(0xFFB97B34)
-    val LightOnAttention = Color(0xFF000000)
-    val LightNeutralFill = Color(0xFFA69C89)
-    val LightOnNeutralFill = Color(0xFF000000)
-    val LightError = Color(0xFFA32F29)
-    val LightOnError = Color(0xFFFFFFFF)
+/** The 17 colours one palette defines for one register. [colorSchemeFor]
+ *  places the 16 Material ones into Material3's slots and derives the tiers
+ *  the tables do not list; `attention` has no slot and travels on
+ *  [LocalEmivitaColors]. */
+data class PaletteTokens(
+    val background: Color,
+    val surface: Color,
+    val surfaceContainer: Color,
+    val surfaceContainerHigh: Color,
+    val onSurface: Color,
+    val onSurfaceVariant: Color,
+    val outline: Color,
+    val outlineVariant: Color,
+    val primary: Color,
+    val onPrimary: Color,
+    val primaryContainer: Color,
+    val onPrimaryContainer: Color,
+    val attention: Color,
+    val error: Color,
+    val onError: Color,
+    val errorContainer: Color,
+    val onErrorContainer: Color,
+)
 
-    // Dark
-    val DarkBackground = Color(0xFF121412)
-    val DarkSurface = Color(0xFF1C201D)
-    val DarkOutline = Color(0xFF787D75)
-    val DarkOnBackground = Color(0xFFE9E7E1)
-    val DarkOnSurfaceVariant = Color(0xFF9A978F)
-    val DarkPrimary = Color(0xFF7CBAA2)
-    val DarkOnPrimary = Color(0xFF000000)
-    val DarkSecondary = Color(0xFF9AB4A9)
-    val DarkOnSecondary = Color(0xFF000000)
-    val DarkTertiary = Color(0xFFCDA97E)
-    val DarkOnTertiary = Color(0xFF000000)
-    val DarkAttention = Color(0xFFCA8C44)
-    val DarkOnAttention = Color(0xFF000000)
-    val DarkNeutralFill = Color(0xFF8C7F69)
-    val DarkOnNeutralFill = Color(0xFF000000)
-    val DarkError = Color(0xFFE8837B)
-    val DarkOnError = Color(0xFF000000)
+// ---------- Porcellana ----------
+// Ming blue-and-white (visual-craft lexicon, world traditions).
+object PorcellanaPalette {
+    val Light = PaletteTokens(
+        background = Color(0xFFF5F6F8),
+        surface = Color(0xFFF5F6F8),
+        surfaceContainer = Color(0xFFEBEDF1),
+        surfaceContainerHigh = Color(0xFFE1E5EB),
+        onSurface = Color(0xFF143667),
+        onSurfaceVariant = Color(0xFF4F6A78),
+        outline = Color(0xFF7691A6),
+        outlineVariant = Color(0xFFCDD3DE),
+        primary = Color(0xFF17488C),
+        onPrimary = Color(0xFFFFFFFF),
+        primaryContainer = Color(0xFFBBC9DC),
+        onPrimaryContainer = Color(0xFF143767),
+        attention = Color(0xFFA05027),
+        error = Color(0xFF9E2A25),
+        onError = Color(0xFFFFFFFF),
+        errorContainer = Color(0xFFE2C9CA),
+        onErrorContainer = Color(0xFF572F45),
+    )
+    val Dark = PaletteTokens(
+        background = Color(0xFF0F141C),
+        surface = Color(0xFF0F141C),
+        surfaceContainer = Color(0xFF1C2129),
+        surfaceContainerHigh = Color(0xFF262B33),
+        onSurface = Color(0xFFE4E8EF),
+        onSurfaceVariant = Color(0xFF8E9296),
+        outline = Color(0xFF60656C),
+        outlineVariant = Color(0xFF353A42),
+        primary = Color(0xFF8FB0E0),
+        onPrimary = Color(0xFF1A2028),
+        primaryContainer = Color(0xFF45566E),
+        onPrimaryContainer = Color(0xFFF9F9FD),
+        attention = Color(0xFFE0925F),
+        error = Color(0xFFF09590),
+        onError = Color(0xFF3A0B08),
+        errorContainer = Color(0xFF654548),
+        onErrorContainer = Color(0xFFF8E8E9),
+    )
 }
 
-// ---------- Sage ----------
-// herbal grey-green. The colour of a windowsill herb pot. Softest of the six.
-object SagePalette {
-    // Light
-    val LightBackground = Color(0xFFF6F6F0)
-    val LightSurface = Color(0xFFEBEDE2)
-    val LightOutline = Color(0xFF7C856A)
-    val LightOnBackground = Color(0xFF23261C)
-    val LightOnSurfaceVariant = Color(0xFF585E4C)
-    val LightPrimary = Color(0xFF4F6733)
-    val LightOnPrimary = Color(0xFFFFFFFF)
-    val LightSecondary = Color(0xFF6B7D4A)
-    val LightOnSecondary = Color(0xFF000000)
-    val LightTertiary = Color(0xFF6E583F)
-    val LightOnTertiary = Color(0xFFFFFFFF)
-    val LightAttention = Color(0xFFC69762)
-    val LightOnAttention = Color(0xFF000000)
-    val LightNeutralFill = Color(0xFF999692)
-    val LightOnNeutralFill = Color(0xFF000000)
-    val LightError = Color(0xFFA32F29)
-    val LightOnError = Color(0xFFFFFFFF)
-
-    // Dark
-    val DarkBackground = Color(0xFF12140F)
-    val DarkSurface = Color(0xFF1C1F18)
-    val DarkOutline = Color(0xFF767C6B)
-    val DarkOnBackground = Color(0xFFE7E9DF)
-    val DarkOnSurfaceVariant = Color(0xFF95998A)
-    val DarkPrimary = Color(0xFFA3BE7B)
-    val DarkOnPrimary = Color(0xFF000000)
-    val DarkSecondary = Color(0xFFAFBC94)
-    val DarkOnSecondary = Color(0xFF000000)
-    val DarkTertiary = Color(0xFFC6A987)
-    val DarkOnTertiary = Color(0xFF000000)
-    val DarkAttention = Color(0xFFA4743C)
-    val DarkOnAttention = Color(0xFF000000)
-    val DarkNeutralFill = Color(0xFFC9C7C5)
-    val DarkOnNeutralFill = Color(0xFF000000)
-    val DarkError = Color(0xFFE8837B)
-    val DarkOnError = Color(0xFF000000)
+// ---------- Ardesia ----------
+// Slate Scholastic (lexicon, contexts).
+object ArdesiaPalette {
+    val Light = PaletteTokens(
+        background = Color(0xFFEEF4F6),
+        surface = Color(0xFFEEF4F6),
+        surfaceContainer = Color(0xFFE4EBED),
+        surfaceContainerHigh = Color(0xFFDBE2E4),
+        onSurface = Color(0xFF19282E),
+        onSurfaceVariant = Color(0xFF5D656A),
+        outline = Color(0xFF818E96),
+        outlineVariant = Color(0xFFC8CFD2),
+        primary = Color(0xFF2D6276),
+        onPrimary = Color(0xFFFFFFFF),
+        primaryContainer = Color(0xFFBCCED5),
+        onPrimaryContainer = Color(0xFF1C3E49),
+        attention = Color(0xFF9C4E26),
+        error = Color(0xFF9E2A25),
+        onError = Color(0xFFFFFFFF),
+        errorContainer = Color(0xFFDCC8C8),
+        onErrorContainer = Color(0xFF5C292A),
+    )
+    val Dark = PaletteTokens(
+        background = Color(0xFF152328),
+        surface = Color(0xFF152328),
+        surfaceContainer = Color(0xFF223034),
+        surfaceContainerHigh = Color(0xFF2D3A3F),
+        onSurface = Color(0xFFF3F5F6),
+        onSurfaceVariant = Color(0xFF9BA2A3),
+        outline = Color(0xFF697376),
+        outlineVariant = Color(0xFF3D494D),
+        primary = Color(0xFF7FB2C6),
+        onPrimary = Color(0xFF172024),
+        primaryContainer = Color(0xFF425F6A),
+        onPrimaryContainer = Color(0xFFFFFFFF),
+        attention = Color(0xFFE0925F),
+        error = Color(0xFFF09590),
+        onError = Color(0xFF3A0B08),
+        errorContainer = Color(0xFF684E50),
+        onErrorContainer = Color(0xFFFDF6F6),
+    )
 }
 
-// ---------- Honeycomb ----------
-// honey and beeswax. Warm without glare. A cool green tertiary keeps it from going sticky.
-object HoneycombPalette {
-    // Light
-    val LightBackground = Color(0xFFFDF8EE)
-    val LightSurface = Color(0xFFF6EFDE)
-    val LightOutline = Color(0xFF8C7B62)
-    val LightOnBackground = Color(0xFF2A2318)
-    val LightOnSurfaceVariant = Color(0xFF655B49)
-    val LightPrimary = Color(0xFF7E5A1B)
-    val LightOnPrimary = Color(0xFFFFFFFF)
-    val LightSecondary = Color(0xFF9C7B36)
-    val LightOnSecondary = Color(0xFF000000)
-    val LightTertiary = Color(0xFF3F5A4E)
-    val LightOnTertiary = Color(0xFFFFFFFF)
-    val LightAttention = Color(0xFFB28875)
-    val LightOnAttention = Color(0xFF000000)
-    val LightNeutralFill = Color(0xFF696763)
-    val LightOnNeutralFill = Color(0xFFFFFFFF)
-    val LightError = Color(0xFFA32F29)
-    val LightOnError = Color(0xFFFFFFFF)
-
-    // Dark
-    val DarkBackground = Color(0xFF15120B)
-    val DarkSurface = Color(0xFF201C13)
-    val DarkOutline = Color(0xFF867D64)
-    val DarkOnBackground = Color(0xFFF0E9DA)
-    val DarkOnSurfaceVariant = Color(0xFF9D9480)
-    val DarkPrimary = Color(0xFFD8B26A)
-    val DarkOnPrimary = Color(0xFF000000)
-    val DarkSecondary = Color(0xFFBFA57C)
-    val DarkOnSecondary = Color(0xFF000000)
-    val DarkTertiary = Color(0xFF86B39F)
-    val DarkOnTertiary = Color(0xFF000000)
-    val DarkAttention = Color(0xFF906350)
-    val DarkOnAttention = Color(0xFFFFFFFF)
-    val DarkNeutralFill = Color(0xFF918F8B)
-    val DarkOnNeutralFill = Color(0xFF000000)
-    val DarkError = Color(0xFFE8837B)
-    val DarkOnError = Color(0xFF000000)
+// ---------- Sangue di bue ----------
+// Tense · Held Breath (lexicon, moods).
+object SangueDiBuePalette {
+    val Light = PaletteTokens(
+        background = Color(0xFFE9E7E4),
+        surface = Color(0xFFE9E7E4),
+        surfaceContainer = Color(0xFFE0DEDB),
+        surfaceContainerHigh = Color(0xFFD6D4D2),
+        onSurface = Color(0xFF17181A),
+        onSurfaceVariant = Color(0xFF5C5C5C),
+        outline = Color(0xFF858483),
+        outlineVariant = Color(0xFFC3C2C0),
+        primary = Color(0xFF6E241F),
+        onPrimary = Color(0xFFFFFFFF),
+        primaryContainer = Color(0xFFC9B4B1),
+        onPrimaryContainer = Color(0xFF471F1D),
+        attention = Color(0xFF904823),
+        error = Color(0xFF9E2A25),
+        onError = Color(0xFFFFFFFF),
+        errorContainer = Color(0xFFD8BDBA),
+        onErrorContainer = Color(0xFF5A2120),
+    )
+    val Dark = PaletteTokens(
+        background = Color(0xFF0E0F11),
+        surface = Color(0xFF0E0F11),
+        surfaceContainer = Color(0xFF1A1B1D),
+        surfaceContainerHigh = Color(0xFF242526),
+        onSurface = Color(0xFFD8D6D2),
+        onSurfaceVariant = Color(0xFF8C8C8C),
+        outline = Color(0xFF60605F),
+        outlineVariant = Color(0xFF323334),
+        primary = Color(0xFFD96B5E),
+        onPrimary = Color(0xFF271311),
+        primaryContainer = Color(0xFF633631),
+        onPrimaryContainer = Color(0xFFF1D1CF),
+        attention = Color(0xFFE0925F),
+        error = Color(0xFFF09590),
+        onError = Color(0xFF3A0B08),
+        errorContainer = Color(0xFF644241),
+        onErrorContainer = Color(0xFFF6E2E2),
+    )
 }
 
-// ---------- Linen ----------
-// clay and unbleached cloth. Warmest of the six. Its error goes oxblood so it never blurs into the clay.
-object LinenPalette {
-    // Light
-    val LightBackground = Color(0xFFF8F5F1)
-    val LightSurface = Color(0xFFEFE8E0)
-    val LightOutline = Color(0xFF877364)
-    val LightOnBackground = Color(0xFF26221E)
-    val LightOnSurfaceVariant = Color(0xFF645A4F)
-    val LightPrimary = Color(0xFF8E4826)
-    val LightOnPrimary = Color(0xFFFFFFFF)
-    val LightSecondary = Color(0xFFA05F3C)
-    val LightOnSecondary = Color(0xFFFFFFFF)
-    val LightTertiary = Color(0xFF3E5B5B)
-    val LightOnTertiary = Color(0xFFFFFFFF)
-    val LightAttention = Color(0xFFC47464)
-    val LightOnAttention = Color(0xFF000000)
-    val LightNeutralFill = Color(0xFF696763)
-    val LightOnNeutralFill = Color(0xFFFFFFFF)
-    val LightError = Color(0xFF8E1F38)
-    val LightOnError = Color(0xFFFFFFFF)
-
-    // Dark
-    val DarkBackground = Color(0xFF191614)
-    val DarkSurface = Color(0xFF231E1A)
-    val DarkOutline = Color(0xFF857569)
-    val DarkOnBackground = Color(0xFFEAE5DF)
-    val DarkOnSurfaceVariant = Color(0xFF9E948A)
-    val DarkPrimary = Color(0xFFD9906A)
-    val DarkOnPrimary = Color(0xFF000000)
-    val DarkSecondary = Color(0xFFC29B80)
-    val DarkOnSecondary = Color(0xFF000000)
-    val DarkTertiary = Color(0xFF86B0AC)
-    val DarkOnTertiary = Color(0xFF000000)
-    val DarkAttention = Color(0xFFA24F3E)
-    val DarkOnAttention = Color(0xFFFFFFFF)
-    val DarkNeutralFill = Color(0xFF878480)
-    val DarkOnNeutralFill = Color(0xFF000000)
-    val DarkError = Color(0xFFEE7E93)
-    val DarkOnError = Color(0xFF000000)
-}
-
-// ---------- Mallow ----------
-// dried plum and mallow flower. Soft, not sweet. The only palette whose brand colour is a true violet-red.
-object MallowPalette {
-    // Light
-    val LightBackground = Color(0xFFFAF6F8)
-    val LightSurface = Color(0xFFF2EAEF)
-    val LightOutline = Color(0xFF87737F)
-    val LightOnBackground = Color(0xFF251E23)
-    val LightOnSurfaceVariant = Color(0xFF615560)
-    val LightPrimary = Color(0xFF7A3F63)
-    val LightOnPrimary = Color(0xFFFFFFFF)
-    val LightSecondary = Color(0xFF8E5C7C)
-    val LightOnSecondary = Color(0xFFFFFFFF)
-    val LightTertiary = Color(0xFF6E5A32)
-    val LightOnTertiary = Color(0xFFFFFFFF)
-    val LightAttention = Color(0xFF7C5A2E)
-    val LightOnAttention = Color(0xFFFFFFFF)
-    val LightNeutralFill = Color(0xFF948C80)
-    val LightOnNeutralFill = Color(0xFF000000)
-    val LightError = Color(0xFFA32F29)
-    val LightOnError = Color(0xFFFFFFFF)
-
-    // Dark
-    val DarkBackground = Color(0xFF161215)
-    val DarkSurface = Color(0xFF201A1F)
-    val DarkOutline = Color(0xFF7E6F79)
-    val DarkOnBackground = Color(0xFFEDE5EA)
-    val DarkOnSurfaceVariant = Color(0xFF9A8D98)
-    val DarkPrimary = Color(0xFFC595B4)
-    val DarkOnPrimary = Color(0xFF000000)
-    val DarkSecondary = Color(0xFFB79FB0)
-    val DarkOnSecondary = Color(0xFF000000)
-    val DarkTertiary = Color(0xFFC3B07A)
-    val DarkOnTertiary = Color(0xFF000000)
-    val DarkAttention = Color(0xFFBC8B4A)
-    val DarkOnAttention = Color(0xFF000000)
-    val DarkNeutralFill = Color(0xFF898173)
-    val DarkOnNeutralFill = Color(0xFF000000)
-    val DarkError = Color(0xFFE8837B)
-    val DarkOnError = Color(0xFF000000)
-}
-
-// ---------- Periwinkle ----------
-// dusty indigo on a warm ground. The one cool option. A tan tertiary stops it reading institutional.
-object PeriwinklePalette {
-    // Light
-    val LightBackground = Color(0xFFF8F7FB)
-    val LightSurface = Color(0xFFECEBF3)
-    val LightOutline = Color(0xFF77758C)
-    val LightOnBackground = Color(0xFF1F1E2A)
-    val LightOnSurfaceVariant = Color(0xFF565469)
-    val LightPrimary = Color(0xFF4E4590)
-    val LightOnPrimary = Color(0xFFFFFFFF)
-    val LightSecondary = Color(0xFF6A6296)
-    val LightOnSecondary = Color(0xFFFFFFFF)
-    val LightTertiary = Color(0xFF7A5A3E)
-    val LightOnTertiary = Color(0xFFFFFFFF)
-    val LightAttention = Color(0xFFB98952)
-    val LightOnAttention = Color(0xFF000000)
-    val LightNeutralFill = Color(0xFFB4AFA6)
-    val LightOnNeutralFill = Color(0xFF000000)
-    val LightError = Color(0xFFA32F29)
-    val LightOnError = Color(0xFFFFFFFF)
-
-    // Dark
-    val DarkBackground = Color(0xFF131319)
-    val DarkSurface = Color(0xFF1D1D25)
-    val DarkOutline = Color(0xFF73728A)
-    val DarkOnBackground = Color(0xFFE6E5EE)
-    val DarkOnSurfaceVariant = Color(0xFF918FA0)
-    val DarkPrimary = Color(0xFFA3A0DC)
-    val DarkOnPrimary = Color(0xFF000000)
-    val DarkSecondary = Color(0xFFA8A5C2)
-    val DarkOnSecondary = Color(0xFF000000)
-    val DarkTertiary = Color(0xFFC9A57E)
-    val DarkOnTertiary = Color(0xFF000000)
-    val DarkAttention = Color(0xFFA57742)
-    val DarkOnAttention = Color(0xFF000000)
-    val DarkNeutralFill = Color(0xFFBCB7AF)
-    val DarkOnNeutralFill = Color(0xFF000000)
-    val DarkError = Color(0xFFE8837B)
-    val DarkOnError = Color(0xFF000000)
+// ---------- Sabbia ----------
+// Serene · Chalk (lexicon, moods).
+object SabbiaPalette {
+    val Light = PaletteTokens(
+        background = Color(0xFFF5F3EF),
+        surface = Color(0xFFF5F3EF),
+        surfaceContainer = Color(0xFFECEAE6),
+        surfaceContainerHigh = Color(0xFFE4E2DE),
+        onSurface = Color(0xFF35322D),
+        onSurfaceVariant = Color(0xFF696361),
+        outline = Color(0xFF8F8A84),
+        outlineVariant = Color(0xFFD2D0CC),
+        primary = Color(0xFF6F634B),
+        onPrimary = Color(0xFFFFFFFF),
+        primaryContainer = Color(0xFFD2CEC4),
+        onPrimaryContainer = Color(0xFF413B31),
+        attention = Color(0xFF9C4E26),
+        error = Color(0xFF9E2A25),
+        onError = Color(0xFFFFFFFF),
+        errorContainer = Color(0xFFE2C7C3),
+        onErrorContainer = Color(0xFF612925),
+    )
+    val Dark = PaletteTokens(
+        background = Color(0xFF1B1917),
+        surface = Color(0xFF1B1917),
+        surfaceContainer = Color(0xFF272522),
+        surfaceContainerHigh = Color(0xFF312F2C),
+        onSurface = Color(0xFFE4DFD6),
+        onSurfaceVariant = Color(0xFF999791),
+        outline = Color(0xFF686561),
+        outlineVariant = Color(0xFF3F3D39),
+        primary = Color(0xFFC0AE8E),
+        onPrimary = Color(0xFF231F1A),
+        primaryContainer = Color(0xFF605849),
+        onPrimaryContainer = Color(0xFFFFFFFF),
+        attention = Color(0xFFE0925F),
+        error = Color(0xFFF09590),
+        onError = Color(0xFF3A0B08),
+        errorContainer = Color(0xFF6C4845),
+        onErrorContainer = Color(0xFFFBF0EF),
+    )
 }
 
 /**
  * Fallback accent for a medicine or profile with no colour of its own -- the
  * flat neutral spec §3/§6 calls for. Palette-independent on purpose: it is
  * what a medicine wearing *no* colour looks like, so it must not shift when
- * the user switches palette. Survives the six-palette rebuild unchanged for
- * exactly that reason: it belongs to no palette, so no palette can retire it.
+ * the user switches palette. Survived the six-palette rebuild and the four-palette one
+ * unchanged for exactly that reason: it belongs to no palette, so no palette
+ * can retire it.
  */
 val NeutralMedicineAccent = Color(0xFFB8ABA9)

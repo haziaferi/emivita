@@ -7,7 +7,7 @@
          over it immediately with whatever palette EmivitaTheme is given.
          Update this if MainActivity's default EmivitaTheme() call ever
          stops defaulting to DAYLIGHT, or accept the brief mismatch. -->
-    <color name="splash_background">#FBF9F5</color>
+    <color name="splash_background">#F5F6F8</color>
 
     <!-- Adaptive icon background layer. Deliberately a flat, zero-hue gray
          rather than any palette's LightBackground in Color.kt; every one of

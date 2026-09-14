@@ -10,12 +10,14 @@ import java.io.File
  * Makes the spec's palette tables and the splash resource checkable by the build
  * rather than by a person remembering to look (§7 R56/R57, §7.1 rules 5 and 8).
  *
- * Three sources have to agree about 132 hex values, and only one of them is
+ * Three sources have to agree about 136 hex values, and only one of them is
  * Kotlin. `docs/SPEC.md`'s Appendix A is what a reader trusts; `Color.kt` is what
- * the app renders; `res/values/colors.xml`'s `splash_background` is what shows
- * for the frames before Compose starts. Nothing connected them until now, which
+ * the app renders; the two `colors.xml` `splash_background`s are what shows for
+ * the frames before Compose starts. Nothing connected them until R56, which
  * is exactly the shape §7 R47 was opened for: an audit proved a *token* was safe
- * while nothing proved the app used it.
+ * while nothing proved the app used it. Since R76 both Appendix A and Color.kt
+ * are printed by `tools/palette_derive.py`, whose `--check` pins the appendix
+ * to the tool; this test pins the code to the appendix, closing the loop.
  *
  * This asserts against [colorSchemeFor] and [emivitaColorsFor] -- the resolved
  * scheme the app actually builds -- rather than against the palette objects, for
@@ -48,17 +50,23 @@ class PaletteSpecConsistencyTest {
         val s = colorSchemeFor(palette, dark)
         val e = emivitaColorsFor(palette, dark)
         return mapOf(
-            "bg" to s.background.hex(),
+            "background" to s.background.hex(),
             "surface" to s.surface.hex(),
+            "surfaceContainer" to s.surfaceContainer.hex(),
+            "surfaceContainerHigh" to s.surfaceContainerHigh.hex(),
+            "onSurface" to s.onSurface.hex(),
+            "onSurfaceVariant" to s.onSurfaceVariant.hex(),
             "outline" to s.outline.hex(),
+            "outlineVariant" to s.outlineVariant.hex(),
             "primary" to s.primary.hex(),
-            "secondary" to s.secondary.hex(),
-            "tertiary" to s.tertiary.hex(),
+            "onPrimary" to s.onPrimary.hex(),
+            "primaryContainer" to s.primaryContainer.hex(),
+            "onPrimaryContainer" to s.onPrimaryContainer.hex(),
             "attention" to e.attention.hex(),
-            "neutralFill" to e.neutralFill.hex(),
             "error" to s.error.hex(),
-            "text" to s.onBackground.hex(),
-            "muted" to s.onSurfaceVariant.hex(),
+            "onError" to s.onError.hex(),
+            "errorContainer" to s.errorContainer.hex(),
+            "onErrorContainer" to s.onErrorContainer.hex(),
         )
     }
 
@@ -72,7 +80,7 @@ class PaletteSpecConsistencyTest {
 
         val out = LinkedHashMap<String, MutableMap<String, Pair<String, String>>>()
         var current: MutableMap<String, Pair<String, String>>? = null
-        val heading = Regex("""^### \d+ · (\w+) —""")
+        val heading = Regex("""^### \d+ · ([\w ]+?) —""")
         val row = Regex("""^\| (\w+) \| `(#[0-9A-Fa-f]{6})` \| `(#[0-9A-Fa-f]{6})` \|$""")
         for (line in body.lineSequence()) {
             heading.find(line)?.let { current = out.getOrPut(it.groupValues[1]) { LinkedHashMap() } }
@@ -112,7 +120,7 @@ class PaletteSpecConsistencyTest {
                 }
             }
         }
-        assertEquals("expected 6 palettes x 2 modes x 11 roles", 132, compared)
+        assertEquals("expected 4 palettes x 2 modes x 17 roles", 136, compared)
     }
 
     /**
@@ -122,16 +130,34 @@ class PaletteSpecConsistencyTest {
      */
     @Test
     fun splashBackgroundMatchesTheDefaultPalette() {
-        val xml = repoFile("app/src/main/res/values/colors.xml").readText()
-        val declared = Regex("""<color name="splash_background">(#[0-9A-Fa-f]{6})</color>""")
-            .find(xml)?.groupValues?.get(1)?.uppercase()
-        assertTrue("splash_background not found in res/values/colors.xml", declared != null)
-        val expected = colorSchemeFor(DEFAULT_PALETTE, dark = false).background.hex()
-        assertEquals(
-            "splash_background is $declared but the default palette " +
-                "(${DEFAULT_PALETTE.displayName()}) has a light background of $expected -- " +
-                "they must match, or the splash flashes a different colour before Compose starts",
-            expected, declared,
-        )
+        // Both qualifiers: the night one had sat at a warm brown matching no
+        // palette from R56 to R75, because only `values/` was pinned.
+        for ((folder, dark) in listOf("values" to false, "values-night" to true)) {
+            val xml = repoFile("app/src/main/res/$folder/colors.xml").readText()
+            val declared = Regex("""<color name="splash_background">(#[0-9A-Fa-f]{6})</color>""")
+                .find(xml)?.groupValues?.get(1)?.uppercase()
+            assertTrue("splash_background not found in res/$folder/colors.xml", declared != null)
+            val expected = colorSchemeFor(DEFAULT_PALETTE, dark).background.hex()
+            assertEquals(
+                "res/$folder splash_background is $declared but the default palette " +
+                    "(${DEFAULT_PALETTE.displayName()}) has a ${if (dark) "dark" else "light"} background of $expected -- " +
+                    "they must match, or the splash flashes a different colour before Compose starts",
+                expected, declared,
+            )
+        }
+    }
+
+    /** A name stored by the six-palette build lands on its nearest of the
+     *  four, and an unknown name on the default (§7 R76). */
+    @Test
+    fun theSixStoredNamesMapToTheirNearestOfTheFour() {
+        assertEquals(MedPalette.PORCELLANA, legacyPaletteNames.getValue("DAYLIGHT"))
+        assertEquals(MedPalette.PORCELLANA, legacyPaletteNames.getValue("SAGE"))
+        assertEquals(MedPalette.SABBIA, legacyPaletteNames.getValue("HONEYCOMB"))
+        assertEquals(MedPalette.SABBIA, legacyPaletteNames.getValue("LINEN"))
+        assertEquals(MedPalette.ARDESIA, legacyPaletteNames.getValue("MALLOW"))
+        assertEquals(MedPalette.ARDESIA, legacyPaletteNames.getValue("PERIWINKLE"))
+        assertEquals(6, legacyPaletteNames.size)
+        assertTrue("no legacy name may collide with a current one", legacyPaletteNames.keys.none { name -> MedPalette.entries.any { it.name == name } })
     }
 }

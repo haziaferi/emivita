@@ -43,13 +43,19 @@ class AlertNotificationBuilder(
     private val context: Context,
     private val settingsRepository: SettingsRepository,
 ) {
+    // The saved palette's accent (§7 R76): refreshed by every suspending post,
+    // read as-is by the two summary builders, which cannot suspend.
+    @Volatile private var accentArgb: Int = DEFAULT_NOTIFICATION_ACCENT_ARGB
+
 
     suspend fun postLowStock(medicine: Medicine, reminder: Reminder) {
+        accentArgb = notificationAccentArgb(settingsRepository)
         val notificationId = -(reminder.id.toInt())
         val name = maskedMedicineName(medicine.name, settingsRepository.hideMedicineNames.first())
         val unit = medicine.stockInfo.unit?.let { " $it" } ?: ""
         val builder = NotificationCompat.Builder(context, ReminderNotificationChannels.channelIdFor(medicine.notificationPriority))
             .setSmallIcon(R.drawable.ic_notification_reminder)
+            .setColor(accentArgb)
             .setContentTitle(context.getString(R.string.alert_low_stock_title, name))
             .setContentText(context.getString(R.string.alert_low_stock_text, formatDecimalLocalized(medicine.stockInfo.quantity) + unit))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -72,11 +78,13 @@ class AlertNotificationBuilder(
     }
 
     suspend fun postExpiration(medicine: Medicine, reminder: Reminder, expirationEpochDay: Long) {
+        accentArgb = notificationAccentArgb(settingsRepository)
         val notificationId = -(reminder.id.toInt())
         val name = maskedMedicineName(medicine.name, settingsRepository.hideMedicineNames.first())
         val expirationDate = LocalDate.ofEpochDay(expirationEpochDay)
         val builder = NotificationCompat.Builder(context, ReminderNotificationChannels.channelIdFor(medicine.notificationPriority))
             .setSmallIcon(R.drawable.ic_notification_reminder)
+            .setColor(accentArgb)
             .setContentTitle(context.getString(R.string.alert_expiring_title, name))
             .setContentText(context.getString(R.string.alert_expiring_text, expirationDate.toString()))
             .setPriority(NotificationCompat.PRIORITY_DEFAULT)
@@ -112,6 +120,7 @@ class AlertNotificationBuilder(
         showing.forEach { style.addLine(it.notification.extras.getCharSequence(NotificationCompat.EXTRA_TITLE) ?: "") }
         val summary = NotificationCompat.Builder(context, ReminderNotificationChannels.CHANNEL_STANDARD)
             .setSmallIcon(R.drawable.ic_notification_reminder)
+            .setColor(accentArgb)
             .setContentTitle(context.resources.getQuantityString(R.plurals.alert_stock_summary, showing.size, showing.size))
             .setStyle(style)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)

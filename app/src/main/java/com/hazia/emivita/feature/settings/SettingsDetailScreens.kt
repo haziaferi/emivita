@@ -67,10 +67,11 @@ import com.hazia.emivita.core.notification.cardBody
 import com.hazia.emivita.core.notification.cardTitle
 import com.hazia.emivita.core.notification.notificationDelivery
 import com.hazia.emivita.ui.components.TimeOfDayField
+import com.hazia.emivita.ui.theme.DEFAULT_PALETTE
 import com.hazia.emivita.ui.theme.MedPalette
 import com.hazia.emivita.ui.theme.ThemeMode
 import com.hazia.emivita.ui.theme.displayName
-import com.hazia.emivita.ui.theme.swatchColorFor
+import com.hazia.emivita.ui.theme.tokensFor
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalTime
@@ -798,7 +799,7 @@ private fun NotificationTierRow(title: String, description: String) {
 @Composable
 fun AppearanceScreen(settingsRepository: SettingsRepository, onBack: () -> Unit) {
     var loaded by remember { mutableStateOf(false) }
-    var selectedPalette by remember { mutableStateOf(MedPalette.DAYLIGHT) }
+    var selectedPalette by remember { mutableStateOf(DEFAULT_PALETTE) }
     var themeMode by remember { mutableStateOf(ThemeMode.SYSTEM) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -1022,7 +1023,7 @@ private fun AppearancePaletteOption(
                     Modifier
                         .size(28.dp)
                         .clip(CircleShape)
-                        .background(swatchColorFor(palette)),
+                        .background(tokensFor(palette, androidx.compose.foundation.isSystemInDarkTheme()).primary),
                 )
                 Spacer(Modifier.height(8.dp))
                 Text(palette.displayName(), style = MaterialTheme.typography.labelMedium)

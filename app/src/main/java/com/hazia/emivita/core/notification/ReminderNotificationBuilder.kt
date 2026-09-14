@@ -52,7 +52,12 @@ class ReminderNotificationBuilder(
     private val doseGroupDao: DoseGroupDao,
     private val settingsRepository: SettingsRepository,
 ) {
+    // The saved palette's accent (§7 R76): refreshed by every suspending post,
+    // read as-is by the two summary builders, which cannot suspend.
+    @Volatile private var accentArgb: Int = DEFAULT_NOTIFICATION_ACCENT_ARGB
+
     suspend fun buildAndPost(doseEvent: DoseEvent, reminder: Reminder, medicine: Medicine) {
+        accentArgb = notificationAccentArgb(settingsRepository)
         val priority = effectivePriority(reminder, medicine)
         val channelId = ReminderNotificationChannels.channelIdFor(priority)
         // doseEvent.id.toInt(): same Long->Int caveat as AlarmScheduler's
@@ -68,6 +73,7 @@ class ReminderNotificationBuilder(
         // public version names no medicine and carries the same actions.
         val publicVersion = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification_reminder)
+            .setColor(accentArgb)
             .setContentTitle(context.getString(R.string.notif_public_title))
             .setContentText(context.getString(R.string.notif_public_text))
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
@@ -82,6 +88,7 @@ class ReminderNotificationBuilder(
 
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification_reminder)
+            .setColor(accentArgb)
             .setContentTitle(title)
             .setContentText(contentText(doseEvent, reminder, medicine))
             .setStyle(NotificationCompat.BigTextStyle().bigText(contentText(doseEvent, reminder, medicine)))
@@ -155,6 +162,7 @@ class ReminderNotificationBuilder(
         )
         val summary = NotificationCompat.Builder(context, ReminderNotificationChannels.CHANNEL_STANDARD)
             .setSmallIcon(R.drawable.ic_notification_reminder)
+            .setColor(accentArgb)
             .setContentTitle(context.resources.getQuantityString(R.plurals.notif_group_summary, showing.size, showing.size))
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setGroup(REMINDER_GROUP_KEY)
@@ -183,10 +191,12 @@ class ReminderNotificationBuilder(
      *  reminder fires. Id in its own negative range so it cannot collide with
      *  a dose (positive) or an alert (negative reminder id). */
     suspend fun postPreAlarm(reminder: Reminder, medicine: Medicine, doseEpochMillis: Long) {
+        accentArgb = notificationAccentArgb(settingsRepository)
         val hideNames = settingsRepository.hideMedicineNames.first()
         val time = LocaleFormats.time(doseEpochMillis)
         val notification = NotificationCompat.Builder(context, ReminderNotificationChannels.CHANNEL_STANDARD)
             .setSmallIcon(R.drawable.ic_notification_reminder)
+            .setColor(accentArgb)
             .setContentTitle(context.getString(R.string.notif_pre_alarm_title, maskedMedicineName(medicine.name, hideNames)))
             .setContentText(context.getString(R.string.notif_pre_alarm_text, time))
             .setCategory(NotificationCompat.CATEGORY_REMINDER)

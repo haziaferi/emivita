@@ -179,8 +179,11 @@ class ReminderAlarmReceiverTest {
 
     @Test
     fun `a pre-alarm posts the heads-up only while the reminder still wants one`() {
-        // 23:59 is always ahead of a 30-minute lead computed from now, whatever the clock says.
-        val reminderId = h.reminder(h.medicine(), fixedTime(hour = 23, minute = 59), preAlarmMinutes = 30)
+        // Two hours ahead of the wall clock, wrapping past midnight, so the
+        // 30-minute lead is always still to come: fixed at 23:59 this failed
+        // every night between 23:29 and 23:59 (§7 R76 found it at 23:31).
+        val ahead = java.time.LocalTime.now().plusHours(2)
+        val reminderId = h.reminder(h.medicine(), fixedTime(hour = ahead.hour, minute = ahead.minute), preAlarmMinutes = 30)
         val pre = h.preAlarms(reminderId).single()
         assertEquals(h.scheduledAtOf(pre) - 30 * 60_000L, pre.triggerAtMs)
         val intent = h.capture(pre)

@@ -92,8 +92,9 @@ class NextRemindersWidget : GlanceAppWidget() {
             )
         }
 
+        val palette = container.settingsRepository.widgetPalette()
         provideContent {
-            GlanceTheme {
+            WidgetTheme(palette) {
                 NextRemindersContent(rows)
             }
         }
