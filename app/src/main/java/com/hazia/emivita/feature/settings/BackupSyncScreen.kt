@@ -57,6 +57,10 @@ import java.time.format.DateTimeFormatter
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
 import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.pluralStringResource
+import com.hazia.emivita.core.data.db.DatabaseFiles
+import com.hazia.emivita.core.data.db.EmivitaDatabase
+import com.hazia.emivita.core.format.LocaleFormats
 import com.hazia.emivita.core.data.backup.BackupJson
 import com.hazia.emivita.core.data.backup.BackupDecodeResult
 import com.hazia.emivita.core.data.backup.decodeBackup
@@ -330,6 +334,11 @@ fun BackupSyncScreen(
         // goes. Reuses the restore's delete block, so the two cannot drift.
         DeleteEverythingSection(backupRepository = backupRepository, settingsRepository = settingsRepository)
 
+        // ---- Set-aside database files (§9 #32) ---------------------------------
+        // Only when a recovery has left something: what exists, and the one
+        // place it can be deleted, behind the lock like Delete everything.
+        SetAsideFilesSection(settingsRepository = settingsRepository)
+
         // ---- Archived medicines (§9 #26) --------------------------------------
         // Delete on a medicine archives it: its record stays, its reminders
         // pause, it leaves every list but this one. From here it comes back,
@@ -526,6 +535,68 @@ private fun DeleteEverythingSection(backupRepository: BackupRepository, settings
                     }
                 }
             },
+        )
+    }
+}
+
+/**
+ * The files a database recovery set aside (§9 #32): count, size, when, and
+ * one delete behind the app lock. Absent entirely when there are none.
+ * [incidents] is a parameter so the section can be composed in a test without
+ * a database directory; production reads [DatabaseFiles.setAsideIncidents].
+ */
+@Composable
+internal fun SetAsideFilesSection(
+    settingsRepository: SettingsRepository,
+    incidents: List<File>? = null,
+    onDeleted: () -> Unit = {},
+) {
+    val context = LocalContext.current
+    val scope = rememberCoroutineScope()
+    val resources = LocalResources.current
+    var files by remember { mutableStateOf(incidents ?: DatabaseFiles.setAsideIncidents(context, EmivitaDatabase.NAME)) }
+    var asking by remember { mutableStateOf(false) }
+    var status by remember { mutableStateOf<String?>(null) }
+    if (files.isEmpty() && status == null) return
+
+    Spacer(Modifier.height(24.dp))
+    Text(stringResource(R.string.recovery_set_aside_title), style = MaterialTheme.typography.titleMedium)
+    if (files.isNotEmpty()) {
+        val totalBytes = DatabaseFiles.setAsideFiles(context, EmivitaDatabase.NAME).sumOf { it.length() }.takeIf { incidents == null } ?: files.sumOf { it.length() }
+        val oldest = files.minOf { it.lastModified() }
+        Text(
+            pluralStringResource(
+                R.plurals.recovery_set_aside_count, files.size, files.size,
+                android.text.format.Formatter.formatShortFileSize(context, totalBytes),
+                LocaleFormats.monthDayYear(java.time.Instant.ofEpochMilli(oldest).atZone(java.time.ZoneId.systemDefault()).toLocalDate()),
+            ),
+            style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(8.dp))
+        OutlinedButton(onClick = { asking = true }) { Text(stringResource(R.string.recovery_set_aside_delete), color = MaterialTheme.colorScheme.error) }
+    }
+    status?.let { Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+
+    if (asking) {
+        AlertDialog(
+            onDismissRequest = { asking = false },
+            title = { Text(stringResource(R.string.recovery_set_aside_confirm_title)) },
+            text = { Text(stringResource(R.string.recovery_set_aside_confirm_text)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    asking = false
+                    scope.launch {
+                        val locked = settingsRepository.biometricLockEnabled.first()
+                        val activity = context as? FragmentActivity
+                        val allowed = !locked || activity == null || BiometricAuthenticator.authenticate(activity)
+                        if (!allowed) return@launch
+                        if (incidents == null) DatabaseFiles.deleteSetAsideFiles(context, EmivitaDatabase.NAME) else onDeleted()
+                        files = emptyList()
+                        status = resources.getString(R.string.recovery_set_aside_deleted)
+                    }
+                }) { Text(stringResource(R.string.recovery_set_aside_delete), color = MaterialTheme.colorScheme.error) }
+            },
+            dismissButton = { TextButton(onClick = { asking = false }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
 }

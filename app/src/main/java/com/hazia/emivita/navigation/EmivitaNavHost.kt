@@ -47,8 +47,13 @@ import com.hazia.emivita.R
 import com.hazia.emivita.core.data.settings.StartPage
 
 @Composable
-fun EmivitaNavHost(startPage: StartPage = StartPage.TODAY) {
+fun EmivitaNavHost(startPage: StartPage = StartPage.TODAY, openDataAndBackupOnStart: Boolean = false) {
     val navController: NavHostController = rememberNavController()
+    // The recovery dialog's "Restore from backup" (§9 #32): the graph keeps its
+    // root and Data & Backup is pushed on top once, so Back lands on the start page.
+    androidx.compose.runtime.LaunchedEffect(openDataAndBackupOnStart) {
+        if (openDataAndBackupOnStart) navController.navigate(EmivitaRoute.DataBackupSettings)
+    }
     val container = LocalAppContainer.current
     val profileId = LocalCurrentProfileId.current
 

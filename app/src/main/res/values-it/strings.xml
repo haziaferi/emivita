@@ -584,4 +584,20 @@
     <string name="purge_confirm_text">Non si può annullare. Esporta prima un backup se c’è qualcosa che potresti rivolere.</string>
     <string name="purge_confirm_check">Ogni farmaco, promemoria, dose e nota su questo telefono</string>
     <string name="purge_done">Tutto eliminato.</string>
+
+    <!-- Ripristino del database (§9 #32) -->
+    <string name="recovery_title">Impossibile aprire i tuoi farmaci</string>
+    <string name="recovery_body">All\'avvio il database dell\'app non era leggibile. Il file è stato messo da parte, non eliminato, e l\'app è partita con un elenco vuoto. Se hai un backup, ripristinalo ora in Dati e backup. Anche il file messo da parte è elencato lì.</string>
+    <string name="recovery_restore">Ripristina da backup</string>
+    <string name="recovery_continue_empty">Continua senza dati</string>
+    <string name="recovery_set_aside_title">File di database messi da parte</string>
+    <plurals name="recovery_set_aside_count">
+        <item quantity="one">%1$d file, %2$s, messo da parte il %3$s. Conservato finché non lo elimini.</item>
+        <item quantity="many">%1$d file, %2$s, il più vecchio messo da parte il %3$s. Conservati finché non li elimini.</item>
+        <item quantity="other">%1$d file, %2$s, il più vecchio messo da parte il %3$s. Conservati finché non li elimini.</item>
+    </plurals>
+    <string name="recovery_set_aside_delete">Elimina i file messi da parte</string>
+    <string name="recovery_set_aside_confirm_title">Eliminare i file messi da parte?</string>
+    <string name="recovery_set_aside_confirm_text">Sono l\'unica copia di ciò che l\'app non è riuscita ad aprire. Non si può annullare.</string>
+    <string name="recovery_set_aside_deleted">File messi da parte eliminati.</string>
 </resources>

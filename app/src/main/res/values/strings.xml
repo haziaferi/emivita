@@ -641,4 +641,19 @@
     <string name="purge_confirm_text">This cannot be undone. Export a backup first if there is anything you might want back.</string>
     <string name="purge_confirm_check">Every medicine, reminder, dose and note on this phone</string>
     <string name="purge_done">Everything deleted.</string>
+
+    <!-- Database recovery (§9 #32): an unopenable file set aside, the app started empty -->
+    <string name="recovery_title">Your medicines could not be opened</string>
+    <string name="recovery_body">The app\'s database could not be read when it started. The file was set aside, not deleted, and the app has started with an empty list. If you have a backup, restore it now under Data &amp; Backup. The set-aside file is listed there too.</string>
+    <string name="recovery_restore">Restore from backup</string>
+    <string name="recovery_continue_empty">Continue empty</string>
+    <string name="recovery_set_aside_title">Set-aside database files</string>
+    <plurals name="recovery_set_aside_count">
+        <item quantity="one">%1$d file, %2$s, set aside on %3$s. Kept until you delete it.</item>
+        <item quantity="other">%1$d files, %2$s, oldest set aside on %3$s. Kept until you delete them.</item>
+    </plurals>
+    <string name="recovery_set_aside_delete">Delete set-aside files</string>
+    <string name="recovery_set_aside_confirm_title">Delete the set-aside files?</string>
+    <string name="recovery_set_aside_confirm_text">They are the only copy of what the app could not open. This cannot be undone.</string>
+    <string name="recovery_set_aside_deleted">Set-aside files deleted.</string>
 </resources>

@@ -14,6 +14,11 @@ interface ProfileDao {
     @Query("SELECT * FROM profiles ORDER BY createdAtEpochMillis ASC")
     fun observeAll(): Flow<List<Profile>>
 
+    /** The open probe (§9 #32): the cheapest real statement that touches a
+     *  table. Room opens lazily, so building proves nothing; this does. */
+    @Query("SELECT COUNT(*) FROM profiles")
+    suspend fun count(): Int
+
     @Query("SELECT * FROM profiles WHERE id = :id")
     suspend fun getById(id: Long): Profile?
 

@@ -31,6 +31,11 @@ import com.hazia.emivita.ui.theme.MedPalette
 import com.hazia.emivita.ui.theme.ThemeMode
 import kotlinx.coroutines.launch
 import com.hazia.emivita.feature.disclaimer.DisclaimerDialog
+import com.hazia.emivita.feature.recovery.DatabaseRecoveredDialog
+import com.hazia.emivita.core.data.db.RecoveryNotice
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import com.hazia.emivita.core.data.settings.StartPage
 import kotlinx.coroutines.flow.first
 
@@ -115,11 +120,23 @@ fun EmivitaApp(container: AppContainer) {
                     }
                     val scope = rememberCoroutineScope()
                     val page = startPage
+                    // The recovery notice (§9 #32): read once the profile list is
+                    // here, because that read is what opened the database and wrote
+                    // the marker. Before the lock, like the disclaimer -- an app that
+                    // silently starts empty is the failure this prevents. Answered
+                    // once; "Restore" opens the graph on Data & Backup.
+                    val recoveryContext = LocalContext.current
+                    var recoveryPending by remember { mutableStateOf(RecoveryNotice.pendingSince(recoveryContext) != null) }
+                    var openDataAndBackup by remember { mutableStateOf(false) }
                     when {
                         disclaimerAccepted == null || page == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                         disclaimerAccepted == false -> DisclaimerDialog(onAccept = { scope.launch { container.settingsRepository.setDisclaimerAccepted() } })
+                        recoveryPending -> DatabaseRecoveredDialog(
+                            onRestore = { RecoveryNotice.dismiss(recoveryContext); openDataAndBackup = true; recoveryPending = false },
+                            onContinueEmpty = { RecoveryNotice.dismiss(recoveryContext); recoveryPending = false },
+                        )
                         else -> AppLockGate(settingsRepository = container.settingsRepository) {
-                            EmivitaNavHost(startPage = page)
+                            EmivitaNavHost(startPage = page, openDataAndBackupOnStart = openDataAndBackup)
                         }
                     }
                 }
