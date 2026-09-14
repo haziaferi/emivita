@@ -65,6 +65,7 @@ import java.time.format.DateTimeFormatter
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
+import com.hazia.emivita.ui.components.TabHeader
 import androidx.annotation.StringRes
 import android.content.Context
 import com.hazia.emivita.core.format.doseStatusLabelRes
@@ -221,13 +222,12 @@ fun HistoryScreen(
     }
 
     Column(Modifier.fillMaxSize()) {
-        Row(
-            Modifier.fillMaxWidth().padding(16.dp),
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Text(stringResource(R.string.history_history), style = MaterialTheme.typography.headlineSmall)
-            if (exportRows.isNotEmpty()) {
+        // The shared header (§9 #33, F-14). The export button used to sit
+        // inside this row, and its 48 dp target made History's header 13 dp
+        // taller than Today's whenever there was anything to export -- the
+        // §7 R59 shape on a third tab, measured by TabHeaderLayoutTest.
+        TabHeader(stringResource(R.string.history_history), actions = if (exportRows.isEmpty()) null else {
+            {
                 Box {
                     IconButton(onClick = { showExportMenu = true }) {
                         Icon(Icons.Filled.MoreVert, contentDescription = stringResource(R.string.history_export))
@@ -250,7 +250,7 @@ fun HistoryScreen(
                     }
                 }
             }
-        }
+        })
 
         exportDialogFormat?.let { format ->
             ExportScopeDialog(

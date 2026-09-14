@@ -325,7 +325,7 @@ internal fun ReminderRow(reminder: Reminder, onEdit: () -> Unit, onEnabledChange
  * edit dialog. Kept short here: three most recent, "show all" expands.
  */
 @Composable
-private fun NotesJournal(medicineId: Long, medicineRepository: MedicineRepository) {
+internal fun NotesJournal(medicineId: Long, medicineRepository: MedicineRepository) {
     val notes by produceState<List<MedicineNote>>(initialValue = emptyList(), medicineId) {
         medicineRepository.observeNotes(medicineId).collect { value = it }
     }

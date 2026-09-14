@@ -72,6 +72,7 @@ import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.zIndex
 import com.hazia.emivita.R
+import com.hazia.emivita.ui.components.TabHeader
 import com.hazia.emivita.core.data.repository.DoseEventRepository
 import com.hazia.emivita.core.data.repository.MedicineRepository
 import com.hazia.emivita.core.data.settings.SettingsRepository
@@ -184,13 +185,9 @@ fun MedicinesScreen(
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
-            // The header row is byte-for-byte Today's (§7 R59); the actions
-            // float over its end so they add no height.
-            Box(Modifier.fillMaxWidth()) {
-                Row(Modifier.fillMaxWidth().padding(16.dp), horizontalArrangement = Arrangement.SpaceBetween) {
-                    Text(stringResource(R.string.medicines_medicines), style = MaterialTheme.typography.headlineSmall)
-                }
-                Row(Modifier.align(Alignment.CenterEnd).padding(end = 4.dp)) {
+            // The shared header (§9 #33, F-14; §7 R59): the actions float over
+            // its end so they add no height, and the layout test measures it.
+            TabHeader(stringResource(R.string.medicines_medicines)) {
                     // Search (§9 #27; HM-13): the field opens under the header
                     // and the list narrows as you type. A search is a moment,
                     // so it is not persisted; the tag filter beside it is.
@@ -226,7 +223,6 @@ fun MedicinesScreen(
                     ) {
                         Icon(Icons.Filled.QrCodeScanner, contentDescription = stringResource(R.string.medicines_scan_to_find))
                     }
-                }
             }
             if (scanUnavailable) {
                 Text(
