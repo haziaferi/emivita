@@ -88,6 +88,7 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.foundation.selection.toggleable
 import com.hazia.emivita.ui.components.unsavedChangesGuard
 import com.hazia.emivita.ui.components.rememberDirty
+import com.hazia.emivita.ui.components.CollapsibleSection
 
 // @StringRes: reminderTypeOptions is a top-level val (§9 #19).
 private data class ReminderTypeOption(
@@ -534,25 +535,13 @@ private fun AdvancedReminderFieldsSection(state: AdvancedReminderFieldsState) {
     var expanded by remember { mutableStateOf(false) }
 
     Spacer(Modifier.height(16.dp))
-    val expandedLabel = stringResource(if (expanded) R.string.a11y_expanded else R.string.a11y_collapsed)
-    Row(
-        Modifier
-            .fillMaxWidth()
-            .clickable(role = Role.Button) { expanded = !expanded }
-            .semantics { stateDescription = expandedLabel },
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Text(stringResource(R.string.add_reminder_advanced), style = MaterialTheme.typography.labelLarge)
-        // An icon with no description, not a triangle glyph: the row above
-        // already says expanded or collapsed, and TalkBack read the glyph as
-        // "black up-pointing triangle" (§9 #19 Stage B).
-        Icon(if (expanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore, contentDescription = null)
+    CollapsibleSection(stringResource(R.string.add_reminder_advanced), expanded, onToggle = { expanded = !expanded }) {
+        AdvancedReminderFields(state)
     }
+}
 
-    if (!expanded) return
-
-    Spacer(Modifier.height(8.dp))
+@Composable
+private fun AdvancedReminderFields(state: AdvancedReminderFieldsState) {
     Row(
         Modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.SpaceBetween,

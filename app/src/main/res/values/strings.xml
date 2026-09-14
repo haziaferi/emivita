@@ -162,6 +162,13 @@
     <string name="settings_detail_selected">Selected</string>
     <string name="settings_detail_snooze_duration_minutes">Snooze duration (minutes)</string>
     <string name="settings_detail_theme_mode">Theme mode</string>
+    <string name="appearance_theme_section">Theme</string>
+    <string name="appearance_theme_summary">%1$s · %2$s</string>
+    <string name="appearance_layout_section">Today layout</string>
+    <string name="today_layout_timeline">Timeline</string>
+    <string name="today_layout_grouped">By time of day</string>
+    <string name="today_layout_compact">Compact</string>
+    <string name="today_layout_hero">Next dose first</string>
     <string name="settings_detail_weekend_mode">Weekend Mode</string>
     <string name="settings_settings">Settings</string>
     <string name="stock_expiration_always">Always</string>

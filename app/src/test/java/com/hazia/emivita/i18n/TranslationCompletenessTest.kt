@@ -26,6 +26,8 @@ class TranslationCompletenessTest {
         "a11y_calendar_day", "a11y_count_status", "history_entry_summary", "today_entry_summary", "reminder_label_at",
         "backup_sync_password", "tier_standard", "snooze_picker_minutes", "add_medicine_tags", "history_table_dose",
         "pdf_col_dose", "history_export_medicine", "dose_default_unit.one", "history_table_medicine",
+        // Format-only: two placeholders and a middle dot, nothing to translate.
+        "appearance_theme_summary", "today_layout_timeline",
     )
 
     private data class Res(val strings: Map<String, String>, val plurals: Map<String, Map<String, String>>)

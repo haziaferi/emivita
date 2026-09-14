@@ -154,6 +154,13 @@
     <string name="settings_detail_selected">Selezionato</string>
     <string name="settings_detail_snooze_duration_minutes">Durata del rinvio (minuti)</string>
     <string name="settings_detail_theme_mode">Tema</string>
+    <string name="appearance_theme_section">Tema</string>
+    <string name="appearance_theme_summary">%1$s · %2$s</string>
+    <string name="appearance_layout_section">Impaginazione di Oggi</string>
+    <string name="today_layout_timeline">Timeline</string>
+    <string name="today_layout_grouped">Per fascia oraria</string>
+    <string name="today_layout_compact">Compatta</string>
+    <string name="today_layout_hero">Prossima dose in evidenza</string>
     <string name="settings_detail_weekend_mode">Modalità weekend</string>
     <string name="settings_settings">Impostazioni</string>
     <string name="stock_expiration_always">Sempre</string>

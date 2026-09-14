@@ -71,7 +71,6 @@ import com.hazia.emivita.ui.theme.DEFAULT_PALETTE
 import com.hazia.emivita.ui.theme.MedPalette
 import com.hazia.emivita.ui.theme.ThemeMode
 import com.hazia.emivita.ui.theme.displayName
-import com.hazia.emivita.ui.theme.tokensFor
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import java.time.LocalTime
@@ -105,6 +104,19 @@ import android.app.AlarmManager
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import com.hazia.emivita.core.data.settings.StartPage
+import androidx.compose.foundation.Canvas
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.contentDescription
+import com.hazia.emivita.core.data.settings.TodayLayout
+import com.hazia.emivita.ui.components.CollapsibleSection
+import com.hazia.emivita.ui.theme.EmivitaTheme
+import androidx.annotation.StringRes
 
 /** Shared by every Settings detail screen in this package, including
  *  BackupSyncScreen's -- `internal`, not `private`, because a file-private
@@ -798,59 +810,75 @@ private fun NotificationTierRow(title: String, description: String) {
  *  to be worth extracting into a shared composable). */
 @Composable
 fun AppearanceScreen(settingsRepository: SettingsRepository, onBack: () -> Unit) {
-    var loaded by remember { mutableStateOf(false) }
-    var selectedPalette by remember { mutableStateOf(DEFAULT_PALETTE) }
-    var themeMode by remember { mutableStateOf(ThemeMode.SYSTEM) }
     val scope = rememberCoroutineScope()
     val context = LocalContext.current
+    // null until DataStore answers, so the cards never show the default as
+    // chosen for a frame and then jump (the loaded gate R56 had, kept).
+    val palette by produceState<MedPalette?>(initialValue = null) { settingsRepository.palette.collect { value = it } }
+    val themeMode by produceState<ThemeMode?>(initialValue = null) { settingsRepository.themeMode.collect { value = it } }
+    val todayLayout by produceState<TodayLayout?>(initialValue = null) { settingsRepository.todayLayout.collect { value = it } }
     val timeFormat by settingsRepository.timeFormat.collectAsState(initial = TimeFormat.SYSTEM)
     var languageTag by remember { mutableStateOf(AppLocale.current(context)) }
-
-    LaunchedEffect(Unit) {
-        selectedPalette = settingsRepository.palette.first()
-        themeMode = settingsRepository.themeMode.first()
-        loaded = true
-    }
+    var themeOpen by rememberSaveable { mutableStateOf(false) }
 
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
         DetailHeader(stringResource(R.string.common_appearance), onBack)
 
-        if (!loaded) {
+        val currentPalette = palette
+        val currentMode = themeMode
+        val currentLayout = todayLayout
+        if (currentPalette == null || currentMode == null || currentLayout == null) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             return@Column
         }
 
-        Text(stringResource(R.string.settings_detail_theme_mode), style = MaterialTheme.typography.labelLarge)
-        Spacer(Modifier.height(8.dp))
-        // FlowRow, not Row (§9 #34): four chips do not fit a phone width in
-        // Italian, and a Row answered by breaking "AMOLED" across three lines.
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            ThemeMode.entries.forEach { mode ->
-                FilterChip(
-                    selected = themeMode == mode,
-                    onClick = { themeMode = mode },
-                    label = { Text(stringResource(mode.labelRes()), maxLines = 1) },
+        // Everything on this screen applies on the tap (§7 R76): the palette
+        // and mode re-theme the app under the finger through EmivitaApp's
+        // collected flows. The Save button that used to sit below the fold
+        // -- the reason R75's pass saw nothing change -- is gone.
+        CollapsibleSection(
+            title = stringResource(R.string.appearance_theme_section),
+            summary = stringResource(R.string.appearance_theme_summary, stringResource(currentMode.labelRes()), currentPalette.displayName()),
+            expanded = themeOpen,
+            onToggle = { themeOpen = !themeOpen },
+        ) {
+            Text(stringResource(R.string.settings_detail_theme_mode), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(6.dp))
+            // FlowRow, not Row (§9 #34): four chips do not fit a phone width in
+            // Italian, and a Row answered by breaking "AMOLED" across three lines.
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                ThemeMode.entries.forEach { mode ->
+                    FilterChip(
+                        selected = currentMode == mode,
+                        onClick = { scope.launch { settingsRepository.setThemeMode(mode) } },
+                        label = { Text(stringResource(mode.labelRes()), maxLines = 1) },
+                    )
+                }
+            }
+            Spacer(Modifier.height(14.dp))
+            Text(stringResource(R.string.settings_detail_palette), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Spacer(Modifier.height(6.dp))
+            OptionGrid(MedPalette.entries) { option ->
+                PaletteCard(
+                    palette = option,
+                    themeMode = currentMode,
+                    selected = option == currentPalette,
+                    onClick = { scope.launch { settingsRepository.setPalette(option) } },
+                    modifier = Modifier.weight(1f),
                 )
             }
         }
 
         Spacer(Modifier.height(20.dp))
-        Text(stringResource(R.string.settings_detail_palette), style = MaterialTheme.typography.labelLarge)
+        Text(stringResource(R.string.appearance_layout_section), style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.height(8.dp))
-        Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-            MedPalette.entries.chunked(2).forEach { rowPalettes ->
-                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-                    rowPalettes.forEach { palette ->
-                        AppearancePaletteOption(
-                            palette = palette,
-                            selected = palette == selectedPalette,
-                            onClick = { selectedPalette = palette },
-                            modifier = Modifier.weight(1f),
-                        )
-                    }
-                    if (rowPalettes.size < 2) Spacer(Modifier.weight(1f))
-                }
-            }
+        OptionGrid(TodayLayout.entries) { option ->
+            LayoutCard(
+                layout = option,
+                selected = option == currentLayout,
+                onClick = { scope.launch { settingsRepository.setTodayLayout(option) } },
+                modifier = Modifier.weight(1f),
+            )
         }
 
         Spacer(Modifier.height(20.dp))
@@ -874,9 +902,7 @@ fun AppearanceScreen(settingsRepository: SettingsRepository, onBack: () -> Unit)
         )
 
         Spacer(Modifier.height(20.dp))
-        // Language and time format (§9 #28) apply on the spot, unlike the
-        // palette and theme above which wait for Save: a language change
-        // recreates the screen, so a pending Save would be lost anyway.
+        // Language and time format (§9 #28) apply on the spot like the rest.
         LanguageAndTimeSection(
             languageTag = languageTag,
             languages = AppLocale.supported(context),
@@ -888,15 +914,20 @@ fun AppearanceScreen(settingsRepository: SettingsRepository, onBack: () -> Unit)
             timeFormat = timeFormat,
             onTimeFormat = { scope.launch { settingsRepository.setTimeFormat(it) } },
         )
-
         Spacer(Modifier.height(24.dp))
-        Button(onClick = {
-            scope.launch {
-                settingsRepository.setPalette(selectedPalette)
-                settingsRepository.setThemeMode(themeMode)
-                onBack()
+    }
+}
+
+/** Two options per row, the last row padded so a lone card keeps its width. */
+@Composable
+private fun <T> OptionGrid(options: List<T>, card: @Composable RowScope.(T) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+        options.chunked(2).forEach { pair ->
+            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                pair.forEach { card(it) }
+                if (pair.size < 2) Spacer(Modifier.weight(1f))
             }
-        }) { Text(stringResource(R.string.common_save)) }
+        }
     }
 }
 
@@ -997,21 +1028,120 @@ internal fun exampleTime(option: TimeFormat, epochMillis: Long): String {
     }
 }
 
+/**
+ * One palette, drawn in itself (§7 R76): the card sits inside its own
+ * [EmivitaTheme], so its three swatches -- primary, attention, the ground --
+ * and its name are that palette's, in the mode the screen is in. Until R76
+ * every card showed one dot of its light primary and the selected card was
+ * tinted in the *current* palette's green whatever it named.
+ */
 @Composable
-private fun AppearancePaletteOption(
-    palette: MedPalette,
-    selected: Boolean,
-    onClick: () -> Unit,
-    modifier: Modifier = Modifier,
-) {
+internal fun PaletteCard(palette: MedPalette, themeMode: ThemeMode, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    EmivitaTheme(palette = palette, themeMode = themeMode) {
+        OptionCard(
+            selected = selected,
+            onClick = onClick,
+            label = palette.displayName(),
+            modifier = modifier.semantics { contentDescription = palette.displayName() },
+        ) {
+            Row(horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                Swatch(MaterialTheme.colorScheme.primary)
+                Swatch(EmivitaTheme.colors.attention)
+                Swatch(MaterialTheme.colorScheme.surface, outlined = true)
+            }
+        }
+    }
+}
+
+@Composable
+private fun Swatch(color: Color, outlined: Boolean = false) {
+    Box(
+        Modifier
+            .size(22.dp)
+            .clip(CircleShape)
+            .background(color)
+            .let { if (outlined) it.border(1.dp, MaterialTheme.colorScheme.outline, CircleShape) else it },
+    )
+}
+
+/** One Today layout (§9 #37): a 56 dp line-art of its shape in the palette's
+ *  own colours, and its name. */
+@Composable
+internal fun LayoutCard(layout: TodayLayout, selected: Boolean, onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val label = stringResource(layout.labelRes())
+    OptionCard(selected = selected, onClick = onClick, label = label, modifier = modifier.semantics { contentDescription = label }) {
+        LayoutPreview(layout)
+    }
+}
+
+@StringRes
+internal fun TodayLayout.labelRes(): Int = when (this) {
+    TodayLayout.TIMELINE -> R.string.today_layout_timeline
+    TodayLayout.GROUPED -> R.string.today_layout_grouped
+    TodayLayout.COMPACT -> R.string.today_layout_compact
+    TodayLayout.HERO -> R.string.today_layout_hero
+}
+
+@Composable
+private fun LayoutPreview(layout: TodayLayout) {
+    val disc = MaterialTheme.colorScheme.primaryContainer
+    val rail = MaterialTheme.colorScheme.primary
+    val card = MaterialTheme.colorScheme.surfaceContainerHigh
+    val line = MaterialTheme.colorScheme.outlineVariant
+    Canvas(Modifier.fillMaxWidth().height(56.dp)) {
+        val w = size.width; val h = size.height
+        val r = 5.dp.toPx()
+        when (layout) {
+            TodayLayout.TIMELINE -> {
+                drawLine(rail, Offset(r + 2.dp.toPx(), 0f), Offset(r + 2.dp.toPx(), h), strokeWidth = 2.dp.toPx())
+                for (i in 0 until 3) {
+                    val y = h * (0.2f + 0.3f * i)
+                    drawCircle(disc, r, Offset(r + 2.dp.toPx(), y))
+                    drawRoundRect(card, Offset(r * 3.5f, y - r * 1.1f), Size(w - r * 3.5f, r * 2.2f), CornerRadius(r * 0.8f))
+                }
+            }
+            TodayLayout.GROUPED -> {
+                for (i in 0 until 3) {
+                    val y = h * (0.12f + 0.3f * i)
+                    drawCircle(rail, r * 0.35f, Offset(r * 0.5f, y))
+                    drawRoundRect(line, Offset(r * 1.5f, y - r * 0.2f), Size(w * 0.3f, r * 0.4f), CornerRadius(r * 0.2f))
+                    drawRoundRect(card, Offset(0f, y + r * 0.7f), Size(w, r * 1.6f), CornerRadius(r * 0.6f))
+                    drawCircle(disc, r * 0.65f, Offset(r * 1.2f, y + r * 1.5f))
+                }
+            }
+            TodayLayout.COMPACT -> {
+                for (i in 0 until 4) {
+                    val y = h * (0.12f + 0.25f * i)
+                    drawCircle(disc, r * 0.7f, Offset(r, y))
+                    drawRoundRect(line, Offset(r * 2.8f, y - r * 0.25f), Size(w * 0.6f, r * 0.5f), CornerRadius(r * 0.2f))
+                    drawLine(line, Offset(0f, y + r * 1.4f), Offset(w, y + r * 1.4f), strokeWidth = 1.dp.toPx())
+                }
+            }
+            TodayLayout.HERO -> {
+                drawRoundRect(disc, Offset(0f, 0f), Size(w, h * 0.48f), CornerRadius(r))
+                drawRoundRect(rail, Offset(r, h * 0.3f), Size(w * 0.3f, h * 0.12f), CornerRadius(r * 0.5f))
+                for (i in 0 until 2) {
+                    val y = h * (0.66f + 0.2f * i)
+                    drawCircle(disc, r * 0.6f, Offset(r, y))
+                    drawRoundRect(line, Offset(r * 2.6f, y - r * 0.25f), Size(w * 0.5f, r * 0.5f), CornerRadius(r * 0.2f))
+                }
+            }
+        }
+    }
+}
+
+/** The shared frame of a palette or layout card: tonal, a 2 dp border in
+ *  primary when selected, the check at the top end, the name beneath. */
+@Composable
+private fun OptionCard(selected: Boolean, onClick: () -> Unit, label: String, modifier: Modifier = Modifier, preview: @Composable () -> Unit) {
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainer,
+        color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = modifier
             .fillMaxWidth()
             .border(
                 width = if (selected) 2.dp else 1.dp,
-                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outline,
+                color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                 shape = RoundedCornerShape(12.dp),
             )
             .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
@@ -1019,14 +1149,9 @@ private fun AppearancePaletteOption(
     ) {
         Box {
             Column {
-                Box(
-                    Modifier
-                        .size(28.dp)
-                        .clip(CircleShape)
-                        .background(tokensFor(palette, androidx.compose.foundation.isSystemInDarkTheme()).primary),
-                )
+                preview()
                 Spacer(Modifier.height(8.dp))
-                Text(palette.displayName(), style = MaterialTheme.typography.labelMedium)
+                Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
             }
             if (selected) {
                 Icon(

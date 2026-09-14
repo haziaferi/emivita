@@ -79,6 +79,7 @@ class SettingsRepository(context: Context) {
         val DISCLAIMER_ACCEPTED = booleanPreferencesKey("disclaimer_accepted")
         // §9 #29 (HM-33): the tab the app opens on.
         val START_PAGE = stringPreferencesKey("start_page")
+        val TODAY_LAYOUT = stringPreferencesKey("today_layout")
         val HIDE_MEDICINE_NAMES = booleanPreferencesKey("hide_medicine_names")
         // §9 #25 alarm settings (medTimer's AlarmSettingsFragment, HomeMedkit HM-21).
         val ALARM_RINGTONE_URI = stringPreferencesKey("alarm_ringtone_uri")           // null = system default alarm
@@ -212,6 +213,14 @@ class SettingsRepository(context: Context) {
         dataStore.edit { it[Keys.START_PAGE] = page.name }
     }
 
+    /** §9 #37: how Today draws its list. Applies on the spot. */
+    val todayLayout: Flow<TodayLayout> = dataStore.data.map { prefs ->
+        prefs[Keys.TODAY_LAYOUT]?.let { n -> TodayLayout.entries.firstOrNull { it.name == n } } ?: TodayLayout.TIMELINE
+    }
+    suspend fun setTodayLayout(layout: TodayLayout) {
+        dataStore.edit { it[Keys.TODAY_LAYOUT] = layout.name }
+    }
+
     val disclaimerAccepted: Flow<Boolean> = dataStore.data.map { prefs -> prefs[Keys.DISCLAIMER_ACCEPTED] ?: false }
     suspend fun setDisclaimerAccepted() {
         dataStore.edit { it[Keys.DISCLAIMER_ACCEPTED] = true }
@@ -318,3 +327,9 @@ enum class TimeFormat { SYSTEM, H12, H24 }
 
 /** §9 #29 (HM-33): where the app opens. */
 enum class StartPage { TODAY, MEDICINES, HISTORY }
+
+/** §9 #37: the four Today layouts from the owner's 2026-08-11 mockups --
+ *  the timeline, the day in three bands, a compact register, the next dose
+ *  as a hero over an ambient list. The state disc and the actions are the
+ *  same objects in all four; only the arrangement changes. */
+enum class TodayLayout { TIMELINE, GROUPED, COMPACT, HERO }
