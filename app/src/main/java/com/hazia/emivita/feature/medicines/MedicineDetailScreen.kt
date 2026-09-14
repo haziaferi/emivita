@@ -26,14 +26,13 @@ import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.FloatingActionButton
+import com.hazia.emivita.feature.settings.DetailHeader
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -97,15 +96,16 @@ fun MedicineDetailScreen(
     var showDeleteConfirm by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
-    Scaffold(
-        topBar = {
-            TopAppBar(
-                title = { Text(medicine?.name ?: "") },
-                navigationIcon = {
-                    IconButton(onClick = onBack) {
-                        Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
-                    }
-                },
+    // No Scaffold of its own (§9 #34): this screen composes inside the
+    // NavHost's Scaffold, and a nested one consumed the status-bar inset a
+    // second time -- the "tall header" §7 R59 flagged and never fixed. The
+    // header is the settings screens' DetailHeader with the two actions on
+    // its row; the FAB floats in a Box and the list keeps clear of it.
+    Box(Modifier.fillMaxSize()) {
+        Column(Modifier.fillMaxSize()) {
+            DetailHeader(
+                title = medicine?.name ?: "",
+                onBack = onBack,
                 actions = {
                     IconButton(onClick = onEditMedicine) {
                         Icon(Icons.Filled.Edit, contentDescription = stringResource(R.string.medicine_detail_edit_medicine))
@@ -156,15 +156,7 @@ fun MedicineDetailScreen(
                     }
                 },
             )
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = onAddReminder) {
-                Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.common_add_reminder))
-            }
-        },
-    ) { padding ->
-        val currentMedicine = medicine
-        Column(Modifier.padding(padding).fillMaxSize()) {
+            val currentMedicine = medicine
             if (currentMedicine != null) {
                 Row(
                     Modifier.padding(16.dp),
@@ -232,7 +224,9 @@ fun MedicineDetailScreen(
                     modifier = Modifier.padding(16.dp),
                 )
             } else {
-                LazyColumn(contentPadding = PaddingValues(16.dp)) {
+                // 96 dp beneath the last row: the FAB's 56 dp plus its margins,
+                // so the last reminder's switch is never under it.
+                LazyColumn(contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp)) {
                     items(reminders, key = { it.id }) { reminder ->
                         ReminderRow(
                             reminder = reminder,
@@ -242,6 +236,9 @@ fun MedicineDetailScreen(
                     }
                 }
             }
+        }
+        FloatingActionButton(onClick = onAddReminder, modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
+            Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.common_add_reminder))
         }
     }
 

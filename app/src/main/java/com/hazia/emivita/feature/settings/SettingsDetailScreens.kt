@@ -110,13 +110,16 @@ import com.hazia.emivita.core.data.settings.StartPage
  *  top-level function can't cross files even inside one package, which is
  *  how this ended up written twice. */
 @Composable
-internal fun DetailHeader(title: String, onBack: () -> Unit) {
+internal fun DetailHeader(title: String, onBack: () -> Unit, actions: (@Composable androidx.compose.foundation.layout.RowScope.() -> Unit)? = null) {
     Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
         IconButton(onClick = onBack) {
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
         }
         Spacer(Modifier.width(4.dp))
-        Text(title, style = MaterialTheme.typography.headlineSmall)
+        // One line, ellipsised, so a long medicine name never pushes the
+        // actions off the row (§9 #34; the medicine detail uses this too).
+        Text(title, style = MaterialTheme.typography.headlineSmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        if (actions != null) actions()
     }
     Spacer(Modifier.height(20.dp))
 }
@@ -818,12 +821,14 @@ fun AppearanceScreen(settingsRepository: SettingsRepository, onBack: () -> Unit)
 
         Text(stringResource(R.string.settings_detail_theme_mode), style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.height(8.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        // FlowRow, not Row (§9 #34): four chips do not fit a phone width in
+        // Italian, and a Row answered by breaking "AMOLED" across three lines.
+        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
             ThemeMode.entries.forEach { mode ->
                 FilterChip(
                     selected = themeMode == mode,
                     onClick = { themeMode = mode },
-                    label = { Text(stringResource(mode.labelRes())) },
+                    label = { Text(stringResource(mode.labelRes()), maxLines = 1) },
                 )
             }
         }

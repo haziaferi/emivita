@@ -2,7 +2,7 @@ package com.hazia.emivita.ui.layout
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.requiredWidth
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Rect
@@ -35,19 +35,21 @@ val PHONE_WIDTHS_DP = listOf(360, 320)
 fun ComposeContentTestRule.setContentAt(widthDp: Int, content: @Composable () -> Unit) {
     setContent {
         EmivitaTheme {
-            Box(Modifier.width(widthDp.dp)) { content() }
+            Box(Modifier.requiredWidth(widthDp.dp)) { content() }
         }
     }
 }
 
 /** One composition, both phone widths stacked (a rule's `setContent` runs
  *  once per test): [content] receives the width and tags its nodes with
- *  [tagAt] so each width's nodes can be found. */
+ *  [tagAt] so each width's nodes can be found. `requiredWidth`, not `width`:
+ *  Robolectric's default window is 320 dp, and a `width(360.dp)` box yields
+ *  to that constraint, so until §9 #34 the "360 dp" case measured 320. */
 fun ComposeContentTestRule.setContentAtPhoneWidths(content: @Composable (widthDp: Int) -> Unit) {
     setContent {
         EmivitaTheme {
             Column {
-                PHONE_WIDTHS_DP.forEach { width -> Box(Modifier.width(width.dp)) { content(width) } }
+                PHONE_WIDTHS_DP.forEach { width -> Box(Modifier.requiredWidth(width.dp)) { content(width) } }
             }
         }
     }

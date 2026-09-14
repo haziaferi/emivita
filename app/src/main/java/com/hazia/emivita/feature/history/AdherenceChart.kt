@@ -32,6 +32,9 @@ import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
 import com.patrykandpatrick.vico.compose.cartesian.layer.stacked
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
+import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
+import com.patrykandpatrick.vico.core.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
 import com.patrykandpatrick.vico.compose.common.fill
@@ -92,6 +95,15 @@ data class DayAdherenceCounts(
  * a bare dot, and the stack order is stated. Three channels: texture, position,
  * colour. Any one of them alone identifies a series.
  */
+/** How the chart meets the width (§9 #34): every day of the window fitted to
+ *  it, no zoom, no scroll. Pinned as values so a refactor that drops one of
+ *  them fails `AdherenceChartFitTest`, not the owner's eye on the phone. */
+internal object AdherenceChartFit {
+    const val ZOOM_ENABLED = false
+    val INITIAL_ZOOM: Zoom = Zoom.Content
+    const val SCROLL_ENABLED = false
+}
+
 @Composable
 fun AdherenceChart(counts: List<DayAdherenceCounts>) {
     val modelProducer = remember { CartesianChartModelProducer() }
@@ -167,6 +179,13 @@ fun AdherenceChart(counts: List<DayAdherenceCounts>) {
                     ),
                 ),
                 modelProducer = modelProducer,
+                // Fit all thirty days to the width and do not scroll (§9 #34).
+                // Vico's default is a layer wider than the screen opened at its
+                // *start*, so the recent days -- the ones with any bars -- sat
+                // off-screen to the right on every phone since §7 R55, and the
+                // owner's "chart texture" check could never have seen one.
+                zoomState = rememberVicoZoomState(zoomEnabled = AdherenceChartFit.ZOOM_ENABLED, initialZoom = AdherenceChartFit.INITIAL_ZOOM),
+                scrollState = rememberVicoScrollState(scrollEnabled = AdherenceChartFit.SCROLL_ENABLED),
             )
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {

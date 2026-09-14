@@ -41,3 +41,6 @@ Thumbs.db
 
 # actionlint, fetched by hand for tools/workflow_check.py (docs/SPEC.md §7 R74); a binary, not source
 tools/bin/
+
+# The §10 triad and device runs write their logs at the root (CLAUDE.md).
+/*.log

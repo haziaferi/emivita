@@ -65,8 +65,21 @@ installs a debug build over whatever is on the phone and writes (then deletes)
 its own rows in the real database — check what is installed before running it
 on a device that is not the test device.
 
-`connectedDebugAndroidTest` **uninstalls the app when it finishes**; run
-`./gradlew installDebug` afterwards if the phone should keep a build.
+`connectedDebugAndroidTest` **uninstalls the app when it finishes, and the
+uninstall deletes its data** — every suite run from R59 to R75 wiped the
+owner's phone (§7 R75). On a phone whose data matters, keep the APKs:
+
+```bash
+./gradlew connectedDebugAndroidTest -Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true > device.log 2>&1; echo "EXIT=$?"
+```
+
+To seed or clean a device pass without the suite's uninstall, install both
+APKs and run the gated class directly (§7 R75):
+
+```bash
+./gradlew installDebug installDebugAndroidTest
+adb shell am instrument -w -e class com.hazia.emivita.PassSeedTest -e seedPass true com.hazia.emivita.test/androidx.test.runner.AndroidJUnitRunner
+```
 
 Pseudolocale sweep (§7 R59) — every resource string renders accented, every
 leftover literal renders plain English. The debug build has
