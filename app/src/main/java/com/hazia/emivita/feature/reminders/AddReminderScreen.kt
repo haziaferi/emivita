@@ -37,6 +37,7 @@ import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import com.hazia.emivita.core.format.LocaleFormats
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -1017,10 +1018,28 @@ private fun DailyWindowFormBody(
             TimeOfDayField(stringResource(R.string.common_window_start), startHour, startMinute) { h, m -> startHour = h; startMinute = m }
             TimeOfDayField(stringResource(R.string.common_window_end), endHour, endMinute) { h, m -> endHour = h; endMinute = m }
         }
+        WindowEndsNextDayNote(startHour, startMinute, endHour, endMinute)
         Spacer(Modifier.height(16.dp))
         StartBehaviorPicker(startBehavior) { startBehavior = it }
         AdvancedReminderFieldsSection(advanced)
     }
+}
+
+/** The one line that makes an overnight window legible (§9 #31, A-20): an end
+ *  before the start is accepted and read as "the next day", so the form says
+ *  so rather than leaving the person to wonder whether 22:00-06:00 will fire.
+ *  Absent for a same-day window. */
+@Composable
+internal fun WindowEndsNextDayNote(startHour: Int, startMinute: Int, endHour: Int, endMinute: Int) {
+    val overnight = endHour * 60 + endMinute < startHour * 60 + startMinute
+    if (!overnight) return
+    val endMillis = java.time.LocalDate.now().atTime(endHour, endMinute).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+    Spacer(Modifier.height(4.dp))
+    Text(
+        stringResource(R.string.reminder_window_ends_next_day, LocaleFormats.time(endMillis)),
+        style = MaterialTheme.typography.labelMedium,
+        color = MaterialTheme.colorScheme.onSurfaceVariant,
+    )
 }
 
 /** No dose field -- unlike the other three types, a stock alert doesn't

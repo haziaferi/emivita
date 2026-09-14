@@ -173,8 +173,12 @@ private fun windowSlotOnDay(
     zone: ZoneId,
 ): ZonedDateTime? {
     val windowStart = day.atTime(config.windowStartHour, config.windowStartMinute).atZone(zone)
-    val windowEnd = day.atTime(config.windowEndHour, config.windowEndMinute).atZone(zone)
-    if (windowEnd.isBefore(windowStart)) return null // misconfigured (end before start) -- skip this day rather than crash
+    var windowEnd = day.atTime(config.windowEndHour, config.windowEndMinute).atZone(zone)
+    // An end before the start means the window runs past midnight (§9 #31,
+    // A-20; medTimer's `calcInstant(end).plus(1, DAYS)`): 22:00 to 06:00 is
+    // the night of [day], ending the next morning. Until R72 this returned
+    // null -- an overnight window silently never fired.
+    if (windowEnd.isBefore(windowStart)) windowEnd = windowEnd.plusDays(1)
 
     val gridStart = if (
         config.startBehavior == IntervalStartBehavior.ON_RESOLVED &&
@@ -363,8 +367,13 @@ fun nextDailyWindowOccurrence(
     if (config.intervalMinutes < 1) return null
     val notBefore = Instant.ofEpochMilli(notBeforeEpochMillis).atZone(zone)
     val lastResolved = lastResolvedEpochMillis?.let { Instant.ofEpochMilli(it).atZone(zone) }
+    // An overnight window that started yesterday may still be running now:
+    // 02:00 belongs to yesterday's 22:00-06:00, not to today's. Start a day
+    // back for those; the bounds check inside windowSlotOnDay keeps a slot
+    // from being reported for a window that has already ended.
     var day = notBefore.toLocalDate()
-    repeat(DAILY_WINDOW_LOOKAHEAD_DAYS) {
+    if (config.isOvernight) day = day.minusDays(1)
+    repeat(DAILY_WINDOW_LOOKAHEAD_DAYS + 1) {
         windowSlotOnDay(day, config, notBefore, lastResolved, zone)?.let {
             return NextOccurrence(it.toInstant().toEpochMilli(), config.dose)
         }

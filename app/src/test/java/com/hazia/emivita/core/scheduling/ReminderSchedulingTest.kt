@@ -338,9 +338,33 @@ class ReminderSchedulingTest {
     }
 
     @Test
-    fun `daily window with the end before the start returns null instead of crashing`() {
-        val config = dailyWindow(startHour = 20, endHour = 8)
-        assertNull(nextDailyWindowOccurrence(config, at("2026-06-01T06:00"), null, zone))
+    fun `an overnight window runs past midnight -- 22 to 06 every 4h is 22, 02, 06, then 22 again`() {
+        // §9 #31 (A-20). Until R72 an end before the start returned null and the
+        // window silently never fired; medTimer adds a day to the end.
+        val config = dailyWindow(startHour = 22, endHour = 6)
+        assertOccursAt("2026-06-01T22:00", nextDailyWindowOccurrence(config, at("2026-06-01T21:00"), null, zone))
+        assertOccursAt("2026-06-02T02:00", nextDailyWindowOccurrence(config, at("2026-06-01T22:01"), null, zone))
+        assertOccursAt("2026-06-02T06:00", nextDailyWindowOccurrence(config, at("2026-06-02T02:01"), null, zone))
+        assertOccursAt("2026-06-02T22:00", nextDailyWindowOccurrence(config, at("2026-06-02T06:01"), null, zone))
+    }
+
+    @Test
+    fun `yesterday's overnight window is still running at 01_00 -- the 02_00 slot belongs to it`() {
+        assertOccursAt("2026-06-02T02:00", nextDailyWindowOccurrence(dailyWindow(startHour = 22, endHour = 6), at("2026-06-02T01:00"), null, zone))
+    }
+
+    @Test
+    fun `an on-resolved overnight window restarts its grid from a resolution after midnight`() {
+        val config = dailyWindow(startHour = 22, endHour = 6, startBehavior = IntervalStartBehavior.ON_RESOLVED)
+        // Taken at 23:30 -> next at 03:30, still inside the night that began at 22:00.
+        assertOccursAt("2026-06-02T03:30", nextDailyWindowOccurrence(config, at("2026-06-01T23:31"), at("2026-06-01T23:30"), zone))
+    }
+
+    @Test
+    fun `a window ending at midnight is overnight, a window ending at its own start is one slot`() {
+        assertOccursAt("2026-06-02T00:00", nextDailyWindowOccurrence(dailyWindow(startHour = 20, endHour = 0), at("2026-06-01T20:01"), null, zone))
+        assertOccursAt("2026-06-01T08:00", nextDailyWindowOccurrence(dailyWindow(startHour = 8, endHour = 8), at("2026-06-01T06:00"), null, zone))
+        assertOccursAt("2026-06-02T08:00", nextDailyWindowOccurrence(dailyWindow(startHour = 8, endHour = 8), at("2026-06-01T08:01"), null, zone))
     }
 
     @Test

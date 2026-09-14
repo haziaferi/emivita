@@ -48,8 +48,8 @@ import java.time.ZoneId
  *
  * Three outcomes, as in R60: **parity** (same slots for the same history);
  * **divergence pinned** as Emivita's behaviour with the row that decided it
- * (A-20, A-24, A-38, A-46) -- the A-20 and A-24 pins are what §9 #31 will
- * flip, which is why they are here first; **none** for `singleDays`, whose
+ * (A-38, A-46; A-20 and A-24 were pinned here by R70 and flipped to parity by
+ * §9 #31, R72); **none** for `singleDays`, whose
  * days-of-month pattern Emivita does not have (A-13) -- no test can be
  * honestly written for a feature that is absent.
  */
@@ -184,13 +184,15 @@ class MedTimerSimulatorParityTest {
     }
 
     @Test
-    fun `windowedIntervalReversed -- A-20 pinned, an overnight window projects nothing`() {
-        // medTimer: 11:40, 00:01, 11:40, 00:01, 11:40 across three days. Emivita
-        // returns null for a window whose end precedes its start (ReminderSchedulingTest
-        // pins the null). This is the divergence §9 #31 changes; when it does, this
-        // assertion becomes the five slots above.
+    fun `windowedIntervalReversed -- an overnight window crosses midnight and comes back the next evening`() {
+        // Parity since §9 #31 (A-20) on the chain: 11:40, 00:01, 11:40, 00:01 ...
+        // R70 pinned the empty walk this used to be. The walk begins at day 1 00:00,
+        // inside the window that started at 11:40 the day before; Emivita fires its
+        // remaining slot at 00:01 (A-06's rule -- a DailyWindow has no start anchor),
+        // where medTimer's simulator starts its day loop at day 1 and its reminder did
+        // not exist the evening before. Same five-slot rhythm, one slot earlier.
         val r = reminder(1, 1, window(741, LocalTime.of(11, 40), LocalTime.of(2, 0)))
-        assertSlots(emptyList(), walk(r, take = 5))
+        assertSlots(listOf(on(1, 1), on(1, 700), on(2, 1), on(2, 700), on(3, 1)), walk(r, take = 5))
     }
 
     @Test

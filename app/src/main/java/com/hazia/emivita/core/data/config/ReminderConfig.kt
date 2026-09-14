@@ -94,7 +94,13 @@ sealed interface ReminderConfig {
         val windowEndHour: Int,
         val windowEndMinute: Int,
         val startBehavior: IntervalStartBehavior,
-    ) : ReminderConfig
+    ) : ReminderConfig {
+        /** True when the window runs past midnight: an end strictly before the
+         *  start (§9 #31, A-20; medTimer's rule). 22:00-06:00 is overnight, and
+         *  so is 22:00-00:00; 08:00-08:00 is a same-day window with one slot. */
+        val isOvernight: Boolean
+            get() = windowEndHour * 60 + windowEndMinute < windowStartHour * 60 + windowStartMinute
+    }
 
     /** [hour]/[minute] is the time of day the alert fires on a day it is due
      *  (spec §7 R37). Ported from medTimer, whose OUT_OF_STOCK and

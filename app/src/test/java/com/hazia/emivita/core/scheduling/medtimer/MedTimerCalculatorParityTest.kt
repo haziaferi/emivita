@@ -200,13 +200,20 @@ class MedTimerCalculatorParityTest {
     }
 
     @Test
-    fun `scheduleWindowedIntervalReminderNextDay -- overnight window, DESIGN divergence`() {
-        // medTimer chains 16:40 -> 02:40 -> 16:40 across midnight. Emivita
-        // treats end < start as a misconfiguration and returns null rather than
-        // crash (ReminderSchedulingTest pins it). Appendix E row A-20 marks this
-        // medtimer-better; cost M; the owner's call.
+    fun `scheduleWindowedIntervalReminderNextDay -- the overnight window chains across midnight`() {
+        // Parity since §9 #31 (A-20): 16:40 -> 02:40 -> 16:40 -> 02:40 across the
+        // nights. One slot medTimer does not produce: asked at day 1 00:00, Emivita
+        // answers 02:40 that same night, because the window that began at 16:40 the
+        // evening before is still running and a DailyWindow has no start anchor --
+        // medTimer's reminder has `intervalStart` and did not exist yet. That is
+        // A-06's documented rule (a window created inside itself fires its remaining
+        // slots), not an overnight defect; the chain after it is medTimer's.
         val overnight = window(600, LocalTime.of(16, 40), LocalTime.of(3, 20), IntervalStartBehavior.ON_REMINDED)
-        assertNull(nextDailyWindowOccurrence(overnight, on(1, 0), null, zone))
+        assertAt(on(1, 160), nextDailyWindowOccurrence(overnight, on(1, 0), null, zone))
+        assertAt(on(1, 1000), nextDailyWindowOccurrence(overnight, on(1, 161), null, zone))
+        assertAt(on(2, 160), nextDailyWindowOccurrence(overnight, on(1, 1001), null, zone))
+        assertAt(on(2, 1000), nextDailyWindowOccurrence(overnight, on(2, 161), null, zone))
+        assertAt(on(3, 160), nextDailyWindowOccurrence(overnight, on(2, 1001), null, zone))
     }
 
     // ---- ReminderSchedulerTimezoneUnitTest ----------------------------------
