@@ -6,7 +6,10 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.intPreferencesKey
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
-import androidx.datastore.preferences.preferencesDataStore
+import androidx.datastore.core.DataStore
+import androidx.datastore.preferences.core.PreferenceDataStoreFactory
+import androidx.datastore.preferences.core.Preferences
+import androidx.datastore.preferences.preferencesDataStoreFile
 import com.hazia.emivita.core.data.entity.Medicine
 import com.hazia.emivita.core.scheduling.DEFAULT_SNOOZE_MINUTES
 import com.hazia.emivita.ui.theme.DEFAULT_PALETTE
@@ -21,7 +24,22 @@ import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import androidx.datastore.preferences.core.longPreferencesKey
 
-private val Context.settingsDataStore by preferencesDataStore(name = "emivita_settings")
+/**
+ * One DataStore per settings *file*, not one per process (§7 R76). The
+ * `preferencesDataStore` delegate is a process singleton bound to the files
+ * directory of the first Context that touched it, which is the same thing
+ * on a phone -- and under Robolectric, where every test method gets a fresh
+ * data directory, it meant a second test class kept writing into the first
+ * class's deleted temp folder (`AccessDeniedException` on the `.tmp` rename).
+ * Keyed by absolute path, a directory still gets exactly one instance, the
+ * rule DataStore enforces.
+ */
+private val settingsStores = java.util.concurrent.ConcurrentHashMap<String, DataStore<Preferences>>()
+private val Context.settingsDataStore: DataStore<Preferences>
+    get() {
+        val file = applicationContext.preferencesDataStoreFile("emivita_settings")
+        return settingsStores.getOrPut(file.absolutePath) { PreferenceDataStoreFactory.create { file } }
+    }
 private val TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm")
 private val DEFAULT_WEEKEND_START = LocalTime.of(9, 0)
 private val DEFAULT_WEEKEND_END = LocalTime.of(18, 0)

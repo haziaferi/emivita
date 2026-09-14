@@ -94,6 +94,7 @@ import com.hazia.emivita.ui.components.MedicineTile
 import com.hazia.emivita.ui.components.StateDisc
 import com.hazia.emivita.ui.components.TonalActionChip
 import com.hazia.emivita.ui.components.DiscState
+import com.hazia.emivita.core.data.settings.TodayLayout
 
 internal enum class TimelineStatus { PENDING, TAKEN, SKIPPED, UPCOMING }
 
@@ -121,9 +122,17 @@ internal data class TimelineEntry(
     val afterMinutes: Int? = null,
 )
 
-private data class TimelineNode(
+internal data class TimelineNode(
     val epochMillis: Long,
     val entries: List<TimelineEntry>,
+)
+
+/** What every layout's rows need to act on an entry (§9 #37). */
+internal class TodayDeps(
+    val doseEventRepository: DoseEventRepository,
+    val lockedByDefault: Boolean,
+    val reminderRepository: ReminderRepository,
+    val notificationBuilder: ReminderNotificationBuilder,
 )
 
 private const val TODAY_CONSUMER_ID = "today-screen"
@@ -229,6 +238,13 @@ fun TodayScreen(
     val lockedByDefault by produceState(initialValue = false) {
         settingsRepository.lockRemindersUntilTakenByDefault.collectLatest { value = it }
     }
+    // §9 #37: the owner's four arrangements of the same rows, from Appearance.
+    val layout by produceState(initialValue = TodayLayout.TIMELINE) {
+        settingsRepository.todayLayout.collectLatest { value = it }
+    }
+    val deps = remember(doseEventRepository, lockedByDefault, reminderRepository, notificationBuilder) {
+        TodayDeps(doseEventRepository, lockedByDefault, reminderRepository, notificationBuilder)
+    }
 
     val nodes = remember(medicinesById, materializedToday, projectionState, startOfToday, startOfTomorrow, remindersById) {
         buildTimeline(medicinesById, materializedToday, projectionState, startOfToday, startOfTomorrow, remindersById)
@@ -252,10 +268,7 @@ fun TodayScreen(
                     )
                 }
                 else -> LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)) {
-                    items(nodes, key = { it.epochMillis }) { node ->
-                        TimelineNodeItem(node, doseEventRepository, lockedByDefault, reminderRepository, notificationBuilder)
-                        Spacer(Modifier.height(12.dp))
-                    }
+                    todayItems(layout, nodes, deps, zone)
                     // As-needed medicines (§9 #26): a standing row each, with
                     // the time since the last dose and a Log chip. They have no
                     // slot on the timeline, so they sit beneath it.
@@ -411,21 +424,8 @@ private fun buildTimeline(
 }
 
 @Composable
-private fun TimelineNodeItem(
-    node: TimelineNode,
-    doseEventRepository: DoseEventRepository,
-    lockedByDefault: Boolean,
-    reminderRepository: ReminderRepository,
-    notificationBuilder: ReminderNotificationBuilder,
-) {
-    // "≈" when every entry at this instant is an estimate (§9 #31): the time
-    // is where a follow-up will land if its parent fires on time.
-    val estimatedNode = node.entries.all { it.estimated }
-    val time = remember(node.epochMillis, estimatedNode) {
-        LocaleFormats.time(node.epochMillis).let { if (estimatedNode) "≈ $it" else it }
-    }
-    val scope = rememberCoroutineScope()
-    var editing by remember { mutableStateOf<TimelineEntry?>(null) }
+internal fun TimelineNodeItem(node: TimelineNode, deps: TodayDeps) {
+    val time = nodeTimeLabel(node)
 
     Row(Modifier.fillMaxWidth()) {
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
@@ -439,58 +439,82 @@ private fun TimelineNodeItem(
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
             node.entries.forEach { entry ->
-                TimelineEntryRow(
-                    entry = entry,
-                    // Same resolution SettingsRepository.isLockedUntilTaken
-                    // performs: the per-medicine override wins, the global
-                    // default fills in when it is null.
-                    canSkip = !(entry.medicine.remindersLockedUntilTaken ?: lockedByDefault),
-                    onResolve = { status ->
-                        val id = entry.doseEventId
-                        scope.launch {
-                            if (id != null) {
-                                doseEventRepository.resolve(id, status)
-                            } else if (entry.reminderId != null && status == DoseStatus.TAKEN) {
-                                // "Take now" on a projected slot (§9 #26).
-                                doseEventRepository.takeProjectedNow(entry.reminderId, entry.medicine.id, node.epochMillis, entry.doseAmount)
-                            }
-                        }
-                    },
-                    // Event editing (spec §3/§9 #3) -- only an already-resolved
-                    // entry has anything to edit; PENDING/UPCOMING have no
-                    // recorded time or confirmed dose to correct yet.
-                    onClick = {
-                        if (entry.status == TimelineStatus.TAKEN || entry.status == TimelineStatus.SKIPPED) editing = entry
-                    },
-                )
+                EntryHost(node, entry, deps) { canSkip, onResolve, onClick ->
+                    TimelineEntryRow(entry = entry, canSkip = canSkip, onResolve = onResolve, onClick = onClick)
+                }
                 Spacer(Modifier.height(8.dp))
             }
         }
     }
+}
 
-    editing?.let { entry ->
-        val id = entry.doseEventId
-        if (id != null) {
-            DoseEditDialog(
-                medicineName = entry.medicine.name,
-                doseEventId = id,
-                originalStatus = if (entry.status == TimelineStatus.TAKEN) DoseStatus.TAKEN else DoseStatus.SKIPPED,
-                originalDoseAmount = entry.doseAmount,
-                originalResolvedAtEpochMillis = entry.resolvedAtEpochMillis,
-                // Today never opens this for a PENDING entry -- those carry inline
-                // Take/Skip chips -- so this is only ever the already-resolved
-                // fallback. Passed because the dialog requires it, not relied on.
-                scheduledEpochMillis = node.epochMillis,
-                doseEventRepository = doseEventRepository,
-                onDismiss = { editing = null },
-                doseUnit = entry.medicine.doseUnit,
-                originalNotes = entry.notes,
-                onReopened = { reopened ->
-                    val reminder = reopened.reminderId?.let { reminderRepository.getById(it) }
-                    if (reminder != null) notificationBuilder.buildAndPost(reopened, reminder, entry.medicine)
-                },
-            )
-        }
+/** "≈" when every entry at this instant is an estimate (§9 #31): the time
+ *  is where a follow-up will land if its parent fires on time. */
+@Composable
+internal fun nodeTimeLabel(node: TimelineNode): String {
+    val estimatedNode = node.entries.all { it.estimated }
+    return remember(node.epochMillis, estimatedNode) {
+        LocaleFormats.time(node.epochMillis).let { if (estimatedNode) "≈ $it" else it }
+    }
+}
+
+/**
+ * What acting on one entry means, whichever layout draws it (§9 #37): the
+ * skip gate, resolving a materialized event or taking a projected slot now,
+ * and the edit dialog for an answered dose. The four layouts differ only in
+ * the row they put inside.
+ */
+@Composable
+internal fun EntryHost(
+    node: TimelineNode,
+    entry: TimelineEntry,
+    deps: TodayDeps,
+    row: @Composable (canSkip: Boolean, onResolve: (DoseStatus) -> Unit, onClick: () -> Unit) -> Unit,
+) {
+    val scope = rememberCoroutineScope()
+    var editing by remember { mutableStateOf(false) }
+    row(
+        // Same resolution SettingsRepository.isLockedUntilTaken performs: the
+        // per-medicine override wins, the global default fills in when it is null.
+        !(entry.medicine.remindersLockedUntilTaken ?: deps.lockedByDefault),
+        { status ->
+            val id = entry.doseEventId
+            scope.launch {
+                if (id != null) {
+                    deps.doseEventRepository.resolve(id, status)
+                } else if (entry.reminderId != null && status == DoseStatus.TAKEN) {
+                    // "Take now" on a projected slot (§9 #26).
+                    deps.doseEventRepository.takeProjectedNow(entry.reminderId, entry.medicine.id, node.epochMillis, entry.doseAmount)
+                }
+            }
+        },
+        // Event editing (spec §3/§9 #3) -- only an already-resolved entry has
+        // anything to edit; PENDING/UPCOMING have no recorded time or
+        // confirmed dose to correct yet.
+        { if (entry.status == TimelineStatus.TAKEN || entry.status == TimelineStatus.SKIPPED) editing = true },
+    )
+
+    val id = entry.doseEventId
+    if (editing && id != null) {
+        DoseEditDialog(
+            medicineName = entry.medicine.name,
+            doseEventId = id,
+            originalStatus = if (entry.status == TimelineStatus.TAKEN) DoseStatus.TAKEN else DoseStatus.SKIPPED,
+            originalDoseAmount = entry.doseAmount,
+            originalResolvedAtEpochMillis = entry.resolvedAtEpochMillis,
+            // Today never opens this for a PENDING entry -- those carry inline
+            // Take/Skip chips -- so this is only ever the already-resolved
+            // fallback. Passed because the dialog requires it, not relied on.
+            scheduledEpochMillis = node.epochMillis,
+            doseEventRepository = deps.doseEventRepository,
+            onDismiss = { editing = false },
+            doseUnit = entry.medicine.doseUnit,
+            originalNotes = entry.notes,
+            onReopened = { reopened ->
+                val reminder = reopened.reminderId?.let { deps.reminderRepository.getById(it) }
+                if (reminder != null) deps.notificationBuilder.buildAndPost(reopened, reminder, entry.medicine)
+            },
+        )
     }
 }
 
@@ -500,6 +524,10 @@ internal fun TimelineEntryRow(
     canSkip: Boolean,
     onResolve: (DoseStatus) -> Unit,
     onClick: () -> Unit,
+    // §9 #37: the grouped layout puts the state disc and the time inside the
+    // card, where the timeline has them on the rail outside it.
+    leading: (@Composable () -> Unit)? = null,
+    timeLabel: String? = null,
 ) {
     val muted = entry.status == TimelineStatus.UPCOMING
     val editable = entry.status == TimelineStatus.TAKEN || entry.status == TimelineStatus.SKIPPED
@@ -529,9 +557,14 @@ internal fun TimelineEntryRow(
         // asserts semantics, not pixels.
         Column(Modifier.padding(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            MedicineTile(entry.medicine)
-            Spacer(Modifier.width(12.dp))
+            if (leading != null) {
+                leading()
+                Spacer(Modifier.width(10.dp))
+            }
             Column(Modifier.weight(1f)) {
+                if (timeLabel != null) {
+                    Text(timeLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
                 Text(
                     entry.medicine.name,
                     style = MaterialTheme.typography.titleMedium,
@@ -563,6 +596,8 @@ internal fun TimelineEntryRow(
                     )
                 }
             }
+            Spacer(Modifier.width(12.dp))
+            MedicineTile(entry.medicine)
         }
             when (entry.status) {
                 TimelineStatus.PENDING -> Row(

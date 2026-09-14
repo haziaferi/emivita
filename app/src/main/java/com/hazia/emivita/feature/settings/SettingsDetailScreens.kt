@@ -67,7 +67,6 @@ import com.hazia.emivita.core.notification.cardBody
 import com.hazia.emivita.core.notification.cardTitle
 import com.hazia.emivita.core.notification.notificationDelivery
 import com.hazia.emivita.ui.components.TimeOfDayField
-import com.hazia.emivita.ui.theme.DEFAULT_PALETTE
 import com.hazia.emivita.ui.theme.MedPalette
 import com.hazia.emivita.ui.theme.ThemeMode
 import com.hazia.emivita.ui.theme.displayName

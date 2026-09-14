@@ -558,6 +558,13 @@
     <string name="today_as_needed_last">Last dose %1$s</string>
     <string name="today_as_needed_never">No dose logged yet</string>
     <string name="today_take_now">Take now</string>
+    <string name="today_band_morning">Morning</string>
+    <string name="today_band_afternoon">Afternoon</string>
+    <string name="today_band_evening">Evening</string>
+    <string name="today_next_dose">Next dose</string>
+    <string name="today_rest_of_day">Rest of the day</string>
+    <string name="today_hero_none">Nothing left to take today</string>
+    <string name="a11y_show_actions">Show actions</string>
     <string name="today_log_earlier">Logged as taken at an earlier time</string>
     <string name="today_prn_headroom">%1$d of %2$d in the last %3$d h</string>
     <string name="today_prn_headroom_returns">room again at %1$s</string>

@@ -468,6 +468,13 @@
     <string name="today_as_needed_last">Ultima dose %1$s</string>
     <string name="today_as_needed_never">Nessuna dose registrata</string>
     <string name="today_take_now">Prendi ora</string>
+    <string name="today_band_morning">Mattina</string>
+    <string name="today_band_afternoon">Pomeriggio</string>
+    <string name="today_band_evening">Sera</string>
+    <string name="today_next_dose">Prossima dose</string>
+    <string name="today_rest_of_day">Resto della giornata</string>
+    <string name="today_hero_none">Niente altro da prendere oggi</string>
+    <string name="a11y_show_actions">Mostra le azioni</string>
     <string name="today_log_earlier">Registrata come presa a un’ora precedente</string>
     <string name="today_prn_headroom">%1$d di %2$d nelle ultime %3$d h</string>
     <string name="today_prn_headroom_returns">di nuovo margine alle %1$s</string>
