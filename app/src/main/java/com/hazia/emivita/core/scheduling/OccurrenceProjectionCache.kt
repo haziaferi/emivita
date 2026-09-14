@@ -5,6 +5,7 @@ import android.util.Log
 import com.hazia.emivita.core.data.config.decodeReminderConfig
 import com.hazia.emivita.core.data.config.ReminderType
 import com.hazia.emivita.core.data.config.ReminderConfig
+import com.hazia.emivita.core.data.entity.Reminder
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -66,6 +67,14 @@ data class ProjectionState(
      * here is wrong, there is just less of it.
      */
     val truncated: Boolean = false,
+    /**
+     * True on the states published mid-pass (§9 #31, A-45): the medicines
+     * visited so far are here, the rest are not yet. Today paints the first
+     * rows before the last medicine is computed; a consumer drawing a
+     * conclusion from an *absence* waits for the state where this is false,
+     * the same rule [truncated] already asks of it.
+     */
+    val inProgress: Boolean = false,
 )
 
 /**
@@ -214,22 +223,29 @@ class OccurrenceProjectionCache(
 
         var visited = 0
         var truncated = false
+        // Hard time budget, checked before every reminder's walk (§9 #31,
+        // A-41; it used to be once per medicine, which let one pathological
+        // reminder drag its medicine's remaining reminders past the budget
+        // with it). A trip stops the pass; [state] still gets everything
+        // projected so far and says so via ProjectionState.truncated rather
+        // than passing a partial answer off as a whole one.
+        fun overBudget(reminder: Reminder): Boolean {
+            if (nowEpochMillis() - start <= COMPUTE_BUDGET_MILLIS) return false
+            Log.w(TAG, "Projection hit the ${COMPUTE_BUDGET_MILLIS}ms budget at reminder ${reminder.id} after $visited reminders -- publishing a truncated state.")
+            truncated = true
+            return true
+        }
+        fun publish(inProgress: Boolean) {
+            _state.value = ProjectionState(
+                occurrences = occurrences.sortedBy { it.epochMillis },
+                stockRunOutDates = runOutDates.toMap(),
+                windowDays = windowDays,
+                computedAtEpochMillis = start,
+                truncated = truncated,
+                inProgress = inProgress,
+            )
+        }
         for (entry in medicines) {
-            // Hard time budget -- a pathological config stops the pass here
-            // rather than blocking; [state] below still gets whatever was
-            // projected for the medicines already visited, and says so via
-            // ProjectionState.truncated rather than passing a partial answer
-            // off as a whole one.
-            if (nowEpochMillis() - start > COMPUTE_BUDGET_MILLIS) {
-                Log.w(
-                    TAG,
-                    "Projection hit the ${COMPUTE_BUDGET_MILLIS}ms budget after $visited of " +
-                        "${medicines.size} medicines -- publishing a truncated state.",
-                )
-                truncated = true
-                break
-            }
-            visited++
 
             // Two passes per medicine (§9 #31, A-24). Pass 1: every dose
             // reminder that computes its own slots. Pass 2: linked children,
@@ -251,6 +267,8 @@ class OccurrenceProjectionCache(
                 // AlarmManager through SchedulingCoordinator like everything
                 // else; they just don't belong in a *dose* projection.
                 if (reminder.type !in schedulingEngine.doseProducingTypes) continue
+                if (overBudget(reminder)) break
+                visited++
                 val forReminder = schedulingEngine.occurrencesFor(reminder, start, toEpochMillis, weekendMode = weekendMode)
                 projectedByReminder[reminder.id] = forReminder.map { it.epochMillis }
                 forReminder.forEach { occurrence ->
@@ -258,7 +276,10 @@ class OccurrenceProjectionCache(
                 }
             }
             for (child in linked) {
+                if (truncated) break
                 val config = decodeReminderConfig(child.configJson) as? ReminderConfig.LinkedFollowing ?: continue
+                if (overBudget(child)) break
+                visited++
                 val parentSlots = child.parentReminderId?.let { projectedByReminder[it] } ?: emptyList()
                 val real = schedulingEngine.occurrencesFor(child, start, toEpochMillis, weekendMode = weekendMode).firstOrNull()
                 if (real != null) medicineOccurrences += ProjectedOccurrence(child.id, entry.medicine.id, real.epochMillis, real.doseAmount)
@@ -284,15 +305,15 @@ class OccurrenceProjectionCache(
                     }
                 }
             }
+            // Progressive emission (§9 #31, A-45; medTimer publishes at each
+            // day boundary): what is projected so far, flagged as such. A
+            // budget trip keeps this medicine's walked reminders -- the whole
+            // point of the check is a partial answer, not a lost one.
+            if (truncated) break
+            publish(inProgress = true)
         }
 
-        _state.value = ProjectionState(
-            occurrences = occurrences.sortedBy { it.epochMillis },
-            stockRunOutDates = runOutDates,
-            windowDays = windowDays,
-            computedAtEpochMillis = start,
-            truncated = truncated,
-        )
+        publish(inProgress = false)
 
         // LowStockAlert/ExpirationAlert triggering (spec §9 #8) -- piggybacks on
         // this same recompute pass rather than a separate periodic job; reuses

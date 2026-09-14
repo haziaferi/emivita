@@ -19,6 +19,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.emptyFlow
 import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.test.UnconfinedTestDispatcher
@@ -95,7 +96,7 @@ class OccurrenceProjectionCacheTest {
         cacheScopes.forEach { it.cancel() }
     }
 
-    private fun TestScope.buildCache(medicines: List<MedicineWithReminders>): OccurrenceProjectionCache {
+    private fun TestScope.buildCache(medicines: List<MedicineWithReminders>, clock: () -> Long = { now }): OccurrenceProjectionCache {
         val medicineDao = mockk<MedicineDao>()
         coEvery { medicineDao.getAllWithReminders() } returns medicines
         // Empty rather than a real Flow: the reactive watcher is not what these
@@ -115,7 +116,7 @@ class OccurrenceProjectionCacheTest {
             alertEvaluator = mockk(relaxed = true),
             scope = CoroutineScope(UnconfinedTestDispatcher(testScheduler) + Job()).also { cacheScopes += it },
             fixedZone = zone,
-            nowEpochMillis = { now },
+            nowEpochMillis = clock,
             dispatcher = UnconfinedTestDispatcher(testScheduler),
         )
     }
@@ -260,5 +261,40 @@ class OccurrenceProjectionCacheTest {
         advanceUntilIdle()
         val child = cache.state.value.occurrences.filter { it.reminderId == 2L }
         assertEquals(true, child.isNotEmpty() && child.all { it.estimated })
+    }
+
+    // ---- Budget per reminder, emission per medicine (§9 #31, A-41 / A-45) --
+
+    private fun twoDailyReminders(medicineId: Long) = MedicineWithReminders(
+        medicine = Medicine(id = medicineId, profileId = 1L, name = "M$medicineId", iconKey = "pill", sortOrder = 0.0, createdAtEpochMillis = 0),
+        reminders = listOf(8, 20).mapIndexed { i, hour ->
+            Reminder(id = medicineId * 10 + i, medicineId = medicineId, type = ReminderType.FIXED_TIME, configJson = encodeReminderConfig(ReminderConfig.FixedTime(hour = hour, minute = 0, dose = 1.0)), createdAtEpochMillis = 0)
+        },
+    )
+
+    @Test
+    fun `the budget is checked before each reminder -- the second of a medicine's two is the one cut off`() = runTest {
+        // Clock: the pass starts at `now`; the first reminder's check is within
+        // budget, the second's is past it. The first reminder's slots survive.
+        val readings = ArrayDeque(listOf(now, now, now + 3_000L))
+        val cache = buildCache(listOf(twoDailyReminders(1))) { readings.removeFirstOrNull() ?: (now + 3_000L) }
+        advanceUntilIdle()
+        val state = cache.state.value
+        // The first reminder's slots survive the trip: a partial answer, not a lost one.
+        assertEquals(setOf(10L), state.occurrences.map { it.reminderId }.toSet())
+        assertEquals(true, state.truncated)
+        assertEquals(false, state.inProgress)
+    }
+
+    @Test
+    fun `the state is published after each medicine, in progress, then once complete`() = runTest {
+        val seen = mutableListOf<ProjectionState>()
+        val cache = buildCache(listOf(twoDailyReminders(1), twoDailyReminders(2), twoDailyReminders(3)))
+        val collector = launch(UnconfinedTestDispatcher(testScheduler)) { cache.state.collect { seen += it } }
+        advanceUntilIdle()
+        collector.cancel()
+        val published = seen.filter { it.computedAtEpochMillis == now }
+        assertEquals(listOf(true, true, true, false), published.map { it.inProgress })
+        assertEquals(listOf(1, 2, 3, 3), published.map { s -> s.occurrences.map { it.medicineId }.distinct().size })
     }
 }
