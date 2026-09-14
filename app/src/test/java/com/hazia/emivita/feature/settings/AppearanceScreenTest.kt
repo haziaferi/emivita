@@ -62,19 +62,18 @@ class AppearanceScreenTest {
 
         compose.onNodeWithText("Theme").performScrollTo().performClick()
         compose.onNodeWithContentDescription("Sabbia").performScrollTo().performClick()
-        compose.waitUntil(5_000) { runBlocking(Dispatchers.IO) { settings.palette.first() } == MedPalette.SABBIA }
-
-        compose.onNodeWithText("Dark").performClick()
-        compose.waitUntil(5_000) { runBlocking(Dispatchers.IO) { settings.themeMode.first() } == ThemeMode.DARK }
-
+        compose.onNodeWithText("Dark").performScrollTo().performClick()
         compose.onNodeWithContentDescription("Compact").performScrollTo().performClick()
-        compose.waitUntil(5_000) { runBlocking(Dispatchers.IO) { settings.todayLayout.first() } == TodayLayout.COMPACT }
+        // The header follows the choice once the section is closed again --
+        // the screen's own collected flows, not a second read of the store.
+        // (Polling the DataStore file from another thread while the writes
+        // land is a sharing violation on Windows.)
+        compose.onNodeWithText("Theme").performScrollTo().performClick()
+        compose.waitUntil(5_000) { compose.onAllNodes(hasText("Dark · Sabbia")).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitForIdle()
 
         assertEquals(MedPalette.SABBIA, runBlocking(Dispatchers.IO) { settings.palette.first() })
         assertEquals(ThemeMode.DARK, runBlocking(Dispatchers.IO) { settings.themeMode.first() })
         assertEquals(TodayLayout.COMPACT, runBlocking(Dispatchers.IO) { settings.todayLayout.first() })
-        // The header follows the choice once the section is closed again.
-        compose.onNodeWithText("Theme").performScrollTo().performClick()
-        compose.onNodeWithText("Dark · Sabbia").performScrollTo().assertIsDisplayed()
     }
 }

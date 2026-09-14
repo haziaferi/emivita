@@ -1143,10 +1143,12 @@ private fun OptionCard(selected: Boolean, onClick: () -> Unit, label: String, mo
                 color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
                 shape = RoundedCornerShape(12.dp),
             )
-            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick)
-            .padding(12.dp),
+            .selectable(selected = selected, role = Role.RadioButton, onClick = onClick),
     ) {
-        Box {
+        // Padding inside the Surface, not on its modifier: outside, the fill
+        // was inset from the border and the label's first letter sat on the
+        // clipped corner (seen on the phone, §7 R76).
+        Box(Modifier.padding(12.dp)) {
             Column {
                 preview()
                 Spacer(Modifier.height(8.dp))

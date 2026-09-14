@@ -616,8 +616,8 @@ map and not a memory.
 
 - **Today screen:** linked/timeline pattern with aggregate grouped-dose
   nodes. ✅ built (`TodayScreen.kt`'s `TimelineNode`/`TimelineEntry`, §9 #5).
-- **Medicine card:** full-card color, icon-per-medicine-type, tags as
-  colored chips.
+- **Medicine card:** tonal card, the medicine's colour as its icon tile
+  (§7 R76; was full-card colour), icon-per-medicine-type, tags as chips.
 - **Add-medicine reminder-type picker:** 5 labeled cards — icon + name +
   one-line description visible *in the picker itself* (no separate help
   screen). Tapping a card goes straight to its config, no disambiguation
@@ -691,11 +691,12 @@ map and not a memory.
   Color), not overflow items. Overflow menu keeps only Duplicate,
   Duplicate-with-reminders, Delete.
 - **Stock & expiration:** ✅ built (`StockExpirationScreen.kt`,
-  `EmivitaRoute.StockExpiration`) — one screen, three visually zoned
-  sections, each on a distinct tonal container color (`primaryContainer`
-  for current stock, `tertiaryContainer` for low-stock alert,
-  `errorContainer` for expiration) — resolving T5's register-distinction
-  finding via color zoning rather than a separate layout treatment.
+  `EmivitaRoute.StockExpiration`) — one screen, three zoned sections, each
+  a tonal card; the two that warn carry the attention glyph in their title
+  (§7 R76; until then the three were painted `primaryContainer` /
+  `tertiaryContainer` / `errorContainer`, which were the base roles, so
+  they were solid slabs — §7 R75). T5's register distinction is carried by
+  the titles and the glyph, not by fills.
   Current stock (qty/unit/refill-amount, computed runs-out date read live
   from the projection cache, one-tap **Refill now**), Low-stock alert
   (enable switch/threshold/`FilterChip` trigger-mode row), Expiration
@@ -732,96 +733,49 @@ map and not a memory.
   notification-loudness default — corrected here after conflating the two
   earlier), and the three notification priority levels (Standard/High/
   Alarm) — discoverability is the fix, not simplification.
-- **Palettes: 6, each with light + dark.** This is the second full
-  replacement. The original 4 (Clinical/Cozy/Neutral/Playful) went first,
-  because they had been picked without discussion; the 8 that replaced them
-  went in turn (§7 R56), because the *register* was never settled — they
-  were built palette-by-palette from lexicon entries chosen for variety
-  (amber, green, blue, pink, two of each) rather than from one decision
-  about what kind of app this is.
+- **Palettes: 4, each with light + dark — and one grammar for applying
+  them (🔒 re-decided by the owner, §7 R76).** The third full replacement.
+  R56's six had all come from the lexicon's *Health* entry (its pairs are
+  named *Daylight* and *Linen*), paired off two by two, and read as stock;
+  and `colorSchemeFor` made every M3 container its base role, so any screen
+  that reached for one got a saturated slab (Stock, §7 R75).
 
-  It is a patient-facing medication app, which puts it squarely in
-  `visual-craft`'s **Health / Consumer Wellbeing** register, and that
-  register carries two obligations the old eight did not answer to: grounds
-  stay **warm**, because the clinical blue-grey that reassures a
-  professional reads as institutional to someone managing their own
-  medication; and **red is reserved for genuine emergencies** — never an
-  accent, never a brand colour, never the marker of an ordinary event. All
-  six below answer to it, including the two cool ones, which keep warm
-  grounds for exactly that reason.
+  **How colour is applied comes first, and it is the reference app's:**
+  every card is tonal (`surfaceContainer`, one step off the ground), the
+  palette's hue lives in controls and mostly as the pale `primaryContainer`
+  (the state disc, the Prendi chip, the tab pill, the FAB), solid `primary`
+  only on the toggle and the timeline rail, a medicine's own colour is the
+  one saturated thing on a card (its icon tile, ink chosen by luminance),
+  and a warning is a glyph beside the text — `attention`, burnt orange,
+  never yellow, never a fill; red stays for errors. `AlphaTintGateTest`
+  keeps it so.
 
-  | Palette | Family | Character | Source |
-  |---|---|---|---|
-  | Daylight | Green | The quiet default | Health/Consumer Wellbeing → *Daylight* (verbatim) |
-  | Sage | Olive-green | Softest of the six | Health register, Naturecore's herbal band |
-  | Honeycomb | Amber | Warm without glare | Health register, Cozy's amber band |
-  | Linen | Terracotta | Warmest of the six | Health/Consumer Wellbeing → *Linen* (verbatim) |
-  | Mallow | Plum | Soft, not sweet | Health register, Coquette/Girly muted |
-  | Periwinkle | Indigo | The one cool option | Health register, Scholastic indigo, warmed |
+  | Palette | Character | Seed (visual-craft lexicon) |
+  |---|---|---|
+  | Porcellana | cobalt on porcelain white — the default | Ming blue-and-white |
+  | Ardesia | steel blue on cool paper | Slate Scholastic |
+  | Sangue di bue | oxblood on neutral grey | Tense · Held Breath |
+  | Sabbia | taupe on warm white, the near-neutral | Serene · Chalk |
 
-  Two are the register's own verified pairs taken verbatim; the other four
-  are hue-anchored within it, spaced so the six stay mutually
-  distinguishable in the picker (worst pair ΔE 14.0, Daylight/Sage).
+  Chosen by the owner from ten candidates, with the rules stated: no purple
+  ("always reads like AI"), no yellow, no muddy green ("associated with
+  sickness"). Each is three agreed colours per register — ground, text,
+  primary — and everything else is derived by `tools/palette_derive.py`,
+  which prints `Color.kt` and Appendix A and fails when the appendix
+  drifts; `PaletteSpecConsistencyTest` fails when the code does. Every
+  colour that can sit on a card is fitted against the darkest card tier.
+  The ground is near-neutral in all four, which is what lets any hue from
+  the medicine picker read as the medicine's and not the theme's.
 
-  **What the register cost, and it is worth recording.** Non-alarming
-  pushes every state into the warm desaturated middle — which is precisely
-  the band where deuteranopia and protanopia collapse hues together. An
-  early draft had *taken* and *missed* at ΔE 0.9: indistinguishable. The
-  fix was structural rather than tuning, and both halves matter: make
-  `skipped` **achromatic**, since a skip is a deliberate non-event and
-  should not compete chromatically with the states that do mean something;
-  and separate on **lightness**, which no colour-vision deficiency
-  destroys, rather than on chroma, which is the axis that reads as alarm.
-  Chromatic / neutral / chromatic now clears ΔE 15.7 worst case across all
-  twelve registers including simulated CVD, against a categorical floor of
-  10.
-
-  Two phone-specific adaptations apply to every palette's dark register,
-  the second beyond what any consulted skill covers, reasoned from first
-  principles this session — flag if either turns out wrong once it's
-  actually running on-device:
-  - OLED dark backgrounds sit at 4.5–5.9% lightness (not the 8–12% that
-    reads fine on a desktop-tuned dark theme), keeping each family's own
-    hue rather than dropping to neutral black.
-  - Astigmatism/eye-comfort pass: no pure `#000000`/`#FFFFFF` anywhere,
-    peak dark-mode text/surface contrast capped around 12–15:1 rather
-    than pushed toward extremes (high-contrast bright elements on very
-    dark OLED can produce halo/glare artifacts, worse for astigmatic
-    vision, and blue scatters more due to chromatic aberration) — pair
-    this with no glow/blur box-shadows on bright dark-mode elements and
-    regular/medium body-text weight rather than thin, once real
-    typography is wired to these palettes.
-
-  Full token tables (all 6 × light/dark, every role, every contrast ratio,
-  computed not eyeballed) are inlined in full in **Appendix A** at the end
-  of this file. There is no separate palette file anymore — it was merged
-  in here and retired, specifically so the actual hex values can't end up
-  living in a second document that goes stale or doesn't get re-uploaded
-  next session.
-
-  ✅ **The default is now a decision, not an accident (§7 R56).** It is
-  **Daylight**, and the reason is not that it is listed first: it is the
-  Health/Consumer Wellbeing register's own documented default pair, taken
-  verbatim, and it is the most nearly neutral of the six — the one that
-  presumes least about a user who has not chosen. The previous default,
-  Golden Hour, was explicitly arbitrary ("first-listed above, arbitrarily,
-  not a design decision"). Note the one hand-maintained coupling this
-  creates: `res/values/colors.xml`'s `splash_background` must match the
-  default palette's light background (`#FBF9F5`), and nothing enforces it —
-  a mismatch flashes between the splash screen and Compose's first frame.
-  The history is worth keeping, because it shows the question surviving a
-  fix that looked like it would settle it. This bullet once offered two
-  exits: an onboarding prompt, or persisted preferences. Persistence landed
-  (§9 #12 — `SettingsRepository.palette` through DataStore, chosen in
-  `AppearanceScreen`) and the onboarding screen was deleted (§9 #1's
-  reversal), which closed one exit and left the other untaken — so a fresh
-  install still took an arbitrary default silently. **Persistence only
-  records a choice once one is made.** What actually settled it was picking
-  a default *on purpose*, which is what R56 did: not the first-listed
-  palette, but the register's own documented default and the most nearly
-  neutral of the six. `SettingsRepository.palette` falls back to `DAYLIGHT`
-  for any name it cannot parse, which now also covers a palette name saved
-  by a build that still had the previous eight.
+  **The default is Porcellana**, the owner's choice. Both `splash_background`
+  resources must equal its light and dark grounds; the consistency test
+  enforces both (the night one had sat at a warm brown matching no palette
+  from R56 to R75). `SettingsRepository.palette` maps the six names the
+  previous build stored to their nearest of the four and falls back to the
+  default for anything else. **Appearance applies on the tap** — the mode
+  chips and the four cards, each drawn in its own palette, inside one
+  collapsed Tema section; the Save button below the fold, the reason R75's
+  pass chose a palette and saw nothing change, is gone.
 - **"Log dose" entry point** (PRN, §3/§9): a secondary action alongside the
   Today screen's FAB, not a separate bottom-nav destination — picks a
   medicine, suggests its last-used amount, defaults to "just now."
@@ -1054,6 +1008,8 @@ reference is where the evidence is.
 | R73 | **§9 #33 quality gates — E.4 group 8's last two code gates (E-17 backup fuzz, F-14 layout bounds), to three answers asked first.** E-17: two parsers stand between a file a person picked and the database and neither had a garbage-input test; the restore screen's catch-all, `withTransaction` and the reminder foreign keys made the contract plausible, not held. F-14: R59's four owner findings were all reachability and layout, invisible to a suite that asserts semantics on nodes it constructs; no test read a bound. | ✅ **Resolved.** Answers: the fixed list *plus* Emivita's edges *plus* seeded mutations; the four R59 shapes plus the R65 rows still owed a device look; the device pass afterwards on a **release** build. **Piece 1** (`3cc3e44`), `BackupFuzzTest` + `BackupRestoreAtomicityTest`: medTimer's seven inputs, a wrong-typed and a negative version, each entity list nulled, a required field removed, a wrong-typed field, an unknown enum constant, a BOM, a doubled and a halved file; 200 mutants of a real snapshot under `Random(20260914)` (truncate, replace, drop a `"key":value,` span, duplicate, insert) — 53 still decode, the rest throw; the zip half on empty, random, truncated at 10/50/90 %, a renamed entry, the wrong and the missing password, and 50 seeded byte flips (44 Corrupt, 4 WrongPassword, 2 Success whose JSON then decodes). Contract held on every input: `decodeBackup` returns or throws a `SerializationException` and nothing else; `BackupZipWriter.read` never throws. And on Room: a decoded snapshot whose reminder names a medicine not in the file is refused by the foreign key inside the transaction and the seeded rows are untouched — the "nothing written" half. **Nothing found; the contract was already honest, and now it is held.** **Piece 2** (`45cd883`), `ui/layout/`: a harness that composes at 360 and 320 dp and reads Compose's layout-phase `boundsInRoot`, and six tests — a header with an action is exactly as tall as one without; the Due row's chips sit under the name and the name is one line; the medicine card's lines stack in one column inside its edge; the export dialog's chips share one line and never overlap; the notes journal fits 320 dp. One limit measured on the way and written into the harness: Robolectric has no font metrics — a text node is about one px per character — so these assert structure (padding, targets, weights, stacking, containment), never glyph widths; the glyphs are the device pass's. **The header test found the third R59 shape:** History's export button sat *inside* the padded row, and its 48 dp target made that header **80 dp against Today's 67** whenever there was anything to export — Medicines had sat 34 px low for the same reason until R59. `ui/components/TabHeader` is now the one header Today, Medicines and History share, its actions floated over the row's end in a Box so they add no height; the old inline shape stays in the test with its number, as the falsification. Settings' title already sits at the same 16 dp top edge as a LazyColumn item with the list's own padding; converting it would re-pad every item for a 2 dp spacer beneath the title, which is not the R59 shape — left as is, said here. Verified: `EXIT=0`, BUILD SUCCESSFUL, **407 tests / 0 failures** (395 → 407, the fuzz being few tests over many cases), `lintDebug` green; no scheduling change, device suite not re-run; **`assembleRelease` green and `tools/r8_check.py` PASS (2 widgets)** — the release APK for §9 #34 is built. F-19..21 wait for CI billing; F-18 stays out (arm-only ABIs) |  |
 | R74 | **§9 #35 CI gates that cannot run yet — E.4 group 8's last three (F-19 CodeQL, F-20 Scorecard, F-21 dependency-review), to three answers asked first.** Runs on this private repository have died in three seconds on a billing block since 2026-09-13 ("recent account payments have failed"), so nothing in `.github/workflows/` has been seen running since R66 — including R69's release step. A workflow file can be wrong for months without a red run to say so. | ✅ **Resolved** (`d6978ac`). Answers: CodeQL and Scorecard now, dependency-review when there is a PR flow; the parallel release job in this batch; verification by actionlint plus a pinned-SHA check. **The files:** `codeql.yml` (java-kotlin; push, pull request, weekly; the private-repo permission pair; JDK 21 + SDK + Gradle as ci.yml has them; a manual `assembleDebug` so the Kotlin extractor sees the compile) and `scorecard.yml` (weekly, push, branch-protection rule; `publish_results` forced off on a private repository, the `repo_token` PAT line present and commented with where to get one) — both state in their header that the upload to code scanning **fails on a private repository without GitHub Advanced Security**, which is the expected result until the repository is public or GHAS is on, and the files are kept so that day needs no writing. `ci.yml` is two jobs with no dependency: `verify` (the §10 triad in *one* Gradle invocation with `--continue`, so a failing test still lints — R23's reports) and `release-gate` (`assembleRelease` + `tools/r8_check.py`, the APK as an artifact); the old one-job rationale was about not splitting the triad, which is still not split. `dependency-review.yml` not written: it fires only on pull requests and the ledger shows work landing on master directly — the one to add with the first PR. **The gate, `tools/workflow_check.py`:** every `uses:` pinned to a 40-char commit SHA with a `# vX.Y.Z` comment (all eight actions across the three files, resolved live from the tags rather than copied from medTimer — annotated tag objects dereferenced to the commit, `gradle/actions` and `codeql-action` being two); top-level `permissions:` present; with `--resolve`, each comment's tag must dereference to exactly that SHA on GitHub, and **every `with:` key must be an input of the action's own `action.yml` at that tag**; and actionlint 1.7.12 (a binary under `tools/bin/`, gitignored). **Falsified three ways** before the commit: an unpinned `@v4` → FAIL naming the line; a SHA off by one hex digit → FAIL naming the action and the SHA GitHub has; a misspelt input `java-versoin` → **actionlint let it through** — it validates inputs only for actions it knows by version tag, never for a SHA pin, which is exactly the pin this repository requires — so the input check was written into the gate itself, and the third falsification then failed as it should, listing the action's twenty declared inputs. Verified: triad `EXIT=0`, **407 / 0** (no app code changed), `lintDebug` green; `python tools/workflow_check.py --resolve` PASS (3 workflows, every pin resolved, every input declared, actionlint clean). The push is the only "run", and it dies in three seconds on the account, not on these files. **Left open:** F-21 by name; making the repository public or buying GHAS is the owner's call and outside the code |  |
 | R75 | **§9 #34 device pass on the release build — run live with the owner at the phone (OnePlus LE2123, Android 14, Italian), on seeded data, paused at Appearance.** Answers first: seed obviously-named data and delete it after; live, now; the release build stays; small fixes in the batch, larger ones recorded. **Seeded** through the real repositories by `PassSeedTest` (androidTest, gated on `-e seedPass true`, four `androidTest …` medicines: an Ibuprofen with a linked follow-up, a low-stock alert, a tag, two notes and six past doses; a Melatonin on an overnight window; a Levothyroxine near run-out; an Alarm-tier medicine two minutes out), run with `am instrument` after `installDebugAndroidTest`; removed by `PassCleanupTest` by prefix. **Seen:** the Alarm tier fired at 20:53:34 on `reminders_alarm_v2` (alarm sound, vibration `[0,500,500,500]`), the heads-up carried Prendi / Rinvia / Salta and its body opened `AlarmActivity` (the content intent is the full-screen intent); Today with the seed, the estimated follow-up row and "≈"; Medicines, the sort menu, group by tag with the two headers; the detail; Stock and expiration; the month/year picker and its Annulla; History and the export dialog; Settings and Appearance on all six palettes and AMOLED. **Found and fixed in the batch (`3cbb822`..this):** (1) `MedicineDetailScreen` still had its own nested `Scaffold`/`TopAppBar` — R59's tall header — replaced by the settings screens' `DetailHeader` (title one line, ellipsised, actions stay on the row; `DetailHeaderLayoutTest` measures it with and without an action at 360 and 320 dp) with a floating FAB and the list inset beneath it; (2) **the adherence chart had never shown a bar on the phone since R55** — Vico opens a layer wider than the screen at its *start*, so the recent days sat off-screen to the right; now `Zoom.Content`, no zoom, no scroll (`AdherenceChartFit`, pinned by `AdherenceChartFitTest`, which also measures thirty days inside the card at both widths); (3) the theme-mode chips wrapped "Nero AMOLED" across three lines — `FlowRow`; (4) `common_clear` was "Cancella" beside a "Annulla", read as delete — now "Azzera". **Found and recorded:** (5) **the Alarm tier's tone is one-shot when the phone is unlocked** — the heads-up plays the channel sound once; the loop lives in `AlarmActivity`, which only comes up over the lock screen (follow-up: loop while the heads-up is showing, or promote the full-screen intent when the app is foreground); (6) the biometric row said no credential is enrolled — the owner is asked whether the phone has a screen-lock PIN (unanswered; if it has one, the row's check is wrong); (7) **`connectedDebugAndroidTest` uninstalls the app and deletes its data when it finishes** — every suite run since R59 wiped the phone, which is why the seed vanished and why the release install re-showed the disclaimer and the permission sheet; CLAUDE.md now carries `-Pandroid.injected.androidTest.leaveApksInstalledAfterRun=true`; (8) the Stock panels were solid green / brown / red with default field colours, because `colorSchemeFor` sets every M3 container to its base role; (9) Appearance applied only on a Save button below the fold, the selected card was tinted Daylight green whatever it named, one dot per card. (8) and (9) opened the palette question that #36 answers. **Harness defect found by the new test:** `LayoutAt`'s `Modifier.width(360.dp)` yielded to Robolectric's 320 dp window, so R73's "360 dp" case had measured 320 — `requiredWidth` now; every R73 assertion still holds at a true 360. Verified: triad `EXIT=0`, **410 / 0**, `lintDebug` green. **Left for #36's device look:** the Italian sweep, the PIN lock, the auto-start button, the widget's "≈", TalkBack, the splash, blocking the Alarm channel alone — on the new palettes, in one sitting; the seed stays on the phone until then |  |
+| R76 | **§9 #36 four palettes, the reference app's colour grammar, Appearance live — decided with the owner before a line was written.** R75's pass stopped at the Stock slabs and the Appearance screen; the owner's verdict was that the six palettes were stock, the panels stark and blocky, and that nothing gets written until the palettes are mutually agreed. **How colour is applied, first:** four options were drawn on the app's own items from the five reference apps with screenshots on disk (HomeMedkit, MediTrak, Pill Time, Did I Take My Meds?, Daily Pill), the owner asked for medTimer — its eight listing screenshots were fetched — and its grammar was adopted as option E: every card tonal, the hue in controls and mostly as the *pale container* (state disc, Prendi chip, tab pill, FAB), solid primary only on the toggle and the rail, the medicine's own colour as one tile, warnings as glyphs. Departure: the glyph is `attention`, red stays for errors. **The palettes:** ten candidates seeded from named, contrast-verified pairs in the visual-craft lexicon — none from its *Health* entry, whose pairs are literally *Daylight* and *Linen*, which is where R56's six came from and why they read as stock — with no purple ("always reads like AI"), no yellow and no muddy green ("associated with sickness"); each derived into E's tokens by one script and scored; the owner chose **Porcellana (default), Ardesia, Sangue di bue, Sabbia**. Attention became burnt orange, not amber, under the no-yellow rule. **Piece 1 (`f6c6af1`):** `tools/palette_derive.py` derives every role from three agreed colours per register and prints both `Color.kt` and Appendix A; `--check` pins the appendix to the tool, `PaletteSpecConsistencyTest` pins the code to the appendix (17 roles, 136 hexes, both splash files — the night one had sat at `#1F150E`, matching no palette, since R56). The tool caught what the eye had not: fitted against the ground, the attention glyph read at 3.8 on the darker card tier, so everything that can sit on a card is now fitted against `surfaceContainerHigh`. `colorSchemeFor` fills `primaryContainer` / `errorContainer` and their on-colours from the tables instead of aliasing them to the base roles — the root of R75's slabs. The saved palette now reaches `AlarmActivity` and `SnoozePickerActivity` (they called `EmivitaTheme()` bare and rang in the default), both Glance widgets (bare `GlanceTheme` was Material You's dynamic colour, never the app's) and the notifications' accent. The six stored names map to their nearest of the four. `secondary`, `tertiary`, `neutralFill`, `onAttention` retired. **Piece 2 (`75cd977`):** `MedicineTile` (the ink chosen by luminance, crossover 0.20 — Appendix C #5 closed; `MedicineAccentTest` sweeps the cube), `StateDisc`, `TonalActionChip`, `AttentionGlyph`; every card `surfaceContainer`; Stock's three zones tonal with the glyph in the two titles that warn; the medicine card, Today's rows, History's rows and summary, the calendar's selected day, the Settings group cards; the three permission cards stay `errorContainer`, a real tint now. `AlphaTintGateTest` names any `.copy(alpha` outside the two that stay (the picker's cursor ring, the calendar's out-of-month day). **Piece 3 (`520884c`):** one collapsed "Tema" section (`CollapsibleSection`, shared with the reminder form) holding the mode chips and four `PaletteCard`s, each drawn inside its own `EmivitaTheme` — three swatches, its name — and the "Impaginazione di Oggi" cards; every tap applies through the repository and the app re-themes under the finger; the Save button below the fold is gone. **Device look (release build, seeded data):** all four palettes on Today, Medicines, Stock, Settings, Appearance; dark and AMOLED on Porcellana. Found and fixed: the option cards clipped their first letter (padding outside the rounded Surface); "Tema" twice in Italian (the mode label is "Modalità"); and — pre-existing — **the status-bar icons vanished on a dark or AMOLED theme when the phone is in light mode**, because `enableEdgeToEdge` reads the system setting; `EmivitaTheme` now sets the bars' appearance from the app's own mode. Found and recorded: the debug test APK cannot instrument the release build (R8 renames the Kotlin runtime it borrows) — the seed was removed under a debug install and the release put back. **Harness:** `SettingsRepository`'s DataStore is keyed by file, not process — the `preferencesDataStore` delegate is bound to the first Context's files dir, so under Robolectric a second test class wrote into the first class's deleted temp folder. Verified: triad `EXIT=0`, **427 / 0**, `lintDebug` green, `palette_derive.py --check` PASS, R8 gate PASS. **Left open:** R75's follow-ups 1–2 (the one-shot tone when unlocked; the biometric row). `docs/palette-mockup.html` deleted — it rendered the six |  |
+| R77 | **§9 #37 the four Today layouts — the owner's `emivita-overview-mockups.html` (2026-08-11), all four as an Appearance option.** Answers asked first: the state circle shows state only — the mockup's cycling tap (da assumere → assunto → saltato) declined, so no single tap ever changes a dose; no day strip, no filter chips. **Built (`4fe0fa6`):** `TodayLayout { TIMELINE, GROUPED, COMPACT, HERO }` in `SettingsRepository`, applied on the spot; `TodayScreen` switches its list body through `todayItems`; one `EntryHost` carries what acting on an entry means (the skip gate, resolve or take-now, the edit dialog) so the four differ only in the row they put inside. Timeline = the screen since R59 under E; Grouped = the day in three bands at the mockup's thresholds (before 11, 11 to 17, from 17; its "Pranzo" is "Pomeriggio" because the band runs to 17:00) with the disc and time inside the card; Compact = a hairline register, 28 dp disc, a 48 dp time column, a due row opening its actions on the first tap and closing them on the second; Hero = the first due dose (else the first still to come) in the pale container with Prendi / Salta, the rest of the day as the register beneath, and a line when nothing is left. The "≈" estimate, the instructions line and "after the dose at" render in all four. `TodayLayoutsTest`: the thresholds, the grouping's order and omitted bands, the hero's pick, the compact row's two taps, the taken row's edit, the row's name and time inside it at 360 and 320 dp. **Device look:** all four on the release build in Sangue di bue, the hero in Porcellana AMOLED. Verified with R76's triad, **427 / 0** |  |
 
 ---
 
@@ -1075,14 +1031,16 @@ medicine flow (§9 #1), the full Add/Edit Reminder Advanced-fields UI
 real palette set in `colorSchemeFor()` rather than the
 Clinical/Cozy/Neutral/Playful one §6 replaced (see T3/T4 in §7).
 
-**Current palette set: the 6 of Appendix A** (Daylight, Sage, Honeycomb,
-Linen, Mallow, Periwinkle), wired in `colorSchemeFor()`. They replaced the
-8 that item 0b shipped (Golden Hour → Velvet Ribbon), which are gone from
-the codebase — see §7 R56 for why the register changed and what it cost.
-Two roles beyond Material3's ColorScheme travel on `LocalEmivitaColors` and
-read as `EmivitaTheme.colors.attention` / `.neutralFill`; every one of M3's
-22 slots was already spoken for, and borrowing one whose name means
-something else is the overload R56 exists to undo.
+**Current palette set: the 4 of Appendix A** (Porcellana, Ardesia, Sangue
+di bue, Sabbia), printed into `Color.kt` by `tools/palette_derive.py` and
+wired in `colorSchemeFor()`, whose container slots are real tints since §7
+R76. They replaced R56's six, which replaced item 0b's eight — §7 R56 and
+R76 for why each register changed. One role beyond Material3's ColorScheme
+travels on `LocalEmivitaColors`, read as `EmivitaTheme.colors.attention`;
+every M3 slot is spoken for, and borrowing one whose name means something
+else is the overload R56 exists to undo. The saved palette is applied by
+`SavedEmivitaTheme` in every Activity, by `WidgetTheme` in both widgets and
+as the notifications' accent.
 
 **Notifications & Alerts** (`NotificationsAlertsScreen`): lists the 3 real
 notification channels (Standard/High/Alarm) with plain-language
@@ -1092,15 +1050,15 @@ deliberate scope boundary, not a stub: Android doesn't let an app override
 a user's own per-channel choice once the channel exists, so there's
 nothing further for in-app UI to do here.
 
-**Appearance** (`AppearanceScreen`): palette grid (all 6, §6) + theme-mode
-picker (Light/Dark/System), `SettingsRepository`-backed. This is the *only*
-place either is ever chosen: the onboarding screen this paragraph used to
-compare against was deleted outright (§9 #1's reversal), so a fresh install
-takes `SettingsRepository.palette`'s default with no prompt. That default is
-no longer arbitrary — R56 made it `DAYLIGHT` on purpose (§6) — so this
-screen now gives a *chosen* default a revisit path rather than papering over
-an accidental one. The grid chunks two per row, so six fills three rows
-evenly where eight filled four.
+**Appearance** (`AppearanceScreen`): a collapsed "Tema" section holding
+the theme-mode chips (Light/Dark/System/AMOLED) and the four palette cards,
+each drawn in its own palette; the four Today-layout cards (§9 #37); the
+start page; language and time format — every one applied on the tap,
+`SettingsRepository`-backed, no Save (§7 R76). This is the *only* place any
+of them is chosen: the onboarding screen this paragraph used to compare
+against was deleted outright (§9 #1's reversal), so a fresh install takes
+`SettingsRepository.palette`'s default — Porcellana, the owner's choice
+(§6) — with no prompt.
 
 **Corrected — the three main screens are built.** `TodayScreen`,
 `MedicinesScreen` and `HistoryScreen` all read real DB contents, and all
@@ -1718,6 +1676,22 @@ this session.
     workflows now, dependency-review with the first PR, actionlint + the pin
     check as the gate. Nothing of E.4 remains as code. #34 stays next.
 
+36. **✅ Four palettes, the reference app's colour grammar, Appearance
+    live — shipped.** §7 R76. Decided with the owner before anything was
+    written: medTimer's grammar (tonal cards, the hue as the pale container
+    in controls, the medicine's colour as one tile, warnings as glyphs);
+    Porcellana (default), Ardesia, Sangue di bue, Sabbia, seeded from the
+    visual-craft lexicon with no purple, yellow or muddy green and derived
+    by `tools/palette_derive.py`, which prints Color.kt and Appendix A and
+    checks the appendix; attention burnt orange. Appearance applies on the
+    tap inside a collapsed Tema section, no Save. The palette now reaches
+    the alarm activities, the widgets and the notifications.
+
+37. **✅ The four Today layouts — shipped.** §7 R77. Timeline, by time of
+    day, compact register, next dose first — the owner's mockups as an
+    Appearance option, the same rows and actions in all four, no single tap
+    changing a dose.
+
 ### Not yet scoped — parking lot ❓
 
 - **Salvage rows from a set-aside database** (§9 #32): the file is
@@ -2329,16 +2303,17 @@ arbitrary ordering. Coherent as written.
    Replace with a real audited `mutedText` token per palette — this is
    the fix Appendix B's finding #8 already called for; the opacity
    shortcut didn't deliver it.
-3. 🟠 **Wire the semantic-state-token roles into `Theme.kt`** —
-   `secondary`/`tertiary`/`error`/`onError`/`errorContainer` are currently
-   unset and fall back to Material3 stock colors. Resolve before anything
-   reaches for `.error` (form validation, is the obvious first caller).
+3. ✅ **Wire the semantic-state-token roles into `Theme.kt`** — done in
+   two steps: R56 set `error`/`onError`; §7 R76 made `errorContainer` and
+   `primaryContainer` real tints with their own on-colours, and aliased
+   `secondary*`/`tertiary*` deliberately (nothing asks for a third hue).
 4. 🟠 **Decide Neutral's Error hue explicitly** — the spec's own
    Accent-relative Error formula is undefined for a fully desaturated
    palette. Needs one fixed reserved hue, by decision, not derivation.
-5. 🟠 **Implement `asOnSurfaceSafe()`** — still a documented no-op;
-   blocks the AA-safe dynamic text-on-arbitrary-hex behavior §6 already
-   promises for the Medicine color picker.
+5. ✅ **Implement `asOnSurfaceSafe()`** — done as `onAccent()` in
+   `ui/theme/MedicineAccent.kt` (§7 R76): dark ink above luminance 0.20,
+   white below, the crossover where both read at 4.2:1 for this ink;
+   `MedicineAccentTest` sweeps the whole RGB cube at a 3:1 floor.
 6. 🟡 **Separate Stock & Expiration's register from History's** — the
    former is threshold/countdown-driven (actionable) and the latter is
    trend-driven (ambient); §6 doesn't yet draw this line and both are

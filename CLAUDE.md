@@ -47,6 +47,16 @@ rhysd/actionlint if it is missing). `--resolve` needs the network.
 python tools/workflow_check.py --resolve
 ```
 
+The four palettes are derived, not typed (§7 R76): `tools/palette_derive.py`
+prints `Color.kt`'s palette objects (`--kotlin`) and SPEC Appendix A
+(`--tables`) from three agreed colours per register, and `--check` fails
+when the appendix has drifted from the tool. Edit the seeds in the tool,
+regenerate both, and let `PaletteSpecConsistencyTest` confirm the code.
+
+```bash
+python tools/palette_derive.py --check
+```
+
 ## On-device tests (§9 #20)
 
 `app/src/androidTest/` runs against the real SQLCipher database, AlarmManager
@@ -74,7 +84,10 @@ owner's phone (§7 R75). On a phone whose data matters, keep the APKs:
 ```
 
 To seed or clean a device pass without the suite's uninstall, install both
-APKs and run the gated class directly (§7 R75):
+APKs and run the gated class directly (§7 R75). The test APK borrows the
+Kotlin runtime from the app, which R8 renames in a release build, so this
+only runs against a **debug** install — `adb install -r` the release back
+afterwards; the data survives both (§7 R76).
 
 ```bash
 ./gradlew installDebug installDebugAndroidTest
@@ -112,8 +125,8 @@ en-XA on the device (`isPseudoLocalesEnabled`) is the complement.
   `LocalResources.current.getString(...)` captured at composition — not
   `LocalContext`, which Compose lint rejects. Top-level `val` or enum:
   `@StringRes Int`, resolved at the render site.
-- Deliberately English, do not "fix": `csvStatusLabel` (CSV is data),
-  `MedPalette.displayName()` (pinned to SPEC Appendix A), `CardLabels.ENGLISH`
+- Deliberately not resources, do not "fix": `csvStatusLabel` (CSV is data),
+  `MedPalette.displayName()` (Italian names, pinned to SPEC Appendix A), `CardLabels.ENGLISH`
   (test-pinned), `"Me"` (a stored sentinel), `MedicineIconOption.key`
   (persisted). Each says why at its declaration.
 - Lint will demand real dashes, ellipses and `<plurals>` the moment text
@@ -142,7 +155,9 @@ trees are under `Downloads/xapps/` beside `Downloads/medTimer-main/`.
   text mode on Windows turns a three-line edit into a 990-line diff (§7 R57).
 - XML comments never use `--` in the body (§10). Kotlin comments are fine.
 - Prefer editing a file to regenerating it. Rewriting `Color.kt` wholesale is
-  what silently dropped `NeutralMedicineAccent` and its 14 call sites.
+  what silently dropped `NeutralMedicineAccent` and its 14 call sites; the
+  palette objects are the one part of it the tool regenerates, and
+  `NeutralMedicineAccent` sits below them for exactly that reason.
 
 ## Before saying something is done
 

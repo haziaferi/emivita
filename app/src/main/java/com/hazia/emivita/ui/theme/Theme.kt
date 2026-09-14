@@ -7,7 +7,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.platform.LocalView
+import androidx.core.view.WindowCompat
+import android.app.Activity
 import androidx.compose.ui.graphics.Color
 import androidx.annotation.StringRes
 import com.hazia.emivita.R
@@ -229,6 +233,21 @@ fun EmivitaTheme(
     }
     val colorScheme = colorSchemeFor(palette, useDark, amoled = themeMode == ThemeMode.AMOLED)
     val extended = emivitaColorsFor(palette, useDark)
+
+    // The system bars' icon colour follows the *app's* mode, not the phone's
+    // (§7 R76): enableEdgeToEdge decides from the system setting, so a dark
+    // or AMOLED theme on a phone in light mode drew dark icons on black and
+    // the clock vanished. A theme is the one place that knows which it is.
+    val view = LocalView.current
+    if (!view.isInEditMode) {
+        SideEffect {
+            (view.context as? Activity)?.window?.let { window ->
+                val bars = WindowCompat.getInsetsController(window, view)
+                bars.isAppearanceLightStatusBars = !useDark
+                bars.isAppearanceLightNavigationBars = !useDark
+            }
+        }
+    }
 
     CompositionLocalProvider(LocalEmivitaColors provides extended) {
         MaterialTheme(

@@ -153,7 +153,7 @@
     <string name="settings_detail_reminders_can_arrive_late">I promemoria possono arrivare in ritardo</string>
     <string name="settings_detail_selected">Selezionato</string>
     <string name="settings_detail_snooze_duration_minutes">Durata del rinvio (minuti)</string>
-    <string name="settings_detail_theme_mode">Tema</string>
+    <string name="settings_detail_theme_mode">Modalità</string>
     <string name="appearance_theme_section">Tema</string>
     <string name="appearance_theme_summary">%1$s · %2$s</string>
     <string name="appearance_layout_section">Impaginazione di Oggi</string>
