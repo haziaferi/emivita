@@ -97,6 +97,7 @@
     <string name="common_unlock">Sblocca</string>
     <string name="common_window_end">Fine della finestra</string>
     <string name="reminder_window_ends_next_day">Finisce il giorno dopo alle %1$s</string>
+    <string name="today_after_dose">Stima: %1$d min dopo la dose delle %2$s</string>
     <string name="common_window_start">Inizio della finestra</string>
     <string name="dose_edit_recorded_time">Ora registrata</string>
     <string name="dose_edit_skipped">Saltata</string>

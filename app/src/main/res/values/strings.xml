@@ -105,6 +105,7 @@
     <string name="common_unlock">Unlock</string>
     <string name="common_window_end">Window end</string>
     <string name="reminder_window_ends_next_day">Ends the next day at %1$s</string>
+    <string name="today_after_dose">Estimated: %1$d min after the %2$s dose</string>
     <string name="common_window_start">Window start</string>
     <string name="dose_edit_recorded_time">Recorded time</string>
     <string name="dose_edit_skipped">Skipped</string>

@@ -20,6 +20,7 @@ import com.hazia.emivita.core.scheduling.SchedulingEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import com.hazia.emivita.core.notification.UnansweredDoseReposter
 import com.hazia.emivita.core.scheduling.MissedDoseBackfiller
@@ -51,7 +52,19 @@ class AppContainer(
     // main thread. Deferring means that cost lands on first actual access
     // rather than on every app launch (still worth wrapping that first access
     // in `withContext(Dispatchers.IO)` at the call site once one exists).
-    private val database: EmivitaDatabase by lazy { injectedDatabase ?: EmivitaDatabase.getInstance(context) }
+    private val databaseLazy = lazy { injectedDatabase ?: EmivitaDatabase.getInstance(context) }
+    private val database: EmivitaDatabase by databaseLazy
+
+    /** Tests only (§9 #31 found the need): stop the process-lifetime loops
+     *  and close the database. A container that outlives its Robolectric
+     *  test keeps recomputing the projection on a connection the runner has
+     *  torn down, which in native SQLite mode is a JVM crash, not an
+     *  exception. Production never calls this -- the process ends instead. */
+    @androidx.annotation.VisibleForTesting
+    internal fun shutdown() {
+        applicationScope.cancel()
+        if (databaseLazy.isInitialized()) runCatching { database.close() }
+    }
 
     val profileRepository: ProfileRepository by lazy {
         ProfileRepository(database.profileDao(), autoSyncManager)

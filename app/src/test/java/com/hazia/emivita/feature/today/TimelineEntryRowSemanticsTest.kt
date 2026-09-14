@@ -113,4 +113,17 @@ class TimelineEntryRowSemanticsTest {
         compose.onNodeWithText("Take").assert(hasClickAction())
         compose.onAllNodes(hasText("Skip")).assertCountEquals(0)
     }
+
+    @Test
+    fun anEstimatedFollowUpSaysWhatItFollows() {
+        val estimated = entry(TimelineStatus.UPCOMING, reminderId = 2L).copy(estimated = true, afterEpochMillis = 0L, afterMinutes = 60)
+        compose.setContent { TimelineEntryRow(estimated, canSkip = true, onResolve = {}, onClick = {}) }
+        compose.onNode(hasText("Estimated: 60 min after the", substring = true)).assertExists()
+    }
+
+    @Test
+    fun aRealUpcomingDoseCarriesNoEstimateLine() {
+        compose.setContent { TimelineEntryRow(entry(TimelineStatus.UPCOMING, reminderId = 2L), canSkip = true, onResolve = {}, onClick = {}) }
+        compose.onNode(hasText("Estimated:", substring = true)).assertDoesNotExist()
+    }
 }

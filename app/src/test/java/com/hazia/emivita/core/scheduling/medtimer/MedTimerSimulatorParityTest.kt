@@ -196,25 +196,31 @@ class MedTimerSimulatorParityTest {
     }
 
     @Test
-    fun `linkedAndAmount -- A-24 pinned, the child is absent until its parent has fired, and then one slot`() = runTest {
-        // medTimer simulates parent and child every day: 12 -> 11 -> 9 -> 8 -> 6,
-        // so 12 tablets last four days. Emivita's LinkedFollowing is anchored to
-        // the parent's most recent *real* event, never to a projected one, so
-        // with no history the projection carries the parent alone and the
-        // run-out is twelve days out. §9 #31's A-24 changes this.
+    fun `linkedAndAmount -- the child follows every projected parent slot as an estimate, and the stock counts it`() = runTest {
+        // Parity since §9 #31 (A-24): parent daily at 08:00 (dose 1), child an hour
+        // later (dose 2): 12 -> 11 -> 9 -> 8 -> 6, twelve tablets last four days.
+        // R70 pinned the parent-only projection this used to be. The child's slots
+        // are estimates -- the parent has not fired -- and say what they follow.
         val parent = reminder(1, 1, daily(8, dose = 1.0))
         val child = reminder(2, 1, ReminderConfig.LinkedFollowing(delayMinutes = 60, dose = 2.0, startBehavior = IntervalStartBehavior.ON_REMINDED), parentReminderId = 1)
-        val noHistory = project(listOf(MedicineWithReminders(medicine(1, stock = 12.0), listOf(parent, child))))
-        assertEquals(setOf(1L), noHistory.occurrences.map { it.reminderId }.toSet())
-        assertEquals(LocalDate.parse("1970-01-12"), noHistory.stockRunOutDates[1L])
+        val state = project(listOf(MedicineWithReminders(medicine(1, stock = 12.0), listOf(parent, child))))
+        val firstFour = state.occurrences.take(4)
+        assertSlots(listOf(on(1, 480), on(1, 540), on(2, 480), on(2, 540)), firstFour.map { it.epochMillis })
+        assertEquals(listOf(false, true, false, true), firstFour.map { it.estimated })
+        assertEquals(on(1, 480), firstFour[1].afterEpochMillis)
+        assertEquals(LocalDate.parse("1970-01-04"), state.stockRunOutDates[1L])
 
-        // Once the parent has a materialized dose, the child yields exactly one
-        // occurrence per walk, an hour after it (`occurrencesFor` breaks after it).
+        // Once the parent has a real dose, the child's next slot is real and only
+        // the parent slots after it are estimated.
         val afterParentFired = project(
             listOf(MedicineWithReminders(medicine(1, stock = 12.0), listOf(parent, child))),
             dao = doseDao(mostRecent = mapOf(1L to event(1, on(1, 480)))),
         )
-        assertSlots(listOf(on(1, 540)), afterParentFired.occurrences.filter { it.reminderId == 2L }.map { it.epochMillis })
+        val childSlots = afterParentFired.occurrences.filter { it.reminderId == 2L }
+        assertEquals(on(1, 540), childSlots.first().epochMillis)
+        assertEquals(false, childSlots.first().estimated)
+        assertEquals(on(2, 540), childSlots[1].epochMillis)
+        assertEquals(true, childSlots[1].estimated)
     }
 
     @Test

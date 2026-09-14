@@ -1,5 +1,6 @@
 package com.hazia.emivita.core.scheduling
 
+import com.hazia.emivita.core.data.config.IntervalStartBehavior
 import com.hazia.emivita.core.data.config.ReminderConfig
 import com.hazia.emivita.core.data.config.ReminderType
 import com.hazia.emivita.core.data.config.RepeatPattern
@@ -218,5 +219,46 @@ class OccurrenceProjectionCacheTest {
         advanceUntilIdle()
 
         assertNull(cache.state.value.stockRunOutDates[1L])
+    }
+
+
+    // ---- Linked children (§9 #31, A-24) ------------------------------------
+
+    private fun linkedPair(childEnabled: Boolean = true, behavior: IntervalStartBehavior = IntervalStartBehavior.ON_REMINDED) = MedicineWithReminders(
+        medicine = Medicine(id = 1L, profileId = 1L, name = "Ibuprofen", iconKey = "pill", stockInfo = StockInfo(quantity = 10.0, unit = "tablet"), sortOrder = 0.0, createdAtEpochMillis = 0),
+        reminders = listOf(
+            Reminder(id = 1L, medicineId = 1L, type = ReminderType.FIXED_TIME, configJson = encodeReminderConfig(ReminderConfig.FixedTime(hour = 8, minute = 0, dose = 1.0)), createdAtEpochMillis = 0),
+            Reminder(
+                id = 2L, medicineId = 1L, parentReminderId = 1L, type = ReminderType.LINKED_FOLLOWING, enabled = childEnabled,
+                configJson = encodeReminderConfig(ReminderConfig.LinkedFollowing(delayMinutes = 90, dose = 1.0, startBehavior = behavior)), createdAtEpochMillis = 0,
+            ),
+        ),
+    )
+
+    @Test
+    fun `a linked child is estimated ninety minutes after each projected parent slot`() = runTest {
+        val cache = buildCache(listOf(linkedPair()))
+        advanceUntilIdle()
+        val child = cache.state.value.occurrences.filter { it.reminderId == 2L }
+        val parent = cache.state.value.occurrences.filter { it.reminderId == 1L }
+        assertEquals(parent.size, child.size)
+        assertEquals(parent.map { it.epochMillis + 90 * 60_000L }, child.map { it.epochMillis })
+        assertEquals(parent.map { it.epochMillis }, child.map { it.afterEpochMillis })
+        assertEquals(true, child.all { it.estimated })
+    }
+
+    @Test
+    fun `a disabled child projects nothing, estimated or not`() = runTest {
+        val cache = buildCache(listOf(linkedPair(childEnabled = false)))
+        advanceUntilIdle()
+        assertEquals(emptyList<Any>(), cache.state.value.occurrences.filter { it.reminderId == 2L })
+    }
+
+    @Test
+    fun `an on-resolved child is estimated from the parent's slot too -- the resolution time is unknown`() = runTest {
+        val cache = buildCache(listOf(linkedPair(behavior = IntervalStartBehavior.ON_RESOLVED)))
+        advanceUntilIdle()
+        val child = cache.state.value.occurrences.filter { it.reminderId == 2L }
+        assertEquals(true, child.isNotEmpty() && child.all { it.estimated })
     }
 }

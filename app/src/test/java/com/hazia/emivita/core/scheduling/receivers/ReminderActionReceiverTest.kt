@@ -36,7 +36,10 @@ class ReminderActionReceiverTest {
     /** DataStore outlives the Robolectric application between tests; the
      *  two settings written here go back to their defaults. */
     @After
-    fun resetSettings() = runBlocking { h.container.settingsRepository.setSwipeAction(SwipeAction.SNOOZE) }
+    fun tearDown() {
+        runBlocking { h.container.settingsRepository.setSwipeAction(SwipeAction.SNOOZE) }
+        h.close()
+    }
 
     private fun daily() = ReminderConfig.FixedTime(hour = 9, minute = 0, dose = 1.0)
 

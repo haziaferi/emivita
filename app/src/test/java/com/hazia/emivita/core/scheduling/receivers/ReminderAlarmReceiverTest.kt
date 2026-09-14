@@ -7,6 +7,7 @@ import com.hazia.emivita.core.data.entity.RepeatConfig
 import com.hazia.emivita.core.notification.ACTION_TAKE
 import com.hazia.emivita.core.notification.preAlarmNotificationId
 import kotlinx.coroutines.runBlocking
+import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
@@ -35,6 +36,9 @@ import java.time.ZoneId
 class ReminderAlarmReceiverTest {
 
     private val h = ReceiverHarness()
+
+    @After
+    fun tearDown() = h.close()
 
     private fun fixedTime(hour: Int = 9, minute: Int = 0, dose: Double = 1.0) = ReminderConfig.FixedTime(hour = hour, minute = minute, dose = dose)
 

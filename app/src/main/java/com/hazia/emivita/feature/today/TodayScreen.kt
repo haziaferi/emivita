@@ -115,6 +115,11 @@ internal data class TimelineEntry(
     val reminderId: Long? = null,
     val instructions: String? = null,
     val notes: String? = null,
+    /** §9 #31 (A-24): a linked follow-up projected off its parent's projected
+     *  slot -- shown as "≈", with the parent slot it follows. */
+    val estimated: Boolean = false,
+    val afterEpochMillis: Long? = null,
+    val afterMinutes: Int? = null,
 )
 
 private data class TimelineNode(
@@ -404,6 +409,9 @@ private fun buildTimeline(
                 resolvedAtEpochMillis = null,
                 reminderId = occurrence.reminderId,
                 instructions = remindersById[occurrence.reminderId]?.instructions,
+                estimated = occurrence.estimated,
+                afterEpochMillis = occurrence.afterEpochMillis,
+                afterMinutes = occurrence.afterEpochMillis?.let { ((occurrence.epochMillis - it) / 60_000L).toInt() },
             )
         }
 
@@ -421,8 +429,11 @@ private fun TimelineNodeItem(
     reminderRepository: ReminderRepository,
     notificationBuilder: ReminderNotificationBuilder,
 ) {
-    val time = remember(node.epochMillis) {
-        LocaleFormats.time(node.epochMillis)
+    // "≈" when every entry at this instant is an estimate (§9 #31): the time
+    // is where a follow-up will land if its parent fires on time.
+    val estimatedNode = node.entries.all { it.estimated }
+    val time = remember(node.epochMillis, estimatedNode) {
+        LocaleFormats.time(node.epochMillis).let { if (estimatedNode) "≈ $it" else it }
     }
     val scope = rememberCoroutineScope()
     var editing by remember { mutableStateOf<TimelineEntry?>(null) }
@@ -559,6 +570,13 @@ internal fun TimelineEntryRow(
                 // the dose is taken, not only on the notification.
                 entry.instructions?.takeIf { it.isNotBlank() }?.let {
                     Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
+                // An estimate says what it follows (§9 #31, A-24).
+                entry.afterEpochMillis?.takeIf { entry.estimated }?.let { after ->
+                    Text(
+                        stringResource(R.string.today_after_dose, entry.afterMinutes ?: 0, LocaleFormats.time(after)),
+                        style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
                 }
             }
         }

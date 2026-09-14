@@ -2,6 +2,9 @@ package com.hazia.emivita.core.scheduling
 
 import com.hazia.emivita.core.data.dao.MedicineDao
 import android.util.Log
+import com.hazia.emivita.core.data.config.decodeReminderConfig
+import com.hazia.emivita.core.data.config.ReminderType
+import com.hazia.emivita.core.data.config.ReminderConfig
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -29,6 +32,13 @@ data class ProjectedOccurrence(
     val medicineId: Long,
     val epochMillis: Long,
     val doseAmount: Double,
+    /** A linked child hung off its parent's *projected* slot (§9 #31, A-24):
+     *  the parent has not fired, so this is where the child will land if it
+     *  does on time. Shown with "≈"; replaced by the real slot once the
+     *  parent's dose exists. */
+    val estimated: Boolean = false,
+    /** For an estimate, the parent slot it follows. */
+    val afterEpochMillis: Long? = null,
 )
 
 data class ProjectionState(
@@ -221,23 +231,48 @@ class OccurrenceProjectionCache(
             }
             visited++
 
-            val medicineOccurrences = mutableListOf<NextOccurrence>()
-            for (reminder in entry.reminders) {
-                if (!reminder.enabled) continue
+            // Two passes per medicine (§9 #31, A-24). Pass 1: every dose
+            // reminder that computes its own slots. Pass 2: linked children,
+            // whose one real slot is anchored to the parent's most recent real
+            // event -- plus an *estimate* after every projected parent slot
+            // beyond that, so Today and the stock run-out see the follow-up
+            // dose before the parent has fired. Parents are same-medicine (the
+            // form offers nothing else) and one level deep (A-23): a child of a
+            // child estimates off nothing, as before.
+            val medicineOccurrences = mutableListOf<ProjectedOccurrence>()
+            val projectedByReminder = mutableMapOf<Long, List<Long>>()
+            val (linked, own) = entry.reminders.filter { it.enabled }.partition { it.type == ReminderType.LINKED_FOLLOWING }
+            for (reminder in own) {
                 // Dose-producing types only. Since spec §7 R37 the alert types
                 // are schedulable too, so occurrencesFor would happily return
                 // their next firing -- but an alert is not a dose: it would
                 // appear on Today's timeline as a zero-amount entry and be
                 // subtracted from the stock run-out walk below. They reach
                 // AlarmManager through SchedulingCoordinator like everything
-                // else; they just have nothing to project here.
+                // else; they just don't belong in a *dose* projection.
                 if (reminder.type !in schedulingEngine.doseProducingTypes) continue
                 val forReminder = schedulingEngine.occurrencesFor(reminder, start, toEpochMillis, weekendMode = weekendMode)
-                medicineOccurrences += forReminder
+                projectedByReminder[reminder.id] = forReminder.map { it.epochMillis }
                 forReminder.forEach { occurrence ->
-                    occurrences += ProjectedOccurrence(reminder.id, entry.medicine.id, occurrence.epochMillis, occurrence.doseAmount)
+                    medicineOccurrences += ProjectedOccurrence(reminder.id, entry.medicine.id, occurrence.epochMillis, occurrence.doseAmount)
                 }
             }
+            for (child in linked) {
+                val config = decodeReminderConfig(child.configJson) as? ReminderConfig.LinkedFollowing ?: continue
+                val parentSlots = child.parentReminderId?.let { projectedByReminder[it] } ?: emptyList()
+                val real = schedulingEngine.occurrencesFor(child, start, toEpochMillis, weekendMode = weekendMode).firstOrNull()
+                if (real != null) medicineOccurrences += ProjectedOccurrence(child.id, entry.medicine.id, real.epochMillis, real.doseAmount)
+                val delayMillis = config.delayMinutes * 60_000L
+                parentSlots
+                    .filter { slot -> real == null || slot + delayMillis > real.epochMillis }
+                    .forEach { slot ->
+                        val at = slot + delayMillis
+                        if (at in start..toEpochMillis) {
+                            medicineOccurrences += ProjectedOccurrence(child.id, entry.medicine.id, at, config.dose, estimated = true, afterEpochMillis = slot)
+                        }
+                    }
+            }
+            occurrences += medicineOccurrences
 
             if (entry.medicine.stockInfo.unit != null) {
                 var remaining = entry.medicine.stockInfo.quantity

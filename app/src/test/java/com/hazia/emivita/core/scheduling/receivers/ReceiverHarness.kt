@@ -55,6 +55,10 @@ class ReceiverHarness {
 
     val profileId: Long = runBlocking { container.profileRepository.create("Me") }
 
+    /** Every test's @After: the container's loops must not outlive the test
+     *  (native SQLite on a torn-down connection is a JVM crash). */
+    fun close() = container.shutdown()
+
     fun medicine(name: String = "Ibuprofen", stock: Double = 10.0, unit: String? = "tablet", locked: Boolean? = null): Long = runBlocking {
         container.medicineRepository.create(
             Medicine(

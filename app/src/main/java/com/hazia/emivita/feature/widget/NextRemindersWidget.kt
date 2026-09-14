@@ -47,6 +47,8 @@ private data class NextReminderRow(
     val medicineName: String,
     val epochMillis: Long,
     val doseAmount: Double,
+    /** §9 #31 (A-24): a follow-up projected off its parent's slot, shown as "≈". */
+    val estimated: Boolean = false,
 )
 
 /**
@@ -86,6 +88,7 @@ class NextRemindersWidget : GlanceAppWidget() {
                 medicineName = medicine.name,
                 epochMillis = occurrence.epochMillis,
                 doseAmount = occurrence.doseAmount,
+                estimated = occurrence.estimated,
             )
         }
 
@@ -126,7 +129,7 @@ private fun NextRemindersContent(rows: List<NextReminderRow>) {
 
 @Composable
 private fun NextReminderRowItem(row: NextReminderRow, showTakeAction: Boolean) {
-    val time = LocaleFormats.time(row.epochMillis)
+    val time = LocaleFormats.time(row.epochMillis).let { if (row.estimated) "≈ $it" else it }
     Row(
         modifier = GlanceModifier.fillMaxWidth().padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
