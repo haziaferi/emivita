@@ -36,6 +36,17 @@ in `proguard-rules.pro` (§7 R69); the gate reads the DEX, and CI runs it:
 ./gradlew :app:assembleRelease && python tools/r8_check.py
 ```
 
+CI on this private repository has been billing-blocked since 2026-09-13
+(every run dies in 3 s), so the workflows are verified locally instead
+(§7 R74): every `uses:` pinned to a commit SHA that resolves to its `# vX`
+comment, every `with:` key an input of the action's own `action.yml`, and
+actionlint (a binary under `tools/bin/`, gitignored; fetch a release from
+rhysd/actionlint if it is missing). `--resolve` needs the network.
+
+```bash
+python tools/workflow_check.py --resolve
+```
+
 ## On-device tests (§9 #20)
 
 `app/src/androidTest/` runs against the real SQLCipher database, AlarmManager

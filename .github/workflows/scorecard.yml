@@ -1,0 +1,70 @@
+# OpenSSF Scorecard (docs/SPEC.md §7 R74; Appendix E F-20, medTimer's
+# scorecard.yml re-typed). The checks that can move on a single-owner private
+# repository are the two this repository already keeps by hand -- pinned
+# dependencies and token permissions -- and this makes them measured.
+#
+# On a PRIVATE repository the action forces `publish_results` to false (no
+# badge, no REST API entry) and the Branch-Protection check needs a
+# fine-grained PAT; without one the action still runs the rest. The upload to
+# code scanning needs GitHub Advanced Security, so that last step is red until
+# the repository is public or GHAS is on -- expected, not a defect here.
+name: Scorecard supply-chain security
+
+on:
+  # For the Branch-Protection check; only the default branch is supported.
+  branch_protection_rule:
+  # So the Maintained check sees an occasional run.
+  schedule:
+    - cron: '45 15 * * 2'
+  push:
+    branches: [master, main]
+
+# Default permissions read-only; the job adds only what the uploads need.
+permissions: read-all
+
+jobs:
+  analysis:
+    name: Scorecard analysis
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      # To upload the results to the code-scanning dashboard.
+      security-events: write
+      # To publish results and get a badge (public repositories only).
+      id-token: write
+      # The two a private repository needs.
+      contents: read
+      actions: read
+
+    steps:
+      - name: Check out
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          persist-credentials: false
+
+      - name: Run analysis
+        uses: ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a # v2.4.3
+        with:
+          results_file: results.sarif
+          results_format: sarif
+          # A fine-grained PAT enables the Branch-Protection check on a private
+          # repository (and on a public one). Create it per
+          # https://github.com/ossf/scorecard-action#authentication-with-fine-grained-pat-optional
+          # and store it as SCORECARD_TOKEN, then uncomment:
+          # repo_token: ${{ secrets.SCORECARD_TOKEN }}
+          #
+          # Forced to false on a private repository regardless of this value.
+          publish_results: true
+
+      - name: Upload SARIF as an artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: SARIF file
+          path: results.sarif
+          retention-days: 5
+
+      # Needs GitHub Advanced Security on a private repository.
+      - name: Upload to code scanning
+        uses: github/codeql-action/upload-sarif@faaca9a8f6edddba5725ffe5adefdab6669a2eca # v3.38.0
+        with:
+          sarif_file: results.sarif

@@ -38,3 +38,6 @@ replay_pid*.log
 # OS noise
 .DS_Store
 Thumbs.db
+
+# actionlint, fetched by hand for tools/workflow_check.py (docs/SPEC.md §7 R74); a binary, not source
+tools/bin/
