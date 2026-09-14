@@ -28,6 +28,14 @@ ls -la app/build/test-results/testDebugUnitTest/*.xml | tail -3
 - `grep` the log explicitly. "No visible errors" is not an assertion of
   success.
 
+R8 runs only on release, so the triad cannot see what it strips. Glance keys
+placed widgets by class name and R8 merges the two widgets without the keep
+in `proguard-rules.pro` (§7 R69); the gate reads the DEX, and CI runs it:
+
+```bash
+./gradlew :app:assembleRelease && python tools/r8_check.py
+```
+
 ## On-device tests (§9 #20)
 
 `app/src/androidTest/` runs against the real SQLCipher database, AlarmManager

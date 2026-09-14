@@ -26,5 +26,11 @@
 
 # Glance widgets -- keep receiver classes so the launcher can find them
 -keep class * extends androidx.glance.appwidget.GlanceAppWidgetReceiver { *; }
+# Glance maps a placed widget to its provider by CLASS NAME (GlanceAppWidgetManager
+# records receiver -> glanceAppWidget.javaClass.name, and updateAll() looks placed
+# instances up by it). Without this rule R8 horizontally merges NextRemindersWidget
+# and StockLevelsWidget into one class with an int class-id constructor, and
+# updating one widget redraws every widget on the launcher (§7 R69, verified in
+# the DEX 2026-09-14). tools/r8_check.py fails the build if the names are gone.
 -keep class * extends androidx.glance.appwidget.GlanceAppWidget { *; }
 

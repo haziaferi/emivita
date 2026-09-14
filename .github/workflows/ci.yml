@@ -64,6 +64,17 @@ jobs:
       - name: Lint
         run: ./gradlew lintDebug --stacktrace
 
+      # The one thing the debug triad cannot see: R8 runs only on release. Glance
+      # maps placed widgets to their provider by class name, and without the keep
+      # in app/proguard-rules.pro R8 merges the two GlanceAppWidget subclasses into
+      # one (docs/SPEC.md §7 R69). A dropped keep does not fail the build, so the
+      # gate reads the shipped DEX and asserts the names survived.
+      - name: Assemble release
+        run: ./gradlew :app:assembleRelease --stacktrace
+
+      - name: R8 kept the widget classes
+        run: python3 tools/r8_check.py
+
       # if: always() so a failing run still uploads the report that explains it
       # -- the whole point of R23's finding was a report nobody opened.
       - name: Upload reports
