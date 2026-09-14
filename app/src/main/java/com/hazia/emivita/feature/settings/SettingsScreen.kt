@@ -1,6 +1,5 @@
 package com.hazia.emivita.feature.settings
 
-import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -210,8 +209,8 @@ fun SettingsScreen(settingsRepository: SettingsRepository, onOpenDetail: (Settin
             )
             Surface(
                 shape = RoundedCornerShape(14.dp),
-                color = MaterialTheme.colorScheme.surface,
-                border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline),
+                // Tonal, no border: the same card every list in the app uses (§7 R76).
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 modifier = Modifier.fillMaxWidth(),
             ) {
                 Column {
@@ -236,7 +235,7 @@ fun SettingsScreen(settingsRepository: SettingsRepository, onOpenDetail: (Settin
                             )
                         }
                         if (index != group.rows.lastIndex) {
-                            HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.5f))
+                            HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
                         }
                     }
                 }

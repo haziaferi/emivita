@@ -14,11 +14,9 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreVert
@@ -40,7 +38,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.hazia.emivita.core.data.dao.DoseEventWithMedicine
@@ -50,9 +47,6 @@ import com.hazia.emivita.core.data.repository.DoseEventRepository
 import com.hazia.emivita.ui.components.DoseEditDialog
 import com.hazia.emivita.ui.components.rememberCurrentDate
 import com.hazia.emivita.core.format.formatDoseWithUnit
-import com.hazia.emivita.ui.components.parseHexColor
-import com.hazia.emivita.ui.icons.MedicineIcons
-import com.hazia.emivita.ui.theme.NeutralMedicineAccent
 import com.hazia.emivita.ui.theme.doseCritical
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.collectLatest
@@ -86,6 +80,7 @@ import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import com.hazia.emivita.core.data.entity.Medicine
+import com.hazia.emivita.ui.components.MedicineTile
 
 private const val HISTORY_LOOKBACK_DAYS = 30L
 
@@ -473,7 +468,7 @@ private fun AdherenceSummary(events: List<DoseEventWithMedicine>) {
 
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = MaterialTheme.colorScheme.primary.copy(alpha = 0.12f),
+        color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp),
     ) {
         Column(Modifier.padding(14.dp)) {
@@ -526,7 +521,6 @@ private fun DayHeader(date: LocalDate, today: LocalDate) {
 internal fun HistoryEntryRow(row: DoseEventWithMedicine, onClick: () -> Unit) {
     val medicine = row.medicine
     val status = row.doseEvent.status
-    val accent = medicine.color?.let { parseHexColor(it) } ?: NeutralMedicineAccent
     // Not an allow-list: a PENDING ("Missed") dose is the case §7 R46 exists to
     // make correctable, and gating on the two resolved statuses is what kept it
     // uncorrectable on this row after R46 shipped (§7 R47). A REFILLED row is
@@ -544,18 +538,14 @@ internal fun HistoryEntryRow(row: DoseEventWithMedicine, onClick: () -> Unit) {
     val editLabel = stringResource(R.string.a11y_edit_dose)
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = accent.copy(alpha = 0.14f),
+        color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = Modifier
             .fillMaxWidth()
             .let { if (editable) it.clickable(onClickLabel = editLabel, role = Role.Button, onClick = onClick) else it }
             .semantics(mergeDescendants = true) { stateDescription = statusLabel },
     ) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = CircleShape, color = accent, modifier = Modifier.size(40.dp)) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Icon(MedicineIcons.iconFor(medicine.iconKey), contentDescription = null, tint = Color.White)
-                }
-            }
+            MedicineTile(medicine)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(medicine.name, style = MaterialTheme.typography.titleMedium)

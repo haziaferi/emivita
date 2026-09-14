@@ -104,7 +104,7 @@ fun HistoryTableView(
                 HistoryTableRow(row, zone, onClick = {
                     if (row.doseEvent.status != DoseStatus.REFILLED) onRowClick(row) // §7 R46
                 })
-                HorizontalDivider(color = MaterialTheme.colorScheme.outline.copy(alpha = 0.2f))
+                HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             }
         }
     }

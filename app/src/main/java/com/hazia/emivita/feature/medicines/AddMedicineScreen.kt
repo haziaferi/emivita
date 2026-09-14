@@ -409,7 +409,7 @@ private fun MedicineFormBody(
                 val selected = option.key == iconKey
                 Surface(
                     shape = CircleShape,
-                    color = if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.18f) else MaterialTheme.colorScheme.surfaceVariant,
+                    color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
                     modifier = Modifier
                         .size(52.dp)
                         .selectable(selected = selected, role = Role.RadioButton) {

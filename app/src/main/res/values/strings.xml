@@ -397,6 +397,7 @@
 
     <!-- Accessibility (§9 #19 Stage B). Read by TalkBack, never drawn. -->
     <string name="a11y_edit_dose">Edit dose</string>
+    <string name="a11y_attention">Attention</string>
     <string name="a11y_show_doses">Show doses</string>
     <string name="a11y_calendar_day">%1$s, %2$s</string>
     <string name="a11y_count_status">%1$d %2$s</string>

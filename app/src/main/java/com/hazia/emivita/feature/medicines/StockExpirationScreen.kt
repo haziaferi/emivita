@@ -38,7 +38,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.hazia.emivita.core.data.config.DEFAULT_ALERT_HOUR
@@ -66,6 +65,7 @@ import com.hazia.emivita.ui.components.MonthYearField
 import com.hazia.emivita.ui.components.isEndOfMonth
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
+import com.hazia.emivita.ui.components.AttentionGlyph
 
 
 /**
@@ -188,7 +188,7 @@ fun StockExpirationScreen(
         }
 
         // ---- Zone 1: Current stock ------------------------------------
-        ZonedSection(title = stringResource(R.string.stock_section_current), color = MaterialTheme.colorScheme.primaryContainer) {
+        ZonedSection(title = stringResource(R.string.stock_section_current)) {
             OutlinedTextField(
                 value = quantity,
                 onValueChange = { quantity = it },
@@ -248,7 +248,7 @@ fun StockExpirationScreen(
         Spacer(Modifier.height(16.dp))
 
         // ---- Zone 2: Low-stock alert ------------------------------------
-        ZonedSection(title = stringResource(R.string.stock_section_low_stock), color = MaterialTheme.colorScheme.tertiaryContainer) {
+        ZonedSection(title = stringResource(R.string.stock_section_low_stock), warns = true) {
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -292,7 +292,7 @@ fun StockExpirationScreen(
         Spacer(Modifier.height(16.dp))
 
         // ---- Zone 3: Expiration ------------------------------------
-        ZonedSection(title = stringResource(R.string.stock_section_expiration), color = MaterialTheme.colorScheme.errorContainer) {
+        ZonedSection(title = stringResource(R.string.stock_section_expiration), warns = true) {
             Row(
                 Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
@@ -467,11 +467,22 @@ fun StockExpirationScreen(
     }
 }
 
+/** One tonal card per zone (§7 R76). Until R76 the three zones were painted
+ *  `primaryContainer` / `tertiaryContainer` / `errorContainer`, which were the
+ *  base roles themselves -- solid green, brown and red panels with default
+ *  text on them (§7 R75). The zone's meaning is in its title: the two that
+ *  warn carry the attention glyph beside it. */
 @Composable
-private fun ZonedSection(title: String, color: Color, content: @Composable () -> Unit) {
-    Surface(shape = RoundedCornerShape(14.dp), color = color, modifier = Modifier.fillMaxWidth()) {
+private fun ZonedSection(title: String, warns: Boolean = false, content: @Composable () -> Unit) {
+    Surface(shape = RoundedCornerShape(14.dp), color = MaterialTheme.colorScheme.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
         Column(Modifier.padding(14.dp)) {
-            Text(title, style = MaterialTheme.typography.titleMedium)
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (warns) {
+                    AttentionGlyph()
+                    Spacer(Modifier.width(6.dp))
+                }
+                Text(title, style = MaterialTheme.typography.titleMedium)
+            }
             Spacer(Modifier.height(10.dp))
             content()
         }

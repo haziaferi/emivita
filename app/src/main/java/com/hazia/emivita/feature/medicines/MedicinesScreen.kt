@@ -24,7 +24,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -56,7 +55,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.res.pluralStringResource
@@ -78,11 +76,7 @@ import com.hazia.emivita.core.data.repository.MedicineRepository
 import com.hazia.emivita.core.data.settings.SettingsRepository
 import com.hazia.emivita.core.format.LocaleFormats
 import com.hazia.emivita.core.scheduling.OccurrenceProjectionCache
-import com.hazia.emivita.ui.components.parseHexColor
 import com.hazia.emivita.ui.components.rememberCurrentDate
-import com.hazia.emivita.ui.icons.MedicineIcons
-import com.hazia.emivita.ui.theme.EmivitaTheme
-import com.hazia.emivita.ui.theme.NeutralMedicineAccent
 import kotlinx.coroutines.launch
 import java.time.ZoneId
 import androidx.compose.material.icons.filled.Search
@@ -95,6 +89,8 @@ import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.semantics.heading
 import androidx.compose.foundation.ExperimentalFoundationApi
+import com.hazia.emivita.ui.components.MedicineTile
+import com.hazia.emivita.ui.components.AttentionGlyph
 
 /**
  * The Medicines tab (spec §9 #24). What each card says and how the list is
@@ -472,11 +468,10 @@ internal fun DragHandle(
 internal fun MedicineCard(entry: MedicineListEntry, onClick: () -> Unit, dragHandle: (@Composable () -> Unit)?) {
     val medicine = entry.medicine
     val state = entry.state
-    val accent = medicine.color?.let { parseHexColor(it) } ?: NeutralMedicineAccent
-    // Expired or empty tints the whole card with `attention` (HM-08) -- the
-    // warm, non-red role §6 reserves for "look at this", never `error`.
+    // Expired or empty puts an `attention` glyph beside the state line (HM-08;
+    // §7 R76) -- the warm, non-red role §6 reserves for "look at this", never
+    // `error`, and never a fill: the card stays tonal.
     val needsAttention = state.expired || state.empty
-    val background = if (needsAttention) EmivitaTheme.colors.attention.copy(alpha = 0.16f) else accent.copy(alpha = 0.14f)
 
     val statusText = when (state.today) {
         TodayStatus.DUE -> stringResource(R.string.medicines_status_due)
@@ -502,7 +497,7 @@ internal fun MedicineCard(entry: MedicineListEntry, onClick: () -> Unit, dragHan
 
     Surface(
         shape = RoundedCornerShape(16.dp),
-        color = background,
+        color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = Modifier
             .fillMaxWidth()
             .clickable(role = Role.Button, onClick = onClick)
@@ -510,11 +505,7 @@ internal fun MedicineCard(entry: MedicineListEntry, onClick: () -> Unit, dragHan
             .semantics(mergeDescendants = true) { if (stateLine.isNotEmpty()) stateDescription = stateLine },
     ) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = CircleShape, color = accent, modifier = Modifier.size(44.dp)) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Icon(MedicineIcons.iconFor(medicine.iconKey), contentDescription = null, tint = Color.White)
-                }
-            }
+            MedicineTile(medicine, size = 44.dp)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(medicine.name, style = MaterialTheme.typography.titleMedium)
@@ -522,11 +513,17 @@ internal fun MedicineCard(entry: MedicineListEntry, onClick: () -> Unit, dragHan
                     Text(it, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 if (stateLine.isNotEmpty()) {
-                    Text(
-                        stateLine,
-                        style = MaterialTheme.typography.labelMedium,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        if (needsAttention) {
+                            AttentionGlyph()
+                            Spacer(Modifier.width(4.dp))
+                        }
+                        Text(
+                            stateLine,
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        )
+                    }
                 }
                 if (entry.tagNames.isNotEmpty()) {
                     Row {

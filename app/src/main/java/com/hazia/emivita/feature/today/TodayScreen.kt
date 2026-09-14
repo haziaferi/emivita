@@ -1,6 +1,5 @@
 package com.hazia.emivita.feature.today
 
-import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -16,7 +15,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -48,7 +46,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.hazia.emivita.core.data.dao.DoseEventWithMedicine
 import com.hazia.emivita.core.data.dao.MedicineWithTags
@@ -63,9 +60,6 @@ import com.hazia.emivita.core.scheduling.ProjectionState
 import com.hazia.emivita.ui.components.DoseEditDialog
 import com.hazia.emivita.ui.components.rememberCurrentDate
 import com.hazia.emivita.core.format.formatDoseWithUnit
-import com.hazia.emivita.ui.components.parseHexColor
-import com.hazia.emivita.ui.icons.MedicineIcons
-import com.hazia.emivita.ui.theme.NeutralMedicineAccent
 import com.hazia.emivita.ui.theme.doseCritical
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
@@ -96,6 +90,10 @@ import androidx.compose.runtime.mutableIntStateOf
 import com.hazia.emivita.core.scheduling.AlarmWatchdog
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.collectAsState
+import com.hazia.emivita.ui.components.MedicineTile
+import com.hazia.emivita.ui.components.StateDisc
+import com.hazia.emivita.ui.components.TonalActionChip
+import com.hazia.emivita.ui.components.DiscState
 
 internal enum class TimelineStatus { PENDING, TAKEN, SKIPPED, UPCOMING }
 
@@ -322,22 +320,17 @@ internal fun AsNeededRow(
     val last by produceState<DoseEvent?>(initialValue = null, medicine.id, refreshKey) {
         value = doseEventRepository.lastDose(medicine.id)
     }
-    val accent = medicine.color?.let { parseHexColor(it) } ?: NeutralMedicineAccent
     val lastLine = last?.let { event ->
         val at = event.resolvedAtEpochMillis ?: event.scheduledEpochMillis
         stringResource(R.string.today_as_needed_last, DateUtils.getRelativeTimeSpanString(at, System.currentTimeMillis(), DateUtils.MINUTE_IN_MILLIS).toString())
     } ?: stringResource(R.string.today_as_needed_never)
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = accent.copy(alpha = 0.10f),
+        color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
     ) {
         Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = CircleShape, color = accent, modifier = Modifier.size(40.dp)) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Icon(MedicineIcons.iconFor(medicine.iconKey), contentDescription = null, tint = Color.White)
-                }
-            }
+            MedicineTile(medicine)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(medicine.name, style = MaterialTheme.typography.titleMedium)
@@ -438,11 +431,10 @@ private fun TimelineNodeItem(
         Column(horizontalAlignment = Alignment.CenterHorizontally) {
             Text(time, style = MaterialTheme.typography.labelLarge)
             Spacer(Modifier.height(4.dp))
-            Box(
-                Modifier
-                    .size(10.dp)
-                    .background(MaterialTheme.colorScheme.primary, CircleShape),
-            )
+            // The reference app's disc (§7 R76): pale container, the node's
+            // state as its glyph -- due wins over the rest, then a slot still
+            // to come, then the recorded answer.
+            StateDisc(discStateOf(node.entries.map { it.status }))
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
@@ -509,7 +501,6 @@ internal fun TimelineEntryRow(
     onResolve: (DoseStatus) -> Unit,
     onClick: () -> Unit,
 ) {
-    val accent = entry.medicine.color?.let { parseHexColor(it) } ?: NeutralMedicineAccent
     val muted = entry.status == TimelineStatus.UPCOMING
     val editable = entry.status == TimelineStatus.TAKEN || entry.status == TimelineStatus.SKIPPED
 
@@ -523,7 +514,8 @@ internal fun TimelineEntryRow(
     val editLabel = stringResource(R.string.a11y_edit_dose)
     Surface(
         shape = RoundedCornerShape(14.dp),
-        color = accent.copy(alpha = if (muted) 0.07f else 0.14f),
+        // Tonal, whatever the medicine's colour: the tile carries that (§7 R76).
+        color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = Modifier
             .fillMaxWidth()
             .let { if (editable) it.clickable(onClickLabel = editLabel, role = Role.Button, onClick = onClick) else it }
@@ -537,11 +529,7 @@ internal fun TimelineEntryRow(
         // asserts semantics, not pixels.
         Column(Modifier.padding(14.dp)) {
         Row(verticalAlignment = Alignment.CenterVertically) {
-            Surface(shape = CircleShape, color = accent.copy(alpha = if (muted) 0.5f else 1f), modifier = Modifier.size(40.dp)) {
-                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    Icon(MedicineIcons.iconFor(entry.medicine.iconKey), contentDescription = null, tint = Color.White)
-                }
-            }
+            MedicineTile(entry.medicine)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
                 Text(
@@ -581,10 +569,10 @@ internal fun TimelineEntryRow(
                     Modifier.fillMaxWidth().padding(top = 10.dp),
                     horizontalArrangement = Arrangement.End,
                 ) {
-                    AssistChip(
+                    TonalActionChip(
                         onClick = { onResolve(DoseStatus.TAKEN) },
-                        label = { Text(stringResource(R.string.common_take)) },
-                        leadingIcon = { Icon(Icons.Filled.Check, contentDescription = null) },
+                        label = stringResource(R.string.common_take),
+                        icon = Icons.Filled.Check,
                     )
                     // Omitted rather than disabled, matching how
                     // ReminderNotificationBuilder handles the same lock: a
@@ -606,16 +594,25 @@ internal fun TimelineEntryRow(
                     Modifier.fillMaxWidth().padding(top = 10.dp),
                     horizontalArrangement = Arrangement.End,
                 ) {
-                    AssistChip(
+                    TonalActionChip(
                         onClick = { onResolve(DoseStatus.TAKEN) },
-                        label = { Text(stringResource(R.string.today_take_now)) },
-                        leadingIcon = { Icon(Icons.Filled.Check, contentDescription = null) },
+                        label = stringResource(R.string.today_take_now),
+                        icon = Icons.Filled.Check,
                     )
                 }
                 else -> {}
             }
         }
     }
+}
+
+/** The disc for a node that may hold several entries: due wins, then a slot
+ *  still to come, then the recorded answer (taken over skipped). */
+internal fun discStateOf(statuses: List<TimelineStatus>): DiscState = when {
+    TimelineStatus.PENDING in statuses -> DiscState.DUE
+    TimelineStatus.UPCOMING in statuses -> DiscState.UPCOMING
+    TimelineStatus.TAKEN in statuses -> DiscState.TAKEN
+    else -> DiscState.SKIPPED
 }
 
 @StringRes
@@ -818,7 +815,7 @@ private fun LogDoseDialog(
 internal fun MissedAlarmCard(plannedAtEpochMillis: Long, onOpen: () -> Unit, onDismiss: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.errorContainer,
+        color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 8.dp),
     ) {
         Column(Modifier.padding(14.dp)) {

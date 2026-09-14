@@ -14,7 +14,6 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
@@ -42,16 +41,12 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import com.hazia.emivita.core.data.config.ReminderType
 import com.hazia.emivita.core.data.entity.Medicine
 import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.repository.MedicineRepository
 import com.hazia.emivita.core.data.repository.ReminderRepository
-import com.hazia.emivita.ui.components.parseHexColor
-import com.hazia.emivita.ui.icons.MedicineIcons
-import com.hazia.emivita.ui.theme.NeutralMedicineAccent
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
@@ -63,6 +58,7 @@ import androidx.compose.ui.semantics.contentDescription
 import com.hazia.emivita.core.data.entity.MedicineNote
 import com.hazia.emivita.core.format.LocaleFormats
 import androidx.compose.foundation.text.selection.SelectionContainer
+import com.hazia.emivita.ui.components.MedicineTile
 
 /**
  * Medicine detail: read-only summary + its reminders list + "Add reminder",
@@ -162,12 +158,7 @@ fun MedicineDetailScreen(
                     Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
-                    val swatch = currentMedicine.color?.let { parseHexColor(it) } ?: NeutralMedicineAccent
-                    Surface(shape = CircleShape, color = swatch, modifier = Modifier.size(48.dp)) {
-                        Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            Icon(MedicineIcons.iconFor(currentMedicine.iconKey), contentDescription = null, tint = Color.White)
-                        }
-                    }
+                    MedicineTile(currentMedicine, size = 48.dp)
                     Spacer(Modifier.width(12.dp))
                     Column {
                         Text(currentMedicine.name, style = MaterialTheme.typography.titleLarge)
@@ -287,7 +278,7 @@ internal fun ReminderRow(reminder: Reminder, onEdit: () -> Unit, onEnabledChange
     val switchLabel = stringResource(R.string.reminder_enabled_switch, typeLabel)
     Surface(
         shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = if (reminder.enabled) 0.4f else 0.2f),
+        color = if (reminder.enabled) MaterialTheme.colorScheme.surfaceContainer else MaterialTheme.colorScheme.surfaceContainerLow,
         modifier = Modifier
             .fillMaxWidth()
             .padding(bottom = 8.dp)
@@ -350,7 +341,7 @@ internal fun NotesJournal(medicineId: Long, medicineRepository: MedicineReposito
         shown.forEach { note ->
             Surface(
                 shape = RoundedCornerShape(12.dp),
-                color = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.3f),
+                color = MaterialTheme.colorScheme.surfaceContainer,
                 modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp)
                     .clickable(role = Role.Button, onClickLabel = stringResource(R.string.medicine_detail_journal_edit)) { editing = note },
             ) {

@@ -224,7 +224,7 @@ internal fun CalendarDayCell(day: CalendarDay, today: LocalDate, statuses: List<
             .aspectRatio(1f)
             .padding(2.dp)
             .clip(RoundedCornerShape(10.dp))
-            .background(if (selected) MaterialTheme.colorScheme.primary.copy(alpha = 0.16f) else Color.Transparent)
+            .background(if (selected) MaterialTheme.colorScheme.primaryContainer else Color.Transparent)
             .let { if (inMonth) it.clickable(onClickLabel = showDoses, role = Role.Button, onClick = onClick) else it }
             .semantics(mergeDescendants = true) {
                 contentDescription = description

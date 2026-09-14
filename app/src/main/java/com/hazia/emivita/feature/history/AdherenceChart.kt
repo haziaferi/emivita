@@ -131,7 +131,7 @@ fun AdherenceChart(counts: List<DayAdherenceCounts>) {
     val skippedFill = rememberPatternFill(SeriesPattern.DIAGONAL, skippedColor, surfaceColor, density)
     val missedFill = rememberPatternFill(SeriesPattern.CROSS_HATCH, missedColor, surfaceColor, density)
     val axisLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
-    val axisLineColor = MaterialTheme.colorScheme.onSurfaceVariant.copy(alpha = 0.35f)
+    val axisLineColor = MaterialTheme.colorScheme.outlineVariant
 
     val dateFormatter = remember(counts) {
         CartesianValueFormatter { _, x, _ ->
