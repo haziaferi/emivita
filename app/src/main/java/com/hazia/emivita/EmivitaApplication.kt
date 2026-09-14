@@ -6,7 +6,11 @@ import com.hazia.emivita.core.notification.ReminderNotificationChannels
 import android.content.Context
 import com.hazia.emivita.core.locale.AppLocale
 
-class EmivitaApplication : Application() {
+// `open` for one reason: the receiver tests (§9 #30) subclass it so that
+// `applicationContext as? EmivitaApplication` holds on the JVM, with the two
+// members below swapped for a container over in-memory Room and no native
+// library. Nothing in production extends it.
+open class EmivitaApplication : Application() {
     lateinit var container: AppContainer
         private set
 
@@ -23,10 +27,13 @@ class EmivitaApplication : Application() {
         // BroadcastReceiver process reached without MainActivity ever running, needs
         // this called once before any net.zetetic.database.sqlcipher class touches
         // JNI, hence here rather than lazily in EmivitaDatabase.
-        System.loadLibrary("sqlcipher")
-        container = AppContainer(this)
+        loadNativeLibraries()
+        container = createContainer()
         ReminderNotificationChannels.createAll(this)
         container.observeAlarmClockSetting()
         container.observeTimeFormatSetting()
     }
+
+    protected open fun loadNativeLibraries() = System.loadLibrary("sqlcipher")
+    protected open fun createContainer(): AppContainer = AppContainer(this)
 }

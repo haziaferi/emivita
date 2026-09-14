@@ -14,6 +14,7 @@ import com.hazia.emivita.ui.theme.MedPalette
 import com.hazia.emivita.ui.theme.ThemeMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
@@ -249,7 +250,12 @@ class SettingsRepository(context: Context) {
      *  alarm icon and the lock screen the next reminder's time, and the OS
      *  treats it as a user-visible alarm for battery purposes. Off by default:
      *  a person with six medicines may not want six lock-screen times. */
-    val useAlarmClock: Flow<Boolean> = dataStore.data.map { prefs -> prefs[Keys.USE_ALARM_CLOCK] ?: false }
+    // distinctUntilChanged is load-bearing (§7 R70): DataStore re-emits the whole
+    // preferences object on every write, and AppContainer.observeAlarmClockSetting
+    // answers each emission after the first with a full rescheduleAll(). Without
+    // it, every settings write -- including the receiver's own last-seen stamp on
+    // every alarm fire -- re-armed every reminder on a background thread.
+    val useAlarmClock: Flow<Boolean> = dataStore.data.map { prefs -> prefs[Keys.USE_ALARM_CLOCK] ?: false }.distinctUntilChanged()
     suspend fun setUseAlarmClock(value: Boolean) {
         dataStore.edit { it[Keys.USE_ALARM_CLOCK] = value }
     }

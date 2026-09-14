@@ -30,7 +30,13 @@ import com.hazia.emivita.core.scheduling.AlarmWatchdog
 /** Single-maintainer personal app -- a plain composition root reads more clearly
  *  here than Hilt's codegen for the size this project is at. Revisit if it
  *  grows enough that manual wiring becomes the annoying part. */
-class AppContainer(context: Context) {
+class AppContainer(
+    context: Context,
+    // Tests hand in an unencrypted in-memory database (§9 #30): the receivers
+    // reach the real repositories, coordinator and scheduler on the JVM, where
+    // SQLCipher's native library cannot load. Production passes nothing.
+    injectedDatabase: EmivitaDatabase? = null,
+) {
     private val appContext = context.applicationContext
 
     // Process-lifetime scope for singletons that need to run their own
@@ -45,7 +51,7 @@ class AppContainer(context: Context) {
     // main thread. Deferring means that cost lands on first actual access
     // rather than on every app launch (still worth wrapping that first access
     // in `withContext(Dispatchers.IO)` at the call site once one exists).
-    private val database: EmivitaDatabase by lazy { EmivitaDatabase.getInstance(context) }
+    private val database: EmivitaDatabase by lazy { injectedDatabase ?: EmivitaDatabase.getInstance(context) }
 
     val profileRepository: ProfileRepository by lazy {
         ProfileRepository(database.profileDao(), autoSyncManager)
