@@ -107,6 +107,18 @@ adb exec-out screencap -p > screen.png
 en-XA glyph traps when matching text in a dump: b→ɓ, f→ƒ, v→V, x→Cyrillic х.
 A dump does not surface `onClickLabel`; that half stays Robolectric-only.
 
+The walk above is scripted (§7 R81): a route of string *keys* resolved through
+`values-<lang>`, one screenshot and one dump per stop under `build/ui_walk/`,
+and `--a11y` lists the nodes TalkBack has nothing to say about (labels are
+matched by bounds, since uiautomator flattens Compose differently from
+TalkBack; a control at the bottom edge is clipped and reads as unlabelled).
+Needs the seed for the detail stops.
+
+```bash
+python tools/ui_walk.py --route all-screens --a11y            # --locale it|en-XA|"" first if needed
+python tools/ui_walk.py --a11y build/ui_walk                  # the report alone, on saved dumps
+```
+
 ## User-visible text (§9 #19)
 
 Every string a user sees lives in `app/src/main/res/values/strings.xml`,
@@ -131,6 +143,21 @@ en-XA on the device (`isPseudoLocalesEnabled`) is the complement.
   (persisted). Each says why at its declaration.
 - Lint will demand real dashes, ellipses and `<plurals>` the moment text
   lands in XML. Fix them; never baseline them.
+- `LiveControlBesideLabelGateTest` fails the build on a `Switch`/`Checkbox`
+  that is its own tap target beside a label: make the row `toggleable` and
+  the control `onCheckedChange = null` (Stage B's one-node pattern).
+
+A translation's *wording* is reviewed with `tools/strings_review.py` (§7 R81):
+`--check` is deterministic (placeholders the test's regex misses, glyph
+consistency, stale `identical` entries, `--` in comments) and exits 1;
+`--sheet` writes every key by screen with EN beside IT and flags that aim the
+reading (length ratio, Title Case, gendered forms, R67 glossary). The sheet
+belongs in a scratch directory, not the repository.
+
+```bash
+python tools/strings_review.py --check
+python tools/strings_review.py --sheet /tmp/it_sheet.md
+```
 
 ## The reference app (§5, §7 R60, Appendix E)
 
