@@ -9,7 +9,7 @@
     <string name="add_medicine_add_a_tag">Aggiungi un tag</string>
     <string name="add_medicine_always_lock">Blocca sempre</string>
     <string name="add_medicine_e_g_capsules_drops_tablet">es. capsule, gocce, compressa</string>
-    <string name="add_medicine_lock_reminders_until_taken">Blocca i promemoria finché non è presa</string>
+    <string name="add_medicine_lock_reminders_until_taken">Blocca i promemoria finché la dose non è presa</string>
     <string name="add_medicine_measurement_optional">Unità di misura (facoltativa)</string>
     <string name="add_medicine_never_lock">Non bloccare mai</string>
     <string name="add_medicine_storage_note_optional">Nota di conservazione (facoltativa)</string>
@@ -21,10 +21,10 @@
     <string name="add_reminder_active_pause_cycle">Ciclo attività/pausa</string>
     <string name="add_reminder_advanced">Avanzate</string>
     <string name="add_reminder_alert_at">Avvisa alle</string>
-    <string name="add_reminder_alert_when_stock_is_at_or_below">Avvisa quando la scorta scende a</string>
+    <string name="add_reminder_alert_when_stock_is_at_or_below">Avvisa quando la scorta è pari o inferiore a</string>
     <string name="add_reminder_auto_resolve">Conferma automatica</string>
     <string name="add_reminder_cycle_starts_today_the_anchor_date_isn_t">Il ciclo inizia oggi; la data di riferimento non è ancora modificabile.</string>
-    <string name="add_reminder_days_before_expiration_to_start_alerting">Giorni di anticipo sulla scadenza per iniziare ad avvisare</string>
+    <string name="add_reminder_days_before_expiration_to_start_alerting">Giorni di preavviso prima della scadenza</string>
     <string name="add_reminder_every_hours">Ogni ___ ore</string>
     <string name="add_reminder_every_min">Ogni (min)</string>
     <string name="add_reminder_every_n_days">Ogni N giorni</string>
@@ -33,7 +33,7 @@
     <string name="add_reminder_follows">Segue</string>
     <string name="add_reminder_from">Dal</string>
     <string name="add_reminder_interval_starts">L’intervallo parte</string>
-    <string name="add_reminder_leave_unset_for_no_bound_a_taper_is_just">Lascia vuoto per nessun limite – una riduzione graduale è solo una serie di promemoria con periodi contigui.</string>
+    <string name="add_reminder_leave_unset_for_no_bound_a_taper_is_just">Lascia vuoto per non impostare un limite – una riduzione graduale è solo una serie di promemoria con periodi contigui.</string>
     <string name="add_reminder_max_repeats">Ripetizioni massime</string>
     <string name="add_reminder_minutes_after_parent_1_1440">Minuti dopo il promemoria principale (1–1440)</string>
     <string name="add_reminder_once_a_day">Una volta al giorno</string>
@@ -109,7 +109,7 @@
     <string name="history_export_as_csv">Esporta in CSV</string>
     <string name="history_export_as_pdf">Esporta in PDF</string>
     <string name="history_history">Storico</string>
-    <string name="history_nothing_recorded_yet_taken_skipped_and">Ancora nessuna registrazione. Le dosi prese, saltate e i rifornimenti compariranno qui.</string>
+    <string name="history_nothing_recorded_yet_taken_skipped_and">Ancora nessuna registrazione. Le dosi prese o saltate e i rifornimenti compariranno qui.</string>
     <string name="medical_id_add_a_name_before_exporting_the_card_is">Inserisci un nome prima di esportare: la scheda lo riporta in alto.</string>
     <string name="medical_id_allergies">Allergie</string>
     <string name="medical_id_blood_type">Gruppo sanguigno</string>
@@ -136,7 +136,7 @@
     <string name="medicines_no_medicines_yet_tap_to_add_your_first_one">Ancora nessun farmaco. Tocca + per aggiungere il primo.</string>
     <string name="medicines_not_found">Non trovato</string>
     <string name="medicines_scan_to_find">Scansiona per cercare</string>
-    <string name="settings_detail_alarm_reminders_can_t_take_over_the_screen">I promemoria a sveglia non possono occupare lo schermo</string>
+    <string name="settings_detail_alarm_reminders_can_t_take_over_the_screen">I promemoria di livello Sveglia non possono occupare lo schermo</string>
     <string name="settings_detail_alarms_snooze">Sveglie e rinvio</string>
     <string name="settings_detail_allow_full_screen_alarms">Consenti le sveglie a schermo intero</string>
     <string name="settings_detail_days">Giorni</string>
@@ -165,11 +165,11 @@
     <string name="settings_settings">Impostazioni</string>
     <string name="stock_expiration_always">Sempre</string>
     <string name="stock_expiration_expiration_date">Data di scadenza</string>
-    <string name="stock_expiration_lead_days_notify_this_many_days_before">Giorni di anticipo (avvisa con questo anticipo)</string>
+    <string name="stock_expiration_lead_days_notify_this_many_days_before">Giorni di preavviso (quanti giorni prima avvisare)</string>
     <string name="stock_expiration_notify_as_expiration_nears">Avvisa quando la scadenza si avvicina</string>
-    <string name="stock_expiration_notify_when_stock_runs_low">Avvisa quando la scorta si esaurisce</string>
+    <string name="stock_expiration_notify_when_stock_runs_low">Avvisa quando la scorta è bassa</string>
     <string name="stock_expiration_quantity">Quantità</string>
-    <string name="stock_expiration_refill_amount_one_tap_restock">Quantità di rifornimento (con un tocco)</string>
+    <string name="stock_expiration_refill_amount_one_tap_restock">Quantità di rifornimento</string>
     <string name="stock_expiration_threshold">Soglia</string>
     <string name="stock_expiration_unit_e_g_tablet_ml">Unità (es. compressa, ml)</string>
     <string name="today_log">Registra</string>
@@ -180,15 +180,19 @@
     <string name="today_nothing_scheduled_yet_add_a_medicine_and_a">Niente in programma. Aggiungi un farmaco e un promemoria per vederli qui.</string>
     <string name="today_today">Oggi</string>
     <string name="add_reminder_push_this_reminder_to_the_end_of_the_weekend">Nei giorni di weekend sposta questo promemoria alla fine della finestra weekend. Giorni e finestra si impostano nelle Impostazioni.</string>
-    <string name="dose_edit_this_dose_was_never_answered_recording_it">A questa dose non è mai stata data risposta. Registrarla adesso tiene corretti lo storico e il resoconto esportato.</string>
+    <string name="dose_edit_this_dose_was_never_answered_recording_it">A questa dose non è mai stata data risposta. Registrarla adesso mantiene esatti lo storico e il resoconto esportato.</string>
     <string name="medical_id_printed_onto_an_emergency_card_you_can_hand">Stampata su una scheda di emergenza da dare a un medico o da tenere nel portafoglio. Emivita non confronta nulla di tutto questo con i tuoi farmaci: scrive quello che digiti.</string>
-    <string name="settings_detail_battery_optimisation_lets_the_system_hold">L’ottimizzazione della batteria permette al sistema di trattenere le sveglie di questa app, così una dose può essere annunciata minuti dopo l’orario: su un telefono ne abbiamo misurati circa cinque, e il sistema si riserva di rinviare un promemoria giornaliero fino a un’ora. Escludere Emivita dall’ottimizzazione è l’unico modo rimasto per evitarlo.</string>
+    <string name="settings_detail_battery_optimisation_lets_the_system_hold">L’ottimizzazione della batteria permette al sistema di ritardare le sveglie di questa app, così una dose può essere annunciata minuti dopo l’orario: su un telefono ne sono stati misurati circa cinque, e il sistema si riserva di ritardare un promemoria giornaliero fino a un’ora. Escludere Emivita dall’ottimizzazione è l’unico modo rimasto per evitarlo.</string>
     <string name="settings_detail_right_now_an_alarm_tier_reminder_arrives_as">Al momento un promemoria di livello Sveglia arriva come una notifica normale, da notare e toccare, invece di accendere lo schermo. Consenti le notifiche a schermo intero per ripristinarlo.</string>
-    <string name="settings_detail_sound_and_vibration_for_each_channel_are">Suono e vibrazione di ogni canale li controlla Android, non questa app: aprine le impostazioni delle notifiche per regolarli.</string>
+    <string name="settings_detail_sound_and_vibration_for_each_channel_are">Suono e vibrazione di ogni canale li controlla Android, non questa app: apri le impostazioni di sistema delle notifiche per regolarli.</string>
+
+    <!-- Bottom navigation. -->
     <string name="nav_today">Oggi</string>
     <string name="nav_medicines">Farmaci</string>
     <string name="nav_history">Storico</string>
     <string name="nav_settings">Impostazioni</string>
+
+    <!-- History view modes and table column headers. -->
     <string name="history_view_list">Elenco</string>
     <string name="history_view_calendar">Calendario</string>
     <string name="history_view_table">Tabella</string>
@@ -196,6 +200,8 @@
     <string name="history_table_medicine">Farmaco</string>
     <string name="history_table_status">Stato</string>
     <string name="history_table_dose">Dose</string>
+
+    <!-- Medicine icon labels. -->
     <string name="icon_tablet">Compressa</string>
     <string name="icon_capsule">Capsula</string>
     <string name="icon_liquid">Liquido / Sciroppo</string>
@@ -207,38 +213,52 @@
     <string name="icon_supplement">Integratore</string>
     <string name="icon_pharmacy">Flacone da farmacia</string>
     <string name="icon_other">Altro</string>
+
+    <!-- Notification channels. -->
     <string name="channel_standard_name">Promemoria dei farmaci</string>
     <string name="channel_standard_desc">Promemoria ordinari per farmaci e integratori.</string>
     <string name="channel_high_name">Promemoria importanti</string>
     <string name="channel_high_desc">Promemoria a priorità più alta, che non devono passare inosservati.</string>
-    <string name="channel_alarm_name">Promemoria a sveglia</string>
+    <string name="channel_alarm_name">Promemoria con sveglia</string>
     <string name="channel_alarm_desc">Sveglie a schermo intero per i farmaci che non vanno saltati.</string>
+
+    <!-- Tier names. -->
     <string name="tier_standard">Standard</string>
     <string name="tier_high">Alta</string>
     <string name="tier_alarm">Sveglia</string>
+
+    <!-- Notification actions. -->
     <string name="common_snooze">Rinvia</string>
     <string name="action_show_alarm">Mostra la sveglia</string>
     <string name="action_refill">Rifornisci</string>
+
+    <!-- Stock and expiry alerts. -->
     <string name="alert_low_stock_title">%1$s sta finendo</string>
     <string name="alert_low_stock_text">Ne restano %1$s</string>
     <string name="alert_expiring_title">%1$s sta per scadere</string>
     <string name="alert_expiring_text">Scade il %1$s</string>
     <string name="biometric_unlock_title">Sblocca Emivita</string>
+
+    <!-- Dose-history PDF. -->
     <string name="pdf_title">Emivita – Storico delle dosi</string>
     <string name="pdf_col_date">Data</string>
     <string name="pdf_col_time">Ora</string>
     <string name="pdf_col_medicine">Farmaco</string>
     <string name="pdf_col_status">Stato</string>
     <string name="pdf_col_dose">Dose</string>
+
+    <!-- Home-screen widgets. -->
     <string name="widget_next_doses_header">Prossime dosi</string>
     <string name="widget_all_caught_up">Tutto in ordine</string>
     <string name="widget_stock_levels_header">Scorte</string>
     <string name="widget_no_tracked_stock">Nessuna scorta monitorata</string>
     <string name="widget_stock_row">%1$s • %2$s</string>
+
+    <!-- Format strings. -->
     <string name="alarm_snooze_minutes">Rinvia di %1$d min</string>
     <string name="history_nothing_recorded_on">Nessuna registrazione il %1$s.</string>
     <string name="history_no_doses_answered">Nessuna dose con risposta</string>
-    <string name="history_percent_taken">%1$d%% delle dosi con risposta prese</string>
+    <string name="history_percent_taken">Dosi prese: %1$d%% di quelle con risposta</string>
     <string name="history_entry_summary">%1$s – %2$s – %3$s</string>
     <string name="medicine_detail_storage">Conservazione: %1$s</string>
     <string name="medicine_detail_delete_title">Eliminare %1$s?</string>
@@ -250,26 +270,30 @@
     <string name="common_not_set">Non impostato</string>
     <string name="history_today">Oggi</string>
     <string name="history_yesterday">Ieri</string>
+
+    <!-- Settings home. -->
     <string name="settings_group_reminders">Promemoria e sveglie</string>
     <string name="settings_row_notifications">Notifiche e avvisi</string>
-    <string name="settings_row_notifications_desc">Suono, priorità, comportamento dei promemoria</string>
+    <string name="settings_row_notifications_desc">Suono, priorità e comportamento</string>
     <string name="settings_row_alarms">Sveglie e rinvio</string>
-    <string name="settings_row_alarms_desc">Suono della sveglia, vibrazione, durata del rinvio</string>
+    <string name="settings_row_alarms_desc">Suono, vibrazione, durata del rinvio</string>
     <string name="settings_row_weekend">Modalità weekend</string>
     <string name="settings_row_weekend_desc">Posticipa i promemoria nei giorni scelti</string>
     <string name="settings_group_appearance">Aspetto</string>
     <string name="settings_row_appearance">Aspetto</string>
-    <string name="settings_row_appearance_desc">Tema, tavolozza, preferenze di visualizzazione</string>
+    <string name="settings_row_appearance_desc">Tema, tavolozza, visualizzazione</string>
     <string name="settings_group_privacy">Privacy e sicurezza</string>
     <string name="settings_row_biometric">Blocco biometrico</string>
-    <string name="settings_row_biometric_desc">Richiedi impronta, volto o il PIN del telefono per aprire Emivita</string>
+    <string name="settings_row_biometric_desc">Impronta, volto o PIN all’apertura</string>
     <string name="settings_biometric_not_enrolled">Su questo dispositivo non è configurato lo sblocco con impronta o volto</string>
     <string name="settings_biometric_no_hardware">Questo dispositivo non supporta l’autenticazione biometrica</string>
     <string name="settings_group_data">Dati e backup</string>
     <string name="settings_row_data_backup">Dati e backup</string>
-    <string name="settings_row_data_backup_desc">Backup automatico, ripristino, esportazione PDF/CSV</string>
+    <string name="settings_row_data_backup_desc">Backup, ripristino ed esportazione</string>
     <string name="settings_row_medical_id">Scheda medica</string>
-    <string name="settings_row_medical_id_desc">Gruppo sanguigno, allergie, medico e farmacia – scheda stampabile</string>
+    <string name="settings_row_medical_id_desc">Gruppo sanguigno, allergie, contatti</string>
+
+    <!-- Dose status labels. -->
     <string name="status_missed">Mancata</string>
     <string name="status_taken">Presa</string>
     <string name="status_skipped">Saltata</string>
@@ -280,6 +304,8 @@
     <string name="history_sorted_ascending">Ordine crescente</string>
     <string name="history_sorted_descending">Ordine decrescente</string>
     <string name="history_subtitle_join">%1$s – %2$s</string>
+
+    <!-- Form titles and save labels. -->
     <string name="common_save_changes">Salva le modifiche</string>
     <string name="common_unknown_error">errore sconosciuto</string>
     <string name="add_medicine_title">Aggiungi farmaco</string>
@@ -300,9 +326,13 @@
     <string name="reminder_edit_low_stock">Modifica avviso di scorta bassa</string>
     <string name="reminder_edit_expiration">Modifica avviso di scadenza</string>
     <string name="reminder_edit_linked_following">Modifica dose successiva collegata</string>
+
+    <!-- Stock & Expiration. -->
     <string name="stock_section_current">Scorta attuale</string>
     <string name="stock_section_expiration">Scadenza</string>
     <string name="stock_refilled_status">Rifornita.</string>
+
+    <!-- Backup & restore status lines. -->
     <string name="backup_exported">Backup esportato.</string>
     <string name="backup_export_failed">Esportazione non riuscita: %1$s</string>
     <string name="backup_unreadable_file">Impossibile leggere il file selezionato.</string>
@@ -310,6 +340,8 @@
     <string name="backup_invalid_file">Questo file non è un backup Emivita valido.</string>
     <string name="backup_restore_failed">Ripristino non riuscito: %1$s</string>
     <string name="medical_id_name_helper">Stampato in cima alla scheda</string>
+
+    <!-- Emergency card (PDF). -->
     <string name="card_title">Scheda medica di emergenza</string>
     <string name="card_prepared">Preparata il %1$s – Emivita</string>
     <string name="card_blood_type">Gruppo sanguigno: %1$s</string>
@@ -320,19 +352,25 @@
     <string name="card_indication">" – per %1$s"</string>
     <string name="card_doctor">Medico</string>
     <string name="card_pharmacy">Farmacia</string>
+
+    <!-- Medical ID screen. -->
     <string name="medical_id_blood_type_helper">Per esempio 0+, AB-</string>
     <string name="medical_id_export_failed">Esportazione non riuscita: %1$s</string>
     <string name="medical_id_save_failed">Salvataggio non riuscito: %1$s</string>
+
+    <!-- Reminder types: -->
     <string name="reminder_low_stock_alert">Avviso di scorta bassa</string>
     <string name="reminder_expiration_alert">Avviso di scadenza</string>
     <string name="reminder_type_fixed_time_desc">Alla stessa ora (o alle stesse ore) ogni giorno</string>
     <string name="reminder_type_repeating_interval_desc">Ogni N ore, giorno e notte</string>
-    <string name="reminder_type_daily_window_desc">Ogni N ore, solo dentro una finestra giornaliera</string>
+    <string name="reminder_type_daily_window_desc">Ogni N ore, solo all’interno di una finestra giornaliera</string>
     <string name="reminder_type_linked_following_desc">Una dose successiva dopo un altro promemoria</string>
     <string name="reminder_label_at">%1$s – %2$s</string>
     <string name="reminder_label_every_hours">%1$s – ogni %2$s h</string>
     <string name="reminder_label_plus_minutes">%1$s – +%2$d min</string>
     <string name="stock_section_low_stock">Avviso di scorta bassa</string>
+
+    <!-- Accessibility (§9 #19 Stage B). -->
     <string name="a11y_edit_dose">Modifica la dose</string>
     <string name="a11y_attention">Attenzione</string>
     <string name="a11y_show_doses">Mostra le dosi</string>
@@ -344,10 +382,14 @@
     <string name="a11y_remove_tag">Rimuovi il tag %1$s</string>
     <string name="a11y_expanded">Espanso</string>
     <string name="a11y_collapsed">Compresso</string>
+
+    <!-- Found on the device under en-XA, not by the gate (§9 #19 Stage A part 3). -->
     <string name="theme_mode_light">Chiaro</string>
     <string name="theme_mode_dark">Scuro</string>
     <string name="theme_mode_system">Sistema</string>
     <string name="medical_id_allergies_helper">Testo libero. Riportato sulla scheda esattamente come scritto qui</string>
+
+    <!-- The notifications-blocked card (§7 R58). -->
     <string name="notif_card_all_blocked_title">I promemoria non possono raggiungerti</string>
     <string name="notif_card_all_blocked_body">Le notifiche di Emivita sono disattivate, quindi nessun promemoria comparirà: né sulla schermata di blocco, né nel pannello, né come sveglia. Le dosi vengono comunque programmate e torneranno ad arrivare non appena riattivi le notifiche.</string>
     <string name="notif_card_one_tier_title">Un livello di promemoria è bloccato</string>
@@ -355,11 +397,13 @@
     <string name="notif_card_one_tier_body">I promemoria di livello %1$s sono bloccati nelle impostazioni delle notifiche di Android, quindi non compaiono mai. Ogni farmaco impostato su quel livello viene programmato e poi scartato in silenzio. Gli altri livelli non ne risentono.</string>
     <string name="notif_card_some_tiers_body">I promemoria di livello %1$s sono bloccati nelle impostazioni delle notifiche di Android, quindi non compaiono mai. Ogni farmaco impostato su uno di quei livelli viene programmato e poi scartato in silenzio. Gli altri livelli non ne risentono.</string>
     <string name="add_medicine_notification_priority">Priorità di notifica</string>
+
+    <!-- Stage A part 4 (§7 R60): -->
     <string name="notif_dose_body">Dose di %1$s alle %2$s</string>
     <string name="widget_runs_out">Finisce il %1$s</string>
     <string name="widget_no_imminent_run_out">Nessuna scorta in esaurimento</string>
     <string name="stock_runs_out">Finisce: %1$s</string>
-    <string name="stock_runs_out_not_tracked">Finisce: non ancora monitorato</string>
+    <string name="stock_runs_out_not_tracked">Finisce: non ancora monitorata</string>
     <string name="error_could_not_save">Salvataggio non riuscito: %1$s</string>
     <string name="error_could_not_log_dose">Registrazione della dose non riuscita: %1$s</string>
     <string name="error_unknown">errore sconosciuto</string>
@@ -369,7 +413,7 @@
     <string name="history_export_done">Esportato.</string>
     <string name="history_export_failed">Esportazione non riuscita: %1$s</string>
     <string name="history_export_no_stream">impossibile aprire in scrittura la posizione scelta</string>
-    <string name="settings_lock_until_taken_default">Blocca i promemoria finché non sono presi, come impostazione generale</string>
+    <string name="settings_lock_until_taken_default">Blocca i promemoria finché la dose non è presa (impostazione generale)</string>
     <string name="settings_lock_until_taken_default_desc">I nuovi farmaci la ereditano; ogni farmaco può cambiarla nella propria scheda.</string>
     <string name="stock_production_date">Data di produzione</string>
     <string name="add_medicine_notes_optional">Note (facoltative)</string>
@@ -405,27 +449,27 @@
     <string name="medicines_course_cycle_day">Giorno %1$d di %2$d del ciclo</string>
     <string name="notif_public_title">Promemoria farmaco</string>
     <string name="notif_public_text">C’è una dose da prendere. Sblocca per vedere quale.</string>
-    <string name="notif_left_after_dose">Dopo questa dose ne restano %1$s %2$s</string>
+    <string name="notif_left_after_dose">Dopo questa dose restano %1$s %2$s</string>
     <string name="settings_swipe_title">Quando scorro via un promemoria</string>
     <string name="settings_swipe_desc">Scorrere via non è una risposta, a meno che tu non lo decida.</string>
     <string name="settings_swipe_nothing">Niente: resta da prendere in Oggi</string>
     <string name="settings_swipe_snooze">Rinvialo</string>
     <string name="settings_swipe_skip">Registralo come saltato</string>
     <string name="settings_hide_names">Nascondi i nomi dei farmaci nelle notifiche</string>
-    <string name="settings_hide_names_desc">Mostra solo l’iniziale, così un’occhiata al pannello dice che c’è una dose da prendere senza dire di cosa.</string>
+    <string name="settings_hide_names_desc">Mostra solo l’iniziale, così un’occhiata al pannello dice che c’è una dose da prendere senza dire quale.</string>
     <string name="settings_alarm_tier_title">Livello Sveglia</string>
     <string name="settings_alarm_tier_desc">Vale per i farmaci impostati sul livello Sveglia: la sveglia a schermo intero che suona finché non rispondi.</string>
     <string name="settings_alarm_tone">Suono della sveglia</string>
     <string name="settings_alarm_tone_default">Sveglia predefinita di sistema</string>
     <string name="settings_alarm_tone_pick">Scegli un suono per la sveglia</string>
     <string name="settings_alarm_no_sound_when_silent">Nessun suono se il telefono è silenzioso</string>
-    <string name="settings_alarm_no_sound_when_silent_desc">Di norma le sveglie suonano anche in modalità silenziosa. Attiva per rispettare l’interruttore.</string>
+    <string name="settings_alarm_no_sound_when_silent_desc">Di norma le sveglie suonano anche in modalità silenziosa. Attiva questa opzione per rispettarla.</string>
     <string name="settings_alarm_no_vibration_when_silent">Nessuna vibrazione se il telefono è silenzioso</string>
     <string name="settings_alarm_no_vibration_when_silent_desc">Lo stesso, per la vibrazione.</string>
     <string name="settings_use_alarm_clock">Mostra il prossimo promemoria come sveglia</string>
-    <string name="settings_use_alarm_clock_desc">La barra di stato mostra l’icona della sveglia e la schermata di blocco l’ora del prossimo promemoria. Android inoltre rinvia meno queste sveglie.</string>
+    <string name="settings_use_alarm_clock_desc">La barra di stato mostra l’icona della sveglia e la schermata di blocco l’ora del prossimo promemoria. Android inoltre ritarda meno queste sveglie.</string>
     <string name="settings_test_reminder">Invia un promemoria di prova</string>
-    <string name="settings_test_reminder_desc">Pubblica una notifica vera, così vedi e senti come arriva un promemoria su questo telefono.</string>
+    <string name="settings_test_reminder_desc">Mostra una notifica vera, così vedi e senti come arriva un promemoria su questo telefono.</string>
     <string name="notif_test_title">Promemoria di prova</string>
     <string name="notif_test_text">Ecco come arriva un promemoria. Niente da prendere.</string>
     <string name="add_reminder_pre_alarm">Preavviso prima della dose</string>
@@ -434,18 +478,18 @@
     <string name="notif_pre_alarm_title">%1$s tra poco</string>
     <string name="notif_pre_alarm_text">Dose alle %1$s</string>
     <string name="notif_take_all">Prendi tutte</string>
-    <string name="snooze_picker_title">Rinviare per quanto?</string>
+    <string name="snooze_picker_title">Rinviare per quanto tempo?</string>
     <string name="snooze_picker_minutes">%1$d min</string>
     <string name="snooze_picker_custom">Altro (minuti)</string>
-    <string name="settings_snooze_ask_each_time">Chiedi ogni volta per quanto</string>
+    <string name="settings_snooze_ask_each_time">Chiedi la durata ogni volta</string>
     <string name="settings_snooze_ask_each_time_desc">Il pulsante Rinvia apre una scelta rapida invece di usare la durata qui sopra.</string>
     <string name="status_deleted">Eliminata</string>
     <string name="dose_edit_notes">Nota (facoltativa)</string>
     <string name="dose_edit_move_title">Sposta questa dose</string>
     <string name="dose_edit_move_day">Giorno</string>
     <string name="dose_edit_move_time">Ora</string>
-    <string name="dose_edit_move_action">Sposta e ricordamelo allora</string>
-    <string name="dose_edit_return_to_due">Rimetti da prendere</string>
+    <string name="dose_edit_move_action">Sposta e ricordamelo a quell’ora</string>
+    <string name="dose_edit_return_to_due">Riporta a «Da prendere»</string>
     <string name="dose_edit_delete">Elimina questa registrazione</string>
     <string name="dose_edit_delete_confirm_text">Sparisce dallo Storico e dalle esportazioni; una dose presa torna nella confezione.</string>
     <string name="dose_edit_delete_confirm">Elimina</string>
@@ -454,7 +498,7 @@
     <string name="add_reminder_course">Un numero fisso di dosi</string>
     <string name="add_reminder_course_desc">Si ferma da solo una volta prese tutte.</string>
     <string name="add_reminder_doses_remaining">Dosi rimanenti</string>
-    <string name="add_medicine_prn_ceiling">Limite al bisogno (facoltativo)</string>
+    <string name="add_medicine_prn_ceiling">Limite per le dosi al bisogno (facoltativo)</string>
     <string name="add_medicine_prn_ceiling_desc">Numero massimo di dosi in una finestra di ore a tua scelta. Quando registri una dose vedi il margine che resta; al limite chiede conferma una volta e non rifiuta mai.</string>
     <string name="add_medicine_prn_max">Dosi massime</string>
     <string name="add_medicine_prn_hours">Ogni quante ore</string>
@@ -477,12 +521,12 @@
     <string name="a11y_show_actions">Mostra le azioni</string>
     <string name="today_log_earlier">Registrata come presa a un’ora precedente</string>
     <string name="today_prn_headroom">%1$d di %2$d nelle ultime %3$d h</string>
-    <string name="today_prn_headroom_returns">di nuovo margine alle %1$s</string>
-    <string name="today_prn_over_title">Oltre il limite al bisogno</string>
+    <string name="today_prn_headroom_returns">di nuovo margine dalle %1$s</string>
+    <string name="today_prn_over_title">Oltre il limite delle dosi al bisogno</string>
     <string name="today_prn_over_text">Sei già a %1$d di %2$d nelle ultime %3$d h. Registrare comunque questa dose?</string>
     <string name="today_prn_log_anyway">Registra comunque</string>
     <string name="data_archived_title">Farmaci archiviati</string>
-    <string name="data_archived_desc">I farmaci eliminati restano qui con il loro storico. Ripristinane uno, oppure eliminalo per sempre: lo storico se ne va con lui.</string>
+    <string name="data_archived_desc">I farmaci eliminati restano qui con il loro storico. Ripristinane uno, oppure eliminalo per sempre, storico compreso.</string>
     <string name="data_archived_none">Niente in archivio.</string>
     <string name="data_archived_restore">Ripristina</string>
     <string name="data_archived_delete">Elimina per sempre</string>
@@ -568,7 +612,7 @@
         <item quantity="many">%1$d farmaci da controllare</item>
         <item quantity="other">%1$d farmaci da controllare</item>
     </plurals>
-    <string name="settings_biometric_credential_only">Nessuna impronta o volto configurati: sblocca il PIN, la sequenza o la password del telefono</string>
+    <string name="settings_biometric_credential_only">Nessuna impronta o volto configurati: si sblocca con il PIN, la sequenza o la password del telefono</string>
     <string name="unsaved_title">Scartare le modifiche?</string>
     <string name="unsaved_text">Quello che hai scritto qui non è stato salvato.</string>
     <string name="unsaved_discard">Scarta</string>
@@ -578,11 +622,12 @@
     <string name="disclaimer_understood">Ho capito</string>
     <string name="disclaimer_continue">Continua</string>
     <string name="missed_alarm_title">Un promemoria non è suonato</string>
-    <string name="missed_alarm_body">Il promemoria previsto per %1$s non è mai partito: il telefono ha trattenuto Emivita. Controlla le impostazioni della batteria.</string>
+    <string name="missed_alarm_body">Il promemoria previsto per %1$s non è mai partito: il telefono ha bloccato Emivita. Controlla le impostazioni della batteria.</string>
     <string name="missed_alarm_open">Controlla le impostazioni</string>
     <string name="missed_alarm_dismiss">Ignora</string>
     <string name="settings_open_auto_start">Apri le impostazioni di avvio automatico</string>
-    <string name="settings_open_auto_start_desc">Su questo telefono le app in background vengono fermate dall’elenco di avvio automatico. Consenti Emivita lì.</string>
+    <string name="settings_open_auto_start_failed">Questo telefono non ha aperto la pagina di avvio automatico. Cerca Emivita nelle impostazioni della batteria o di avvio.</string>
+    <string name="settings_open_auto_start_desc">Su questo telefono è l’elenco di avvio automatico a decidere quali app in background vengono fermate. Consenti Emivita lì.</string>
     <string name="settings_permissions">Cosa consente Android</string>
     <string name="permission_notifications">Notifiche</string>
     <string name="permission_exact_alarms">Sveglie esatte</string>
@@ -590,7 +635,7 @@
     <string name="permission_battery">Batteria senza limitazioni</string>
     <string name="permission_granted">Consentito</string>
     <string name="permission_blocked">Bloccato</string>
-    <string name="permission_fix">Sistema</string>
+    <string name="permission_fix">Risolvi</string>
     <string name="theme_mode_amoled">Nero AMOLED</string>
     <string name="settings_start_page">Apri su</string>
     <string name="settings_start_page_desc">La scheda su cui si apre l’app, dal prossimo avvio.</string>
@@ -604,7 +649,7 @@
 
     <!-- Ripristino del database (§9 #32) -->
     <string name="recovery_title">Impossibile aprire i tuoi farmaci</string>
-    <string name="recovery_body">All\'avvio il database dell\'app non era leggibile. Il file è stato messo da parte, non eliminato, e l\'app è partita con un elenco vuoto. Se hai un backup, ripristinalo ora in Dati e backup. Anche il file messo da parte è elencato lì.</string>
+    <string name="recovery_body">All’avvio il database dell’app non era leggibile. Il file è stato messo da parte, non eliminato, e l’app è partita con un elenco vuoto. Se hai un backup, ripristinalo ora in Dati e backup. Anche il file messo da parte è elencato lì.</string>
     <string name="recovery_restore">Ripristina da backup</string>
     <string name="recovery_continue_empty">Continua senza dati</string>
     <string name="recovery_set_aside_title">File di database messi da parte</string>
@@ -615,6 +660,6 @@
     </plurals>
     <string name="recovery_set_aside_delete">Elimina i file messi da parte</string>
     <string name="recovery_set_aside_confirm_title">Eliminare i file messi da parte?</string>
-    <string name="recovery_set_aside_confirm_text">Sono l\'unica copia di ciò che l\'app non è riuscita ad aprire. Non si può annullare.</string>
+    <string name="recovery_set_aside_confirm_text">Sono l’unica copia di ciò che l’app non è riuscita ad aprire. Non si può annullare.</string>
     <string name="recovery_set_aside_deleted">File messi da parte eliminati.</string>
 </resources>

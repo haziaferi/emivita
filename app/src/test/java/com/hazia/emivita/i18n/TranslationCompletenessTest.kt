@@ -24,8 +24,8 @@ class TranslationCompletenessTest {
     private val identical = setOf(
         "app_name", "common_ok", "unit_ml", "add_medicine_strength_hint", "field_label_value", "widget_stock_row",
         "a11y_calendar_day", "a11y_count_status", "history_entry_summary", "today_entry_summary", "reminder_label_at",
-        "backup_sync_password", "tier_standard", "snooze_picker_minutes", "add_medicine_tags", "history_table_dose",
-        "pdf_col_dose", "history_export_medicine", "dose_default_unit.one", "history_table_medicine",
+        "backup_sync_password", "tier_standard", "snooze_picker_minutes", "history_table_dose",
+        "pdf_col_dose", "dose_default_unit.one",
         // Format-only: two placeholders and a middle dot, nothing to translate.
         "appearance_theme_summary", "today_layout_timeline",
     )
@@ -41,7 +41,8 @@ class TranslationCompletenessTest {
         return Res(strings, plurals)
     }
 
-    private fun args(value: String): List<String> = Regex("%(\\d+\\$)?[sd]").findAll(value).map { it.value }.sorted().toList()
+    /** Every Formatter conversion, not only `%s`/`%d`: `%%`, `%.1f` and `%,d` are arguments too (§7 R81). */
+    private fun args(value: String): List<String> = Regex("%(\\d+\\$)?[-#+ 0,(]*\\d*(\\.\\d+)?[sdfxXeEgGcboaAhHn%]").findAll(value).map { it.value }.sorted().toList()
 
     private fun translations(): List<Pair<String, File>> = res.listFiles()!!
         .filter { it.name.startsWith("values-") && !it.name.startsWith("values-night") }
@@ -82,6 +83,25 @@ class TranslationCompletenessTest {
             val same = en.strings.filter { (k, v) -> tr.strings[k] == v && k !in identical }.keys +
                 en.plurals.flatMap { (name, items) -> items.filter { (q, v) -> tr.plurals[name]?.get(q) == v && "$name.$q" !in identical }.keys.map { "$name.$it" } }
             assertEquals("$lang: untranslated (add to `identical` only if it is the same word)", emptyList<String>(), same.sorted())
+        }
+    }
+
+    /**
+     * The allow-list is a record, so it must be exact both ways: an entry whose
+     * value has since been translated is a false record (§7 R81 found three).
+     */
+    @Test
+    fun `every listed identity is still identical in every translation`() {
+        val en = parse(File(res, "values/strings.xml"))
+        for ((lang, file) in translations()) {
+            val tr = parse(file)
+            val stale = identical.filter { key ->
+                val (name, quantity) = key.split(".", limit = 2).let { it[0] to it.getOrNull(1) }
+                val enValue = if (quantity == null) en.strings[name] else en.plurals[name]?.get(quantity)
+                val trValue = if (quantity == null) tr.strings[name] else tr.plurals[name]?.get(quantity)
+                enValue == null || enValue != trValue
+            }
+            assertEquals("$lang: listed as identical but translated or missing (remove from `identical`)", emptyList<String>(), stale.sorted())
         }
     }
 }

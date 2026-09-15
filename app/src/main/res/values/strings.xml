@@ -188,10 +188,6 @@
     <string name="today_nothing_scheduled_yet_add_a_medicine_and_a">Nothing scheduled yet. Add a medicine and a reminder to see it here.</string>
     <string name="today_today">Today</string>
 
-    <!-- ==== Screen text (spec §9 #19 Stage A) ====
-         Extracted from Compose literals. `isPseudoLocalesEnabled` on the
-         debug build renders everything here accented, so anything still
-         hardcoded shows up plain on the screen. -->
     <string name="add_reminder_push_this_reminder_to_the_end_of_the_weekend">Push this reminder to the end of the weekend window on weekend days. Set the days and window in Settings.</string>
     <string name="dose_edit_this_dose_was_never_answered_recording_it">This dose was never answered. Recording it now keeps the history and the exported report accurate.</string>
     <string name="medical_id_printed_onto_an_emergency_card_you_can_hand">Printed onto an emergency card you can hand to a doctor or keep in a wallet. Emivita never checks any of it against your medicines – it writes down what you type.</string>
@@ -639,6 +635,7 @@
     <string name="missed_alarm_open">Check settings</string>
     <string name="missed_alarm_dismiss">Dismiss</string>
     <string name="settings_open_auto_start">Open auto-start settings</string>
+    <string name="settings_open_auto_start_failed">This phone refused to open its auto-start page. Look for Emivita under the battery or startup settings instead.</string>
     <string name="settings_open_auto_start_desc">On this phone the auto-start list is where background apps get stopped. Allow Emivita there.</string>
     <string name="settings_permissions">What Android allows</string>
     <string name="permission_notifications">Notifications</string>
