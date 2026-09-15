@@ -684,9 +684,27 @@ private fun BatteryOptimizationCard() {
             }
             // The OEM's own kill list (§9 #29, HM-36), when this phone has one.
             val autoStart = remember { AutoStartSettings.intentFor(context) }
+            // A page that resolves can still refuse to open (an OEM that exports it
+            // but guards it); say so instead of a button that does nothing (§7.1 rule 17).
+            var autoStartFailed by remember { mutableStateOf(false) }
             if (autoStart != null) {
                 Spacer(Modifier.height(6.dp))
-                Button(onClick = { context.startActivity(autoStart) }) { Text(stringResource(R.string.settings_open_auto_start)) }
+                if (autoStartFailed) {
+                    Text(
+                        stringResource(R.string.settings_open_auto_start_failed),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                } else {
+                    Button(onClick = {
+                        try {
+                            context.startActivity(autoStart)
+                        } catch (e: RuntimeException) {
+                            // ActivityNotFoundException and SecurityException are both RuntimeExceptions.
+                            autoStartFailed = true
+                        }
+                    }) { Text(stringResource(R.string.settings_open_auto_start)) }
+                }
                 Text(
                     stringResource(R.string.settings_open_auto_start_desc),
                     style = MaterialTheme.typography.labelSmall,

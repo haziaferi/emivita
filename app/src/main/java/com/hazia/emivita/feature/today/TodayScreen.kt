@@ -71,6 +71,7 @@ import com.hazia.emivita.R
 import com.hazia.emivita.ui.components.TabHeader
 import androidx.annotation.StringRes
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.stateDescription
 import androidx.compose.ui.platform.LocalResources
@@ -299,13 +300,19 @@ fun TodayScreen(
         // Secondary action alongside Today's timeline (spec §6) -- picks a
         // medicine, suggests its last-used amount, defaults to "just now".
         // Not a bottom-nav destination.
+        // The label is also the node's description (§7 R81): on the LE2123 the
+        // extended FAB's text never reached the accessibility tree (uiautomator
+        // showed the button with no text leaf, while every plain Button had one),
+        // so TalkBack had nothing to say for Today's main action.
+        val logDoseLabel = stringResource(R.string.today_log_dose)
         ExtendedFloatingActionButton(
-            text = { Text(stringResource(R.string.today_log_dose)) },
+            text = { Text(logDoseLabel) },
             icon = { Icon(Icons.Filled.Add, contentDescription = null) },
             onClick = { logDosePreselected = null; showLogDose = true },
             modifier = Modifier
                 .align(Alignment.BottomEnd)
-                .padding(16.dp),
+                .padding(16.dp)
+                .semantics { contentDescription = logDoseLabel },
         )
     }
 

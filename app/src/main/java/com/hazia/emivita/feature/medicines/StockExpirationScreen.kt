@@ -250,12 +250,12 @@ fun StockExpirationScreen(
         // ---- Zone 2: Low-stock alert ------------------------------------
         ZonedSection(title = stringResource(R.string.stock_section_low_stock), warns = true) {
             Row(
-                Modifier.fillMaxWidth(),
+                Modifier.fillMaxWidth().toggleable(value = lowStockEnabled, role = Role.Switch) { lowStockEnabled = it },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(stringResource(R.string.stock_expiration_notify_when_stock_runs_low), style = MaterialTheme.typography.bodyMedium)
-                Switch(checked = lowStockEnabled, onCheckedChange = { lowStockEnabled = it })
+                Switch(checked = lowStockEnabled, onCheckedChange = null)
             }
             if (lowStockEnabled) {
                 Spacer(Modifier.height(8.dp))
@@ -294,12 +294,12 @@ fun StockExpirationScreen(
         // ---- Zone 3: Expiration ------------------------------------
         ZonedSection(title = stringResource(R.string.stock_section_expiration), warns = true) {
             Row(
-                Modifier.fillMaxWidth(),
+                Modifier.fillMaxWidth().toggleable(value = expirationEnabled, role = Role.Switch) { expirationEnabled = it },
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically,
             ) {
                 Text(stringResource(R.string.stock_expiration_notify_as_expiration_nears), style = MaterialTheme.typography.bodyMedium)
-                Switch(checked = expirationEnabled, onCheckedChange = { expirationEnabled = it })
+                Switch(checked = expirationEnabled, onCheckedChange = null)
             }
             Spacer(Modifier.height(8.dp))
             DateField(stringResource(R.string.stock_production_date), productionDateEpochDay) { productionDateEpochDay = it }

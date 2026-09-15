@@ -246,8 +246,8 @@ fun BackupSyncScreen(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Spacer(Modifier.height(12.dp))
-        Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            Checkbox(checked = passwordProtectExport, onCheckedChange = { passwordProtectExport = it })
+        Row(Modifier.fillMaxWidth().toggleable(value = passwordProtectExport, role = Role.Checkbox) { passwordProtectExport = it }, verticalAlignment = Alignment.CenterVertically) {
+            Checkbox(checked = passwordProtectExport, onCheckedChange = null)
             Text(stringResource(R.string.backup_sync_password_protect_this_backup))
         }
         if (passwordProtectExport) {

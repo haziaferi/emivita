@@ -104,6 +104,25 @@ class AlarmRingServiceTest {
         assertEquals(doseEventId, stop.getLongExtra(AlarmRingService.EXTRA_DOSE_EVENT_ID, -1L))
     }
 
+    /** §7 R81 (§9 #34's Alarm-channel check): the user blocks the Alarm channel in
+     *  Android, and the tone must not play under a notification nobody can see. */
+    @Test
+    fun `with the Alarm channel blocked in Android, nothing rings`() {
+        val nm = app.getSystemService(android.content.Context.NOTIFICATION_SERVICE) as android.app.NotificationManager
+        nm.getNotificationChannel(com.hazia.emivita.core.notification.ReminderNotificationChannels.CHANNEL_ALARM).importance =
+            android.app.NotificationManager.IMPORTANCE_NONE
+        assertTrue(com.hazia.emivita.core.notification.ReminderNotificationChannels.isBlocked(app, NotificationPriority.ALARM))
+
+        val medicineId = alarmMedicine()
+        val reminderId = h.reminder(medicineId, ReminderConfig.FixedTime(8, 0, 1.0))
+        val doseEventId = materializedDose(reminderId, medicineId)
+        val dose = h.doseEvent(doseEventId)
+        val reminder = runBlocking { h.container.reminderRepository.getById(reminderId)!! }
+        runBlocking { h.container.notificationBuilder.buildAndPost(dose, reminder, h.medicineRow(medicineId)) }
+
+        assertNull("a blocked Alarm channel starts no ring service", shadowOf(app).nextStartedService)
+    }
+
     @Test
     fun `the service shows the notification as its own, and stops once the dose is answered elsewhere`() {
         val medicineId = alarmMedicine()

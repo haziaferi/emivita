@@ -132,9 +132,15 @@ class ReminderNotificationBuilder(
             builder.setContentIntent(openAppPendingIntent(context, doseEvent.id.toInt()))
         }
 
-        if (priority == NotificationPriority.ALARM && notificationsPermitted(context)) {
+        if (priority == NotificationPriority.ALARM && notificationsPermitted(context) && !ReminderNotificationChannels.isBlocked(context, priority)) {
             // The Alarm tier rings until answered (§7 R80): the service posts
-            // this notification as its own and loops the tone under it.
+            // this notification as its own and loops the tone under it. Not
+            // when the user has blocked the Alarm channel in Android (§7 R81):
+            // the tone would play for ten minutes under a notification the
+            // system never shows, with no screen to answer it from. medTimer
+            // is silent here by construction (its tone lives in the full-screen
+            // activity the notification launches); the blocked-tier card in
+            // Settings › Notifications says why nothing came.
             AlarmRingService.ring(context, doseEvent.id, builder.build())
         } else {
             postIfPermitted(context, TAG, notificationId, builder.build())

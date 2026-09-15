@@ -540,7 +540,7 @@ private fun AdvancedReminderFieldsSection(state: AdvancedReminderFieldsState) {
 @Composable
 private fun AdvancedReminderFields(state: AdvancedReminderFieldsState) {
     Row(
-        Modifier.fillMaxWidth(),
+        Modifier.fillMaxWidth().toggleable(value = state.autoResolve, role = Role.Switch) { state.autoResolve = it },
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -552,7 +552,7 @@ private fun AdvancedReminderFields(state: AdvancedReminderFieldsState) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Switch(checked = state.autoResolve, onCheckedChange = { state.autoResolve = it })
+        Switch(checked = state.autoResolve, onCheckedChange = null)
     }
 
     Spacer(Modifier.height(12.dp))
@@ -570,12 +570,12 @@ private fun AdvancedReminderFields(state: AdvancedReminderFieldsState) {
 
     Spacer(Modifier.height(12.dp))
     Row(
-        Modifier.fillMaxWidth(),
+        Modifier.fillMaxWidth().toggleable(value = state.nagEnabled, role = Role.Switch) { state.nagEnabled = it },
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Text(stringResource(R.string.add_reminder_repeat_until_answered), style = MaterialTheme.typography.bodyMedium)
-        Switch(checked = state.nagEnabled, onCheckedChange = { state.nagEnabled = it })
+        Switch(checked = state.nagEnabled, onCheckedChange = null)
     }
     if (state.nagEnabled) {
         Spacer(Modifier.height(8.dp))
@@ -668,7 +668,7 @@ private fun AdvancedReminderFields(state: AdvancedReminderFieldsState) {
 
     Spacer(Modifier.height(12.dp))
     Row(
-        Modifier.fillMaxWidth(),
+        Modifier.fillMaxWidth().toggleable(value = state.weekendModeOptIn, role = Role.Switch) { state.weekendModeOptIn = it },
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
@@ -684,7 +684,7 @@ private fun AdvancedReminderFields(state: AdvancedReminderFieldsState) {
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
         }
-        Switch(checked = state.weekendModeOptIn, onCheckedChange = { state.weekendModeOptIn = it })
+        Switch(checked = state.weekendModeOptIn, onCheckedChange = null)
     }
 }
 
@@ -805,13 +805,14 @@ private fun FixedTimeFormBody(
             FlowRow {
                 (1..7).forEach { dayNum ->
                     val label = DayOfWeek.of(dayNum).getDisplayName(TextStyle.SHORT, Locale.current.platformLocale)
-                    Row(verticalAlignment = Alignment.CenterVertically) {
-                        Checkbox(
-                            checked = dayNum in selectedDays,
-                            onCheckedChange = { checked ->
-                                selectedDays = if (checked) selectedDays + dayNum else selectedDays - dayNum
-                            },
-                        )
+                    // One toggleable node per day (Stage B pattern): TalkBack reads "lun, casella di controllo".
+                    Row(
+                        Modifier.toggleable(value = dayNum in selectedDays, role = Role.Checkbox) { checked ->
+                            selectedDays = if (checked) selectedDays + dayNum else selectedDays - dayNum
+                        },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(checked = dayNum in selectedDays, onCheckedChange = null)
                         Text(label, style = MaterialTheme.typography.labelSmall)
                     }
                 }

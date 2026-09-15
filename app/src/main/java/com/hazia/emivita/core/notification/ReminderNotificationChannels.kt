@@ -66,12 +66,14 @@ object ReminderNotificationChannels {
      * [createAll] runs in `EmivitaApplication.onCreate`, so that only happens
      * before the app has finished starting.
      */
-    fun blockedTiers(context: Context): List<String> {
-        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager
-            ?: return emptyList()
-        return NotificationPriority.entries
-            .filter { manager.getNotificationChannel(channelIdFor(it))?.importance == NotificationManager.IMPORTANCE_NONE }
-            .map { context.getString(tierNameFor(it)) }
+    fun blockedTiers(context: Context): List<String> =
+        NotificationPriority.entries.filter { isBlocked(context, it) }.map { context.getString(tierNameFor(it)) }
+
+    /** True when Android has this tier's channel at IMPORTANCE_NONE: nothing posted to it is
+     *  ever shown, so nothing should ring for it either (§7 R81). */
+    fun isBlocked(context: Context, priority: NotificationPriority): Boolean {
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return false
+        return manager.getNotificationChannel(channelIdFor(priority))?.importance == NotificationManager.IMPORTANCE_NONE
     }
 
     fun createAll(context: Context) {
