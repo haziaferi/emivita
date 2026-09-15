@@ -44,7 +44,10 @@ object BiometricAuthenticator {
     }
 
     /** True on success, false on any failure/cancellation -- the caller
-     *  (AppLockGate) treats both the same way: stay locked. */
+     *  (AppLockGate) treats both the same way: stay locked. The three
+     *  `AppLock` log lines carry no data and are what made §7 R79's
+     *  diagnosis possible from adb: a prompt cancelled by the screen going
+     *  off (error 10) looks, from the phone in hand, like "no keyboard". */
     suspend fun authenticate(activity: FragmentActivity): Boolean = suspendCancellableCoroutine { continuation ->
         val executor = ContextCompat.getMainExecutor(activity)
         val prompt = BiometricPrompt(
@@ -52,10 +55,12 @@ object BiometricAuthenticator {
             executor,
             object : BiometricPrompt.AuthenticationCallback() {
                 override fun onAuthenticationSucceeded(result: BiometricPrompt.AuthenticationResult) {
+                    android.util.Log.i("AppLock", "succeeded type=${result.authenticationType} active=${continuation.isActive}")
                     if (continuation.isActive) continuation.resume(true)
                 }
 
                 override fun onAuthenticationError(errorCode: Int, errString: CharSequence) {
+                    android.util.Log.i("AppLock", "error $errorCode $errString active=${continuation.isActive}")
                     if (continuation.isActive) continuation.resume(false)
                 }
 
@@ -72,7 +77,8 @@ object BiometricAuthenticator {
             .setTitle(activity.getString(R.string.biometric_unlock_title))
             .setAllowedAuthenticators(ALLOWED)
             .build()
-        continuation.invokeOnCancellation { prompt.cancelAuthentication() }
+        continuation.invokeOnCancellation { android.util.Log.i("AppLock", "cancelled"); prompt.cancelAuthentication() }
+        android.util.Log.i("AppLock", "authenticate()")
         prompt.authenticate(promptInfo)
     }
 }
