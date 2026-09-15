@@ -23,7 +23,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.core.app.NotificationManagerCompat
+import com.hazia.emivita.core.notification.ReminderNotifications
 import androidx.lifecycle.lifecycleScope
 import com.hazia.emivita.EmivitaApplication
 import com.hazia.emivita.R
@@ -65,7 +65,7 @@ class SnoozePickerActivity : ComponentActivity() {
                                 fireAtEpochMillis = System.currentTimeMillis() + minutes * 60_000L,
                             )
                         }
-                        NotificationManagerCompat.from(this@SnoozePickerActivity).cancel(doseEventId.toInt())
+                        ReminderNotifications.dismiss(this@SnoozePickerActivity, doseEventId)
                         finish()
                     }
                 }

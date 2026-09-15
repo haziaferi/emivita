@@ -25,6 +25,7 @@ import com.hazia.emivita.core.format.formatDecimalLocalized
 import com.hazia.emivita.core.format.maskedMedicineName
 import kotlinx.coroutines.flow.first
 import com.hazia.emivita.core.format.LocaleFormats
+import com.hazia.emivita.core.alarm.AlarmRingService
 
 const val ACTION_TAKE = "com.hazia.emivita.action.TAKE"
 const val ACTION_SKIP = "com.hazia.emivita.action.SKIP"
@@ -131,7 +132,13 @@ class ReminderNotificationBuilder(
             builder.setContentIntent(openAppPendingIntent(context, doseEvent.id.toInt()))
         }
 
-        postIfPermitted(context, TAG, notificationId, builder.build())
+        if (priority == NotificationPriority.ALARM && notificationsPermitted(context)) {
+            // The Alarm tier rings until answered (§7 R80): the service posts
+            // this notification as its own and loops the tone under it.
+            AlarmRingService.ring(context, doseEvent.id, builder.build())
+        } else {
+            postIfPermitted(context, TAG, notificationId, builder.build())
+        }
         // The real reminder replaces its own pre-alarm.
         androidx.core.app.NotificationManagerCompat.from(context).cancel(preAlarmNotificationId(reminder.id))
         updateGroupSummary()

@@ -35,7 +35,7 @@ import androidx.compose.ui.platform.LocalResources
 import com.hazia.emivita.core.format.parseDecimal
 import com.hazia.emivita.core.format.formatDecimalLocalized
 import androidx.compose.ui.platform.LocalContext
-import androidx.core.app.NotificationManagerCompat
+import com.hazia.emivita.core.notification.ReminderNotifications
 import com.hazia.emivita.core.data.entity.DoseEvent
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -184,7 +184,7 @@ fun DoseEditDialog(
                                 try {
                                     val at = java.time.LocalDate.ofEpochDay(day).atTime(moveHour, moveMinute).atZone(zone).toInstant().toEpochMilli()
                                     doseEventRepository.reschedule(doseEventId, at)
-                                    NotificationManagerCompat.from(context).cancel(doseEventId.toInt())
+                                    ReminderNotifications.dismiss(context, doseEventId)
                                     onDismiss()
                                 } catch (e: Exception) {
                                     saving = false
@@ -231,7 +231,7 @@ fun DoseEditDialog(
                                 scope.launch {
                                     try {
                                         doseEventRepository.softDelete(doseEventId)
-                                        NotificationManagerCompat.from(context).cancel(doseEventId.toInt())
+                                        ReminderNotifications.dismiss(context, doseEventId)
                                         onDismiss()
                                     } catch (e: Exception) {
                                         saving = false

@@ -43,16 +43,18 @@
          and §1's permission posture stays intact. See §7 R58: the removal
          being correct is exactly what let the stale reason go unread.
 
-         WAKE_LOCK and FOREGROUND_SERVICE were previously described here as
-         removed too. Deleting their <uses-permission> lines only removed
-         them from THIS file - the manifest merger put both straight back
-         from androidx.work, which arrives transitively via
-         androidx.glance:glance-appwidget. They are now genuinely removed,
-         below, via tools:node="remove". None of this app's own code wants
-         any of them: no receiver acquires a PowerManager.WakeLock or
-         declares a foreground Service, an alarm-fired broadcast already gets
-         the OS's own brief wake guarantee for onReceive(), and every
+         WAKE_LOCK was previously described here as removed too. Deleting
+         its <uses-permission> line only removed it from THIS file - the
+         manifest merger put it straight back from androidx.work, which
+         arrives transitively via androidx.glance:glance-appwidget. It is now
+         genuinely removed, below, via tools:node="remove": no receiver
+         acquires a PowerManager.WakeLock, an alarm-fired broadcast already
+         gets the OS's own brief wake guarantee for onReceive(), and every
          receiver extends that with goAsync() for its coroutine work.
+         FOREGROUND_SERVICE was removed the same way until SPEC.md section 7
+         R80: AlarmRingService (below) is this app's one foreground service,
+         of type mediaPlayback, and it is what lets an Alarm-tier reminder
+         ring until it is answered while the phone is unlocked.
 
          ACCESS_NETWORK_STATE arrives the same way, into an app that
          deliberately declares no INTERNET permission at all.
@@ -67,7 +69,8 @@
          Re-check with :app:processReleaseMainManifest and read
          app/build/intermediates/merged_manifest/release/. -->
     <uses-permission android:name="android.permission.WAKE_LOCK" tools:node="remove" />
-    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" tools:node="remove" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MEDIA_PLAYBACK" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" tools:node="remove" />
     <uses-permission android:name="android.permission.USE_FINGERPRINT" tools:node="remove" />
 
@@ -161,6 +164,13 @@
             android:launchMode="singleTask" />
 
         <!-- Fired by AlarmManager (see core/scheduling/AlarmScheduler.kt). -->
+        <!-- The Alarm tier's ringing (SPEC.md section 7 R80): a foreground
+             service whose notification is the reminder's own. -->
+        <service
+            android:name=".core.alarm.AlarmRingService"
+            android:exported="false"
+            android:foregroundServiceType="mediaPlayback" />
+
         <receiver
             android:name=".core.scheduling.ReminderAlarmReceiver"
             android:exported="false" />

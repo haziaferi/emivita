@@ -30,7 +30,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
-import androidx.core.app.NotificationManagerCompat
 import com.hazia.emivita.EmivitaApplication
 import com.hazia.emivita.core.data.entity.DoseStatus
 import com.hazia.emivita.core.data.entity.Medicine
@@ -43,22 +42,10 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
-import android.media.AudioAttributes
-import android.media.MediaPlayer
-import android.os.Build
-import android.os.VibrationEffect
-import android.os.Vibrator
-import android.os.VibratorManager
-import android.provider.Settings
-import android.util.Log
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
-import android.media.AudioManager
-import android.net.Uri
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.Job
-import androidx.core.net.toUri
 import com.hazia.emivita.core.locale.AppLocale
+import com.hazia.emivita.core.notification.ReminderNotifications
 
 /**
  * Full-screen target for ALARM-priority reminders (see
@@ -74,16 +61,9 @@ import com.hazia.emivita.core.locale.AppLocale
 class AlarmActivity : ComponentActivity() {
     override fun attachBaseContext(newBase: Context) = super.attachBaseContext(AppLocale.wrap(newBase))
 
-    // The half of medTimer's ReminderAlarmActivity that the port left out
-    // (§7 R59): this screen showed over the lock screen and turned the
-    // display on, and then sat there silently. medTimer loops the alarm
-    // ringtone through a MediaPlayer on USAGE_ALARM -- the alarm stream,
-    // which rings through vibrate mode and, by default, through Do Not
-    // Disturb -- and vibrates 500ms on / 500ms off until the dose is
-    // answered. Found on the device: "alarm firing but no sound".
-    private var player: MediaPlayer? = null
-    private var vibrator: Vibrator? = null
-
+    // The ringing moved to AlarmRingService (§7 R80): it starts with the
+    // notification, whether this screen is shown (locked) or a heads-up is
+    // (unlocked), and it keeps going when this screen is left unanswered.
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         setShowWhenLocked(true)
@@ -105,66 +85,6 @@ class AlarmActivity : ComponentActivity() {
                 )
             }
         }
-    }
-
-    // Ring while the screen is in front; stop the moment it is not. Leaving
-    // for Home without answering stops the noise but keeps the notification,
-    // which is the same trade medTimer makes in its pauseAlarm.
-    override fun onStart() { super.onStart(); startRinging() }
-    override fun onStop() { stopRinging(); super.onStop() }
-    override fun onDestroy() { stopRinging(); super.onDestroy() }
-
-    private var ringingJob: Job? = null
-
-    private fun startRinging() {
-        if (player != null || ringingJob?.isActive == true) return
-        val settings = (application as EmivitaApplication).container.settingsRepository
-        // The three settings are read once per ring (§9 #25; medTimer's
-        // AlarmSettingsFragment): the chosen tone, and whether the phone's
-        // silent switch should be respected for sound and for vibration.
-        // USAGE_ALARM rings through vibrate mode by design; these two switches
-        // are the user's way of saying "not when I have silenced the phone".
-        ringingJob = lifecycleScope.launch {
-            val toneUri = settings.alarmRingtoneUri.first()?.let { it.toUri() } ?: Settings.System.DEFAULT_ALARM_ALERT_URI
-            val noSoundWhenSilent = settings.alarmNoSoundWhenSilent.first()
-            val noVibrationWhenSilent = settings.alarmNoVibrationWhenSilent.first()
-            val ringerSilent = (getSystemService(Context.AUDIO_SERVICE) as? AudioManager)?.ringerMode == AudioManager.RINGER_MODE_SILENT
-            if (isDestroyed || isFinishing) return@launch
-
-            if (!(noSoundWhenSilent && ringerSilent)) {
-                val attrs = AudioAttributes.Builder()
-                    .setUsage(AudioAttributes.USAGE_ALARM)
-                    .setContentType(AudioAttributes.CONTENT_TYPE_SONIFICATION)
-                    .build()
-                // The chosen tone, else the system's alarm tone -- and if the
-                // chosen one cannot be opened (deleted file, revoked grant), the
-                // default again rather than silence: medTimer's double fallback.
-                player = runCatching { MediaPlayer.create(this@AlarmActivity, toneUri, null, attrs, 0) }.getOrNull()
-                    ?: runCatching { MediaPlayer.create(this@AlarmActivity, Settings.System.DEFAULT_ALARM_ALERT_URI, null, attrs, 0) }.getOrNull()
-                player?.apply { isLooping = true; start() }
-                if (player == null) Log.w(TAG, "Could not create the alarm MediaPlayer -- ringing without sound.")
-            }
-
-            if (!(noVibrationWhenSilent && ringerSilent)) {
-                vibrator = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                    (getSystemService(Context.VIBRATOR_MANAGER_SERVICE) as? VibratorManager)?.defaultVibrator
-                } else {
-                    @Suppress("DEPRECATION")
-                    getSystemService(Context.VIBRATOR_SERVICE) as? Vibrator
-                }
-                vibrator?.vibrate(VibrationEffect.createWaveform(longArrayOf(500, 500), 0))
-            }
-        }
-    }
-
-    private fun stopRinging() {
-        ringingJob?.cancel()
-        ringingJob = null
-        runCatching { player?.stop() }
-        player?.release()
-        player = null
-        vibrator?.cancel()
-        vibrator = null
     }
 
     private companion object {
@@ -279,7 +199,7 @@ private suspend fun resolveAndDismiss(
         }
     }
     container.doseEventRepository.resolve(doseEventId, status)
-    NotificationManagerCompat.from(context).cancel(doseEventId.toInt())
+    ReminderNotifications.dismiss(context, doseEventId)
 }
 
 private suspend fun snoozeAndDismiss(container: AppContainer, context: Context, doseEventId: Long, snoozeMinutes: Int) {
@@ -293,5 +213,5 @@ private suspend fun snoozeAndDismiss(container: AppContainer, context: Context, 
             fireAtEpochMillis = System.currentTimeMillis() + snoozeMinutes * 60_000L,
         )
     }
-    NotificationManagerCompat.from(context).cancel(doseEventId.toInt())
+    ReminderNotifications.dismiss(context, doseEventId)
 }

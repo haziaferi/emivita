@@ -25,10 +25,15 @@ import androidx.core.content.ContextCompat
  * [tag] is the caller's log tag, so a dropped notification is attributable to
  * the builder that tried to post it.
  */
+internal fun notificationsPermitted(context: Context): Boolean =
+    Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
+
 internal fun postIfPermitted(context: Context, tag: String, notificationId: Int, notification: Notification) {
+    // Spelled out here rather than through notificationsPermitted(): lint's
+    // MissingPermission check only recognises the check when it is inline.
     val granted = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
-        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
-        PackageManager.PERMISSION_GRANTED
+        ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
     if (!granted) {
         Log.w(tag, "POST_NOTIFICATIONS not granted -- notification $notificationId not shown.")
         return

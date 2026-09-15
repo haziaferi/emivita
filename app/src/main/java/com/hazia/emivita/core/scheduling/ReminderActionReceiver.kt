@@ -4,7 +4,6 @@ import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.util.Log
-import androidx.core.app.NotificationManagerCompat
 import com.hazia.emivita.EmivitaApplication
 import com.hazia.emivita.core.data.entity.DoseStatus
 import com.hazia.emivita.core.di.AppContainer
@@ -21,6 +20,7 @@ import com.hazia.emivita.core.notification.ACTION_SWIPED
 import com.hazia.emivita.core.data.settings.SwipeAction
 import com.hazia.emivita.core.notification.ACTION_TAKE_ALL
 import com.hazia.emivita.core.notification.EXTRA_DOSE_EVENT_IDS
+import com.hazia.emivita.core.notification.ReminderNotifications
 
 private const val TAG = "ReminderActionReceiver"
 
@@ -159,7 +159,7 @@ class ReminderActionReceiver : BroadcastReceiver() {
     }
 
     private fun dismissNotification(context: Context, doseEventId: Long) {
-        NotificationManagerCompat.from(context).cancel(doseEventId.toInt())
+        ReminderNotifications.dismiss(context, doseEventId)
         // The summary's "Take all" must list only what is still showing.
         (context.applicationContext as? EmivitaApplication)?.container?.notificationBuilder?.updateGroupSummary()
     }
