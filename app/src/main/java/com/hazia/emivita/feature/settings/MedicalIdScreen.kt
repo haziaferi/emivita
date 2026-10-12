@@ -23,6 +23,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
@@ -76,21 +77,23 @@ fun MedicalIdScreen(
 
     var profile by remember { mutableStateOf<Profile?>(null) }
     var loaded by remember { mutableStateOf(false) }
+    // Fields are saveable and filled from the store once (§7 R83 (a)).
+    var filled by rememberSaveable { mutableStateOf(false) }
 
-    var name by remember { mutableStateOf("") }
-    var bloodType by remember { mutableStateOf("") }
-    var allergies by remember { mutableStateOf("") }
-    var doctorName by remember { mutableStateOf("") }
-    var doctorPhone by remember { mutableStateOf("") }
-    var doctorAddress by remember { mutableStateOf("") }
-    var pharmacyName by remember { mutableStateOf("") }
-    var pharmacyPhone by remember { mutableStateOf("") }
+    var name by rememberSaveable { mutableStateOf("") }
+    var bloodType by rememberSaveable { mutableStateOf("") }
+    var allergies by rememberSaveable { mutableStateOf("") }
+    var doctorName by rememberSaveable { mutableStateOf("") }
+    var doctorPhone by rememberSaveable { mutableStateOf("") }
+    var doctorAddress by rememberSaveable { mutableStateOf("") }
+    var pharmacyName by rememberSaveable { mutableStateOf("") }
+    var pharmacyPhone by rememberSaveable { mutableStateOf("") }
     var saveError by remember { mutableStateOf<String?>(null) }
 
     LaunchedEffect(profileId) {
         val existing = profileRepository.getById(profileId)
         profile = existing
-        if (existing != null) {
+        if (existing != null && !filled) {
             // "Me" is EmivitaApp's placeholder for a name nothing used to
             // display. Showing it here as though the user had chosen it would
             // invite them to leave it, and then hand a doctor a card headed
@@ -104,6 +107,7 @@ fun MedicalIdScreen(
             pharmacyName = existing.pharmacyName.orEmpty()
             pharmacyPhone = existing.pharmacyPhone.orEmpty()
         }
+        filled = true
         loaded = true
     }
 

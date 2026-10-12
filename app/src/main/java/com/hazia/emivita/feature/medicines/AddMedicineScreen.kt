@@ -41,6 +41,8 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import com.hazia.emivita.ui.components.NullableColorSaver
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -296,29 +298,31 @@ private fun MedicineFormBody(
     ) -> Unit,
     onCancel: () -> Unit,
 ) {
-    var name by remember { mutableStateOf(initialName) }
-    var priority by remember { mutableStateOf(initialPriority) }
-    var barcodeValue by remember { mutableStateOf(initialBarcodeValue) }
-    var iconKey by remember { mutableStateOf(initialIconKey) }
-    var color by remember { mutableStateOf(initialColor) }
-    var showColorPicker by remember { mutableStateOf(false) }
-    var tagInput by remember { mutableStateOf("") }
-    var pendingTags by remember { mutableStateOf(initialTagNames) }
-    var indication by remember { mutableStateOf(initialIndication) }
-    var storageNote by remember { mutableStateOf(initialStorageNote) }
-    var notes by remember { mutableStateOf(initialNotes) }
-    var prnMax by remember { mutableStateOf(initialPrnMaxDoses?.toString() ?: "") }
-    var prnHours by remember { mutableStateOf(initialPrnWindowHours?.toString() ?: "") }
-    var strength by remember { mutableStateOf(initialStrength) }
-    var rxNumber by remember { mutableStateOf(initialRxNumber) }
+    // Every field is saveable, so a rotation or a process death keeps the
+    // input (§7 R83 (a)).
+    var name by rememberSaveable { mutableStateOf(initialName) }
+    var priority by rememberSaveable { mutableStateOf(initialPriority) }
+    var barcodeValue by rememberSaveable { mutableStateOf(initialBarcodeValue) }
+    var iconKey by rememberSaveable { mutableStateOf(initialIconKey) }
+    var color by rememberSaveable(stateSaver = NullableColorSaver) { mutableStateOf(initialColor) }
+    var showColorPicker by rememberSaveable { mutableStateOf(false) }
+    var tagInput by rememberSaveable { mutableStateOf("") }
+    var pendingTags by rememberSaveable { mutableStateOf(initialTagNames) }
+    var indication by rememberSaveable { mutableStateOf(initialIndication) }
+    var storageNote by rememberSaveable { mutableStateOf(initialStorageNote) }
+    var notes by rememberSaveable { mutableStateOf(initialNotes) }
+    var prnMax by rememberSaveable { mutableStateOf(initialPrnMaxDoses?.toString() ?: "") }
+    var prnHours by rememberSaveable { mutableStateOf(initialPrnWindowHours?.toString() ?: "") }
+    var strength by rememberSaveable { mutableStateOf(initialStrength) }
+    var rxNumber by rememberSaveable { mutableStateOf(initialRxNumber) }
     val resources = LocalResources.current
-    var doseUnit by remember { mutableStateOf(initialDoseUnit) }
+    var doseUnit by rememberSaveable { mutableStateOf(initialDoseUnit) }
     // null = inherit global default, true/false = explicit override
-    var lockOverride by remember { mutableStateOf(initialLockOverride) }
+    var lockOverride by rememberSaveable { mutableStateOf(initialLockOverride) }
     // §9 #29 (HM-40): every field a save would persist, against its first value.
     val dirty = rememberDirty(Unit, name, priority, barcodeValue, iconKey, color, pendingTags, indication, storageNote, notes, prnMax, prnHours, strength, rxNumber, doseUnit, lockOverride)
     val cancel = unsavedChangesGuard(dirty, onCancel)
-    var saving by remember { mutableStateOf(false) }
+    var saving by remember { mutableStateOf(false) } // transient: a save in flight does not survive the activity
     var saveError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -326,7 +330,7 @@ private fun MedicineFormBody(
     // scanner app (e.g. Binary Eye) rather than bundling camera/ML code here
     // (spec §3: local-only, no drug database or online lookup, this is purely
     // for the user's own quick re-identification later).
-    var scanUnavailable by remember { mutableStateOf(false) }
+    var scanUnavailable by rememberSaveable { mutableStateOf(false) }
     val scanLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
         if (result.resultCode == RESULT_OK) {
             barcodeValue = result.data?.getStringExtra("SCAN_RESULT")

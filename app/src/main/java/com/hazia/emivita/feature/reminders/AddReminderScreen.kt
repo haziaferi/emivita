@@ -46,6 +46,9 @@ import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -129,7 +132,7 @@ fun AddReminderScreen(
     onDone: () -> Unit,
     onCancel: () -> Unit,
 ) {
-    var selectedType by remember { mutableStateOf<ReminderType?>(null) }
+    var selectedType by rememberSaveable { mutableStateOf<ReminderType?>(null) }
     // One-time fetch, not a live collector -- the Measurement field is set on
     // the medicine's own screen, not editable from here; this form only
     // needs its current value as a display hint next to the dose field.
@@ -269,7 +272,7 @@ fun EditReminderScreen(
         return
     }
 
-    var showDeleteConfirm by remember { mutableStateOf(false) }
+    var showDeleteConfirm by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val onDelete: () -> Unit = { showDeleteConfirm = true }
     if (showDeleteConfirm) {
@@ -501,6 +504,22 @@ private class AdvancedReminderFieldsState(initialReminder: Reminder?) {
     var courseEnabled by mutableStateOf(initialReminder?.dosesRemaining != null)
     var dosesRemaining by mutableStateOf(initialReminder?.dosesRemaining?.toString() ?: "10")
 
+    companion object {
+        /** Field by field, so the section survives a rotation (§7 R83 (a)). */
+        val Saver: Saver<AdvancedReminderFieldsState, Any> = listSaver(
+            save = { listOf(it.autoResolve, it.activeFromEpochDay, it.activeUntilEpochDay, it.nagEnabled, it.nagDelayMinutes, it.nagMaxRepeats,
+                it.weekendModeOptIn, it.preAlarmEnabled, it.preAlarmMinutes, it.instructions, it.courseEnabled, it.dosesRemaining) },
+            restore = { v ->
+                AdvancedReminderFieldsState(null).apply {
+                    autoResolve = v[0] as Boolean; activeFromEpochDay = v[1] as Long?; activeUntilEpochDay = v[2] as Long?
+                    nagEnabled = v[3] as Boolean; nagDelayMinutes = v[4] as String; nagMaxRepeats = v[5] as String
+                    weekendModeOptIn = v[6] as Boolean; preAlarmEnabled = v[7] as Boolean; preAlarmMinutes = v[8] as String
+                    instructions = v[9] as String; courseEnabled = v[10] as Boolean; dosesRemaining = v[11] as String
+                }
+            },
+        )
+    }
+
     fun snapshot(): AdvancedFields = AdvancedFields(
         autoResolve = autoResolve,
         activeFromEpochDay = activeFromEpochDay,
@@ -519,7 +538,7 @@ private class AdvancedReminderFieldsState(initialReminder: Reminder?) {
 
 @Composable
 private fun rememberAdvancedReminderFieldsState(initialReminder: Reminder?): AdvancedReminderFieldsState =
-    remember(initialReminder) { AdvancedReminderFieldsState(initialReminder) }
+    rememberSaveable(initialReminder, saver = AdvancedReminderFieldsState.Saver) { AdvancedReminderFieldsState(initialReminder) }
 
 /** Collapsed by default -- these are the "advanced" fields per their own
  *  schema doc comments (Reminder.kt), not something most reminders need.
@@ -529,7 +548,7 @@ private fun rememberAdvancedReminderFieldsState(initialReminder: Reminder?): Adv
  *  and none of these four fields mean anything without one. */
 @Composable
 private fun AdvancedReminderFieldsSection(state: AdvancedReminderFieldsState) {
-    var expanded by remember { mutableStateOf(false) }
+    var expanded by rememberSaveable { mutableStateOf(false) }
 
     Spacer(Modifier.height(16.dp))
     CollapsibleSection(stringResource(R.string.add_reminder_advanced), expanded, onToggle = { expanded = !expanded }) {
@@ -730,11 +749,11 @@ private fun FixedTimeFormBody(
     onDelete: (() -> Unit)? = null,
 ) {
     val advanced = rememberAdvancedReminderFieldsState(initialReminder)
-    var hour by remember { mutableIntStateOf(initial.hour) }
-    var minute by remember { mutableIntStateOf(initial.minute) }
-    var dose by remember { mutableStateOf(formatDecimalLocalized(initial.dose)) }
+    var hour by rememberSaveable { mutableIntStateOf(initial.hour) }
+    var minute by rememberSaveable { mutableIntStateOf(initial.minute) }
+    var dose by rememberSaveable { mutableStateOf(formatDecimalLocalized(initial.dose)) }
     val initialPattern = initial.repeatPattern
-    var patternKind by remember {
+    var patternKind by rememberSaveable {
         mutableIntStateOf(
             when (initialPattern) {
                 is RepeatPattern.SpecificDaysOfWeek -> 1
@@ -744,11 +763,11 @@ private fun FixedTimeFormBody(
             }
         )
     }
-    var selectedDays by remember { mutableStateOf((initialPattern as? RepeatPattern.SpecificDaysOfWeek)?.days ?: setOf()) }
-    var everyN by remember { mutableStateOf((initialPattern as? RepeatPattern.EveryNDays)?.n?.toString() ?: "2") }
+    var selectedDays by rememberSaveable { mutableStateOf((initialPattern as? RepeatPattern.SpecificDaysOfWeek)?.days ?: setOf()) }
+    var everyN by rememberSaveable { mutableStateOf((initialPattern as? RepeatPattern.EveryNDays)?.n?.toString() ?: "2") }
     val everyNStartEpochDay = (initialPattern as? RepeatPattern.EveryNDays)?.startEpochDay ?: LocalDate.now().toEpochDay()
-    var activeDays by remember { mutableStateOf((initialPattern as? RepeatPattern.CyclicActivePause)?.activeDays?.toString() ?: "21") }
-    var pauseDays by remember { mutableStateOf((initialPattern as? RepeatPattern.CyclicActivePause)?.pauseDays?.toString() ?: "7") }
+    var activeDays by rememberSaveable { mutableStateOf((initialPattern as? RepeatPattern.CyclicActivePause)?.activeDays?.toString() ?: "21") }
+    var pauseDays by rememberSaveable { mutableStateOf((initialPattern as? RepeatPattern.CyclicActivePause)?.pauseDays?.toString() ?: "7") }
     // First-cycle anchor isn't editable in this pass (spec doesn't call for a
     // date-picker UI beyond the day-chip/stepper controls the other patterns
     // already get) -- defaults to today for a new reminder, preserved as-is
@@ -868,9 +887,9 @@ private fun RepeatingIntervalFormBody(
     onDelete: (() -> Unit)? = null,
 ) {
     val advanced = rememberAdvancedReminderFieldsState(initialReminder)
-    var intervalHours by remember { mutableStateOf(formatHours(initial.intervalMinutes)) }
-    var dose by remember { mutableStateOf(formatDecimalLocalized(initial.dose)) }
-    var startBehavior by remember { mutableStateOf(initial.startBehavior) }
+    var intervalHours by rememberSaveable { mutableStateOf(formatHours(initial.intervalMinutes)) }
+    var dose by rememberSaveable { mutableStateOf(formatDecimalLocalized(initial.dose)) }
+    var startBehavior by rememberSaveable { mutableStateOf(initial.startBehavior) }
     val scope = rememberCoroutineScope()
     val doseValue = parseDecimal(dose)
     val hoursValue = parseDecimal(intervalHours)
@@ -941,13 +960,13 @@ private fun DailyWindowFormBody(
     onDelete: (() -> Unit)? = null,
 ) {
     val advanced = rememberAdvancedReminderFieldsState(initialReminder)
-    var intervalHours by remember { mutableStateOf(formatHours(initial.intervalMinutes)) }
-    var dose by remember { mutableStateOf(formatDecimalLocalized(initial.dose)) }
-    var startHour by remember { mutableIntStateOf(initial.windowStartHour) }
-    var startMinute by remember { mutableIntStateOf(initial.windowStartMinute) }
-    var endHour by remember { mutableIntStateOf(initial.windowEndHour) }
-    var endMinute by remember { mutableIntStateOf(initial.windowEndMinute) }
-    var startBehavior by remember { mutableStateOf(initial.startBehavior) }
+    var intervalHours by rememberSaveable { mutableStateOf(formatHours(initial.intervalMinutes)) }
+    var dose by rememberSaveable { mutableStateOf(formatDecimalLocalized(initial.dose)) }
+    var startHour by rememberSaveable { mutableIntStateOf(initial.windowStartHour) }
+    var startMinute by rememberSaveable { mutableIntStateOf(initial.windowStartMinute) }
+    var endHour by rememberSaveable { mutableIntStateOf(initial.windowEndHour) }
+    var endMinute by rememberSaveable { mutableIntStateOf(initial.windowEndMinute) }
+    var startBehavior by rememberSaveable { mutableStateOf(initial.startBehavior) }
     val scope = rememberCoroutineScope()
     val doseValue = parseDecimal(dose)
     val hoursValue = parseDecimal(intervalHours)
@@ -1041,10 +1060,10 @@ private fun LowStockAlertFormBody(
     onCancel: () -> Unit,
     onDelete: (() -> Unit)? = null,
 ) {
-    var threshold by remember { mutableStateOf(formatDecimalLocalized(initial.threshold)) }
-    var triggerMode by remember { mutableStateOf(initial.triggerMode) }
-    var hour by remember { mutableStateOf(initial.hour) }
-    var minute by remember { mutableStateOf(initial.minute) }
+    var threshold by rememberSaveable { mutableStateOf(formatDecimalLocalized(initial.threshold)) }
+    var triggerMode by rememberSaveable { mutableStateOf(initial.triggerMode) }
+    var hour by rememberSaveable { mutableStateOf(initial.hour) }
+    var minute by rememberSaveable { mutableStateOf(initial.minute) }
     val scope = rememberCoroutineScope()
     val thresholdValue = parseDecimal(threshold)
 
@@ -1125,10 +1144,10 @@ private fun ExpirationAlertFormBody(
     onCancel: () -> Unit,
     onDelete: (() -> Unit)? = null,
 ) {
-    var leadDays by remember { mutableStateOf(initial.leadDays.toString()) }
-    var frequency by remember { mutableStateOf(initial.frequency) }
-    var hour by remember { mutableStateOf(initial.hour) }
-    var minute by remember { mutableStateOf(initial.minute) }
+    var leadDays by rememberSaveable { mutableStateOf(initial.leadDays.toString()) }
+    var frequency by rememberSaveable { mutableStateOf(initial.frequency) }
+    var hour by rememberSaveable { mutableStateOf(initial.hour) }
+    var minute by rememberSaveable { mutableStateOf(initial.minute) }
     val scope = rememberCoroutineScope()
     val leadDaysValue = leadDays.toIntOrNull()
 
@@ -1213,11 +1232,13 @@ private fun LinkedFollowingFormBody(
 ) {
     val advanced = rememberAdvancedReminderFieldsState(initialReminder)
     var siblings by remember { mutableStateOf<List<Reminder>?>(null) }
-    var selectedParent by remember { mutableStateOf<Reminder?>(null) }
-    var delayMinutes by remember { mutableStateOf(initial.delayMinutes.toString()) }
-    var dose by remember { mutableStateOf(formatDecimalLocalized(initial.dose)) }
-    var startBehavior by remember { mutableStateOf(initial.startBehavior) }
-    var menuExpanded by remember { mutableStateOf(false) }
+    // The parent the person picked, by id so it survives a rotation (§7 R83 (a));
+    // null until they pick, and the default below stands in.
+    var chosenParentId by rememberSaveable { mutableStateOf<Long?>(null) }
+    var delayMinutes by rememberSaveable { mutableStateOf(initial.delayMinutes.toString()) }
+    var dose by rememberSaveable { mutableStateOf(formatDecimalLocalized(initial.dose)) }
+    var startBehavior by rememberSaveable { mutableStateOf(initial.startBehavior) }
+    var menuExpanded by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(medicineId) {
@@ -1234,17 +1255,17 @@ private fun LinkedFollowingFormBody(
                     it.type != ReminderType.EXPIRATION_ALERT
             }
             siblings = candidates
-            if (selectedParent == null) {
-                selectedParent = candidates.firstOrNull { it.id == initialParentReminderId } ?: candidates.firstOrNull()
-            }
         }
     }
 
     val delayValue = delayMinutes.toIntOrNull()
     val doseValue = parseDecimal(dose)
     val currentSiblings = siblings
+    val selectedParent = currentSiblings?.let { list ->
+        list.firstOrNull { it.id == chosenParentId } ?: list.firstOrNull { it.id == initialParentReminderId } ?: list.firstOrNull()
+    }
 
-    val dirty = rememberDirty(siblings, selectedParent?.id, delayMinutes, dose, startBehavior, advanced.snapshot())
+    val dirty = rememberDirty(Unit, chosenParentId, delayMinutes, dose, startBehavior, advanced.snapshot())
     ReminderFormScaffold(
         dirty = dirty,
         title = title,
@@ -1284,7 +1305,7 @@ private fun LinkedFollowingFormBody(
                             DropdownMenuItem(
                                 text = { Text(reminderLabel(sibling)) },
                                 onClick = {
-                                    selectedParent = sibling
+                                    chosenParentId = sibling.id
                                     menuExpanded = false
                                 },
                             )

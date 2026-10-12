@@ -360,15 +360,18 @@ private fun SwipeAction.labelRes(): Int = when (this) {
 fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit) {
     val schedulingCoordinator = LocalAppContainer.current.schedulingCoordinator
     var loaded by remember { mutableStateOf(false) }
-    var enabled by remember { mutableStateOf(false) }
-    var days by remember { mutableStateOf(setOf<Int>()) }
-    var startHour by remember { mutableIntStateOf(9) }
-    var startMinute by remember { mutableIntStateOf(0) }
-    var endHour by remember { mutableIntStateOf(18) }
-    var endMinute by remember { mutableIntStateOf(0) }
+    // Saveable and filled once (§7 R83 (a)), so a rotation keeps the edits.
+    var filled by rememberSaveable { mutableStateOf(false) }
+    var enabled by rememberSaveable { mutableStateOf(false) }
+    var days by rememberSaveable { mutableStateOf(setOf<Int>()) }
+    var startHour by rememberSaveable { mutableIntStateOf(9) }
+    var startMinute by rememberSaveable { mutableIntStateOf(0) }
+    var endHour by rememberSaveable { mutableIntStateOf(18) }
+    var endMinute by rememberSaveable { mutableIntStateOf(0) }
     val scope = rememberCoroutineScope()
 
     LaunchedEffect(Unit) {
+        if (filled) { loaded = true; return@LaunchedEffect }
         enabled = settingsRepository.weekendModeEnabled.first()
         days = settingsRepository.weekendDays.first()
         val start = settingsRepository.weekendStartTime.first()
@@ -377,6 +380,7 @@ fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit
         val end = settingsRepository.weekendEndTime.first()
         endHour = end.hour
         endMinute = end.minute
+        filled = true
         loaded = true
     }
 

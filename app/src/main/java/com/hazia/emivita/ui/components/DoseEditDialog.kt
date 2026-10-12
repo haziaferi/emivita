@@ -16,6 +16,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -97,16 +98,16 @@ fun DoseEditDialog(
     val wasUnresolved = originalStatus == DoseStatus.PENDING
     // Null until chosen when the dose was never resolved -- see the doc comment
     // on why this dialog refuses to guess Taken for a missed dose.
-    var status by remember { mutableStateOf(originalStatus.takeIf { !wasUnresolved }) }
-    var hour by remember { mutableIntStateOf(originalZoned.hour) }
-    var minute by remember { mutableIntStateOf(originalZoned.minute) }
-    var doseAmount by remember { mutableStateOf(formatDecimalLocalized(originalDoseAmount)) }
-    var notes by remember { mutableStateOf(originalNotes ?: "") }
-    var confirmDelete by remember { mutableStateOf(false) }
+    var status by rememberSaveable { mutableStateOf(originalStatus.takeIf { !wasUnresolved }) }
+    var hour by rememberSaveable { mutableIntStateOf(originalZoned.hour) }
+    var minute by rememberSaveable { mutableIntStateOf(originalZoned.minute) }
+    var doseAmount by rememberSaveable { mutableStateOf(formatDecimalLocalized(originalDoseAmount)) }
+    var notes by rememberSaveable { mutableStateOf(originalNotes ?: "") }
+    var confirmDelete by rememberSaveable { mutableStateOf(false) }
     // Move (§9 #26; medTimer RESCHEDULE): a pending dose to a chosen day + time.
-    var moveDay by remember { mutableStateOf<Long?>(null) }
-    var moveHour by remember { mutableIntStateOf(originalZoned.hour) }
-    var moveMinute by remember { mutableIntStateOf(originalZoned.minute) }
+    var moveDay by rememberSaveable { mutableStateOf<Long?>(null) }
+    var moveHour by rememberSaveable { mutableIntStateOf(originalZoned.hour) }
+    var moveMinute by rememberSaveable { mutableIntStateOf(originalZoned.minute) }
     var saving by remember { mutableStateOf(false) }
     var saveError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()

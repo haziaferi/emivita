@@ -19,6 +19,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -77,7 +78,10 @@ fun AppLockGate(settingsRepository: SettingsRepository, content: @Composable () 
         return
     }
 
-    var authenticated by remember { mutableStateOf(false) }
+    // Saveable so a rotation keeps the unlock (§7 R83 (a)). Safe across a
+    // process death: a real backgrounding sets it false at ON_STOP, which
+    // runs before the state is saved.
+    var authenticated by rememberSaveable { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val lifecycleOwner = LocalLifecycleOwner.current
 
@@ -97,7 +101,7 @@ fun AppLockGate(settingsRepository: SettingsRepository, content: @Composable () 
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
-            if (event == Lifecycle.Event.ON_STOP) authenticated = false
+            if (relocksOn(event, activity.isChangingConfigurations)) authenticated = false
         }
         lifecycleOwner.lifecycle.addObserver(observer)
         onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
@@ -127,3 +131,7 @@ fun AppLockGate(settingsRepository: SettingsRepository, content: @Composable () 
         }
     }
 }
+
+/** Backgrounding re-locks; the stop a rotation or theme switch passes through does not. */
+internal fun relocksOn(event: Lifecycle.Event, changingConfigurations: Boolean): Boolean =
+    event == Lifecycle.Event.ON_STOP && !changingConfigurations

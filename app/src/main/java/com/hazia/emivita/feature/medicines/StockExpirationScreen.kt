@@ -34,6 +34,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -96,37 +97,41 @@ fun StockExpirationScreen(
 ) {
     val scope = rememberCoroutineScope()
     var loaded by remember { mutableStateOf(false) }
+    // The editable fields are saveable (§7 R83 (a)); once filled from the
+    // store they are not refilled, so a rotation keeps the edits. Ids and
+    // saved-state facts are re-read every time.
+    var filled by rememberSaveable { mutableStateOf(false) }
 
     // Current stock
-    var quantity by remember { mutableStateOf("") }
-    var unit by remember { mutableStateOf("") }
+    var quantity by rememberSaveable { mutableStateOf("") }
+    var unit by rememberSaveable { mutableStateOf("") }
     // Whether the SAVED row has a unit -- the tracking switch (§3), and what
     // "Refill now" is gated on (§7 R60 C F-2): a refill applied before the
     // unit was saved used to insert a history row and change nothing.
     var trackingSaved by remember { mutableStateOf(false) }
-    var refillQuantity by remember { mutableStateOf("") }
+    var refillQuantity by rememberSaveable { mutableStateOf("") }
 
     // Low-stock alert (mirrors a LowStockAlert Reminder for this medicine)
     var lowStockReminderId by remember { mutableStateOf<Long?>(null) }
-    var lowStockEnabled by remember { mutableStateOf(false) }
-    var threshold by remember { mutableStateOf("") }
-    var triggerMode by remember { mutableStateOf(LowStockTriggerMode.ONCE_WHEN_BELOW) }
+    var lowStockEnabled by rememberSaveable { mutableStateOf(false) }
+    var threshold by rememberSaveable { mutableStateOf("") }
+    var triggerMode by rememberSaveable { mutableStateOf(LowStockTriggerMode.ONCE_WHEN_BELOW) }
 
     // Expiration alert (mirrors an ExpirationAlert Reminder for this medicine)
     var expirationReminderId by remember { mutableStateOf<Long?>(null) }
-    var expirationEnabled by remember { mutableStateOf(false) }
-    var expirationDateEpochDay by remember { mutableStateOf<Long?>(null) }
+    var expirationEnabled by rememberSaveable { mutableStateOf(false) }
+    var expirationDateEpochDay by rememberSaveable { mutableStateOf<Long?>(null) }
     // A column no screen could set (§7 R60 C F-5), the shape R59's rule 18
     // names; carried forward unchanged on every save until now.
     var productionDateEpochDay by remember { mutableStateOf<Long?>(null) }
     // §9 #27: the pack's "EXP 03/2027" by default, an exact day on request;
     // opened-on plus "use within N days" makes the effective expiry the
     // earlier of the two.
-    var exactExpiryDay by remember { mutableStateOf(false) }
-    var openedDateEpochDay by remember { mutableStateOf<Long?>(null) }
-    var useWithinDays by remember { mutableStateOf("") }
-    var leadDays by remember { mutableStateOf("") }
-    var frequency by remember { mutableStateOf(ExpirationTriggerFrequency.ONCE) }
+    var exactExpiryDay by rememberSaveable { mutableStateOf(false) }
+    var openedDateEpochDay by rememberSaveable { mutableStateOf<Long?>(null) }
+    var useWithinDays by rememberSaveable { mutableStateOf("") }
+    var leadDays by rememberSaveable { mutableStateOf("") }
+    var frequency by rememberSaveable { mutableStateOf(ExpirationTriggerFrequency.ONCE) }
 
     var saveStatus by remember { mutableStateOf<String?>(null) }
     // LocalResources, not LocalContext, for strings resolved inside a
@@ -137,35 +142,36 @@ fun StockExpirationScreen(
 
     LaunchedEffect(medicineId) {
         val medicine = medicineRepository.getById(medicineId) ?: return@LaunchedEffect
-        quantity = formatDecimalLocalized(medicine.stockInfo.quantity)
-        unit = medicine.stockInfo.unit ?: ""
+        if (!filled) quantity = formatDecimalLocalized(medicine.stockInfo.quantity)
+        if (!filled) unit = medicine.stockInfo.unit ?: ""
         trackingSaved = medicine.stockInfo.unit != null
-        refillQuantity = medicine.stockInfo.refillQuantity?.let { formatDecimalLocalized(it) } ?: ""
-        expirationDateEpochDay = medicine.stockInfo.expirationDateEpochDay
-        exactExpiryDay = medicine.stockInfo.expirationDateEpochDay?.let { !isEndOfMonth(it) } == true
+        if (!filled) refillQuantity = medicine.stockInfo.refillQuantity?.let { formatDecimalLocalized(it) } ?: ""
+        if (!filled) expirationDateEpochDay = medicine.stockInfo.expirationDateEpochDay
+        if (!filled) exactExpiryDay = medicine.stockInfo.expirationDateEpochDay?.let { !isEndOfMonth(it) } == true
         productionDateEpochDay = medicine.stockInfo.productionDateEpochDay
-        openedDateEpochDay = medicine.stockInfo.openedDateEpochDay
-        useWithinDays = medicine.stockInfo.useWithinDaysAfterOpening?.toString() ?: ""
+        if (!filled) openedDateEpochDay = medicine.stockInfo.openedDateEpochDay
+        if (!filled) useWithinDays = medicine.stockInfo.useWithinDaysAfterOpening?.toString() ?: ""
 
         val reminders = reminderRepository.observeForMedicine(medicineId).first()
         reminders.find { it.type == ReminderType.LOW_STOCK_ALERT }?.let { reminder ->
             lowStockReminderId = reminder.id
-            lowStockEnabled = reminder.enabled
+            if (!filled) lowStockEnabled = reminder.enabled
             val config = reminderRepository.decodeConfig(reminder) as? ReminderConfig.LowStockAlert
             if (config != null) {
-                threshold = formatDecimalLocalized(config.threshold)
-                triggerMode = config.triggerMode
+                if (!filled) threshold = formatDecimalLocalized(config.threshold)
+                if (!filled) triggerMode = config.triggerMode
             }
         }
         reminders.find { it.type == ReminderType.EXPIRATION_ALERT }?.let { reminder ->
             expirationReminderId = reminder.id
-            expirationEnabled = reminder.enabled
+            if (!filled) expirationEnabled = reminder.enabled
             val config = reminderRepository.decodeConfig(reminder) as? ReminderConfig.ExpirationAlert
             if (config != null) {
-                leadDays = config.leadDays.toString()
-                frequency = config.frequency
+                if (!filled) leadDays = config.leadDays.toString()
+                if (!filled) frequency = config.frequency
             }
         }
+        filled = true
         loaded = true
     }
 
