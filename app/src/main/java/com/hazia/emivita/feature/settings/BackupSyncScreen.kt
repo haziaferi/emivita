@@ -29,6 +29,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -48,7 +49,6 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import kotlinx.serialization.json.Json
 import java.io.File
 import java.util.Arrays
 import java.time.Instant
@@ -106,6 +106,11 @@ fun BackupSyncScreen(
     var exportPassword by remember { mutableStateOf("") }
     var showUnencryptedConfirm by remember { mutableStateOf(false) }
     var pendingExportPassword by remember { mutableStateOf<CharArray?>(null) }
+    // The password cannot survive the SAF activity round trip (a CharArray is
+    // not saveable, and holding one across process death would be worse), but
+    // the *intent* must: without it a recreated activity wrote a plaintext zip
+    // and reported "Backup exported" (SPEC §7 R82).
+    var pendingExportEncrypted by rememberSaveable { mutableStateOf(false) }
     var exportStatus by remember { mutableStateOf<String?>(null) }
 
     val createDocumentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
@@ -113,6 +118,12 @@ fun BackupSyncScreen(
         val password = pendingExportPassword
         scope.launch {
             exportStatus = null
+            if (pendingExportEncrypted && password == null) {
+                // Refuse rather than silently downgrade: the same reasoning as
+                // the null-stream case below (§7 R23).
+                exportStatus = resources.getString(R.string.backup_export_password_lost)
+                return@launch
+            }
             val tempFile = File.createTempFile("emivita_export", ".zip", context.cacheDir)
             try {
                 // Serializing the whole DB, AES-256-encrypting it, and copying
@@ -148,6 +159,7 @@ fun BackupSyncScreen(
 
     fun launchExport(password: CharArray?) {
         pendingExportPassword = password
+        pendingExportEncrypted = password != null
         val fileName = "emivita_backup_${Instant.now().atZone(ZoneId.systemDefault()).format(EXPORT_FILE_STAMP)}.zip"
         createDocumentLauncher.launch(fileName)
     }

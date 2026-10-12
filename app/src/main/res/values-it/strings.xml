@@ -335,6 +335,7 @@
     <!-- Backup & restore status lines. -->
     <string name="backup_exported">Backup esportato.</string>
     <string name="backup_export_failed">Esportazione non riuscita: %1$s</string>
+    <string name="backup_export_password_lost">Esportazione annullata: la password è andata perduta mentre il selettore di file era aperto e questo backup doveva essere protetto da password. Tocca «Esporta backup» e inseriscila di nuovo.</string>
     <string name="backup_unreadable_file">Impossibile leggere il file selezionato.</string>
     <string name="backup_restore_complete">Ripristino completato.</string>
     <string name="backup_invalid_file">Questo file non è un backup Emivita valido.</string>

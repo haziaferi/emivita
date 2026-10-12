@@ -4,6 +4,7 @@ import android.content.Context
 import android.util.Log
 import androidx.core.net.toUri
 import androidx.documentfile.provider.DocumentFile
+import com.hazia.emivita.core.data.db.RecoveryNotice
 import com.hazia.emivita.core.data.settings.SettingsRepository
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -11,7 +12,6 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import kotlinx.serialization.json.Json
 import java.io.File
 import java.util.Arrays
 
@@ -56,6 +56,11 @@ class AutoSyncManager(
     }
 
     private suspend fun writeIfConfigured() {
+        // A recovery replaced the database with an empty one, so a snapshot now
+        // would overwrite the only off-device copy with a backup of nothing --
+        // destroying the data precisely when it is needed (SPEC §7 R82). The
+        // write resumes once the launch dialog's notice is answered.
+        if (RecoveryNotice.pendingSince(appContext) != null) return
         val folderUriString = settingsRepository.autoSyncFolderUri.first() ?: return
         val password = AutoSyncPassphraseStore.get(appContext) ?: return
         // AutoSyncPassphraseStore hands back a CharArray precisely so it can be
@@ -103,8 +108,21 @@ class AutoSyncManager(
             }
             opened.use { out -> tempFile.inputStream().use { it.copyTo(out) } }
 
-            treeDoc.findFile(AUTO_SYNC_FILE_NAME)?.delete()
-            staging.renameTo(AUTO_SYNC_FILE_NAME)
+            // The previous generation is kept until the swap is confirmed.
+            // `renameTo` returns false on providers with no renameDocument, and
+            // deleting first left the folder holding only the staging name,
+            // which nothing reads -- months of healthy-looking screens over
+            // zero restorable backups (SPEC §7 R82).
+            val keptName = "$AUTO_SYNC_FILE_NAME.prev"
+            val previous = treeDoc.findFile(AUTO_SYNC_FILE_NAME)
+            treeDoc.findFile(keptName)?.delete()
+            if (previous != null && !previous.renameTo(keptName)) {
+                error("SAF renameTo refused $AUTO_SYNC_FILE_NAME -- the previous backup is untouched")
+            }
+            if (!staging.renameTo(AUTO_SYNC_FILE_NAME)) {
+                error("SAF renameTo refused $stagingName -- the previous backup is at $keptName")
+            }
+            treeDoc.findFile(keptName)?.delete()
         } finally {
             tempFile.delete()
         }
