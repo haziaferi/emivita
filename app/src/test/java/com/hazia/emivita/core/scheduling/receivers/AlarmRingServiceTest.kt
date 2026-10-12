@@ -133,6 +133,9 @@ class AlarmRingServiceTest {
         val service = controller.get()
         val shadow = shadowOf(service)
         assertEquals("foreground under the reminder's own id", doseEventId.toInt(), shadow.lastForegroundNotificationId)
+        // The id outlives stopForeground in Robolectric, so it alone cannot
+        // say the service is still foreground (§7 R83 (d), rule 5).
+        assertFalse("still foreground while it rings", shadow.isForegroundStopped)
         assertFalse(shadow.isStoppedBySelf)
 
         // Answered from Today, without any dismiss call reaching the service.

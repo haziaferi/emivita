@@ -66,7 +66,9 @@ class AlarmRingService : Service() {
                 // Within the 5 s the platform allows, before anything suspends.
                 ServiceCompat.startForeground(this, id.toInt(), notification, foregroundType())
                 if (doseEventId == id && ringer?.isRinging == true) return START_NOT_STICKY
-                stopRinging(keepNotification = true)
+                // Silence a previous dose only; stopForeground here would undo
+                // the startForeground above (§7 R83 (d)).
+                stopSound()
                 doseEventId = id
                 val container = (application as EmivitaApplication).container
                 val r = AlarmRinger(this, container.settingsRepository)
@@ -97,9 +99,13 @@ class AlarmRingService : Service() {
         return START_NOT_STICKY
     }
 
-    private fun stopRinging(keepNotification: Boolean) {
+    private fun stopSound() {
         watch?.cancel(); watch = null
         ringer?.stop(); ringer = null
+    }
+
+    private fun stopRinging(keepNotification: Boolean) {
+        stopSound()
         ServiceCompat.stopForeground(this, if (keepNotification) ServiceCompat.STOP_FOREGROUND_DETACH else ServiceCompat.STOP_FOREGROUND_REMOVE)
     }
 
