@@ -51,6 +51,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -293,6 +294,7 @@ fun MedicinesScreen(
                                 dragHandle = if (sort == MedicinesSort.MANUAL && order.size > 1) {
                                     {
                                         DragHandle(
+                                            itemKey = entry.medicine.id,
                                             index = index,
                                             count = order.size,
                                             drag = drag,
@@ -424,6 +426,7 @@ internal class DragReorderState(private val listState: LazyListState) {
 
 @Composable
 internal fun DragHandle(
+    itemKey: Any,
     index: Int,
     count: Int,
     drag: DragReorderState,
@@ -435,6 +438,9 @@ internal fun DragHandle(
     val moveDown = stringResource(R.string.medicines_move_down)
     val label = stringResource(R.string.medicines_drag_to_reorder)
     val position = stringResource(R.string.medicines_position_of, index + 1, count)
+    val currentIndex by rememberUpdatedState(index)
+    val currentOnReorder by rememberUpdatedState(onReorder)
+    val currentOnDrop by rememberUpdatedState(onDrop)
     Icon(
         Icons.Filled.DragHandle,
         contentDescription = null,
@@ -449,15 +455,19 @@ internal fun DragHandle(
                     if (index < count - 1) CustomAccessibilityAction(moveDown) { onMoveBy(1); true } else null,
                 )
             }
-            .pointerInput(index) {
+            // Keyed on the item, not its index: the drag moves the index, and a
+            // key that changes mid-gesture tears the gesture down (§7 R83).
+            .pointerInput(itemKey) {
                 detectDragGestures(
-                    onDragStart = { drag.start(index) },
+                    onDragStart = { drag.start(currentIndex) },
                     onDrag = { change, delta ->
                         change.consume()
-                        drag.drag(delta.y)?.let { (from, to) -> onReorder(from, to) }
+                        drag.drag(delta.y)?.let { (from, to) -> currentOnReorder(from, to) }
                     },
-                    onDragEnd = { drag.end()?.let(onDrop) },
-                    onDragCancel = { drag.end() },
+                    onDragEnd = { drag.end()?.let(currentOnDrop) },
+                    // The list already shows the new place, so a cancelled drag
+                    // keeps it rather than leaving the screen and the store apart.
+                    onDragCancel = { drag.end()?.let(currentOnDrop) },
                 )
             },
     )
