@@ -1,15 +1,14 @@
 # OpenSSF Scorecard (docs/SPEC.md §7 R74; Appendix E F-20, medTimer's
-# scorecard.yml re-typed). The checks that can move on a single-owner private
+# scorecard.yml re-typed). The checks that can move on a single-owner
 # repository are the two this repository already keeps by hand -- pinned
 # dependencies and token permissions -- and this makes them measured.
 #
-# On a PRIVATE repository the default token cannot read the commit history
-# ("Resource not accessible by integration"), so the analysis needs a
-# read-only fine-grained PAT in the SCORECARD_TOKEN secret; until it exists
-# the run says so and skips. The action also forces `publish_results` to
-# false there, and the code-scanning upload needs GitHub Advanced Security,
-# so it runs only once the repository is public; the SARIF artifact is kept
-# either way.
+# The repository is public, so the default token reads everything but the
+# branch-protection settings, and results are published (badge, REST API).
+# Publishing only accepts a job whose steps are the four approved actions
+# below: no `run:` steps, no job env. If the repository went private again,
+# the analysis would need a read-only PAT as SCORECARD_TOKEN and the
+# code-scanning upload GitHub Advanced Security.
 name: Scorecard supply-chain security
 
 on:
@@ -34,55 +33,34 @@ jobs:
       security-events: write
       # To publish results and get a badge (public repositories only).
       id-token: write
-      # The two a private repository needs.
       contents: read
       actions: read
 
     steps:
-      - name: Check for the token
-        id: token
-        env:
-          PRIVATE: ${{ github.event.repository.private }}
-          HAS_TOKEN: ${{ secrets.SCORECARD_TOKEN != '' }}
-        run: |
-          if [ "$PRIVATE" = true ] && [ "$HAS_TOKEN" != true ]; then
-            echo "::notice::Private repository without SCORECARD_TOKEN: Scorecard skipped."
-            echo "run=false" >> "$GITHUB_OUTPUT"
-          else
-            echo "run=true" >> "$GITHUB_OUTPUT"
-          fi
-
       - name: Check out
-        if: steps.token.outputs.run == 'true'
         uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           persist-credentials: false
 
       - name: Run analysis
-        if: steps.token.outputs.run == 'true'
         uses: ossf/scorecard-action@4eaacf0543bb3f2c246792bd56e8cdeffafb205a # v2.4.3
         with:
           results_file: results.sarif
           results_format: sarif
-          # A fine-grained read-only PAT, made per
+          # Optional on a public repository: a fine-grained PAT, made per
           # https://github.com/ossf/scorecard-action#authentication-with-fine-grained-pat-optional
-          # It also enables the Branch-Protection check.
+          # and stored as SCORECARD_TOKEN, enables the Branch-Protection check.
           repo_token: ${{ secrets.SCORECARD_TOKEN || github.token }}
-          #
-          # Forced to false on a private repository regardless of this value.
           publish_results: true
 
       - name: Upload SARIF as an artifact
-        if: steps.token.outputs.run == 'true'
         uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
         with:
           name: SARIF file
           path: results.sarif
           retention-days: 5
 
-      # Needs GitHub Advanced Security on a private repository.
       - name: Upload to code scanning
-        if: steps.token.outputs.run == 'true' && !github.event.repository.private
         uses: github/codeql-action/upload-sarif@faaca9a8f6edddba5725ffe5adefdab6669a2eca # v3.38.0
         with:
           sarif_file: results.sarif
