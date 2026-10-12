@@ -7,6 +7,7 @@ import android.util.Base64
 import androidx.core.content.edit
 import java.security.KeyStore
 import java.security.SecureRandom
+import javax.crypto.AEADBadTagException
 import javax.crypto.Cipher
 import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
@@ -72,10 +73,15 @@ object PassphraseProvider {
         val existingCiphertext = prefs.getString(KEY_CIPHERTEXT, null)
         val existingIv = prefs.getString(KEY_IV, null)
         if (existingCiphertext != null && existingIv != null) {
-            return decrypt(
-                Base64.decode(existingCiphertext, Base64.NO_WRAP),
-                Base64.decode(existingIv, Base64.NO_WRAP),
-            )
+            // A stored key with no wrap key to open it: never generate a new
+            // wrap key here, which used to turn the loss into a crash on every
+            // launch (§7 R83 (f)).
+            val wrapKey = existingWrapKey() ?: throw DatabaseKeyLostException("the Keystore no longer holds $KEYSTORE_ALIAS")
+            return try {
+                decrypt(Base64.decode(existingCiphertext, Base64.NO_WRAP), Base64.decode(existingIv, Base64.NO_WRAP), wrapKey)
+            } catch (e: AEADBadTagException) {
+                throw DatabaseKeyLostException("the Keystore's $KEYSTORE_ALIAS no longer opens the stored key", e)
+            }
         }
 
         val newRawKey = ByteArray(RAW_KEY_BYTES).also { SecureRandom().nextBytes(it) }
@@ -105,9 +111,19 @@ object PassphraseProvider {
         return "x'$hex'".toByteArray(Charsets.US_ASCII)
     }
 
+    /** Forgets the lost key so the next [getOrCreatePassphrase] starts a new
+     *  one. Only after [DatabaseKeyLostException]: the old file is unreadable
+     *  either way, and keeping the dead ciphertext would throw on every open. */
+    fun resetAfterKeyLoss(context: Context) {
+        context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE).edit(commit = true) { remove(KEY_CIPHERTEXT); remove(KEY_IV) }
+        runCatching { KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }.deleteEntry(KEYSTORE_ALIAS) }
+    }
+
+    private fun existingWrapKey(): SecretKey? =
+        KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }.getKey(KEYSTORE_ALIAS, null) as? SecretKey
+
     private fun getOrCreateWrapKey(): SecretKey {
-        val keyStore = KeyStore.getInstance(ANDROID_KEYSTORE).apply { load(null) }
-        (keyStore.getKey(KEYSTORE_ALIAS, null) as? SecretKey)?.let { return it }
+        existingWrapKey()?.let { return it }
 
         val keyGenerator = KeyGenerator.getInstance(KeyProperties.KEY_ALGORITHM_AES, ANDROID_KEYSTORE)
         keyGenerator.init(
@@ -128,9 +144,14 @@ object PassphraseProvider {
         return cipher.doFinal(plaintext) to cipher.iv
     }
 
-    private fun decrypt(ciphertext: ByteArray, iv: ByteArray): ByteArray {
+    private fun decrypt(ciphertext: ByteArray, iv: ByteArray, wrapKey: SecretKey): ByteArray {
         val cipher = Cipher.getInstance(TRANSFORMATION)
-        cipher.init(Cipher.DECRYPT_MODE, getOrCreateWrapKey(), GCMParameterSpec(GCM_TAG_BITS, iv))
+        cipher.init(Cipher.DECRYPT_MODE, wrapKey, GCMParameterSpec(GCM_TAG_BITS, iv))
         return cipher.doFinal(ciphertext)
     }
 }
+
+/** The database key exists but nothing on this phone can open it any more:
+ *  the Keystore entry is gone or replaced (some resets, a restore onto a new
+ *  phone). The database it protected can never be read again. */
+class DatabaseKeyLostException(message: String, cause: Throwable? = null) : Exception(message, cause)

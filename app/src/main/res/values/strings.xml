@@ -671,4 +671,20 @@
     <string name="recovery_set_aside_confirm_title">Delete the set-aside files?</string>
     <string name="recovery_set_aside_confirm_text">They are the only copy of what the app could not open. This cannot be undone.</string>
     <string name="recovery_set_aside_deleted">Set-aside files deleted.</string>
+
+    <!-- §7 R83: asking for every grant reminders depend on, and the backup the key loss makes essential -->
+    <string name="permission_allow">Allow</string>
+    <string name="permission_setup_title">Let reminders through</string>
+    <string name="permission_setup_body">Emivita can only remind you on time if Android lets it. Allow each of these; you can change them later in Settings › Notifications &amp; Alerts.</string>
+    <string name="permission_setup_done">Done</string>
+    <string name="permission_setup_later">Later</string>
+    <string name="permission_card_title">Some reminders may not arrive</string>
+    <string name="permission_card_body">Android is holding back what Emivita needs to remind you on time.</string>
+    <string name="permission_card_not_now">Not now</string>
+    <string name="backup_none_title">No backup yet</string>
+    <string name="backup_none_body">Your medicines are kept only on this phone, locked with a key Android holds. If that key is lost, they cannot be opened again — only a backup brings them back.</string>
+    <string name="backup_none_action">Back up now</string>
+    <string name="backup_key_warning">Emivita locks your data with a key that Android keeps for it. If that key is lost (some phone resets, or moving to a new phone), the data cannot be opened again, and a backup is the only copy that survives.</string>
+    <string name="recovery_key_lost_title">Your medicines cannot be opened</string>
+    <string name="recovery_key_lost_body">This phone no longer holds the key that unlocks the app\'s data, so it cannot be read, now or later. The app has started with an empty list. If you have a backup, restore it now under Data &amp; Backup.</string>
 </resources>

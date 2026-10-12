@@ -1,5 +1,9 @@
 package com.hazia.emivita.feature.today
 
+import com.hazia.emivita.feature.permissions.rememberPermissionState
+import com.hazia.emivita.feature.permissions.rememberPermissionFixer
+import com.hazia.emivita.feature.permissions.missingKey
+import com.hazia.emivita.feature.permissions.MissingPermissionsCard
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -173,6 +177,7 @@ fun TodayScreen(
     reminderRepository: ReminderRepository,
     notificationBuilder: ReminderNotificationBuilder,
     onOpenNotificationSettings: () -> Unit = {},
+    onOpenDataAndBackup: () -> Unit = {},
 ) {
     var showLogDose by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -256,6 +261,7 @@ fun TodayScreen(
             missedAlarm?.let { plannedAt ->
                 MissedAlarmCard(plannedAt, onOpen = onOpenNotificationSettings, onDismiss = { AlarmWatchdog.dismissNotice(context) })
             }
+            TodayNoticeCards(settingsRepository, hasMedicines = !medicinesById.isNullOrEmpty(), onOpenDataAndBackup = onOpenDataAndBackup)
 
             when {
                 medicinesById == null || materializedToday == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -870,6 +876,44 @@ internal fun MissedAlarmCard(plannedAtEpochMillis: Long, onOpen: () -> Unit, onD
                 TextButton(onClick = onOpen) { Text(stringResource(R.string.missed_alarm_open)) }
                 TextButton(onClick = onDismiss) { Text(stringResource(R.string.missed_alarm_dismiss)) }
             }
+        }
+    }
+}
+
+/**
+ * Today's two standing notices (§7 R83). A grant reminders depend on is
+ * missing -- the card names it and opens its page, and "Not now" holds until a
+ * different one goes missing. No backup has ever been written while there is
+ * something to lose -- the card stays until one is, because without it a lost
+ * Keystore key leaves nothing to restore (§7 R83 (f)).
+ */
+@Composable
+private fun TodayNoticeCards(settingsRepository: SettingsRepository, hasMedicines: Boolean, onOpenDataAndBackup: () -> Unit) {
+    val scope = rememberCoroutineScope()
+    val setupShown by settingsRepository.permissionSetupShown.collectAsState(initial = false)
+    val dismissedFor by settingsRepository.permissionCardDismissedFor.collectAsState(initial = null)
+    val permissions = rememberPermissionState()
+    val onFix = rememberPermissionFixer(settingsRepository)
+    val missing = permissions.missing
+    if (setupShown && missing.isNotEmpty() && dismissedFor != missingKey(missing)) {
+        MissingPermissionsCard(permissions, onFix, onDismiss = { scope.launch { settingsRepository.setPermissionCardDismissedFor(missingKey(missing)) } })
+    }
+    // Long.MIN_VALUE: still loading, so the card cannot flash on a phone that has a backup.
+    val lastBackup by settingsRepository.lastBackupEpochMillis.collectAsState(initial = Long.MIN_VALUE)
+    if (hasMedicines && lastBackup == null) NoBackupCard(onOpenDataAndBackup)
+}
+
+@Composable
+internal fun NoBackupCard(onBackUp: () -> Unit) {
+    Surface(
+        shape = RoundedCornerShape(12.dp),
+        color = MaterialTheme.colorScheme.surfaceContainer,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 8.dp),
+    ) {
+        Column(Modifier.padding(14.dp)) {
+            Text(stringResource(R.string.backup_none_title), style = MaterialTheme.typography.titleMedium)
+            Text(stringResource(R.string.backup_none_body), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            TextButton(onClick = onBackUp) { Text(stringResource(R.string.backup_none_action)) }
         }
     }
 }

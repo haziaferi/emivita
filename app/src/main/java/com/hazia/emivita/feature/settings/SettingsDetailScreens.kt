@@ -4,7 +4,6 @@ import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.content.pm.PackageManager
-import android.os.Build
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.compose.foundation.clickable
@@ -97,11 +96,15 @@ import com.hazia.emivita.core.locale.AppLocale
 import com.hazia.emivita.core.format.LocaleFormats
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.TextButton
+import com.hazia.emivita.feature.permissions.PermissionRows
+import com.hazia.emivita.feature.permissions.appNotificationSettings
+import com.hazia.emivita.feature.permissions.batteryExemptionRequest
+import com.hazia.emivita.feature.permissions.fullScreenIntentSettings
+import com.hazia.emivita.feature.permissions.rememberPermissionFixer
+import com.hazia.emivita.feature.permissions.rememberPermissionState
 import com.hazia.emivita.core.platform.AutoStartSettings
 import com.hazia.emivita.core.scheduling.AlarmWatchdog
-import android.app.AlarmManager
 import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.stateDescription
 import com.hazia.emivita.core.data.settings.StartPage
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.layout.RowScope
@@ -608,13 +611,10 @@ private fun FullScreenAlarmAccessCard() {
  * being throttled rather than quietly arriving late, which is what it did
  * before this card existed.
  *
- * **No new permission.** `isIgnoringBatteryOptimizations` is a plain query and
- * `ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS` opens the system list, neither
- * of which requires holding `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` — that one
- * is only needed to pop the direct allow-this-app dialog. AndroidManifest.xml
- * removed it on least-privilege grounds and it stays removed: the user takes
- * the last step in Settings, which is one extra tap and keeps §1's permission
- * posture intact.
+ * **One tap since §7 R83.** The owner chose the system's direct allow-this-app
+ * dialog over the plain list, so the manifest declares
+ * `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` (R39 to R82 kept it out on
+ * least-privilege grounds); the list stays as the fallback.
  *
  * Re-read on ON_RESUME for the same reason [FullScreenAlarmAccessCard] does:
  * this is a special-access settings screen and does not deliver a result.
@@ -643,7 +643,11 @@ private fun BatteryOptimizationCard() {
 
     if (exempt) return
 
-    val settingsIntent = remember { Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS) }
+    // The one-tap system dialog since §7 R83; the plain list where an OEM removed it.
+    val settingsIntent = remember {
+        batteryExemptionRequest(context).takeIf { it.resolveActivity(context.packageManager) != null }
+            ?: Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
+    }
     // Every device that reaches this app has the screen (it is standard from
     // API 23 and minSdk is 30), but an OEM can remove it, and starting an
     // unresolvable intent throws.
@@ -786,30 +790,6 @@ private fun NotificationsBlockedCard() {
         }
     }
 }
-
-/** Android's own per-app notification screen -- the only place either an
- *  app-level block or a per-channel one can be undone, since an app cannot
- *  override a user's channel choice once the channel exists. */
-private fun appNotificationSettings(context: Context): Intent =
-    Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-        putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-    }
-
-/** The dedicated special-access screen exists from Android 14; below that the
- *  permission is install-granted and this card shouldn't be showing at all, so
- *  the per-app notification settings are the honest fallback rather than an
- *  intent that would fail to resolve. */
-private fun fullScreenIntentSettings(context: Context): Intent =
-    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.UPSIDE_DOWN_CAKE) {
-        Intent(
-            Settings.ACTION_MANAGE_APP_USE_FULL_SCREEN_INTENT,
-            Uri.fromParts("package", context.packageName, null),
-        )
-    } else {
-        Intent(Settings.ACTION_APP_NOTIFICATION_SETTINGS).apply {
-            putExtra(Settings.EXTRA_APP_PACKAGE, context.packageName)
-        }
-    }
 
 @Composable
 private fun NotificationTierRow(title: String, description: String) {
@@ -1184,48 +1164,13 @@ private fun OptionCard(selected: Boolean, onClick: () -> Unit, label: String, mo
     }
 }
 
-/** What the four rows show (§9 #29, HM-37); pure so the section is testable. */
-internal data class PermissionState(
-    val notifications: Boolean,
-    val exactAlarms: Boolean,
-    val fullScreen: Boolean,
-    val batteryExempt: Boolean,
-)
-
-internal fun readPermissionState(context: Context): PermissionState {
-    val alarms = context.getSystemService(Context.ALARM_SERVICE) as? AlarmManager
-    val power = context.getSystemService(Context.POWER_SERVICE) as? PowerManager
-    return PermissionState(
-        notifications = NotificationManagerCompat.from(context).areNotificationsEnabled(),
-        exactAlarms = if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) alarms?.canScheduleExactAlarms() ?: true else true,
-        fullScreen = NotificationManagerCompat.from(context).canUseFullScreenIntent(),
-        batteryExempt = power?.isIgnoringBatteryOptimizations(context.packageName) ?: true,
-    )
-}
-
 @Composable
 private fun PermissionsSection(missedAlarmAt: Long?) {
-    val context = LocalContext.current
-    val lifecycleOwner = LocalLifecycleOwner.current
-    var state by remember { mutableStateOf(readPermissionState(context)) }
-    DisposableEffect(lifecycleOwner) {
-        val observer = LifecycleEventObserver { _, event -> if (event == Lifecycle.Event.ON_RESUME) state = readPermissionState(context) }
-        lifecycleOwner.lifecycle.addObserver(observer)
-        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
-    }
+    val state = rememberPermissionState()
+    val onFix = rememberPermissionFixer(LocalAppContainer.current.settingsRepository)
     Spacer(Modifier.height(16.dp))
     Text(stringResource(R.string.settings_permissions), style = MaterialTheme.typography.labelLarge)
-    PermissionRows(
-        state = state,
-        onNotifications = { context.startActivity(appNotificationSettings(context)) },
-        onExactAlarms = {
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                context.startActivity(Intent(Settings.ACTION_REQUEST_SCHEDULE_EXACT_ALARM, Uri.fromParts("package", context.packageName, null)))
-            }
-        },
-        onFullScreen = { context.startActivity(fullScreenIntentSettings(context)) },
-        onBattery = { context.startActivity(Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)) },
-    )
+    PermissionRows(state = state, onFix = onFix)
     // The watchdog's finding, beside the row that explains it (§9 #29, DP-04):
     // "may" becomes "did, at …" while a missed alarm is on record.
     missedAlarmAt?.let {
@@ -1234,37 +1179,5 @@ private fun PermissionsSection(missedAlarmAt: Long?) {
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.error,
         )
-    }
-}
-
-/** Four merged nodes, each carrying Granted/Blocked as its state and its own
- *  action button when blocked (one node per control, Stage B). */
-@Composable
-internal fun PermissionRows(
-    state: PermissionState,
-    onNotifications: () -> Unit,
-    onExactAlarms: () -> Unit,
-    onFullScreen: () -> Unit,
-    onBattery: () -> Unit,
-) {
-    PermissionRow(stringResource(R.string.permission_notifications), state.notifications, onNotifications)
-    PermissionRow(stringResource(R.string.permission_exact_alarms), state.exactAlarms, onExactAlarms)
-    PermissionRow(stringResource(R.string.permission_full_screen), state.fullScreen, onFullScreen)
-    PermissionRow(stringResource(R.string.permission_battery), state.batteryExempt, onBattery)
-}
-
-@Composable
-private fun PermissionRow(title: String, granted: Boolean, onFix: () -> Unit) {
-    val stateLabel = stringResource(if (granted) R.string.permission_granted else R.string.permission_blocked)
-    Row(
-        Modifier.fillMaxWidth().padding(vertical = 6.dp).semantics(mergeDescendants = true) { stateDescription = stateLabel },
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            Text(stateLabel, style = MaterialTheme.typography.labelMedium, color = if (granted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error)
-        }
-        if (!granted) TextButton(onClick = onFix) { Text(stringResource(R.string.permission_fix)) }
     }
 }

@@ -78,6 +78,14 @@ class SettingsRepository(context: Context) {
         // exactly once rather than re-prompting on every app open after a
         // denial (PERM-023/PERM-024 -- respect the user's decision).
         val NOTIFICATION_PERMISSION_REQUESTED = booleanPreferencesKey("notification_permission_requested")
+        // §7 R83: the one-time sheet asking for every permission reminders
+        // depend on, and the Today card's dismissal, kept as the sorted names
+        // of what was missing so a newly missing one shows the card again.
+        val PERMISSION_SETUP_SHOWN = booleanPreferencesKey("permission_setup_shown")
+        val PERMISSION_CARD_DISMISSED_FOR = stringPreferencesKey("permission_card_dismissed_for")
+        // §7 R83 (f): the last backup that was written, manual or automatic.
+        // Absent means none ever was, which is what the Today card reads.
+        val LAST_BACKUP_EPOCH_MILLIS = longPreferencesKey("last_backup_epoch_millis")
         // Which of History's three views was open last (§7 R60 D F5); the
         // enum name, tolerant of a value from a removed case.
         val HISTORY_VIEW_MODE = stringPreferencesKey("history_view_mode")
@@ -325,6 +333,24 @@ class SettingsRepository(context: Context) {
 
     suspend fun setNotificationPermissionRequested() {
         dataStore.edit { it[Keys.NOTIFICATION_PERMISSION_REQUESTED] = true }
+    }
+
+    val permissionSetupShown: Flow<Boolean> = dataStore.data.map { it[Keys.PERMISSION_SETUP_SHOWN] ?: false }.distinctUntilChanged()
+
+    suspend fun setPermissionSetupShown() {
+        dataStore.edit { it[Keys.PERMISSION_SETUP_SHOWN] = true }
+    }
+
+    val permissionCardDismissedFor: Flow<String?> = dataStore.data.map { it[Keys.PERMISSION_CARD_DISMISSED_FOR] }.distinctUntilChanged()
+
+    suspend fun setPermissionCardDismissedFor(missing: String) {
+        dataStore.edit { it[Keys.PERMISSION_CARD_DISMISSED_FOR] = missing }
+    }
+
+    val lastBackupEpochMillis: Flow<Long?> = dataStore.data.map { it[Keys.LAST_BACKUP_EPOCH_MILLIS] }.distinctUntilChanged()
+
+    suspend fun setLastBackup(epochMillis: Long) {
+        dataStore.edit { it[Keys.LAST_BACKUP_EPOCH_MILLIS] = epochMillis }
     }
 
     /** Resolves [Medicine.remindersLockedUntilTaken]'s "no override, inherit

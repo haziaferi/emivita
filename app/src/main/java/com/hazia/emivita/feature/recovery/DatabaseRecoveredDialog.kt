@@ -18,16 +18,18 @@ import com.hazia.emivita.R
  * tap outside or the back gesture: an app that silently starts empty is the
  * failure this exists to prevent, so the person answers it. Two answers,
  * both clear the notice: go to Data & Backup to restore, or carry on empty.
+ * A lost key gets its own words (§7 R83 (f)): that file can never be read, so
+ * the corruption text's "set aside, not deleted" would promise too much.
  */
 @Composable
-fun DatabaseRecoveredDialog(onRestore: () -> Unit, onContinueEmpty: () -> Unit) {
+fun DatabaseRecoveredDialog(keyLost: Boolean, onRestore: () -> Unit, onContinueEmpty: () -> Unit) {
     AlertDialog(
         onDismissRequest = {},
         properties = DialogProperties(dismissOnBackPress = false, dismissOnClickOutside = false),
-        title = { Text(stringResource(R.string.recovery_title)) },
+        title = { Text(stringResource(if (keyLost) R.string.recovery_key_lost_title else R.string.recovery_title)) },
         text = {
             Column(androidx.compose.ui.Modifier.verticalScroll(rememberScrollState())) {
-                Text(stringResource(R.string.recovery_body), style = MaterialTheme.typography.bodyMedium)
+                Text(stringResource(if (keyLost) R.string.recovery_key_lost_body else R.string.recovery_body), style = MaterialTheme.typography.bodyMedium)
             }
         },
         confirmButton = { TextButton(onClick = onRestore) { Text(stringResource(R.string.recovery_restore)) } },

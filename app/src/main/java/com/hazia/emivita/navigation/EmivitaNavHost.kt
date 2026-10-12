@@ -121,6 +121,7 @@ fun EmivitaNavHost(startPage: StartPage = StartPage.TODAY, openDataAndBackupOnSt
                     reminderRepository = container.reminderRepository,
                     notificationBuilder = container.notificationBuilder,
                     onOpenNotificationSettings = { navController.navigate(EmivitaRoute.NotificationsAlertsSettings) },
+                    onOpenDataAndBackup = { navController.navigate(EmivitaRoute.DataBackupSettings) },
                 )
             }
             composable<EmivitaRoute.Medicines> {

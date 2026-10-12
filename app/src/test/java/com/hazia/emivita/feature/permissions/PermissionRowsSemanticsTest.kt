@@ -1,4 +1,4 @@
-package com.hazia.emivita.feature.settings
+package com.hazia.emivita.feature.permissions
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.ui.test.assertCountEquals
@@ -30,7 +30,7 @@ class PermissionRowsSemanticsTest {
             Column {
                 PermissionRows(
                     state = PermissionState(notifications = true, exactAlarms = false, fullScreen = true, batteryExempt = false),
-                    onNotifications = { fixed += "n" }, onExactAlarms = { fixed += "e" }, onFullScreen = { fixed += "f" }, onBattery = { fixed += "b" },
+                    onFix = { fixed += it.name.first().lowercase() },
                 )
             }
         }
@@ -45,9 +45,34 @@ class PermissionRowsSemanticsTest {
     @Test
     fun `all granted -- no Fix at all`() {
         compose.setContent {
-            Column { PermissionRows(PermissionState(true, true, true, true), {}, {}, {}, {}) }
+            Column { PermissionRows(PermissionState(true, true, true, true), {}) }
         }
         compose.onAllNodes(hasText("Fix")).assertCountEquals(0)
         compose.onNodeWithText("Exact alarms").assertExists()
+    }
+
+    // ---- §7 R83: the setup sheet and the Today card ----
+
+    @Test
+    fun `what is missing, and the dismissal key, ignore the order the grants are read in`() {
+        val state = PermissionState(notifications = true, exactAlarms = false, fullScreen = true, batteryExempt = false)
+        assertEquals(listOf(ReminderPermission.EXACT_ALARMS, ReminderPermission.BATTERY), state.missing)
+        assertEquals("BATTERY,EXACT_ALARMS", missingKey(state.missing))
+        assertEquals(missingKey(state.missing), missingKey(state.missing.reversed()))
+    }
+
+    @Test
+    fun `Today's card lists only the missing grants, each with Allow, and offers Not now`() {
+        var fixed: ReminderPermission? = null
+        var dismissed = false
+        compose.setContent {
+            MissingPermissionsCard(PermissionState(true, true, false, true), onFix = { fixed = it }, onDismiss = { dismissed = true })
+        }
+        compose.onNodeWithText("Full-screen alarms").assertExists()
+        compose.onAllNodes(hasText("Exact alarms")).assertCountEquals(0)
+        compose.onNodeWithText("Allow").performClick()
+        assertEquals(ReminderPermission.FULL_SCREEN, fixed)
+        compose.onNodeWithText("Not now").performClick()
+        assertEquals(true, dismissed)
     }
 }

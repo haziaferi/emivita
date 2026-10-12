@@ -143,6 +143,7 @@ fun BackupSyncScreen(
                     out.use { tempFile.inputStream().use { input -> input.copyTo(it) } }
                 }
                 exportStatus = resources.getString(R.string.backup_exported)
+                settingsRepository.setLastBackup(System.currentTimeMillis())
                 exportPassword = "" // cleared after use, matching restorePasswordInput/syncPassphraseInput below
             } catch (e: Exception) {
                 exportStatus = resources.getString(R.string.backup_export_failed, e.message ?: resources.getString(R.string.common_unknown_error))
@@ -250,6 +251,12 @@ fun BackupSyncScreen(
 
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
         DetailHeader(stringResource(R.string.backup_sync_backup_sync), onBack)
+        // Always shown (§7 R83 (f)): the one loss a backup alone survives.
+        Text(
+            stringResource(R.string.backup_key_warning),
+            style = MaterialTheme.typography.bodyMedium,
+            modifier = Modifier.padding(bottom = 12.dp),
+        )
 
         Text(stringResource(R.string.backup_sync_manual_backup), style = MaterialTheme.typography.titleMedium)
         Text(

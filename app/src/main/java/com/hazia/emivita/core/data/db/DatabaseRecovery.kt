@@ -30,7 +30,8 @@ class DatabaseOpen<T>(
  *
  * Recovery here means the unopenable file is *renamed aside*, never deleted,
  * and a fresh empty database is created in its place. The set-aside file is
- * still encrypted with the same Keystore passphrase, so it stays recoverable;
+ * still encrypted with the same Keystore passphrase, so it stays recoverable
+ * while that key lives -- a lost key is the other path, [EmivitaDatabase.openGuardingKey].
  * Data & Backup lists what exists and is the one place it can be deleted.
  *
  * Generic over the database type so the ordering -- probe, close, set aside,
@@ -110,13 +111,26 @@ object DatabaseFiles {
 object RecoveryNotice {
     private const val PREFS = "emivita_db_recovery"
     private const val KEY_PENDING_SINCE = "pending_since"
+    private const val KEY_REASON = "reason"
+
+    /** Why the file went aside; the dialog says different things (§7 R83 (f)). */
+    enum class Reason {
+        /** The file would not open; the key still exists, so it may yet be salvaged. */
+        UNOPENABLE,
+        /** The key is gone; nothing on this phone can ever read the file. */
+        KEY_LOST,
+    }
 
     private fun prefs(context: Context) = context.getSharedPreferences(PREFS, Context.MODE_PRIVATE)
 
-    fun record(context: Context, atEpochMillis: Long) = prefs(context).edit { putLong(KEY_PENDING_SINCE, atEpochMillis) }
+    fun record(context: Context, atEpochMillis: Long, reason: Reason = Reason.UNOPENABLE) =
+        prefs(context).edit { putLong(KEY_PENDING_SINCE, atEpochMillis); putString(KEY_REASON, reason.name) }
+
+    fun reason(context: Context): Reason =
+        prefs(context).getString(KEY_REASON, null)?.let { name -> Reason.entries.firstOrNull { it.name == name } } ?: Reason.UNOPENABLE
 
     /** When the set-aside happened, or null when there is nothing to say. */
     fun pendingSince(context: Context): Long? = prefs(context).getLong(KEY_PENDING_SINCE, -1L).takeIf { it >= 0L }
 
-    fun dismiss(context: Context) = prefs(context).edit { remove(KEY_PENDING_SINCE) }
+    fun dismiss(context: Context) = prefs(context).edit { remove(KEY_PENDING_SINCE); remove(KEY_REASON) }
 }

@@ -28,21 +28,16 @@
          permission, granted at install; see §7 R59 for why it was missing. -->
     <uses-permission android:name="android.permission.VIBRATE" />
 
-    <!-- REQUEST_IGNORE_BATTERY_OPTIMIZATIONS removed (least-privilege), and
-         it stays removed.
+    <!-- REQUEST_IGNORE_BATTERY_OPTIMIZATIONS is declared since §7 R83, by
+         the owner's decision: the app asks for everything reminders depend
+         on, and this one lets the battery exemption be granted with one tap
+         in the system's own dialog instead of a search through the list.
+         R39 to R82 kept it removed on least-privilege grounds; that reasoning
+         holds for a store app and the owner chose against it for this one,
+         which is sideloaded. -->
+    <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS" />
 
-         This block used to justify that with "nothing checks
-         isIgnoringBatteryOptimizations", which stopped being true when R39
-         added BatteryOptimizationCard: SettingsDetailScreens.kt does check it.
-         The removal is still right, but for the reason that survives rather
-         than the one that expired. isIgnoringBatteryOptimizations() is a plain
-         query and ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS opens the system
-         list; neither needs this permission. It is only required to pop the
-         direct allow-this-app dialog, which the card deliberately does not do,
-         so the user takes the last step in Settings themselves. One extra tap,
-         and §1's permission posture stays intact. See §7 R58: the removal
-         being correct is exactly what let the stale reason go unread.
-
+    <!--
          WAKE_LOCK was previously described here as removed too. Deleting
          its <uses-permission> line only removed it from THIS file - the
          manifest merger put it straight back from androidx.work, which

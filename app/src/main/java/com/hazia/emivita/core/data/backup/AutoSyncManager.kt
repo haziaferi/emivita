@@ -123,6 +123,7 @@ class AutoSyncManager(
                 error("SAF renameTo refused $stagingName -- the previous backup is at $keptName")
             }
             treeDoc.findFile(keptName)?.delete()
+            settingsRepository.setLastBackup(nowEpochMillis())
         } finally {
             tempFile.delete()
         }

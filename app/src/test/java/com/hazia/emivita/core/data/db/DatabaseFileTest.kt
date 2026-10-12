@@ -119,6 +119,36 @@ class DatabaseFileTest {
         DatabaseFiles.deleteSetAsideFiles(app, name)
         assertEquals(emptyList<File>(), DatabaseFiles.setAsideFiles(app, name))
     }
+
+    // ---- §7 R83 (f): a lost Keystore key ----
+
+    @Test
+    fun `a lost key sets the file aside, makes a new key, opens empty, and says the data cannot be recovered`() {
+        open().database.close()
+        val before = file.readBytes()
+        var keyLost = true
+        var resets = 0
+        val result = EmivitaDatabase.openGuardingKey(
+            app, name,
+            passphrase = { if (keyLost) throw DatabaseKeyLostException("gone") else "new".toByteArray() },
+            resetKey = { resets++; keyLost = false },
+            factoryFor = { KeepFileOnCorruptionFactory() },
+        ).also { opened += it.database }
+
+        assertTrue("no crash, and recovery is reported", result.recovered)
+        assertEquals(1, resets)
+        assertArrayEquals("the old file is set aside intact", before, DatabaseFiles.setAsideIncidents(app, name).single().readBytes())
+        assertEquals(0, runBlocking { result.database.profileDao().count() })
+        assertEquals(RecoveryNotice.Reason.KEY_LOST, RecoveryNotice.reason(app))
+    }
+
+    @Test
+    fun `an ordinary set-aside still reads as unopenable, not as a lost key`() {
+        writeGarbage()
+        open()
+        assertEquals(RecoveryNotice.Reason.UNOPENABLE, RecoveryNotice.reason(app))
+    }
+
 }
 
 /**

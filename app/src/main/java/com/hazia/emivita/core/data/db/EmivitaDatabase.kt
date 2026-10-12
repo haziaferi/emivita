@@ -1,6 +1,7 @@
 package com.hazia.emivita.core.data.db
 
 import android.content.Context
+import android.util.Log
 import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
@@ -62,14 +63,46 @@ abstract class EmivitaDatabase : RoomDatabase() {
 
         fun getInstance(context: Context): EmivitaDatabase =
             instance ?: synchronized(this) {
-                instance ?: open(context.applicationContext, NAME, sqlcipherFactory(context.applicationContext))
+                instance ?: context.applicationContext.let { app ->
+                    openGuardingKey(
+                        app, NAME,
+                        passphrase = { PassphraseProvider.getOrCreatePassphrase(app) },
+                        resetKey = { PassphraseProvider.resetAfterKeyLoss(app) },
+                        factoryFor = { SupportOpenHelperFactory(it) },
+                    )
+                }
                     .also { recoveredOnOpen = it.recovered }
                     .database
                     .also { instance = it }
             }
 
-        private fun sqlcipherFactory(context: Context): SupportSQLiteOpenHelper.Factory =
-            SupportOpenHelperFactory(PassphraseProvider.getOrCreatePassphrase(context))
+        /**
+         * The key first, then [open] (§7 R83 (f)). A lost Keystore key threw
+         * while the factory was being built, outside [openOrRecover]'s retry,
+         * so the app crashed on every launch. Now the unreadable file is set
+         * aside, a new key is made, and the launch dialog says the data
+         * cannot be recovered -- not that it can, which the corruption
+         * wording promises. Parameters are the seams the JVM test drives.
+         */
+        internal fun openGuardingKey(
+            context: Context,
+            name: String,
+            passphrase: () -> ByteArray,
+            resetKey: () -> Unit,
+            factoryFor: (ByteArray) -> SupportSQLiteOpenHelper.Factory,
+        ): DatabaseOpen<EmivitaDatabase> {
+            val key = try {
+                passphrase()
+            } catch (e: DatabaseKeyLostException) {
+                Log.e("EmivitaDatabase", "Database key lost; setting $name aside", e)
+                val now = System.currentTimeMillis()
+                DatabaseFiles.setAside(context, name, now)
+                resetKey()
+                RecoveryNotice.record(context, now, RecoveryNotice.Reason.KEY_LOST)
+                return DatabaseOpen(open(context, name, factoryFor(passphrase())).database, recovered = true)
+            }
+            return open(context, name, factoryFor(key))
+        }
 
         /**
          * The whole open path -- build, probe, set aside, rebuild -- on the

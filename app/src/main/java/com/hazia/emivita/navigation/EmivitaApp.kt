@@ -1,10 +1,5 @@
 package com.hazia.emivita.navigation
 
-import android.Manifest
-import android.content.pm.PackageManager
-import android.os.Build
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.CircularProgressIndicator
@@ -18,13 +13,15 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.core.content.ContextCompat
 import com.hazia.emivita.core.data.entity.Profile
 import com.hazia.emivita.core.data.settings.SettingsRepository
 import com.hazia.emivita.core.di.AppContainer
 import com.hazia.emivita.core.di.LocalAppContainer
 import com.hazia.emivita.core.di.LocalCurrentProfileId
 import com.hazia.emivita.feature.lock.AppLockGate
+import com.hazia.emivita.feature.permissions.PermissionSetupSheet
+import com.hazia.emivita.feature.permissions.rememberPermissionFixer
+import com.hazia.emivita.feature.permissions.rememberPermissionState
 import com.hazia.emivita.ui.theme.SavedEmivitaTheme
 import kotlinx.coroutines.launch
 import com.hazia.emivita.feature.disclaimer.DisclaimerDialog
@@ -101,7 +98,6 @@ fun EmivitaApp(container: AppContainer) {
                 }
 
                 else -> CompositionLocalProvider(LocalCurrentProfileId provides profiles!!.first().id) {
-                    NotificationPermissionEffect(container.settingsRepository)
                     // The disclaimer (§9 #29, MT-21) comes before the lock: it
                     // is the one thing a person must read before the app is
                     // theirs at all. null = not loaded yet, no flash either way.
@@ -127,11 +123,13 @@ fun EmivitaApp(container: AppContainer) {
                         disclaimerAccepted == null || page == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                         disclaimerAccepted == false -> DisclaimerDialog(onAccept = { scope.launch { container.settingsRepository.setDisclaimerAccepted() } })
                         recoveryPending -> DatabaseRecoveredDialog(
+                            keyLost = RecoveryNotice.reason(recoveryContext) == RecoveryNotice.Reason.KEY_LOST,
                             onRestore = { RecoveryNotice.dismiss(recoveryContext); openDataAndBackup = true; recoveryPending = false },
                             onContinueEmpty = { RecoveryNotice.dismiss(recoveryContext); recoveryPending = false },
                         )
                         else -> AppLockGate(settingsRepository = container.settingsRepository) {
                             EmivitaNavHost(startPage = page, openDataAndBackupOnStart = openDataAndBackup)
+                            PermissionSetupEffect(container.settingsRepository)
                         }
                     }
                 }
@@ -141,40 +139,21 @@ fun EmivitaApp(container: AppContainer) {
 }
 
 /**
- * Requests POST_NOTIFICATIONS once, the first time the main shell renders
- * post-onboarding (API 33+ only -- the permission doesn't exist below that).
- * Without this, [ReminderNotificationBuilder]/[AlertNotificationBuilder]'s
- * existing `checkSelfPermission` guard correctly stops a crash, but nothing
- * anywhere ever triggers the system grant dialog -- on a fresh Android 13+
- * install the permission defaults to denied and every reminder notification
- * silently never posts, for an app whose entire purpose is posting them.
- *
- * Asks exactly once (tracked via [SettingsRepository.notificationPermissionRequested]),
- * whichever way the user answers -- no re-prompt on later app opens and no
- * Settings-page redirect on denial (PERM-023/024: respect the decision,
- * don't pressure it). If the user later wants notifications after denying,
- * they grant it the normal OS way (long-press the app icon > App info).
+ * The first-launch sheet asking for every grant reminders depend on (§7 R83,
+ * the owner's decision; it replaces the single notification request of §9 #12).
+ * Shown once, after the disclaimer and the lock, and only when something is
+ * missing; later revocations are Today's card.
  */
 @Composable
-private fun NotificationPermissionEffect(settingsRepository: SettingsRepository) {
-    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
-
-    val context = LocalContext.current
+private fun PermissionSetupEffect(settingsRepository: SettingsRepository) {
     val scope = rememberCoroutineScope()
-    val alreadyRequested by settingsRepository.notificationPermissionRequested.collectAsState(initial = true)
-
-    val launcher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {
-        scope.launch { settingsRepository.setNotificationPermissionRequested() }
-    }
-
-    LaunchedEffect(alreadyRequested) {
-        if (alreadyRequested) return@LaunchedEffect
-        val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) ==
-            PackageManager.PERMISSION_GRANTED
-        if (granted) {
-            settingsRepository.setNotificationPermissionRequested()
-        } else {
-            launcher.launch(Manifest.permission.POST_NOTIFICATIONS)
-        }
+    val shown by settingsRepository.permissionSetupShown.collectAsState(initial = true)
+    if (shown) return
+    val state = rememberPermissionState()
+    val onFix = rememberPermissionFixer(settingsRepository)
+    var open by remember { mutableStateOf(state.missing.isNotEmpty()) }
+    LaunchedEffect(Unit) { if (!open) settingsRepository.setPermissionSetupShown() }
+    if (open) {
+        PermissionSetupSheet(state, onFix, onClose = { open = false; scope.launch { settingsRepository.setPermissionSetupShown() } })
     }
 }
