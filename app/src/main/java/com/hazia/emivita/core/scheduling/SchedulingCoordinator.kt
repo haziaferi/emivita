@@ -27,15 +27,12 @@ interface SchedulingCoordinator {
      *  any alarm still pending for it. */
     suspend fun onReminderRemoved(reminderId: Long)
 
-    /** Called after a change to a medicine's stock quantity or expiry date.
-     *  Those two are inputs to LOW_STOCK_ALERT and EXPIRATION_ALERT scheduling
-     *  (spec §7 R37), so a refill, a dose, or an edit to the expiry field can
-     *  each move -- or cancel, or create -- an alert reminder's next alarm,
-     *  with nothing about the reminder row itself having changed.
-     *
-     *  Scoped to that medicine's alert reminders on purpose. Its dose reminders
-     *  do not depend on stock, and re-arming them here would duplicate what
-     *  [onDoseResolved] already does on the path that actually moved them. */
+    /** Called after a change to a medicine's stock quantity or expiry date,
+     *  which are inputs to LOW_STOCK_ALERT and EXPIRATION_ALERT scheduling
+     *  (spec §7 R37), so an alert's next alarm can move with no change to its
+     *  reminder row. Scoped to that medicine's alert reminders on purpose: its
+     *  dose reminders do not depend on stock, and [onDoseResolved] already
+     *  re-arms them on the path that actually moved them. */
     suspend fun onMedicineChanged(medicineId: Long)
 
     /** Recomputes and re-schedules every enabled reminder's next alarm.

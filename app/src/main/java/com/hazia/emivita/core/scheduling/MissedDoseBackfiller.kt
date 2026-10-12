@@ -8,23 +8,16 @@ import com.hazia.emivita.core.data.settings.SettingsRepository
 import kotlinx.coroutines.flow.first
 
 /**
- * Doses the app never fired become Missed rows (spec §9 #26, the owner's
- * choice; Appendix F DS-01, Dosage's `addMissedItems`). A phone left off for
- * three days, a force-stop, an alarm the OS dropped: until now the slots
- * that passed meanwhile were absent from History and from the adherence
- * figure, so a bad week looked like a quiet one.
- *
- * Window: from the last moment the app is known to have been alive
- * ([SettingsRepository.appLastSeenEpochMillis], stamped on every launch,
- * boot and alarm fire) to a minute ago, capped at [MAX_LOOKBACK_MILLIS]. A
- * reminder paused and resumed while the app was alive leaves no gap, which
- * is what the stamp is for. Only history-independent types are projected --
- * FixedTime and ON_REMINDED intervals and windows; an ON_RESOLVED chain and
- * a LinkedFollowing child depend on answers nobody gave, so they get no
- * invented slots. Rows are inserted PENDING through the same idempotent
- * materialisation the alarm path uses, so a slot the alarm did reach is
- * never doubled. Nothing is notified here: [com.hazia.emivita.core.notification.UnansweredDoseReposter]
- * decides, with its own day-long window, which of these deserve a card.
+ * Doses the app never fired (phone off, force-stop, a dropped alarm) become
+ * Missed rows, so a bad week no longer looks like a quiet one (spec §9 #26,
+ * Appendix F DS-01, Dosage's `addMissedItems`). The window runs from
+ * [SettingsRepository.appLastSeenEpochMillis] to a minute ago, capped at
+ * [MAX_LOOKBACK_MILLIS], and only FixedTime and ON_REMINDED intervals and
+ * windows are projected, since ON_RESOLVED chains and LinkedFollowing children
+ * depend on answers nobody gave. Rows go in PENDING through the alarm path's
+ * idempotent materialisation, so nothing is doubled, and
+ * [com.hazia.emivita.core.notification.UnansweredDoseReposter] decides which
+ * deserve a card.
  */
 class MissedDoseBackfiller(
     private val reminderDao: ReminderDao,

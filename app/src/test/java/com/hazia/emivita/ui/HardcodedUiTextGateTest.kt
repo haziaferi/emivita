@@ -7,35 +7,15 @@ import java.io.File
 
 /**
  * Fails the build if a user-visible string literal reappears in Kotlin
- * (spec §9 #19, Stage A's gate).
+ * (spec §9 #19, Stage A's gate), the check lint's `HardcodedText` never makes
+ * on Compose, read from the repository on the JVM with comments blanked first.
  *
- * Android lint's `HardcodedText` fires on XML layouts and never on Compose,
- * which is how 300-odd strings sat in this codebase behind a lint gate
- * configured with `warningsAsErrors = true`. This test is the check lint does
- * not make. It reads `app/src/main/java` the way [com.hazia.emivita.ui.theme.PaletteSpecConsistencyTest]
- * reads `docs/SPEC.md`: from the repository, on the JVM, no Robolectric.
- *
- * **What it detects, precisely.** A string literal handed directly to a
- * *sink* -- a call whose argument reaches the user's eyes: `Text("...")`,
- * `contentDescription = "..."`, a notification builder's title/text/action, a
- * `NotificationChannel` name or description, `Canvas.drawText`, the biometric
- * prompt, the app's own text-taking composables, `MedicineIconOption`'s label,
- * an enum entry's `("...")` display argument, and a `title`/`label`/
- * `saveLabel`/`helper`/`description` named argument. Sink-based on purpose: a
- * rule that matched "anything prose-shaped" would flag palette names, the
- * CSV's English status column and the card exporter's test-pinned English
- * defaults, and then need an allowlist -- and a gate with an allowlist is a
- * lint baseline wearing a different hat.
- *
- * **What it cannot see, stated rather than hidden.** A literal assigned to a
- * `val` and passed to a sink later, or returned from a plain `when` and then
- * displayed. Stage A part 2 found ~70 of those by reading. The complement is
- * `isPseudoLocalesEnabled` on the debug build: switch the phone to en-XA and
- * anything this test misses renders plain English amid accented text. The two
- * together are the check; neither alone is.
- *
- * Comments are blanked before matching (offsets preserved, so a reported line
- * number is real), so a sink quoted in a KDoc does not trip it.
+ * It flags a literal handed directly to a *sink* (see [sinks]) and is
+ * sink-based on purpose, since matching anything prose-shaped would need an
+ * allowlist, and a gate with an allowlist is a lint baseline in another hat.
+ * Its blind spot is a literal assigned to a `val` or returned from a `when`
+ * before display, which en-XA on the debug build catches instead: the two
+ * together are the check.
  */
 class HardcodedUiTextGateTest {
 
@@ -66,14 +46,11 @@ class HardcodedUiTextGateTest {
     )
 
     /**
-     * The one rule with a package scope. `title = "..."` names UI text in the
-     * feature, ui and navigation layers -- a form title, a section heading --
-     * but in `core/` it is a data-class field, and
-     * `EmergencyCardExporter.CardLabels.ENGLISH` is exactly that: the
-     * test-pinned English side of the card, kept in Kotlin on purpose (see its
-     * KDoc). Scoping the rule to where it is true is not an allowlist. The
-     * first run of this gate caught that field, and the alternative was to
-     * exempt one file by name.
+     * The one rule with a package scope: `title = "..."` names UI text in the
+     * feature, ui and navigation layers, but in `core/` it is a data-class
+     * field such as `EmergencyCardExporter.CardLabels.ENGLISH`, test-pinned
+     * English kept in Kotlin on purpose. Scoping the rule to where it is true
+     * is not an allowlist, whereas exempting that one file by name would be.
      */
     private val uiLayerOnly = setOf("named text arg")
     private fun inUiLayer(rel: String) =

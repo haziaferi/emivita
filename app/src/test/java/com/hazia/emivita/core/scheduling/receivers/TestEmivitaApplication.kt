@@ -6,13 +6,11 @@ import com.hazia.emivita.core.data.db.EmivitaDatabase
 import com.hazia.emivita.core.di.AppContainer
 
 /**
- * The application the receiver tests run under (spec §9 #30). It *is* an
- * [EmivitaApplication], so `applicationContext as? EmivitaApplication` in the
- * receivers holds exactly as on the phone; the only differences are the two
- * things the JVM cannot do -- load SQLCipher's native library and open the
- * encrypted file -- swapped for an unencrypted in-memory database. Everything
- * else in the container (repositories, coordinator, scheduler, notification
- * builders) is the production wiring.
+ * The application the receiver tests run under (spec §9 #30): a real
+ * [EmivitaApplication], so the receivers' cast holds as on the phone, with
+ * only SQLCipher's native library and encrypted file (which the JVM cannot
+ * load) swapped for an unencrypted in-memory database and the rest of the
+ * container the production wiring.
  *
  * Selected per test class with `@Config(application = TestEmivitaApplication::class)`;
  * `robolectric.properties` keeps the stock Application for every other test.

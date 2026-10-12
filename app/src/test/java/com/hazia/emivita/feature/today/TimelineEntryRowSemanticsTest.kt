@@ -19,13 +19,10 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * What a screen reader is told about a dose on Today (spec §9 #19 Stage B).
- *
- * The row's status used to be text only, inside a Surface that was clickable
- * with no role. Now the row is one merged node with `Role.Button`, an
- * `onClickLabel`, and the status carried as `stateDescription` -- the channel
- * TalkBack treats as state, which is to accessibility what R55's texture
- * channel is to colour-blindness. Semantics only, no pixels (§7 R47).
+ * What a screen reader is told about a dose on Today (spec §9 #19 Stage B):
+ * the row is one merged node with `Role.Button`, an `onClickLabel`, and the
+ * status carried as `stateDescription`, the channel TalkBack treats as state.
+ * Semantics only, no pixels (§7 R47).
  */
 @RunWith(RobolectricTestRunner::class)
 class TimelineEntryRowSemanticsTest {

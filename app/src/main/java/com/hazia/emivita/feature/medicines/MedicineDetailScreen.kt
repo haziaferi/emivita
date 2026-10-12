@@ -264,11 +264,10 @@ fun MedicineDetailScreen(
 
 /**
  * One reminder on the detail screen (§9 #24, owner's choice): the row opens
- * the editor; the switch pauses or resumes. Two nodes on purpose -- they do
- * two different things, unlike the Stage B rows where a switch and its row
- * were one action. The switch carries its own label so a screen reader hears
- * "Enabled, Fixed time" rather than an unnamed toggle. An alert reminder
- * (low stock / expiry) has no switch here: the stock screen owns those.
+ * the editor and the switch pauses or resumes, two nodes on purpose because
+ * they do different things, so the switch carries its own label ("Enabled,
+ * Fixed time"). An alert reminder (low stock / expiry) has no switch here,
+ * since the stock screen owns those.
  */
 @Composable
 internal fun ReminderRow(reminder: Reminder, onEdit: () -> Unit, onEnabledChange: (Boolean) -> Unit) {
@@ -306,10 +305,10 @@ internal fun ReminderRow(reminder: Reminder, onEdit: () -> Unit, onEnabledChange
 }
 
 /**
- * The notes journal (§9 #26; Appendix F MT-04): dated entries, newest first,
+ * The notes journal (§9 #26, Appendix F MT-04): dated entries, newest first,
  * for what a standing notes field cannot say -- "dizzy for two days after
- * the dose went up". Add at the top; tap an entry to edit; delete from the
- * edit dialog. Kept short here: three most recent, "show all" expands.
+ * the dose went up". Add at the top, tap an entry to edit, delete from the
+ * edit dialog, and only the three most recent show until "show all" expands.
  */
 @Composable
 internal fun NotesJournal(medicineId: Long, medicineRepository: MedicineRepository) {

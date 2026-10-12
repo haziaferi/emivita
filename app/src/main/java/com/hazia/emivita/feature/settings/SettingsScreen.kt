@@ -162,19 +162,13 @@ private val settingsGroups = listOf(
  * Settings home list -- three response modes per row (see [RowKind]) instead
  * of one uniform "push a new screen" for everything:
  *  - NAVIGATE: Notifications, Appearance and DataBackup route through
- *    [onOpenDetail] (a real EmivitaRoute push) -- DataBackup genuinely has
- *    multiple flows (export, restore, auto-sync setup) that don't fit a
- *    sheet cleanly.
- *  - SHEET: Alarms & Snooze and Weekend Mode open in a [ModalBottomSheet]
- *    right over this list -- one dismiss gesture back to Settings instead of
- *    a full screen transition + back-stack entry, for content that's really
- *    just a handful of fields.
- *  - TOGGLE: Biometric lock doesn't navigate anywhere at all -- the whole
- *    "screen" would be a single Switch, so it's inline on the row itself.
- *    Reads live [SettingsRepository.biometricLockEnabled] plus device
- *    availability (fails closed to disabled+unchecked, matching
- *    [com.hazia.emivita.feature.lock.AppLockGate]'s own fail-open design at
- *    the other end -- can't turn on a lock the device can't challenge).
+ *    [onOpenDetail], since DataBackup's several flows do not fit a sheet
+ *  - SHEET: Alarms & Snooze and Weekend Mode open in a [ModalBottomSheet],
+ *    one dismiss gesture back, for content that is a handful of fields
+ *  - TOGGLE: Biometric lock is a Switch on the row, read from
+ *    [SettingsRepository.biometricLockEnabled] plus device availability,
+ *    disabled and unchecked when the device cannot challenge (the other end
+ *    of [com.hazia.emivita.feature.lock.AppLockGate]'s fail-open design).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable

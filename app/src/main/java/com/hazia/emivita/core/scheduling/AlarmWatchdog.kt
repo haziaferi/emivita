@@ -7,15 +7,15 @@ import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
 /**
- * Says so when an armed alarm did not fire (§9 #29; Appendix F DP-04, the
- * finding DP-F2). `rescheduleOnLaunch` has repaired dropped alarms silently
- * since R61; the person never learned their OEM was killing the app. Now:
- * every armed regular slot is recorded here by [AlarmScheduler]; every fire
- * stamps [recordFired]; and on launch, *before* the repair, [checkOnLaunch]
- * compares -- the earliest planned instant is more than a minute past, no
- * alarm has fired since it, and the phone has been up for five minutes
- * (Daily Pill's two guards: AlarmManager's slack, and a receiver that has
- * not had its turn yet after a boot). One notice, kept until dismissed.
+ * Says so when an armed alarm did not fire (§9 #29, Appendix F DP-04, the
+ * finding DP-F2), because `rescheduleOnLaunch` repairs dropped alarms silently
+ * and the person would never learn their OEM is killing the app. [AlarmScheduler]
+ * records every armed regular slot, [recordFired] stamps every fire, and on
+ * launch, *before* the repair, [checkOnLaunch] posts one notice, kept until
+ * dismissed, when the earliest planned instant is more than a minute past, no
+ * alarm has fired since it, and the phone has been up for five minutes (Daily
+ * Pill's guards against AlarmManager's slack and a receiver not yet run after
+ * a boot).
  *
  * SharedPreferences, not DataStore: [AlarmScheduler.schedule] is not a
  * suspend function and runs on the alarm path.

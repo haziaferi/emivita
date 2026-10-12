@@ -41,33 +41,16 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 
 /**
- * Event editing (spec §3/§9 #3) -- shared between Today and History, since
- * spec explicitly calls both out ("swipe-to-edit on a Today/History entry").
- * Status switch, recorded time, and dose amount are each independently
- * editable; only the fields that actually changed get written, each through
- * its own repository method, so the stock-correct-undo logic stays isolated
- * to [DoseEventRepository.switchStatus] specifically -- editing amount/time
- * never touches stock, only a status switch does.
+ * Event editing (spec §3/§9 #3), shared between Today and History and opened
+ * by a tap rather than an easily-triggered swipe: only the fields that changed
+ * are written, each through its own repository method, so only a status
+ * switch touches stock, via [DoseEventRepository.switchStatus].
  *
- * Tap-to-open rather than a literal swipe gesture -- functionally
- * equivalent (every field spec calls out is editable), and a modal step
- * before changing a medication record reads safer for this app's purpose
- * than a gesture that's easy to trigger by accident.
- *
- * Also opens for an unresolved (PENDING) event, which History labels
- * "Missed" -- spec §7 R46. That case used to be excluded by every caller,
- * which meant a dose you took but did not tap was wrong in the record
- * permanently and wrong in the PDF export with it. Two differences when
- * [originalStatus] is PENDING: neither status radio starts selected, so
- * resolving is a deliberate choice rather than a default the dialog picked
- * for you; and the recorded time starts at the dose's own
- * [scheduledEpochMillis] rather than now, because a dose taken on Tuesday and
- * recorded on Friday happened on Tuesday.
- *
- * A locked medicine (`Medicine.remindersLockedUntilTaken`) is deliberately
- * not gated here, on the same reasoning §7 R32 used for the resolved case:
- * that lock stops a *live* dose being dismissed without being taken, and
- * correcting a past record is not a dismissal.
+ * For a PENDING ("Missed") event (spec §7 R46) neither status radio starts
+ * selected and the recorded time starts at [scheduledEpochMillis] rather than
+ * now, so resolving it is a deliberate choice dated when the dose happened.
+ * A locked medicine is not gated here (§7 R32), because that lock stops a live
+ * dose being dismissed and correcting a past record is not a dismissal.
  */
 @Composable
 fun DoseEditDialog(

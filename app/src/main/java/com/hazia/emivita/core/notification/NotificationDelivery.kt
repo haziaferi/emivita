@@ -5,27 +5,14 @@ import com.hazia.emivita.R
 
 /**
  * What, if anything, stands between a reminder and the user actually seeing
- * it (spec §7 R58).
+ * it (spec §7 R58), shown as a passive status card beside
+ * `FullScreenAlarmAccessCard` and `BatteryOptimizationCard`, never a prompt.
  *
- * [postIfPermitted] already refuses to post without POST_NOTIFICATIONS, which
- * correctly avoids a crash and just as correctly says nothing: it writes one
- * `Log.w` and returns. `EmivitaApp` asks for the permission exactly once and
- * deliberately never re-prompts, which is the right call about *pressure* --
- * PERM-023/024 say respect the decision -- but it quietly became "and never
- * mention it again", which is a different thing. A user who declined once, or
- * who turned notifications off in system Settings a month later, then has an
- * app whose Today screen is populated, whose alarms are genuinely armed in
- * `dumpsys alarm`, and which will never post a reminder again.
- *
- * The app already solved this twice for weaker failures -- `FullScreenAlarmAccessCard`
- * for a degraded Alarm tier, `BatteryOptimizationCard` for late delivery. This is
- * the same shape for the strongest one, so it is a passive status card in the
- * same block, not a prompt.
- *
- * Split out as pure functions over plain values so the whole decision is unit
- * testable without Robolectric or a NotificationManager -- the same reason
- * [com.hazia.emivita.core.data.export.EmergencyCardExporter.buildLines] exists
- * apart from its PDF writer.
+ * [postIfPermitted] fails silently and `EmivitaApp` asks for the permission
+ * only once (PERM-023/024), so without this card a user who declined, or who
+ * switched notifications off later, has armed alarms that never post. Pure
+ * functions over plain values, so the decision is unit-testable without
+ * Robolectric or a NotificationManager.
  */
 sealed interface NotificationDelivery {
 
@@ -42,13 +29,10 @@ sealed interface NotificationDelivery {
      * Notifications work, but one or more tiers sit at `IMPORTANCE_NONE` --
      * blocked outright, so nothing posted to them appears at all.
      *
-     * Only `NONE` counts. A user who drops the Standard tier to silent or
-     * min is expressing a preference and is not owed a warning about it;
-     * flagging that would be nagging, which is the failure PERM-024 names.
-     * `NONE` is different in kind: it is the third silent-failure mode and
-     * the one no permission check can see, because an Alarm-tier medicine
-     * "that must not be skipped" can be posting to a channel the user
-     * silenced entirely and the app would never know.
+     * Only `NONE` counts: a tier dropped to silent or min is a preference,
+     * and warning about it would be the nagging PERM-024 names. `NONE` is the
+     * silent failure no permission check can see, an Alarm-tier medicine
+     * posting to a channel nobody will ever look at.
      */
     data class TiersBlocked(val tiers: List<String>) : NotificationDelivery
 }
@@ -71,12 +55,10 @@ fun notificationDelivery(
 
 /**
  * A piece of card text as a resource id plus its format arguments, resolved by
- * the composable (spec §9 #19). These two functions used to return English
- * strings, for JVM testability -- and stayed English through Stage A because
- * a `when` branch that is returned and later handed to Text() sits at no
- * sink the gate can see. en-XA on the device, with POST_NOTIFICATIONS
- * revoked, is what showed the card plain amid accented text. Same fix as
- * EmergencyCardExporter.CardLabels: the decision stays pure, the words move.
+ * the composable (spec §9 #19), so the decision stays pure and the words live
+ * in resources, as with EmergencyCardExporter.CardLabels. The hardcoded-text
+ * gate cannot see a returned `when` branch later handed to Text(), so only
+ * en-XA on the device catches a literal slipping back in here.
  */
 data class CardText(@StringRes val res: Int, val args: List<Any> = emptyList())
 

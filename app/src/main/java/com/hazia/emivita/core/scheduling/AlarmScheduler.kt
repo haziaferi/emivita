@@ -28,7 +28,7 @@ const val DEFAULT_SNOOZE_MINUTES = 10L
 private const val TAG = "AlarmScheduler"
 
 /**
- * Thin wrapper around [AlarmManager] for reminder alarms. Three alarm "slots",
+ * Thin wrapper around [AlarmManager] for reminder alarms, with three "slots",
  * each its own PendingIntent request code so they can't clobber each other --
  * the same "each concern gets its own slot" idea medTimer's own
  * `AlarmProcessor` uses (slot 0 for the next-scheduled alarm, a separate
@@ -43,20 +43,11 @@ private const val TAG = "AlarmScheduler"
  *    spec §3/§4 `repeatOnUnanswered`), a re-fire for a still-unanswered dose
  *    that doesn't touch the recurring chain either -- see [scheduleNag].
  *
- * The last two used to be keyed by reminder as well (§7 R60). That was fine
- * while a reminder had one outstanding dose, and an ON_REMINDED interval
- * reminder reschedules the moment it fires, so it can have two: snoozing the
- * second silently cancelled the first's pending snooze, and arming the
- * second's nag overwrote the first's chain. medTimer keys these by event
- * (`PendingIntentFactory`); so does this now. A pre-R60 install may still
- * hold per-reminder snooze/nag alarms; they fire once into
- * [ReminderAlarmReceiver], which looks the dose up by (reminder, slot) and
- * ignores it unless it is still PENDING -- harmless, and gone after that.
- *
- * Handles the API 31+ exact-alarm permission split (audit item, gating
- * exact vs. inexact) -- below API 31 SCHEDULE_EXACT_ALARM is a normal,
- * install-time-granted permission and [AlarmManager.canScheduleExactAlarms]
- * doesn't exist yet, so exact scheduling is always assumed available there.
+ * Snooze and nag are keyed by event, as medTimer's are, because an ON_REMINDED
+ * interval reminder can have two outstanding doses and a per-reminder key let
+ * one dose's snooze or nag overwrite the other's (§7 R60). Below API 31 exact
+ * alarms are an install-time permission and [AlarmManager.canScheduleExactAlarms]
+ * does not exist, so exact scheduling is assumed available there.
  */
 class AlarmScheduler(private val context: Context) {
     private val alarmManager: AlarmManager =

@@ -7,18 +7,16 @@ import java.io.File
 
 /**
  * Fails the build on a `Switch`, `Checkbox` or `RadioButton` that is its own tap
- * target beside a label (§9 #19 Stage B's "one node" pattern; §7 R81 found seven,
- * §7 R82 widened the gate). TalkBack reads what a node says about itself, so a
- * live control next to a `Text` announces "interruttore, attivo" with no name.
+ * target beside a label (§9 #19 Stage B's "one node" pattern; §7 R81, R82),
+ * because TalkBack would announce such a control as "interruttore, attivo" with
+ * no name.
  *
  * Accepted shapes: the row is the single `toggleable`/`selectable` node and the
  * control is display-only (`onCheckedChange = null`, `onClick = null`), or the
  * control names itself with a non-null `contentDescription`.
  *
- * Source-level like [HardcodedUiTextGateTest], because a semantics test only
- * covers the composable it was written for and the seventh live checkbox sat in
- * a `FlowRow` no test rendered. Comments are blanked so a quoted call cannot
- * trip it.
+ * Source-level with comments blanked, like [HardcodedUiTextGateTest], because a
+ * semantics test only covers the composables it renders.
  */
 class LiveControlBesideLabelGateTest {
 

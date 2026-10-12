@@ -93,22 +93,13 @@ class ReminderRepository(
         return id
     }
 
-    /** The whole of an edit-form save, in ONE write.
+    /** The whole of an edit-form save, in ONE write, because
+     *  `ReminderDao.update` is a full-row `@Update` and two writes built from
+     *  the same pre-edit `Reminder` revert each other (docs/SPEC.md §7 R23).
      *
-     *  Every edit path used to call [updateConfig] and then
-     *  [updateAdvancedFields], passing the same pre-edit `Reminder` to both.
-     *  `ReminderDao.update` is a plain Room `@Update`, which writes every
-     *  column of the row, so the second call wrote the pre-edit `configJson`
-     *  straight back over the first call's: editing a reminder's time or
-     *  pattern appeared to succeed and silently kept the old schedule. Four
-     *  call sites had it, and the `LinkedFollowing` one reverted
-     *  `parentReminderId` with it. Combining the two into a single `copy()`
-     *  is what makes that unrepeatable -- the ordering hazard only exists
-     *  while two full-row writes describe one edit. See docs/SPEC.md §7 R23.
-     *
-     *  [parentReminderId] defaults to leaving the existing link alone, and is
-     *  passed explicitly only by the `LinkedFollowing` form, which is the one
-     *  config whose edit is also a relationship change (see
+     *  [parentReminderId] defaults to leaving the existing link alone and is
+     *  passed explicitly only by the `LinkedFollowing` form, the one config
+     *  whose edit is also a relationship change (see
      *  [updateLinkedFollowingParent]). */
     suspend fun updateConfigAndAdvancedFields(
         reminder: Reminder,
@@ -221,24 +212,14 @@ class ReminderRepository(
     }
 
     /** Deleting a reminder switches its direct LinkedFollowing children off
-     *  first (spec §3, settled in §7 R25).
+     *  first (spec §3, settled in §7 R25), because the `ON DELETE SET_NULL`
+     *  FK would otherwise leave each one enabled, listed and never firing,
+     *  and CASCADE would delete rows the user never selected.
      *
-     *  The self-referencing FK is `ON DELETE SET_NULL`, so SQLite detaches a
-     *  child rather than removing it. Left alone, that child keeps its row,
-     *  keeps `enabled = true`, keeps showing in the medicine's reminder list,
-     *  and never fires again -- SchedulingEngine's LinkedFollowing branch
-     *  returns null for a null parent. Switching it off turns a silent dead
-     *  row into a visible off toggle the user can act on, and costs no schema
-     *  change; CASCADE was the alternative and would have deleted rows the
-     *  user never selected, in a list that does not show the chain.
-     *
-     *  Children are read BEFORE the delete: the FK nulls `parentReminderId`
-     *  as part of it, so afterwards there is nothing left to query by.
-     *
-     *  One level down only, matching [getChildrenOf]'s own documented scope
-     *  and [setEnabled]'s existing semantics -- disabling a chain's head has
-     *  never disabled the rest of the chain, and a grandchild is not orphaned
-     *  here, just following a parent that no longer fires. */
+     *  Children are read BEFORE the delete, since the FK nulls
+     *  `parentReminderId` as part of it. One level down only, matching
+     *  [getChildrenOf] and [setEnabled]: a grandchild is not orphaned, just
+     *  following a parent that no longer fires. */
     suspend fun delete(reminder: Reminder) {
         val children = reminderDao.getChildrenOf(reminder.id)
 

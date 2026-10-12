@@ -7,25 +7,14 @@ import com.hazia.emivita.core.data.config.ReminderType
 import android.content.res.Resources
 
 /**
- * Drops a trailing ".0" so a whole number reads as "2" rather than "2.0",
- * while leaving genuine fractions alone.
+ * The display label for a dose status, as a resource id (spec §9 #19), for
+ * the History list, the table and the PDF, while the CSV deliberately does
+ * not use it (see [csvStatusLabel]).
  *
- * The single implementation behind every dose amount, stock quantity and
- * interval this app displays. It previously existed as seven separate copies
- * of the same expression -- formatDoseAmount, formatDose, formatNumber, two
- * different formatQuantity, the numeric half of formatHours, and one inlined
- * directly into a `remember {}` block.
- */
-/**
- * The display label for a dose status, as a resource id (spec §9 #19).
- *
- * PENDING reads as "Missed": the alarm fired (or was projected in the past)
- * and nothing resolved it. That is a display-only relabel of a past-dated
- * PENDING row, not a fifth DoseStatus -- the column stays PENDING so a late
- * resolve() still works. It used to live in HistoryScreen with a second
- * private copy in HistoryExporter; one @StringRes function here serves the
- * History list, the table, and the PDF, and the CSV deliberately does not
- * use it (see [csvStatusLabel]).
+ * PENDING reads as "Missed" (the alarm fired, or was projected in the past,
+ * and nothing resolved it), a display-only relabel of a past-dated row rather
+ * than a fifth DoseStatus, so the column stays PENDING and a late resolve()
+ * still works.
  */
 @StringRes
 fun doseStatusLabelRes(status: DoseStatus): Int = when (status) {
@@ -63,7 +52,9 @@ fun ReminderType.labelRes(): Int = when (this) {
     ReminderType.LINKED_FOLLOWING -> R.string.reminder_linked_following
 }
 
-/** Invariant (`.`), for files: CSV, PDF, the backup. Screens use
+/** Drops a trailing ".0" so a whole number reads "2", leaving fractions alone,
+ *  the one implementation behind every displayed dose, quantity and interval.
+ *  Invariant (`.`), for files: CSV, PDF, the backup; screens use
  *  [formatDecimalLocalized] (§7 R60 F 2). */
 fun formatDecimal(value: Double): String =
     if (value == value.toLong().toDouble()) value.toLong().toString() else value.toString()

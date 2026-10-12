@@ -13,18 +13,12 @@ import java.time.ZonedDateTime
 private const val MIDNIGHT_OVERSHOOT_MILLIS = 1_000L
 
 /**
- * Today's date, recomputed when it actually changes.
- *
- * `remember { LocalDate.now() }` captures the date the composable first ran
- * and then never updates, so a screen left open across midnight keeps
- * rendering the previous day: Today would go on showing yesterday's doses
- * and offering to resolve them, and History's rolling window would stop
- * moving. Nothing else in either screen forces recomposition on its own,
- * because the data those screens observe is queried *for* the stale range.
- *
- * Sleeps until just after the next local midnight rather than ticking on a
- * fixed 24-hour interval, so a timezone change or a DST shift lands on the
- * real boundary instead of drifting away from it.
+ * Today's date, recomputed when it actually changes: `remember { LocalDate.now() }`
+ * never updates, so a screen left open across midnight would keep showing
+ * yesterday's doses, and nothing else recomposes because the observed data is
+ * queried for the stale range. Sleeps until just after the next local midnight
+ * rather than ticking every 24 hours, so a zone change or DST shift lands on
+ * the real boundary.
  */
 @Composable
 fun rememberCurrentDate(zone: ZoneId): LocalDate =

@@ -23,21 +23,14 @@ import kotlinx.coroutines.launch
 private const val TAG = "ReminderAlarmReceiver"
 
 /**
- * Fired by AlarmManager via the PendingIntent [AlarmScheduler] built.
- * Not exported in the manifest -- nothing outside this app can trigger it.
+ * Fired by AlarmManager via the PendingIntent [AlarmScheduler] built, and not
+ * exported, so nothing outside this app can trigger it. Work runs off the main
+ * thread under `goAsync()`, which must always end in `finish()`.
  *
- * `onReceive` isn't suspend and Android gives receivers only a short window
- * before treating them as unresponsive, so this uses the standard
- * `goAsync()` + coroutine pattern: get a [android.content.BroadcastReceiver.PendingResult],
- * do the real work off the main thread, and always call `finish()`.
- *
- * [EXTRA_IS_NAG] branches to [handleNagFire] instead of [handleAlarm] --
- * ported from medTimer's own design (`RepeatProcessor`/`AlarmProcessor`'s
- * secondary-alarm slot), where a repeat/nag re-fire deliberately does NOT
- * go through the same path as a genuine new occurrence: [handleAlarm]'s
- * `reschedulesImmediatelyOnFire()` and cascade-reschedule side effects are
- * meant to fire once per real occurrence, not once per nag -- sharing the
- * path would re-trigger them on every nag re-notification.
+ * [EXTRA_IS_NAG] branches to [handleNagFire] instead of [handleAlarm], as in
+ * medTimer's secondary-alarm slot, because [handleAlarm]'s
+ * `reschedulesImmediatelyOnFire()` and cascade-reschedule side effects must
+ * fire once per real occurrence, not once per nag.
  */
 class ReminderAlarmReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -164,18 +157,11 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
      * An alert reminder's alarm fired (spec §7 R37).
      *
      * The condition is re-checked against live data rather than trusted from
-     * scheduling time, because an alert alarm is armed for a *future* instant
-     * and the world moves in between: a low-stock alarm set for tomorrow
-     * morning is wrong if the user refills tonight, and
-     * SchedulingCoordinator.onMedicineChanged only re-arms alarms for changes
-     * this app performed. A restore, a clock change, or an alarm the OS
-     * delivers late can all land here with the condition no longer true. Cheap
-     * to verify, so it is verified.
-     *
-     * Always re-arms afterwards, whether or not it notified, and does so
-     * through the coordinator rather than computing anything here: the next
-     * firing depends on `lastAlertNotifiedEpochDay`, which the write below may
-     * have just moved, and the coordinator reads the row back.
+     * scheduling time, because a refill, a restore, a clock change or a late
+     * OS delivery can all land here with it no longer true. Always re-arms
+     * afterwards through the coordinator, which reads the row back, since the
+     * next firing depends on the `lastAlertNotifiedEpochDay` the write below
+     * may have just moved.
      */
     private suspend fun handleAlertFire(
         reminder: Reminder,
@@ -305,7 +291,7 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
         }
     }
 
-    /** The silent "coming up" notification (§9 #25; HM-19). Posted only if
+    /** The silent "coming up" notification (§9 #25, HM-19). Posted only if
      *  the reminder still exists, is enabled, and still wants a pre-alarm --
      *  the alarm may have been armed before an edit. Its id is derived from
      *  the reminder, not a dose, and the regular fire cancels it. */

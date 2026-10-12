@@ -33,26 +33,13 @@ import androidx.compose.runtime.setValue
 import com.hazia.emivita.core.data.settings.StartPage
 import kotlinx.coroutines.flow.first
 
-/** Name given to the silently auto-created first [Profile] -- never shown
- *  anywhere in the UI (confirmed by search: only the profile's `id`, via
- *  [LocalCurrentProfileId], is ever read outside creation), so any fixed
- *  string is safe here. Matches the single-profile, personal-use framing
- *  (spec §1) -- there's no name to actually ask for.
- *
- *  That premise stopped being universally true with Medical ID (§7 R48),
- *  which prints the profile's name at the top of an emergency card handed to
- *  a clinician. It is still true of every *other* surface, so this stays a
- *  silent default rather than becoming onboarding again -- the deleted
- *  onboarding screen is not coming back to ask for a name that only one
- *  screen needs. MedicalIdScreen holds the other half of the deal: it treats
- *  this exact string as an empty field rather than a chosen name, and refuses
- *  to export a card until a real one is entered. Change this constant and
- *  change PLACEHOLDER_PROFILE_NAME there with it.
- *
- *  Not a string resource, deliberately (§9 #19): this is a sentinel that is
- *  WRITTEN to the database and later RECOGNISED by comparison. Translating it
- *  would make a profile created under one language unrecognisable under
- *  another, and the card exporter would print the placeholder as a name. */
+/** Name given to the silently auto-created first [Profile] (spec §1), shown
+ *  only on the Medical ID card (§7 R48), so it stays a silent default rather
+ *  than an onboarding question. MedicalIdScreen treats this exact string as an
+ *  empty field and refuses to export until a real name is entered, so change
+ *  its PLACEHOLDER_PROFILE_NAME with this. Deliberately not a string resource
+ *  (§9 #19): it is a stored sentinel recognised by comparison, and a
+ *  translation would stop a profile created under one language matching. */
 private const val DEFAULT_PROFILE_NAME = "Me"
 
 /**

@@ -12,18 +12,12 @@ import org.junit.runner.RunWith
 import java.io.File
 
 /**
- * The encrypted database on real hardware (spec §9 #20).
- *
- * Robolectric runs the migration and repository tests against a JVM SQLite,
- * so nothing in the JVM suite ever loads `libsqlcipher.so`, wraps a key
- * through AndroidKeyStore, or writes ciphertext to disk. §7 R39 proved all
- * three by hand once -- "proven by the database opening at all" -- and this
- * is that proof made repeatable.
- *
- * Two assertions, and the second is the one worth having: a database that
- * opens and round-trips could still be plaintext if the SQLCipher factory
- * were silently dropped from the builder. Reading the file's first bytes is
- * the check no repository call can stand in for.
+ * The encrypted database on real hardware (spec §9 #20): the JVM suite never
+ * loads `libsqlcipher.so`, wraps a key through AndroidKeyStore or writes
+ * ciphertext, so this makes §7 R39's one-off manual proof repeatable. The
+ * second test is the one worth having: a database that round-trips could still
+ * be plaintext if the SQLCipher factory were dropped from the builder, and only
+ * the file's first bytes can tell.
  */
 @RunWith(AndroidJUnit4::class)
 class SqlCipherRoundTripTest {
@@ -54,16 +48,11 @@ class SqlCipherRoundTripTest {
         // assertion this test exists for.
         DeviceTestSupport.ensureProfileId(DeviceTestSupport.container())
 
-        // A plaintext SQLite file begins with a 16-byte magic: the fifteen
-        // ASCII characters of "SQLite format 3" followed by a NUL. SQLCipher's
-        // first page is ciphertext (the salt), so a correctly encrypted file
-        // must NOT start with it.
-        //
-        // The NUL matters. A first draft of this compared against the text
-        // with a trailing space instead, which no file ever starts with, so
-        // the assertion below could not have failed on a plaintext database.
-        // That is §7.1 rule 5 in one line, and why the sanity check on the
-        // magic's own length is here.
+        // A plaintext SQLite file begins with the 16-byte magic "SQLite format 3"
+        // plus a NUL, while SQLCipher's first page is ciphertext (the salt), so
+        // an encrypted file must NOT start with it. The NUL matters: a trailing
+        // space instead matches no file, so the assertion could never fail
+        // (§7.1 rule 5), which is why the magic's own length is checked too.
         val file: File = DeviceTestSupport.app().getDatabasePath("emivita.db")
         assertTrue("database file should exist after the app has opened it: $file", file.isFile)
 

@@ -89,14 +89,12 @@ private val reminderTypeOptions = listOf(
 
 /**
  * Type picker + the 6 sub-forms (spec §6/§9 items 1, 8, and 14).
- * LowStockAlert/ExpirationAlert get a real AlarmManager occurrence like every
- * other type as of spec §7 R37 -- which is why both their forms carry a time
- * of day. Only low stock's ONCE/ALWAYS modes are still announced by
- * LowStockExpirationAlertEvaluator on the projection cache's recompute pass,
- * because those two mean "the moment it crosses" and an alarm cannot say that.
- * CyclicActivePause
- * is a 4th RepeatPattern case inside Fixed Time's own form, not a top-level
- * type with a card of its own (R8, §7).
+ * LowStockAlert/ExpirationAlert get a real AlarmManager occurrence (spec §7
+ * R37), so both forms carry a time of day, and only low stock's ONCE/ALWAYS
+ * modes, which mean "the moment it crosses", are still announced by
+ * LowStockExpirationAlertEvaluator on the projection cache's recompute pass.
+ * CyclicActivePause is a 4th RepeatPattern case inside Fixed Time's own form,
+ * not a top-level type with a card of its own (R8, §7).
  */
 @Composable
 fun AddReminderScreen(
@@ -180,12 +178,12 @@ fun AddReminderScreen(
             },
             onCancel = { selectedType = null },
         )
-        // Unreachable: [reminderTypeOptions] excludes both, and the picker is
-        // the only thing that ever sets selectedType. StockExpirationScreen is
-        // their sole creation path (spec §6/§9 #1: "one entry point, no
-        // duplicated fields elsewhere"). Kept as an explicit case rather than
-        // an `else` so adding a 7th ReminderType still forces this file to be
-        // revisited. EditReminderScreen below routes to their form bodies.
+        // Unreachable: [reminderTypeOptions] excludes both, since
+        // StockExpirationScreen is their sole creation path (spec §6/§9 #1:
+        // "one entry point, no duplicated fields elsewhere"). Kept as an
+        // explicit case rather than an `else` so adding a 7th ReminderType
+        // still forces this file to be revisited (EditReminderScreen below
+        // routes to their form bodies).
         ReminderType.LOW_STOCK_ALERT, ReminderType.EXPIRATION_ALERT -> Unit
         ReminderType.LINKED_FOLLOWING -> LinkedFollowingFormBody(
             title = stringResource(R.string.reminder_linked_following),

@@ -12,15 +12,12 @@ import com.hazia.emivita.core.scheduling.SnoozeLedger
 /**
  * Re-post the notifications of doses that fired, were never answered, and
  * whose notification is gone (§9 #25; Appendix E B-20, medTimer's
- * `AutostartService.restoreNotifications`). A reboot clears the shade; a
- * user force-stop clears it too. `rescheduleAll()` re-arms the *future*
- * (§7 R61), so a dose left Due before either had no notification until now
- * -- it survived only as a row on Today.
+ * `AutostartService.restoreNotifications`), since a reboot or force-stop
+ * clears the shade and `rescheduleAll()` only re-arms the *future* (§7 R61).
  *
- * Window: the last [LOOKBACK_MILLIS]. Older unanswered doses are Missed on
- * Today and in History already; re-posting a three-day-old reminder helps
- * no one. Only doses with no active notification are posted, so calling
- * this on every launch cannot re-chime a reminder that is still showing.
+ * Only doses from the last [LOOKBACK_MILLIS] (older ones already show as
+ * Missed) with no active notification are posted, so calling this on every
+ * launch cannot re-chime a reminder that is still showing.
  */
 class UnansweredDoseReposter(
     private val context: Context,

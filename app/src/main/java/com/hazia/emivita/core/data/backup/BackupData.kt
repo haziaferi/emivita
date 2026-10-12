@@ -21,15 +21,11 @@ import com.hazia.emivita.core.data.entity.MedicineNote
  *  so far, nothing to migrate between. */
 const val BACKUP_SCHEMA_VERSION = 1
 
-/** The one Json every backup path uses (§7 R60 E F1). The default `Json`
- *  rejects an unknown key and omits defaulted fields, so a file written by a
- *  newer Emivita -- any added entity field -- failed on restore at the first
- *  key it did not know, and [BackupData.schemaVersion], being a default,
- *  was never written at all: the version field existed and no file carried
- *  it. `ignoreUnknownKeys` makes an older app read a newer file's known
- *  half; `encodeDefaults` makes the version (and every defaulted entity
- *  field) explicit on disk, which is what a snapshot is for. medTimer's
- *  Gson path has both properties by default. */
+/** The one Json every backup path uses (§7 R60 E F1). `ignoreUnknownKeys`
+ *  lets an older app restore a newer file's known half, where the default
+ *  `Json` fails at the first added field. `encodeDefaults` writes
+ *  [BackupData.schemaVersion] and every defaulted field to disk, which the
+ *  default `Json` silently omits. */
 val BackupJson: Json = Json {
     ignoreUnknownKeys = true
     encodeDefaults = true

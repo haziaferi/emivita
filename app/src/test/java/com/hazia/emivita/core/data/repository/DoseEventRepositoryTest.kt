@@ -148,13 +148,11 @@ class DoseEventRepositoryTest {
 
     @Test
     fun `a backdated correction does not become the ON_RESOLVED anchor over a newer dose`() = runTest {
-        // The hazard that made this feature worth thinking about rather than
-        // just unlocking the UI. DoseEventDao.getLastResolved picks a
-        // reminder's ON_RESOLVED anchor with ORDER BY resolvedAtEpochMillis
-        // DESC. Had the correction stamped "now", tidying up last Tuesday's
-        // missed dose on Friday would have silently re-anchored a live interval
-        // reminder to Friday. Recording the truthful time is what makes it safe
-        // -- so this asserts the anchor, not just the row.
+        // DoseEventDao.getLastResolved picks a reminder's ON_RESOLVED anchor
+        // with ORDER BY resolvedAtEpochMillis DESC, so a correction stamped
+        // "now" would let tidying up last Tuesday's missed dose on Friday
+        // re-anchor a live interval reminder to Friday. Recording the truthful
+        // time is what makes it safe, so this asserts the anchor, not just the row.
         val medicineId = seedMedicineWithStock(10.0)
         val reminderId = seedReminder(medicineId)
         val tuesday = 1_700_000_000_000L

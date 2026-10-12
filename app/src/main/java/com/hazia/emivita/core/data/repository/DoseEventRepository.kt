@@ -75,30 +75,15 @@ class DoseEventRepository(
 
     /** The single entry point for Taken / Skipped from any screen or receiver.
      *
-     *  [resolvedAtEpochMillis] defaults to now, which is right for every live
-     *  path -- a notification action, the alarm screen, Today's chips -- where
-     *  answering and acting are the same moment. It is passed explicitly only
-     *  when correcting the record after the fact, where they are not: a dose
-     *  taken on Tuesday and only recorded on Friday happened on Tuesday, and
-     *  the History this app exists to hand a clinician should say so (spec §7
-     *  R46).
-     *
-     *  That parameter is also what makes retroactive resolution safe for
-     *  scheduling, which is the reason it is a parameter rather than a second
-     *  method that stamps now. `DoseEventDao.getLastResolved` picks a
-     *  reminder's ON_RESOLVED anchor with `ORDER BY resolvedAtEpochMillis
-     *  DESC`, so a truthful backdated resolution cannot displace a genuinely
-     *  newer one -- and where it *is* the newest, it is also the truth about
-     *  when the medicine was last taken, which is exactly what that anchor
-     *  means. Stamping now instead would silently re-anchor a live interval
-     *  reminder to the moment someone tidied up their history.
-     *  Resolvable from three independent surfaces (notification action,
-     *  full-screen alarm, Today's inline buttons), so a second call for an
-     *  event that's already been resolved has to be a safe no-op rather than
-     *  re-applying the stock change a second time for one real dose -- the
-     *  PENDING check below is read and enforced inside the same transaction
-     *  as the write, not against a snapshot taken before it opens, so two
-     *  near-simultaneous calls can't both pass it. */
+     *  [resolvedAtEpochMillis] defaults to now for live paths and is passed
+     *  explicitly only when correcting the record after the fact, so History
+     *  says when the dose really happened and `DoseEventDao.getLastResolved`
+     *  (ORDER BY resolvedAtEpochMillis DESC) never re-anchors a live interval
+     *  reminder to the moment someone tidied their history (spec §7 R46).
+     *  A second call for an already-resolved event is a no-op, because the
+     *  PENDING check is read inside the same transaction as the write, so two
+     *  near-simultaneous calls from different surfaces cannot both apply the
+     *  stock change. */
     suspend fun resolve(
         doseEventId: Long,
         status: DoseStatus,
@@ -164,35 +149,16 @@ class DoseEventRepository(
 
     /** Taken<->Skipped switch (spec §3/§9 #3), stock-correct: applies the
      *  quantity this dose actually consumed as a *relative* adjustment, taken
-     *  from the sentinel pair [resolve] recorded at resolution time.
+     *  from the sentinel pair [resolve] recorded at resolution time, never as
+     *  an absolute `setStock`, which would discard every stock change made
+     *  since (spec §7 R27).
      *
-     *  It used to write that pair back as an absolute quantity --
-     *  `setStock(stockAfter)` for Taken, `setStock(stockBefore)` for Skipped --
-     *  which silently discarded every stock change made since the dose was
-     *  resolved. Correcting this morning's dose after the evening one had been
-     *  taken reverted the evening one; correcting a dose logged before a refill
-     *  destroyed the refill. See docs/SPEC.md §7 R27.
-     *
-     *  The rationale that absolute write carried -- that relative math "could
-     *  compound error across repeated switches" -- does not hold for a delta
-     *  read from the recorded pair. Taken->Skipped gives back exactly what
-     *  Skipped->Taken takes away, so any sequence of switches is reversible,
-     *  and the same-status guard below stops one direction being applied
-     *  twice. Compounding would only be a risk if the delta were recomputed
-     *  from the event's *current* doseAmount, which [editDoseAmount] can change
-     *  independently of the sentinels -- which is precisely why the delta comes
-     *  from stockBefore/stockAfter rather than from doseAmount.
-     *
-     *  The recorded pair is clamp-aware for free: [hypotheticalStockSentinels]
-     *  floors stockAfter at 0, so a dose taken against insufficient stock
-     *  records what was really consumed, and handing back exactly that is
-     *  right. A REFILLED event can never reach here -- the require below
-     *  admits only an already-resolved Taken/Skipped one -- so the difference
-     *  is never negative.
-     *
-     *  A no-op for an event that was never tracked (stockBefore == stockAfter,
-     *  the -1.0 sentinel pair or a genuinely zero-dose event -- both correctly
-     *  mean "nothing to restore"). */
+     *  The delta comes from stockBefore/stockAfter, not from the current
+     *  doseAmount that [editDoseAmount] can change, so switches stay exactly
+     *  reversible, and [hypotheticalStockSentinels] flooring stockAfter at 0
+     *  means a dose taken against insufficient stock hands back only what it
+     *  consumed. A no-op for an untracked event (stockBefore == stockAfter:
+     *  the -1.0 sentinel pair or a zero dose). */
     suspend fun switchStatus(doseEventId: Long, newStatus: DoseStatus) {
         require(newStatus == DoseStatus.TAKEN || newStatus == DoseStatus.SKIPPED) {
             "switchStatus is for Taken<->Skipped only, was $newStatus"
@@ -347,11 +313,9 @@ class DoseEventRepository(
         doseEventDao.getInRangeOnce(profileId, startEpochMillis, endEpochMillis, medicineId)
 
     /** Source for the "suggest the medicine's last-used amount" default on
-     *  the Log dose entry point (spec §3) -- simpler than medTimer's
-     *  inactive-reminder-as-preset indirection, same outcome. Null if the
-     *  medicine has never had a dose logged against it. (Refill was named
-     *  here too; StockExpirationScreen's refill field has always been its
-     *  own input and has never called this.) */
+     *  the Log dose entry point (spec §3), simpler than medTimer's
+     *  inactive-reminder-as-preset indirection with the same outcome. Null if
+     *  the medicine has never had a dose logged against it. */
     suspend fun getLastUsedDoseAmount(medicineId: Long): Double? =
         doseEventDao.getMostRecentForMedicine(medicineId)?.doseAmount
 

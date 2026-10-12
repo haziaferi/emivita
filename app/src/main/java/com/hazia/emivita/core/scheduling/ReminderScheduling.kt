@@ -14,21 +14,12 @@ import java.time.ZoneId
 import java.time.ZonedDateTime
 
 /**
- * Pure, side-effect-free scheduling math -- no DB access, no Android
- * framework types, so these are trivially unit-testable (see the R3 audit
- * item: this file is exactly the kind of logic that should have tests before
- * anything else does). Each function answers "what's the next occurrence of
- * this reminder at or after `notBeforeEpochMillis`?" for one [ReminderConfig]
- * type. [SchedulingEngine] is what actually calls these against real data.
- *
- * [ReminderConfig.LowStockAlert] and [ReminderConfig.ExpirationAlert] are
- * covered here too, as of spec §7 R37. This comment used to say they were
- * "deliberately NOT covered" because they "need periodic re-evaluation against
- * live stock/date data rather than a fixed next occurrence" -- which was true
- * of the evaluator they were given instead, and false of the reference this
- * file ports from: medTimer schedules both as ordinary reminder types. Their
- * two calculators take the live stock quantity and expiry date as parameters,
- * which keeps them as pure as the rest of the file.
+ * Pure scheduling math -- no DB access, no Android framework types -- so it
+ * is unit-testable (R3); [SchedulingEngine] calls it against real data. Each
+ * function answers "what's the next occurrence of this reminder at or after
+ * `notBeforeEpochMillis`?" for one [ReminderConfig] type. The two alert types
+ * are ordinary reminder types here, as in medTimer (spec §7 R37), and take the
+ * live stock quantity and expiry date as parameters to stay pure.
  */
 
 // ---- FixedTime ----------------------------------------------------------
@@ -36,17 +27,10 @@ import java.time.ZonedDateTime
 /** Finds the earliest date on/after [fromDate] that matches [pattern], or
  *  `null` if [pattern] can never match: an empty `SpecificDaysOfWeek.days`
  *  set, an `EveryNDays.n` below 1, or a `CyclicActivePause` whose
- *  `activeDays` is below 1 or whose `pauseDays` is negative. All three are UI
- *  validation bugs if they ever happen, and none is something this function
- *  should crash over.
- *
- *  The `n` case used to be a `require(n >= 1)`, which contradicted the
- *  sentence above it and mattered because of *where* it threw: the row is
- *  committed before the scheduler ever sees it, and the projection cache
- *  re-reads every reminder on a loop, so one bad row threw on every
- *  recompute rather than at the point of entry. Returning null degrades to
- *  "this reminder has no next occurrence", which every caller already
- *  handles. See docs/SPEC.md §7 R23. */
+ *  `activeDays` is below 1 or whose `pauseDays` is negative. Never throw here:
+ *  the row is already committed and the projection cache re-reads every
+ *  reminder on a loop, so one bad row would throw on every recompute, while
+ *  null degrades to "no next occurrence" (docs/SPEC.md §7 R23). */
 private fun matchingDateOnOrAfter(pattern: RepeatPattern, fromDate: LocalDate): LocalDate? = when (pattern) {
     is RepeatPattern.Daily -> fromDate
     is RepeatPattern.SpecificDaysOfWeek -> {
@@ -135,24 +119,13 @@ fun nextRepeatingIntervalOccurrence(
     notBeforeEpochMillis: Long,
     effectiveAnchorEpochMillis: Long,
 ): NextOccurrence? {
-    // Null, not `require`, for the reason [matchingDateOnOrAfter] spells out
-    // above: R23 replaced exactly this guard in the EveryNDays and
-    // CyclicActivePause branches and left it standing in the two interval
-    // calculators, so one file ended up answering the same question -- what
-    // does an invalid config do? -- two opposite ways. The half that was fixed
-    // carries the argument that settles the other half: AddReminderScreen gates
-    // the field (see its own comment, which cites this require by name), but
-    // BackupRepository.restoreSnapshot writes reminder rows back with no config
-    // revalidation, so a corrupted backup is enough to commit a zero here.
-    //
-    // Where it threw is what made it matter. OccurrenceProjectionCache's
-    // recompute runs inside a `for (trigger)` loop, so an exception did not
-    // skip one reminder -- it cancelled the loop for the life of the process,
-    // silently freezing Today, History and both widgets and stopping every
-    // low-stock and expiration alert. SchedulingCoordinator.rescheduleAll()
-    // walks every enabled reminder at boot, so a throw there left each one
-    // after the bad row with no alarm at all. Null degrades to "this reminder
-    // has no next occurrence", which every caller already handles.
+    // Null, not `require` (§7 R23, as in [matchingDateOnOrAfter]): the UI gates
+    // the field, but BackupRepository.restoreSnapshot writes rows back without
+    // revalidating, so a corrupted backup can commit a zero here. A throw would
+    // cancel OccurrenceProjectionCache's `for (trigger)` loop for the life of the
+    // process (freezing Today, History, both widgets and every stock/expiry
+    // alert) and leave every reminder after the bad row unarmed at boot, while
+    // null means "no next occurrence", which every caller already handles.
     if (config.intervalMinutes < 1) return null
     val intervalMillis = config.intervalMinutes * 60_000L
     val elapsed = notBeforeEpochMillis - effectiveAnchorEpochMillis
@@ -205,21 +178,14 @@ private fun windowSlotOnDay(
 
 /**
  * The next instant an alert reminder should fire, or null for "not due, and
- * nothing to arm". Spec §7 R37, ported from medTimer's `OutOfStockScheduling`
- * and `ExpirationDateScheduling`, which are ordinary [Scheduling]
- * implementations feeding the same alarm chain as every dose reminder.
- *
- * Emivita differs from the reference in one mechanical respect: medTimer finds
- * "the next day this has not already been announced on" by scanning reminder
- * *events* (`SchedulingBase.getNextNotRemindedDay` walks 31 days calling
- * `isRaisedOn`). Emivita already records the same fact as a single column,
- * [com.hazia.emivita.core.data.entity.Reminder.lastAlertNotifiedEpochDay], so
- * this takes it as a parameter instead of replaying history. Same answer,
- * one comparison instead of a scan.
- *
- * [lastNotifiedEpochDay] is null for "never announced" -- and, for low stock
- * specifically, is reset to null when stock rises back above the threshold, so
- * a restock genuinely re-arms a ONCE alert. See LowStockExpirationAlertEvaluator.
+ * nothing to arm" (spec §7 R37, ported from medTimer's `OutOfStockScheduling`
+ * and `ExpirationDateScheduling`). Where medTimer scans 31 days of events
+ * (`SchedulingBase.getNextNotRemindedDay`), this reads the single column
+ * [com.hazia.emivita.core.data.entity.Reminder.lastAlertNotifiedEpochDay]
+ * passed in as `lastNotifiedEpochDay`: same answer, one comparison. That value
+ * is null for "never announced", and for low stock a restock above the
+ * threshold resets it to null so a ONCE alert re-arms (see
+ * LowStockExpirationAlertEvaluator).
  */
 private fun nextAlertSlot(
     earliestEpochDay: Long,
@@ -247,19 +213,11 @@ private fun nextAlertSlot(
 }
 
 /**
- * Next firing of a [ReminderConfig.LowStockAlert].
- *
- * Only `DAILY_WHEN_BELOW` is scheduled, which is exactly medTimer's rule --
- * `OutOfStockScheduling.getNextScheduledTime` returns null unless the type is
- * DAILY. `ONCE_WHEN_BELOW` and `ALWAYS_WHEN_BELOW` are announced at the moment
- * stock actually crosses the threshold, the way medTimer's
- * `StockHandlingProcessor.checkForThreshold` does it inline on every stock
- * decrement; an alarm cannot express "the instant this changes", and waiting
- * until tomorrow morning to mention that a medicine just ran out would be
- * worse than the event-driven path those two already have.
- *
- * [stockQuantity] is null when the medicine has stock tracking off (no unit
- * set), which is the app-wide meaning of that state and is not an alert.
+ * Next firing of a [ReminderConfig.LowStockAlert]. Only `DAILY_WHEN_BELOW` is
+ * scheduled (medTimer's `OutOfStockScheduling` rule): `ONCE_WHEN_BELOW` and
+ * `ALWAYS_WHEN_BELOW` are announced the instant stock crosses the threshold,
+ * as `StockHandlingProcessor.checkForThreshold` does, which no alarm can express.
+ * A null [stockQuantity] means stock tracking is off, which is not an alert.
  */
 fun nextLowStockAlertOccurrence(
     config: ReminderConfig.LowStockAlert,
@@ -276,16 +234,12 @@ fun nextLowStockAlertOccurrence(
 }
 
 /**
- * Next firing of a [ReminderConfig.ExpirationAlert]. Unlike low stock, *both*
- * modes are scheduled -- matching medTimer, where `ExpirationDateScheduling`
- * handles ONCE and DAILY alike. There is no event to hang an expiry on: a
- * medicine sitting in a cupboard produces no writes, which is precisely why
- * this type could not survive as an evaluator riding data changes.
- *
- * [expirationEpochDay] null means the medicine has no expiry recorded, which
- * is not an alert. The alert opens on `expiration - leadDays` and, for DAILY,
- * keeps firing past the expiry date -- an expired medicine is more worth
- * mentioning than one about to expire, not less.
+ * Next firing of a [ReminderConfig.ExpirationAlert]. Unlike low stock, both
+ * ONCE and DAILY are scheduled (as in medTimer's `ExpirationDateScheduling`),
+ * because a medicine sitting in a cupboard produces no write to hang an expiry
+ * on. A null [expirationEpochDay] is not an alert; otherwise the alert opens on
+ * `expiration - leadDays` and DAILY keeps firing past the expiry date, since an
+ * expired medicine is more worth mentioning, not less.
  */
 fun nextExpirationAlertOccurrence(
     config: ReminderConfig.ExpirationAlert,
@@ -332,16 +286,11 @@ fun ReminderConfig.doseAmountOrNull(): Double? = when (this) {
 /**
  * Whether the *next* occurrence should be computed and scheduled the moment
  * this one fires (true), or only once the user actually resolves this dose
- * (false). FixedTime's next slot never depends on resolution. An
- * ON_REMINDED interval/window is a fixed grid, also independent of
- * resolution. An ON_RESOLVED interval/window must NOT be re-armed here --
- * doing so would schedule the following dose before the current one has
- * even been answered. LinkedFollowing is always false here regardless of its
- * own startBehavior -- it has no "next slot" of its own to re-arm at all,
- * its next occurrence is entirely defined by the parent's next event (spec
- * §3/§9 #14); see ReminderAlarmReceiver/RealSchedulingCoordinator's cascade-
- * reschedule trigger points for how a LinkedFollowing child actually gets
- * rescheduled.
+ * (false). FixedTime and ON_REMINDED grids never depend on resolution, while
+ * re-arming an ON_RESOLVED interval/window here would schedule the following
+ * dose before the current one is answered. LinkedFollowing has no slot of its
+ * own: its next occurrence follows the parent's next event (spec §3/§9 #14) and
+ * is rescheduled by the cascade in ReminderAlarmReceiver/RealSchedulingCoordinator.
  */
 fun ReminderConfig.reschedulesImmediatelyOnFire(): Boolean = when (this) {
     is ReminderConfig.FixedTime -> true
@@ -385,38 +334,15 @@ fun nextDailyWindowOccurrence(
 // ---- Weekend mode (global preference, not per-reminder) -------------------
 
 /**
- * Weekend-mode adjustment (spec §3, ported faithfully from medTimer's
- * WeekendModeSchedulingDecorator per spec §5) -- applied as the *last* step,
- * after the type-specific calculator and the activeFrom/activeUntil clamp. If
- * [occurrence]'s day-of-week is in [weekendDays] and its time-of-day falls in
- * `[weekendStart, weekendEnd)`, pushes it to [weekendEnd] on that same day;
- * otherwise leaves it untouched. An empty [weekendDays] (the default, nothing
- * configured yet) is a no-op regardless of the enabled flag -- callers only
- * need to check "is weekend mode enabled" before calling this if they want to
- * skip the work entirely, not to preserve correctness.
- *
- * This comment used to say the adjustment applied "for every reminder type
- * unconditionally, no per-reminder opt-out", which stopped being true at §7
- * R36: [SchedulingEngine.nextOccurrenceFor] now gates on
- * `Reminder.weekendModeOptIn` *before* reading the global setting, so both
- * must be on. The behaviour changed and this file kept stating the old
- * contract, which is how one file ends up answering a question two opposite
- * ways (§7 R58).
- *
- * **What this does on a sub-daily reminder** (§7 R58, measured rather than
- * reasoned). "Delays a dose" describes the FixedTime case exactly: one slot a
- * day, pushed to the end of the window. For a RepeatingInterval or DailyWindow
- * it does something stronger, because deferral is not queueing. Every raw slot
- * inside the window is pushed to the same instant, and both the alarm chain
- * (`ReminderAlarmReceiver` reschedules from `fired + 60s`) and the projection
- * walk ([SchedulingEngine.occurrencesFor], the same arithmetic) then resume
- * *past* the window -- so the intermediate slots are never armed and never
- * materialize a DoseEvent. A 2-hourly reminder across an 08:00-20:00 weekend
- * window yields 7 doses that day where an ordinary day yields 13; the six in
- * between are not stacked at 20:00, they do not happen. The projection is
- * therefore accurate, not lossy -- it reports exactly what the device will do
- * -- but anyone opting a sub-daily reminder into weekend mode is choosing to
- * skip those doses, not to postpone them.
+ * Weekend-mode adjustment (spec §3, medTimer's WeekendModeSchedulingDecorator
+ * per §5), applied last: an [occurrence] on one of [weekendDays] inside
+ * `[weekendStart, weekendEnd)` moves to [weekendEnd] that day, and an empty
+ * [weekendDays] is a no-op; [SchedulingEngine.nextOccurrenceFor] also requires
+ * `Reminder.weekendModeOptIn` (§7 R36). On a sub-daily reminder every slot in
+ * the window collapses to [weekendEnd] and both the alarm chain and
+ * [SchedulingEngine.occurrencesFor] resume past it, so the intermediate doses
+ * are skipped, not postponed (§7 R58). Measured: a 2-hourly reminder across an
+ * 08:00-20:00 weekend window yields 7 doses that day instead of 13.
  */
 fun applyWeekendMode(
     occurrence: NextOccurrence,

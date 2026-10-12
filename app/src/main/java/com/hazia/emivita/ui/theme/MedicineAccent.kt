@@ -6,16 +6,13 @@ import com.hazia.emivita.core.data.entity.Medicine
 import com.hazia.emivita.ui.components.parseHexColor
 
 /**
- * A medicine's own colour, and what to draw on top of it (§7 R76; Appendix C
- * action #5, `asOnSurfaceSafe`, open since R47 and closed here).
+ * A medicine's own colour, and what to draw on top of it (§7 R76, Appendix C
+ * action #5, `asOnSurfaceSafe`).
  *
- * The colour comes from a free HSV picker, so any hue and any lightness can
- * arrive: a pale yellow with white on it is unreadable, a navy with dark ink
- * on it the same. `onAccent` picks by relative luminance -- dark ink above
- * the crossover, white below -- the one rule that clears 4.5:1 against any
- * colour except the narrow mid-band, which the picker's distinguishability
- * hint already steers away from. Until R76 every glyph was white at seven
- * call sites, each resolving the fallback inline.
+ * The free HSV picker can deliver any hue and lightness, so `onAccent` picks
+ * by relative luminance -- dark ink above the crossover, white below -- the
+ * one rule that clears 4.5:1 against any colour except the narrow mid-band,
+ * which the picker's distinguishability hint already steers away from.
  */
 fun medicineAccent(hex: String?): Color = hex?.let { parseHexColor(it) } ?: NeutralMedicineAccent
 

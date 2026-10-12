@@ -9,28 +9,14 @@ import androidx.core.graphics.createBitmap
 import androidx.core.graphics.get
 
 /**
- * The non-colour channel for [AdherenceChart]'s three series (spec §7 R54).
- *
- * The chart paints taken/skipped/missed as stacked bars read through a legend,
- * so hue was the only thing telling them apart. Measured across the candidate
- * palettes (Appendix D), the taken/missed pair falls under the ΔE 10
- * categorical floor in 4 of 16 registers once a colour-vision deficiency is
- * simulated -- which is the condition §7 R53 named as overturning its
- * judgement, and R54 confirmed.
- *
- * R54 offered two fixes and recommended this one: give the chart a second
- * channel rather than reserving a hue for `missed`. Reserving a hue fixes one
- * palette's arithmetic; fixing the channel holds for any palette, now or later,
- * and is what WCAG 1.4.1 asks for regardless of how far apart the colours are.
- *
- * Each series gets a tiled fill: solid, diagonal hatch, cross-hatch. The marks
- * are drawn in the series' own colour blended toward the surface, so the
- * texture stays inside the palette's family instead of introducing a fourth
- * colour -- the coherence §7 R49-R52 was spent buying is not spent again here.
- *
- * Bars are about 6dp wide at the 30-day window, so the tile is deliberately
- * coarse: a finer weave disappears at that size, which would put the app back
- * to relying on hue while appearing to have fixed it.
+ * The non-colour channel for [AdherenceChart]'s three series (spec §7 R54): with
+ * a simulated colour-vision deficiency the taken/missed pair falls under the
+ * ΔE 10 floor in 4 of 16 registers (Appendix D), and a second channel holds for
+ * any palette, as WCAG 1.4.1 asks, where reserving a hue would not. Solid,
+ * diagonal hatch and cross-hatch, with marks in the series' own colour blended
+ * toward the surface so no fourth colour enters (§7 R49-R52). The tile is
+ * deliberately coarse because bars are about 6dp wide at 30 days, where a finer
+ * weave vanishes and the chart would rely on hue again.
  */
 enum class SeriesPattern {
     /** Taken. No marks -- the expected outcome reads as the plain one. */

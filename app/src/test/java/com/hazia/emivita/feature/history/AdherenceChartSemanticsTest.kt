@@ -9,10 +9,9 @@ import org.robolectric.RobolectricTestRunner
 import java.time.LocalDate
 
 /**
- * The adherence chart draws to a canvas; a screen reader gets nothing from
- * the pixels (spec §9 #19 Stage B). The chart host carries a description
- * that says what a sighted reader takes from it at a glance: the totals over
- * the window. Per-day detail is what the Table view is for.
+ * The adherence chart draws to a canvas, so its host carries a description of
+ * what a sighted reader takes from it at a glance, the totals over the window,
+ * and per-day detail is the Table view's job (spec §9 #19 Stage B).
  *
  * Robolectric draws to a shadow canvas, so the chart's bars are not asserted
  * -- only the semantics the host exposes (§7 R47's own rule for UI tests).

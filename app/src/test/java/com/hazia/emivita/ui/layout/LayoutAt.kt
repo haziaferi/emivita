@@ -15,20 +15,16 @@ import com.hazia.emivita.ui.theme.EmivitaTheme
 import org.junit.Assert.assertTrue
 
 /**
- * Geometry, not semantics (spec §9 #33, F-14). Robolectric runs Compose's
- * layout phase for real even though it renders no pixels, so a node's
- * `boundsInRoot` is what the phone would measure. Content is composed
- * inside a Box of a phone's width; the two widths the tests use are the
- * common phone (360 dp) and the small one (320 dp) -- §7 R59's squeeze only
- * happened at phone width, which is why width is the parameter. All numbers
- * here are px at the test density.
+ * Geometry, not semantics (spec §9 #33, F-14): Robolectric runs Compose's
+ * layout phase for real, so a node's `boundsInRoot` (px at the test density)
+ * is what the phone would measure inside a Box 360 dp or 320 dp wide, and
+ * width is the parameter because §7 R59's squeeze only happened at phone width.
  *
- * One limit, measured: Robolectric has no font metrics, and a text node
- * measures about one px per character ("Sertraline" is 10 px wide). So a
- * width ratio against text is meaningless here; what is real is everything
- * layout decides from dp -- padding, minimum targets, weights, stacking,
- * containment -- and a text node's line count. These tests assert structure,
- * not glyph widths; the glyphs are what the device pass is for.
+ * Robolectric has no font metrics (measured: a text node is about one px per
+ * character, "Sertraline" is 10 px wide), so these tests assert what layout
+ * decides from dp -- padding, minimum targets, weights, stacking,
+ * containment -- and a text node's line count, never glyph widths, which the
+ * device pass covers.
  */
 val PHONE_WIDTHS_DP = listOf(360, 320)
 

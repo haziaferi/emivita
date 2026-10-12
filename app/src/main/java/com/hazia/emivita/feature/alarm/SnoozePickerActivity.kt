@@ -34,12 +34,11 @@ import android.content.Context
 import com.hazia.emivita.core.locale.AppLocale
 
 /**
- * "Snooze for how long?" (spec §9 #25; medTimer's custom snooze). Opened by
+ * "Snooze for how long?" (spec §9 #25, medTimer's custom snooze), opened by
  * the notification's Snooze action when the Alarms & Snooze setting says
- * "ask each time"; otherwise that action snoozes for the saved duration
- * without any screen. A dialog-themed activity because a notification action
- * cannot show a dialog itself. Quick choices plus a free field; the pick is
- * the same [com.hazia.emivita.core.scheduling.AlarmScheduler.scheduleSnooze]
+ * "ask each time", as a dialog-themed activity because a notification action
+ * cannot show a dialog itself. Quick choices plus a free field, and the pick
+ * is the same [com.hazia.emivita.core.scheduling.AlarmScheduler.scheduleSnooze]
  * call the one-tap path makes.
  */
 class SnoozePickerActivity : ComponentActivity() {

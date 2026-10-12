@@ -35,20 +35,14 @@ import java.time.LocalDateTime
 import java.time.ZoneId
 
 /**
- * Covers the shared-window arithmetic recorded in spec §7 R28.
+ * Covers the shared-window arithmetic recorded in spec §7 R28: every screen
+ * and widget reads one [ProjectionState], so a
+ * [OccurrenceProjectionCache.requestWindow] registration means "at least this
+ * many days" and Today's 2-day request must never shrink anyone else's window.
  *
- * The projection is shared: Today, Stock & Expiration and both widgets read
- * one [ProjectionState]. A [OccurrenceProjectionCache.requestWindow]
- * registration therefore has to mean "I need at least this many days", never
- * "this many is all anyone needs" -- and until R28 the minimum applied only
- * when no consumer had registered at all, so Today's 2-day request collapsed
- * the window for every other reader the moment Today composed.
- *
- * No Robolectric: the cache touches no Android types. The dispatcher is
- * injected so the 1s debounce runs on virtual time rather than really
- * sleeping, and the cache is launched into [TestScope.backgroundScope]
- * because its trigger loop never terminates and would otherwise hang the
- * test at teardown.
+ * The dispatcher is injected so the 1s debounce runs on virtual time, and the
+ * cache runs in [TestScope.backgroundScope] because its trigger loop never
+ * terminates and would otherwise hang the test at teardown.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class OccurrenceProjectionCacheTest {

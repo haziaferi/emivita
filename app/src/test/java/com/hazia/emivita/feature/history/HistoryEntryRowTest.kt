@@ -17,22 +17,13 @@ import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.assertHasNoClickAction
 
 /**
- * The regression guard for spec §7 R46, whose fix reached one of History's
- * three surfaces (§7 R47).
+ * The regression guard for spec §7 R46 and §7 R47: a never-answered
+ * ("Missed") dose must open the edit dialog from every History surface,
+ * where [HistoryEntryRow] once gated on a `TAKEN || SKIPPED` allow-list.
  *
- * R46 made a never-answered ("Missed") dose correctable, and its own note
- * recorded that the History tap-through was the half it could not verify --
- * the device it was being tested on turned out to be shared mid-session. The
- * half that shipped unverified is the half that was wrong: [HistoryEntryRow]
- * kept gating on a `TAKEN || SKIPPED` allow-list, so the List surface never
- * opened the dialog for a missed dose and the Calendar surface passed a
- * correctly-gated callback into a row that was not clickable at all.
- *
- * This is the first Compose test in the project. It runs under Robolectric in
- * the ordinary unit-test source set rather than in `androidTest`, because CI
- * runs `testDebugUnitTest` and has no device -- see the note in
- * app/build.gradle.kts. Assertions are on semantics and click handling only;
- * nothing here depends on real pixels.
+ * Runs under Robolectric in the unit-test source set rather than `androidTest`
+ * because CI runs `testDebugUnitTest` and has no device (see
+ * app/build.gradle.kts). Assertions are on semantics and click handling only.
  */
 @RunWith(RobolectricTestRunner::class)
 class HistoryEntryRowTest {

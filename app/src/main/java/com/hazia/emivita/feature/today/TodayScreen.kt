@@ -140,32 +140,23 @@ internal class TodayDeps(
 )
 
 private const val TODAY_CONSUMER_ID = "today-screen"
-// Today + a peek into tomorrow is all this screen renders. Declaring it is a
-// statement of Today's *minimum*, not a request for a cheaper projection: the
-// cache's window is the max of every registration and its own floor, so this
-// is a no-op while the floor stands at 28 and would only bite if the floor
-// ever dropped below 2. The comment here used to read "cheap relative to the
-// cache's 28-day default", which had it backwards -- the request replaced the
-// 28-day window for every other reader of the shared projection rather than
-// buying Today a cheaper slice of it. See docs/SPEC.md §7 R28.
+// Today + a peek into tomorrow is all this screen renders. It states Today's
+// *minimum*, not a request for a cheaper projection: the cache's window is the
+// max of every registration and its 28-day floor, so this is a no-op unless
+// the floor ever drops below 2 (docs/SPEC.md §7 R28).
 private const val TODAY_WINDOW_DAYS = 2L
 
 /**
  * Today's linked/timeline pattern (spec §6/§9 #5): a chronological rail of
- * "nodes," one per distinct time, each an aggregate of every dose due at that
- * instant -- multiple medicines sharing a slot (the common case for a
- * DoseGroup, or just two reminders that happen to land on the same time)
- * collapse into one node instead of one row per medicine.
+ * "nodes", one per distinct time, each aggregating every dose due at that
+ * instant, so medicines sharing a slot collapse into one node.
  *
- * Consumes [OccurrenceProjectionCache] (spec §9 #4) rather than running its
- * own simulation -- registers a window on entry, releases it on exit. Merges
- * two sources per node:
- *  - already-materialized [com.hazia.emivita.core.data.entity.DoseEvent] rows
- *    for today ([DoseEventRepository.observeInRange]) -- real, actionable
- *    (Take/Skip), reflects actual resolved status.
- *  - the cache's still-projected occurrences for today that haven't
- *    materialized yet -- shown for visibility, not actionable, since there's
- *    no DoseEvent row to resolve() until the alarm actually fires.
+ * It reads [OccurrenceProjectionCache] (spec §9 #4), registering a window on
+ * entry and releasing it on exit, and merges two sources per node: today's
+ * materialized [com.hazia.emivita.core.data.entity.DoseEvent] rows
+ * ([DoseEventRepository.observeInRange]), which are actionable (Take/Skip),
+ * and the cache's not-yet-materialized occurrences, shown but not actionable
+ * because there is no DoseEvent row to resolve() until the alarm fires.
  */
 @Composable
 fun TodayScreen(
@@ -224,22 +215,12 @@ fun TodayScreen(
     }
 
     // "Lock reminders until taken" (spec §3) resolves per medicine as
-    // `medicine.remindersLockedUntilTaken ?: this global default`, which is
-    // exactly what SettingsRepository.isLockedUntilTaken does. That function is
-    // suspend (it reads the DataStore flow), so it can't be called from
-    // composition -- the global half is collected once here and the per-medicine
-    // override applied synchronously at each row, giving the same answer.
-    //
-    // This screen used to offer an unconditional Skip chip, which made the
-    // whole feature decorative: the notification builder omits Skip when
-    // locked, ReminderActionReceiver rejects a stale one, and AlarmActivity
-    // does both -- and then Today, the app's start destination and the surface
-    // a user actually reaches for, let the same dose be dismissed in one tap.
-    // A safety gate with an unguarded door on the front page is not a gate.
-    //
+    // `medicine.remindersLockedUntilTaken ?: this global default`, the same
+    // answer as the suspend SettingsRepository.isLockedUntilTaken: the global
+    // half is collected once here and the override applied at each row, so
+    // Today's Skip chip obeys the lock like the notification and AlarmActivity.
     // `false` as the initial value is the repository's own default for this
-    // key, not a placeholder, so the first frame can't briefly offer a Skip
-    // that the resolved value would forbid.
+    // key, so the first frame cannot briefly offer a Skip the lock forbids.
     val lockedByDefault by produceState(initialValue = false) {
         settingsRepository.lockRemindersUntilTakenByDefault.collectLatest { value = it }
     }

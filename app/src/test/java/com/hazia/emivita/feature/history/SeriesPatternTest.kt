@@ -10,20 +10,11 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.GraphicsMode
 
 /**
- * The regression guard for spec §7 R54/R55.
- *
- * R53 recorded that coherence and distinguishability are in opposition, and
- * named the condition that would overturn its judgement: any surface conveying
- * state by colour with no icon or label beside it. R54 tested that condition
- * against `AdherenceChart` and found it met -- the taken/missed pair falls
- * under the categorical floor in 4 of 16 registers once colour-vision
- * deficiency is simulated.
- *
- * The fix is a second channel, so the test has to check the second channel.
- * Asserting the three series are *different colours* would pass on the exact
- * code that failed R54. These assertions discard colour entirely and measure
- * what is left, which is the only thing that proves hue is no longer
- * load-bearing.
+ * The regression guard for spec §7 R54/R55: `AdherenceChart`'s taken/missed
+ * pair falls under the categorical floor in 4 of 16 registers once
+ * colour-vision deficiency is simulated, so the fix is a second channel. These
+ * assertions discard colour entirely and measure what is left, since asserting
+ * three different colours would pass on the exact code that failed R54.
  */
 // Native graphics, not the legacy shadow: the shadow implements drawColor but
 // not drawLine, so every tile came back flat and the pattern assertions failed

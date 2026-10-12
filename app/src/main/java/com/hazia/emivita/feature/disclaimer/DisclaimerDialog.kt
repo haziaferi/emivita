@@ -28,10 +28,10 @@ import androidx.compose.ui.window.DialogProperties
 import com.hazia.emivita.R
 
 /**
- * The medical disclaimer, once, before anything else (§9 #29; Appendix F
+ * The medical disclaimer, once, before anything else (§9 #29, Appendix F
  * MT-21): not a medical device, not a substitute for the prescriber, and a
- * reminder can be missed on any phone. Cannot be dismissed; Continue needs
- * the checkbox. One node per control (the Stage B rule).
+ * reminder can be missed on any phone. Cannot be dismissed, Continue needs
+ * the checkbox, and each control is one node (the Stage B rule).
  */
 @Composable
 fun DisclaimerDialog(onAccept: () -> Unit) {

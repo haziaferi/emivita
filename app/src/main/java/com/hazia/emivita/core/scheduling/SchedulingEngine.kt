@@ -16,15 +16,13 @@ import com.hazia.emivita.core.data.entity.DoseStatus
 
 /**
  * Bridges the pure math in ReminderScheduling.kt to real reminder/dose-event
- * data. This is the ONLY place that should call the per-type calculators --
+ * data, and is the ONLY place that should call the per-type calculators --
  * everything else (AlarmScheduler, RealSchedulingCoordinator, the boot
- * receiver) should go through [nextOccurrenceFor].
+ * receiver) goes through [nextOccurrenceFor].
  *
- * Depends on [DoseEventDao] directly rather than on ReminderRepository --
- * ReminderRepository depends on SchedulingCoordinator (to notify it of
- * changes), so routing the engine through the repository as well would
- * create a cycle. Reminder config decoding uses the standalone
- * [decodeReminderConfig] function for the same reason.
+ * Depends on [DoseEventDao] and the standalone [decodeReminderConfig] rather
+ * than on ReminderRepository, which depends on SchedulingCoordinator and so
+ * would create a cycle.
  */
 class SchedulingEngine(
     private val doseEventDao: DoseEventDao,
@@ -63,18 +61,10 @@ class SchedulingEngine(
     )
 
     /** Reminder types that have a next-occurrence chain at all -- every type
-     *  that can be handed to [AlarmScheduler].
-     *
-     *  The two alert types used to be excluded, on the grounds that they
-     *  "need periodic re-evaluation against live stock/date data rather than a
-     *  fixed next occurrence". That was a description of the evaluator they
-     *  were given instead, not a property of the problem: medTimer schedules
-     *  both as ordinary reminder types (`SchedulingFactory` has a branch for
-     *  each, feeding `ReminderScheduler` and the same alarm chain as doses).
-     *  Excluding them meant nothing drove them from a clock, so an expiry
-     *  alert on a medicine with no dosing reminder -- a box in a cupboard,
-     *  which produces no database writes at all -- only fired at boot or when
-     *  the app happened to be opened. See docs/SPEC.md §7 R37. */
+     *  that can be handed to [AlarmScheduler], the two alert types included,
+     *  as medTimer schedules them (§7 R37). Without a clock driving them, an
+     *  expiry alert on a medicine with no dosing reminder (a box in a cupboard,
+     *  which writes nothing) would only fire at boot or when the app opens. */
     val supportedTypes: Set<ReminderType> = doseProducingTypes + setOf(
         ReminderType.LOW_STOCK_ALERT,
         ReminderType.EXPIRATION_ALERT,
@@ -101,21 +91,14 @@ class SchedulingEngine(
     /** Next time [reminder] should fire at/after [notBeforeEpochMillis], or
      *  `null` if it has no more occurrences (disabled, an unsupported type
      *  for now, a calculator-level "never matches" result, or a candidate past
-     *  [Reminder.activeUntilEpochDay]).
+     *  [Reminder.activeUntilEpochDay]), a guarantee every branch of
+     *  [computeBase] honours, LinkedFollowing included.
      *
-     *  "At/after [notBeforeEpochMillis]" is a guarantee every branch of
-     *  [computeBase] honours, LinkedFollowing included -- see the note there
-     *  for what went wrong while it did not. A reminder whose
-     *  [Reminder.activeFromEpochDay] has not arrived yet is *deferred*, not
-     *  refused: the answer is the first occurrence on or after the day the
-     *  range opens.
-     *
-     *  A null [weekendMode] means "read it yourself" -- convenient for a
-     *  one-off caller, and the read still happens only after the clamps
-     *  below, so a reminder that returns early costs nothing. Pass a
-     *  snapshot when calling repeatedly. (Null rather than a default of
-     *  `readWeekendMode()`: Kotlin does not allow a suspend call in a
-     *  default parameter value.) */
+     *  A reminder whose [Reminder.activeFromEpochDay] has not arrived yet is
+     *  deferred to the first occurrence on or after the day the range opens.
+     *  A null [weekendMode] means "read it yourself" after the clamps (a
+     *  suspend call cannot be a default value), so pass a snapshot when
+     *  calling repeatedly. */
     suspend fun nextOccurrenceFor(
         reminder: Reminder,
         notBeforeEpochMillis: Long = nowEpochMillis(),
@@ -130,31 +113,14 @@ class SchedulingEngine(
 
         var base = computeBase(reminder, notBeforeEpochMillis, assumeOutstandingResolved) ?: return null
 
-        // activeFrom/activeUntil clamp (spec §3/§4) -- after the type-specific
-        // calculator, before weekend mode, per §4's explicit ordering ("weekend
-        // mode is applied... after the type-specific calculator and the
-        // activeFrom/UntilEpochDay clamp"). Null on either side = unbounded on
-        // that side (today's default behavior, unchanged for every reminder
-        // that doesn't set these).
-        //
-        // The two bounds are NOT symmetric, which is what this used to get
-        // wrong -- both read "candidate outside the range -> return null". For
-        // activeUntil that is right: past the end there genuinely is no next
-        // occurrence, ever. For activeFrom it is not. A range that opens in the
-        // future means "not yet", not "never", and nothing in this app re-arms
-        // a reminder on the passage of time alone: rescheduleAll() runs at boot
-        // and app-update, and OccurrenceProjectionCache recomputes on data
-        // changes, not on a clock. So a reminder whose range opened even a day
-        // out had its alarm cancelled the moment it was saved and was never
-        // scheduled again, and projected zero occurrences into Today, History
-        // and both widgets.
-        //
-        // That silently broke the one mechanism §4 names for courses and
-        // tapers -- "several ordinary FixedTime reminders with adjacent,
-        // non-overlapping ranges -- no new ReminderConfig type needed, this
-        // clamp is the whole mechanism" -- since only the segment already in
-        // range could ever fire. Deferring re-runs the calculator from the day
-        // the range opens instead of giving up.
+        // activeFrom/activeUntil clamp (spec §3/§4): after the type-specific
+        // calculator, before weekend mode, with null meaning unbounded on that
+        // side. The bounds are not symmetric: past activeUntil there is never a
+        // next occurrence, but a future activeFrom means "not yet", and nothing
+        // re-arms a reminder on the passage of time alone (rescheduleAll() runs
+        // at boot and app-update, the projection on data changes). So the
+        // calculator is re-run from the day the range opens, which is what
+        // keeps §4's courses and tapers (adjacent FixedTime ranges) working.
         val activeFrom = reminder.activeFromEpochDay
         if (activeFrom != null && base.epochDayIn(zone) < activeFrom) {
             val opensAtEpochMillis = LocalDate.ofEpochDay(activeFrom).atStartOfDay(zone).toInstant().toEpochMilli()
@@ -171,23 +137,12 @@ class SchedulingEngine(
 
         reminder.activeUntilEpochDay?.let { if (base.epochDayIn(zone) > it) return null }
 
-        // Weekend mode (spec §3) -- the last step, and opt-in per reminder.
-        //
-        // This gate is checked before the global one on purpose. It used to be
-        // applied to every reminder whenever the global toggle was on, which
-        // is how medTimer's SchedulingFactory does it (every scheduler wrapped
-        // in WeekendModeSchedulingDecorator, no per-reminder gate) -- and it
-        // meant one setting could not distinguish a supplement that is happy
-        // to wait until 11:00 on a Sunday from a drug that is not. Both must
-        // now be on: SettingsRepository still owns which days and which window,
-        // Reminder.weekendModeOptIn owns whether this reminder is subject to
-        // it. See docs/SPEC.md §7 R36.
-        //
-        // Returning here rather than falling through also means a reminder
-        // that has not opted in never triggers readWeekendMode() at all, which
-        // preserves the "a disabled feature costs one Flow read" property that
-        // readWeekendMode's own doc comment describes -- and for the common
-        // case (nothing opted in) now costs zero.
+        // Weekend mode (spec §3, §7 R36) is the last step and opt-in per
+        // reminder, unlike medTimer's global decorator, so a supplement that can
+        // wait until 11:00 on a Sunday is told apart from a drug that cannot:
+        // SettingsRepository owns the days and window, weekendModeOptIn whether
+        // this reminder is subject to them. The per-reminder gate comes first
+        // so a reminder that has not opted in never reads DataStore at all.
         if (!reminder.weekendModeOptIn) return base
         return when (val mode = weekendMode ?: readWeekendMode()) {
             is WeekendMode.Off -> base
@@ -198,26 +153,15 @@ class SchedulingEngine(
     private fun NextOccurrence.epochDayIn(zone: ZoneId): Long =
         Instant.ofEpochMilli(epochMillis).atZone(zone).toLocalDate().toEpochDay()
 
-    /** The type-specific calculators alone, before any of [nextOccurrenceFor]'s
-     *  cross-cutting clamps. Split out of it specifically so the activeFrom
-     *  clamp can re-run the calculation from the day the active range opens
-     *  rather than having to answer "never". */
     /** The anchor an ON_RESOLVED interval or window continues from, or
-     *  [Outstanding] when a dose is still unanswered (§7 R60).
+     *  [Outstanding] when a dose is still unanswered (§7 R60), because reading
+     *  [DoseEventDao.getLastResolved] alone skips PENDING and any reschedule
+     *  would then arm a second alarm and a second PENDING dose, the state in
+     *  which medTimer's schedulers also return null.
      *
-     *  This used to read [DoseEventDao.getLastResolved] alone, which skips
-     *  PENDING, and never asked whether a dose was outstanding. So while one
-     *  was, `rescheduleAll()` at boot -- or any edit of the reminder -- armed
-     *  a second alarm at `previousResolution + k * interval` and materialised
-     *  a second PENDING dose beside the first. medTimer's schedulers return
-     *  null in exactly this state (`IntervalScheduling`,
-     *  `WindowedIntervalScheduling`: "otherwise the notification loop would
-     *  fire continuously"); its ported test is what found this.
-     *
-     *  The projection walk is the other caller, and blanking it would make
-     *  the stock run-out date jump while a dose sits unanswered. medTimer's
-     *  simulator treats an unprocessed event as processed at its reminded
-     *  time; [assumeOutstandingResolved] does the same here. */
+     *  The projection walk instead passes [assumeOutstandingResolved], treating
+     *  the unanswered dose as taken at its slot as medTimer's simulator does,
+     *  so the stock run-out date does not jump while a dose waits. */
     private sealed interface ResolvedAnchor {
         data class At(val epochMillis: Long) : ResolvedAnchor
         data object Outstanding : ResolvedAnchor
@@ -233,6 +177,10 @@ class SchedulingEngine(
         )
     }
 
+    /** The type-specific calculators alone, before any of [nextOccurrenceFor]'s
+     *  cross-cutting clamps. Split out of it specifically so the activeFrom
+     *  clamp can re-run the calculation from the day the active range opens
+     *  rather than having to answer "never". */
     private suspend fun computeBase(
         reminder: Reminder,
         notBeforeEpochMillis: Long,
@@ -269,26 +217,12 @@ class SchedulingEngine(
             is ReminderConfig.LinkedFollowing -> {
                 val parentId = reminder.parentReminderId
                 if (parentId == null) {
-                    // Orphaned child. Not a "shouldn't happen" case, which is
-                    // what this comment used to claim: the self-referencing FK
-                    // on Reminder.parentReminderId is ON DELETE SET_NULL, so
-                    // detaching a child is exactly what deleting its parent
-                    // does.
-                    //
-                    // R23 left the FK's semantics contradicting §3's "ON DELETE
-                    // CASCADE" as an open decision; §7 R25 settled it in favour
-                    // of SET_NULL and corrected §3. The silent-dead-row problem
-                    // this branch used to describe is handled at the source:
-                    // ReminderRepository.delete() switches every detached child
-                    // off in the same transaction, so a child that reaches this
-                    // branch by that route is already disabled and returns null
-                    // one gate earlier.
-                    //
-                    // This guard is still load-bearing, because delete() is not
-                    // the only way to get here: BackupRepository.restoreAll()
-                    // writes reminder rows back verbatim, so a backup whose
-                    // parent row is missing restores an enabled child with a
-                    // null parent, as would any row predating R25.
+                    // Orphaned child: the FK on Reminder.parentReminderId is ON
+                    // DELETE SET_NULL (§7 R25), and ReminderRepository.delete()
+                    // disables every child it detaches. This guard is still
+                    // load-bearing because BackupRepository.restoreAll() writes
+                    // rows back verbatim, so a backup missing the parent row (or
+                    // any row predating R25) restores an enabled, parentless child.
                     null
                 } else {
                     val anchorEpochMillis = when (config.startBehavior) {
@@ -300,31 +234,15 @@ class SchedulingEngine(
                         }
                         IntervalStartBehavior.ON_RESOLVED -> doseEventDao.getLastResolved(parentId)?.resolvedAtEpochMillis
                     }
-                    // Parent hasn't fired/resolved yet -- nothing to follow. Not
-                    // "unbounded," just genuinely no next occurrence until it does,
-                    // at which point the cascade-reschedule trigger recomputes this.
-                    //
-                    // The takeIf is what makes this branch honour
-                    // notBeforeEpochMillis the way every other one does, and the
-                    // way nextOccurrenceFor's own KDoc already promised. The
-                    // anchor is the parent's *last* event, so once delayMinutes
-                    // has elapsed the expression below is an instant in the
-                    // *past*, and handing that back as "the next occurrence" had
-                    // two consequences: RealSchedulingCoordinator armed an alarm
-                    // at a past instant -- which AlarmManager fires immediately --
-                    // on every reschedule after the child's own dose was
-                    // answered; and the shared projection carried a stale past
-                    // occurrence until the parent fired again, which is the
-                    // reason NextRemindersWidget has to filter `epochMillis >=
-                    // now` at all.
-                    //
-                    // A slot that has already passed is not a next occurrence.
-                    // There isn't one until the parent fires or resolves again,
-                    // and the cascade-reschedule trigger points recompute it then.
-                    // No catch-up behaviour is lost that the other types offer:
-                    // FixedTime rolls a missed slot to its next matching day, and
-                    // both interval calculators step forward onto a future grid
-                    // instant rather than replaying a past one.
+                    // No anchor means the parent hasn't fired/resolved yet, so
+                    // there is no next occurrence until the cascade-reschedule
+                    // trigger recomputes this. The takeIf keeps the at/after
+                    // notBeforeEpochMillis guarantee: the anchor is the parent's
+                    // *last* event, so a passed slot would arm an alarm in the
+                    // past (AlarmManager fires it at once) and leave a stale
+                    // occurrence in the projection. A passed slot is simply not
+                    // a next occurrence, just as FixedTime and both interval
+                    // calculators step forward rather than replay one.
                     anchorEpochMillis
                         ?.let { it + config.delayMinutes * 60_000L }
                         ?.takeIf { it >= notBeforeEpochMillis }

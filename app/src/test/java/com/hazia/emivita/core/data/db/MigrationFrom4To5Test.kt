@@ -12,22 +12,12 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 
 /**
- * MIGRATION_4_5 adds `reminders.weekendModeOptIn` via a plain `ALTER TABLE ADD
- * COLUMN` with a constant default -- same shape as MIGRATION_2_3 and
- * MIGRATION_3_4, same direct-fixture technique as [MigrationFrom2To3Test] for
- * the same reason (that class's doc comment explains the
- * MigrationTestHelper/Robolectric driver bug this sidesteps).
- *
- * The v4 `reminders` DDL below is copied from the exported
- * `app/schemas/.../4.json`, not written from the entity, so this fixture is the
- * schema an installed v4 database actually has rather than the one the current
- * Kotlin source would produce.
- *
- * What is worth pinning here is the *default*, not the column: the migration
- * deliberately backfills 0 (opted out) rather than 1, so a user who had the old
- * global weekend toggle switched on does not silently carry a blanket delay
- * forward onto every reminder as though each had asked for it. See the
- * migration's own doc comment and docs/SPEC.md §7 R36.
+ * MIGRATION_4_5 adds `reminders.weekendModeOptIn` with a constant default,
+ * tested with [MigrationFrom2To3Test]'s direct-fixture technique (its doc
+ * comment explains the driver bug) against v4 DDL copied from the exported
+ * `app/schemas/.../4.json`, not written from the entity. What is pinned is the
+ * default: 0 (opted out), so a user with the old global weekend toggle on does
+ * not silently carry a blanket delay onto every reminder (docs/SPEC.md §7 R36).
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)

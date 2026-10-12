@@ -65,8 +65,8 @@ fun Color.toHexString(): String {
  * Saturation and value come from a tap/drag position on a square canvas — x is
  * saturation, y is value, plain linear mapping, simpler to hit-test correctly
  * than a circular wheel while keeping the same HSV semantics. Hue comes from
- * the separate horizontal strip below it, and is what the square is redrawn
- * against. A hex text field is kept in sync both ways.
+ * the horizontal strip below, which the square is redrawn against, and a hex
+ * text field is kept in sync both ways.
  */
 @Composable
 fun ColorPickerDialog(

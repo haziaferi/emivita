@@ -17,10 +17,10 @@ import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
 
 /**
- * Back from a half-edited form asks before dropping the edits (§9 #29;
+ * Back from a half-edited form asks before dropping the edits (§9 #29,
  * Appendix F HM-40). Installs a [BackHandler] for the system gesture while
  * [dirty], and returns the callback the form's own Cancel/Back control should
- * use, so both paths ask and neither silently discards. Not dirty: the
+ * use, so both paths ask and neither silently discards. When not dirty, the
  * returned callback is [onDiscard] itself.
  */
 @Composable

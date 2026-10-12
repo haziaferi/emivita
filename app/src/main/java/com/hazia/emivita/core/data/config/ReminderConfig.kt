@@ -34,16 +34,12 @@ sealed interface RepeatPattern {
     @Serializable data class EveryNDays(val n: Int, val startEpochDay: Long) : RepeatPattern
 
     /** Birth-control-style cyclic reminders (spec §3/§9 #14) -- a 4th case on
-     *  the existing pattern, not a new top-level ReminderConfig, since cyclic
-     *  reminders are still "a time of day + a day-selection rule" exactly
-     *  like the other three. Truly periodic in *both* directions -- active on
-     *  dates before [firstCycleStartEpochDay] too. This used to claim that
-     *  matched medTimer; it does not (§7 R60): medTimer's `StandardScheduling`
-     *  schedules nothing before its cycle start (`dayInCycle >= 0`) and its
-     *  own test pins that. Kept as a deliberate divergence -- a user who
-     *  enters a cycle start in the past expects the rhythm to hold on either
-     *  side of it -- and pinned by `MedTimerCalculatorParityTest`. See
-     *  [isActiveOn] for the actual rule. */
+     *  the existing pattern, not a new top-level ReminderConfig, since they are
+     *  still "a time of day + a day-selection rule". Periodic in *both*
+     *  directions, active before [firstCycleStartEpochDay] too, a deliberate
+     *  divergence from medTimer (§7 R60) pinned by `MedTimerCalculatorParityTest`,
+     *  because a user who enters a past cycle start expects the rhythm to hold
+     *  on either side of it. See [isActiveOn] for the rule. */
     @Serializable
     data class CyclicActivePause(
         val firstCycleStartEpochDay: Long,
@@ -103,18 +99,13 @@ sealed interface ReminderConfig {
     }
 
     /** [hour]/[minute] is the time of day the alert fires on a day it is due
-     *  (spec §7 R37). Ported from medTimer, whose OUT_OF_STOCK and
-     *  EXPIRATION_DATE reminders are ordinary schedulable types carrying a
-     *  `reminder.time` that `SchedulingBase.localDateToReminderInstant` turns
-     *  into a real alarm instant. Emivita's alert configs had no time at all,
-     *  which is why they could not be scheduled and had to ride the projection
-     *  cache's recompute instead.
+     *  (spec §7 R37), as medTimer's OUT_OF_STOCK and EXPIRATION_DATE reminders
+     *  carry a time that makes them ordinary schedulable alarms.
      *
-     *  Defaulted rather than required, so every reminder row written before
-     *  this field existed decodes unchanged: `configJson` is a JSON blob and
-     *  kotlinx fills an absent key from the default, so there is no database
-     *  migration here. 09:00 because an alert is a chore, not a dose -- it
-     *  wants a civil hour, not the middle of the night. */
+     *  Defaulted rather than required, so rows written before the field
+     *  existed decode unchanged (kotlinx fills an absent key from the default,
+     *  so no database migration). 09:00 because an alert is a chore, not a
+     *  dose, and wants a civil hour. */
     @Serializable
     data class LowStockAlert(
         val threshold: Double,
@@ -132,16 +123,15 @@ sealed interface ReminderConfig {
         val minute: Int = DEFAULT_ALERT_MINUTE,
     ) : ReminderConfig
 
-    /** Chained "following dose" reminders (spec §3/§9 #14). Note that
-     *  CyclicActivePause above is a RepeatPattern case, not a top-level type
-     *  of its own (R8, spec §7).
-     *  [Reminder.parentReminderId] carries which reminder this follows -- kept
-     *  as a real FK column rather than inside this config specifically so the
-     *  engine can query "children of reminder X" without deserializing every
-     *  reminder's JSON. Next occurrence = the parent's most recent event time
-     *  (fired-at for ON_REMINDED, resolved-at for ON_RESOLVED) + [delayMinutes]
-     *  -- see SchedulingEngine's LinkedFollowing branch and the cascade-
-     *  reschedule trigger points in ReminderAlarmReceiver/RealSchedulingCoordinator. */
+    /** Chained "following dose" reminders (spec §3/§9 #14; cyclic ones stay a
+     *  RepeatPattern case, R8, spec §7).
+     *  [Reminder.parentReminderId] carries which reminder this follows, as a
+     *  real FK column rather than inside this config so the engine can query
+     *  "children of reminder X" without deserializing every reminder's JSON.
+     *  Next occurrence = the parent's most recent event time (fired-at for
+     *  ON_REMINDED, resolved-at for ON_RESOLVED) + [delayMinutes] -- see
+     *  SchedulingEngine's LinkedFollowing branch and the cascade-reschedule
+     *  trigger points in ReminderAlarmReceiver/RealSchedulingCoordinator. */
     @Serializable
     data class LinkedFollowing(
         val delayMinutes: Int, // 1..1440 (24h), matching medTimer exactly

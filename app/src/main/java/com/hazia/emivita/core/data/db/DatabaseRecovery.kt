@@ -17,31 +17,21 @@ class DatabaseOpen<T>(
 )
 
 /**
- * Build the database, prove it actually opens, and recover once if it does not.
+ * Build the database, prove it actually opens, and recover once if it does
+ * not, because a corrupt file or a throwing migration otherwise surfaces at
+ * the first DAO call and crashes every launch (SQLCipher keeps the file on
+ * corruption, since a wrong passphrase looks the same).
  *
- * Before this, `EmivitaDatabase.getInstance` handed back a lazily-opened Room
- * instance and nothing caught a failure to open it: a corrupt file, or a
- * migration that throws, surfaced at the first DAO call and took the app
- * down -- on every launch, with no route back. SQLCipher does not delete the
- * file on corruption (its error handler refuses to when a codec is loaded,
- * since a wrong passphrase looks the same), which is better than the
- * framework's default and still leaves the person with an app that cannot
- * start.
- *
- * Recovery here means the unopenable file is *renamed aside*, never deleted,
- * and a fresh empty database is created in its place. The set-aside file is
- * still encrypted with the same Keystore passphrase, so it stays recoverable
- * while that key lives -- a lost key is the other path, [EmivitaDatabase.openGuardingKey].
- * Data & Backup lists what exists and is the one place it can be deleted.
+ * Recovery *renames* the unopenable file aside, never deletes it, and creates
+ * a fresh empty database: the set-aside file stays recoverable while the
+ * Keystore key lives (a lost key is [EmivitaDatabase.openGuardingKey]), and
+ * Data & Backup is the one place it can be deleted.
  *
  * Generic over the database type so the ordering -- probe, close, set aside,
- * rebuild, re-probe -- is testable without Room or a SQLite file; that
- * ordering is the whole content. [probe] must issue a real query: Room opens
- * lazily, so building proves nothing. A second failure is rethrown rather than
- * looped on: if a freshly created database cannot be opened, the old file was
- * not the problem, and setting another one aside would destroy a working copy
- * for nothing. Lifted from Lunar's DatabaseRecovery (the owner's own), where
- * it was written for the same hole.
+ * rebuild, re-probe -- is testable without Room, with [probe] issuing a real
+ * query because Room opens lazily, and a second failure rethrown rather than
+ * looped on, since then the old file was not the problem and setting another
+ * one aside would destroy a working copy.
  */
 fun <T> openOrRecover(
     build: () -> T,

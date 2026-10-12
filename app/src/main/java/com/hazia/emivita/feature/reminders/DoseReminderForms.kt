@@ -261,16 +261,10 @@ internal fun RepeatingIntervalFormBody(
     val doseValue = parseDecimal(dose)
     val hoursValue = parseDecimal(intervalHours)
     // Guard the value actually stored, not the raw hours: 0.01 passes
-    // `hoursValue > 0` but truncates to 0 minutes, which the calculator then
-    // rejects -- after the row would already have been committed. Same shape
-    // as the Every-N-days guard above. See docs/SPEC.md §7 R23.
-    //
-    // Still the right place for this even though the calculator no longer
-    // throws (R33 made it return null, matching the rest of the file): a zero
-    // that reaches the database yields a reminder that silently never fires,
-    // which is worse than a save button that stays disabled. The two guards
-    // are belt and braces, not a duplicate -- the calculator's exists because
-    // BackupRepository.restoreSnapshot bypasses this form entirely.
+    // `hoursValue > 0` but truncates to 0 minutes (docs/SPEC.md §7 R23). A zero
+    // that reaches the database is a reminder that silently never fires, worse
+    // than a disabled save button, so this stays even though the calculator
+    // returns null (R33) for the BackupRepository.restoreSnapshot path.
     val intervalMinutesValue = hoursValue?.let { (it * 60).toInt() }
 
     val dirty = rememberDirty(Unit, intervalHours, dose, startBehavior, advanced.snapshot())
@@ -338,16 +332,10 @@ internal fun DailyWindowFormBody(
     val doseValue = parseDecimal(dose)
     val hoursValue = parseDecimal(intervalHours)
     // Guard the value actually stored, not the raw hours: 0.01 passes
-    // `hoursValue > 0` but truncates to 0 minutes, which the calculator then
-    // rejects -- after the row would already have been committed. Same shape
-    // as the Every-N-days guard above. See docs/SPEC.md §7 R23.
-    //
-    // Still the right place for this even though the calculator no longer
-    // throws (R33 made it return null, matching the rest of the file): a zero
-    // that reaches the database yields a reminder that silently never fires,
-    // which is worse than a save button that stays disabled. The two guards
-    // are belt and braces, not a duplicate -- the calculator's exists because
-    // BackupRepository.restoreSnapshot bypasses this form entirely.
+    // `hoursValue > 0` but truncates to 0 minutes (docs/SPEC.md §7 R23). A zero
+    // that reaches the database is a reminder that silently never fires, worse
+    // than a disabled save button, so this stays even though the calculator
+    // returns null (R33) for the BackupRepository.restoreSnapshot path.
     val intervalMinutesValue = hoursValue?.let { (it * 60).toInt() }
 
     val dirty = rememberDirty(Unit, intervalHours, dose, startHour, startMinute, endHour, endMinute, startBehavior, advanced.snapshot())

@@ -13,20 +13,14 @@ import org.robolectric.annotation.Config
 
 /**
  * MIGRATION_2_3 only adds `reminders.lastAlertNotifiedEpochDay` via a plain
- * `ALTER TABLE ADD COLUMN` (see the migration's own doc comment). Originally
- * written against `MigrationTestHelper` (the exported `app/schemas/.../2.json`
- * and `3.json` make that possible in principle, unlike MIGRATION_1_2 -- see
- * [MigrationFrom1To2Test]), but that combination hits a Room/Robolectric
- * driver bug under this project's setup: `SupportSQLiteMigrationTestHelper`
- * throws `IllegalArgumentException: This driver is configured to open a
- * database named 'X' but '<robolectric temp dir>/X' was requested` before
- * any migration logic even runs -- a path-vs-bare-name mismatch inside
- * Room's newer connection-manager layer, not a real assertion about our
- * schema. Rather than fight that, this uses the same direct-fixture
- * technique as [MigrationFrom1To2Test]: build the v2 `reminders` shape from
- * raw SQL (it's exactly MIGRATION_1_2's own `reminders_new` definition),
- * run the real `Migration` object against it, assert on the result. Still a
- * real regression test of the actual migration; just not schema-JSON-backed.
+ * `ALTER TABLE ADD COLUMN`. `MigrationTestHelper` is not usable here, because
+ * under Robolectric `SupportSQLiteMigrationTestHelper` throws
+ * `IllegalArgumentException: This driver is configured to open a database
+ * named 'X' but '<robolectric temp dir>/X' was requested` before any migration
+ * runs (a path-vs-bare-name mismatch in Room's connection-manager layer).
+ * So, as in [MigrationFrom1To2Test], the v2 `reminders` shape is built from raw
+ * SQL (MIGRATION_1_2's own `reminders_new` definition) and the real
+ * `Migration` object is run against it.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)

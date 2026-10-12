@@ -8,10 +8,10 @@ import java.time.LocalDate
 /**
  * How many medicines need a hand (§9 #27; Appendix F DS-05, Dosage's tab
  * badge): tracked and empty, tracked and at or below an enabled low-stock
- * threshold, or expired by the effective date. The same three predicates
- * the card tints on and the alerts fire on, so the number on the tab can
- * never disagree with the cards behind it. Pure; archived medicines are
- * already absent from the list this reads.
+ * threshold, or expired by the effective date. These are the predicates the
+ * cards tint on and the alerts fire on, so the tab's number can never
+ * disagree with the cards behind it, and archived medicines are already
+ * absent from the list this reads.
  */
 fun stockAttentionCount(medicines: List<MedicineWithReminders>, today: LocalDate): Int =
     medicines.count { needsStockAttention(it, today) }

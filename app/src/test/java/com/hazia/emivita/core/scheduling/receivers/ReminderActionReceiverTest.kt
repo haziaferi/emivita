@@ -20,8 +20,8 @@ import org.robolectric.annotation.Config
 import org.robolectric.annotation.SQLiteMode
 
 /**
- * The notification's buttons and its swipe, on the JVM (spec §9 #30;
- * Appendix E B-47). medTimer's `singleTaken` and `removeSingle` in Emivita's
+ * The notification's buttons and its swipe, on the JVM (spec §9 #30,
+ * Appendix E B-47): medTimer's `singleTaken` and `removeSingle` in Emivita's
  * terms, then the paths the inventory listed as untested: snooze -- its
  * arming and its re-fire -- the lock's rejection of Skip, and the swipe
  * setting's three meanings. Same harness as [ReminderAlarmReceiverTest].

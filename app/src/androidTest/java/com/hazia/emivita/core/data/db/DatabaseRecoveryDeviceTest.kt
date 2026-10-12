@@ -14,14 +14,14 @@ import org.junit.runner.RunWith
 import java.io.File
 
 /**
- * The recovery path on the real SQLCipher factory (spec §9 #32). The JVM
- * suite proves the ordering on the framework's factory, where a keep-file
- * wrapper is needed because the framework deletes a corrupt file before any
- * probe (Lunar's finding). SQLCipher's helper never consults Room's callback
+ * The recovery path on the real SQLCipher factory (spec §9 #32); the JVM suite
+ * proves the ordering on the framework's factory, which needs a keep-file
+ * wrapper because it deletes a corrupt file before any probe (Lunar's finding).
+ * SQLCipher's helper never consults Room's callback
  * and its own error handler keeps the file when a codec is loaded -- read
  * from sqlcipher-android 4.16.0's bytecode, and this is where that reading
  * is checked rather than trusted. Runs on a throwaway database name with the
- * real Keystore passphrase; the owner's file is never touched.
+ * real Keystore passphrase, so the owner's file is never touched.
  */
 @RunWith(AndroidJUnit4::class)
 class DatabaseRecoveryDeviceTest {

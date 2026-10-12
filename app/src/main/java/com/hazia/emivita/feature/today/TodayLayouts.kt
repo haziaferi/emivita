@@ -57,14 +57,12 @@ import java.time.ZoneId
  * state disc, its tile, Prendi and Salta through [EntryHost] -- and only the
  * arrangement changes:
  *
- *  - TIMELINE: the rail with a disc per instant and a card per entry, as the
- *    screen has been since R59.
+ *  - TIMELINE: the rail with a disc per instant and a card per entry (R59);
  *  - GROUPED: the day in three bands, morning / afternoon / evening, each
- *    with an eyebrow header; the disc and the time move inside the card.
- *  - COMPACT: a register -- one hairline row per entry, a 28 dp disc, the
- *    time in a column, name and dose in one line each. A tap on a row that
- *    is due opens its actions beneath it; a second tap closes them, so no
- *    single tap ever changes a dose (the mockup's cycling circle, declined).
+ *    with an eyebrow header, the disc and the time inside the card;
+ *  - COMPACT: a register of hairline rows with a 28 dp disc, where a tap on a
+ *    due row opens its actions beneath it and a second tap closes them, so no
+ *    single tap ever changes a dose (the mockup's cycling circle, declined);
  *  - HERO: the next dose in a card of the pale container with its actions,
  *    and the rest of the day as a compact register beneath.
  */

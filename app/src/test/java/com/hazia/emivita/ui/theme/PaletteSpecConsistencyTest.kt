@@ -10,22 +10,15 @@ import java.io.File
  * Makes the spec's palette tables and the splash resource checkable by the build
  * rather than by a person remembering to look (§7 R56/R57, §7.1 rules 5 and 8).
  *
- * Three sources have to agree about 136 hex values, and only one of them is
- * Kotlin. `docs/SPEC.md`'s Appendix A is what a reader trusts; `Color.kt` is what
- * the app renders; the two `colors.xml` `splash_background`s are what shows for
- * the frames before Compose starts. Nothing connected them until R56, which
- * is exactly the shape §7 R47 was opened for: an audit proved a *token* was safe
- * while nothing proved the app used it. Since R76 both Appendix A and Color.kt
- * are printed by `tools/palette_derive.py`, whose `--check` pins the appendix
- * to the tool; this test pins the code to the appendix, closing the loop.
+ * Appendix A, the resolved app scheme and the two `colors.xml`
+ * `splash_background`s must agree about 136 hex values, and since R76
+ * `tools/palette_derive.py --check` pins the appendix to the tool while this
+ * test pins the code to the appendix, failing with the role's name.
  *
- * This asserts against [colorSchemeFor] and [emivitaColorsFor] -- the resolved
- * scheme the app actually builds -- rather than against the palette objects, for
- * the same reason [PaletteContrastTest] does: a table can be right while the
- * expansion into it is wrong.
- *
- * Pure JVM, no Robolectric. If Appendix A is ever edited by hand and the code is
- * not (or vice versa), this fails and names the role.
+ * It asserts against [colorSchemeFor] and [emivitaColorsFor], the scheme the
+ * app actually builds, rather than the palette objects, for the same reason
+ * as [PaletteContrastTest]: a table can be right while the expansion into it
+ * is wrong.
  */
 class PaletteSpecConsistencyTest {
 

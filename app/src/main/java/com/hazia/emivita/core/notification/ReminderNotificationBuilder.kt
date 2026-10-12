@@ -62,11 +62,10 @@ class ReminderNotificationBuilder(
         val hideNames = settingsRepository.hideMedicineNames.first()
         val title = maskedMedicineName(medicine.name, hideNames)
 
-        // The lock-screen copy (§9 #25; Appendix F PT-06 / DP-F1). A phone set
-        // to hide sensitive content used to show "Content hidden" with no
-        // buttons, so a Standard or High reminder could not be answered
-        // without unlocking; only the ALARM tier reached the lock screen. The
-        // public version names no medicine and carries the same actions.
+        // The lock-screen copy (§9 #25; Appendix F PT-06 / DP-F1): it names no
+        // medicine and carries the same actions, so a phone set to hide
+        // sensitive content can still answer a Standard or High reminder
+        // without unlocking.
         val publicVersion = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification_reminder)
             .setColor(accentArgb)

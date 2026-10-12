@@ -20,18 +20,16 @@ import org.robolectric.annotation.SQLiteMode
 import java.io.File
 
 /**
- * [EmivitaDatabase.open] on real files (spec §9 #32). SQLCipher's native
- * library cannot load on the JVM, so these run the production open path on
- * the framework's open-helper factory -- which is also how Lunar's finding is
- * pinned here as a fact about *that* factory: Room's default callback inherits
- * the framework's `DefaultDatabaseErrorHandler`, which deletes a corrupt file
- * and reopens empty before any probe runs. With it, recovery has nothing to
- * set aside and the data is simply gone; with [KeepFileOnCorruptionFactory]
- * (Lunar's class, test-side here) the file survives to be set aside.
+ * [EmivitaDatabase.open] on real files (spec §9 #32), run on the framework's
+ * open-helper factory because SQLCipher's native library cannot load on the
+ * JVM, which also pins Lunar's finding about *that* factory: Room's default
+ * callback inherits `DefaultDatabaseErrorHandler`, which deletes a corrupt
+ * file and reopens empty before any probe runs, unless
+ * [KeepFileOnCorruptionFactory] (Lunar's class, test-side here) wraps it.
  *
- * Production's SQLCipher factory needs no such wrapper -- it never consults
- * the callback and its own handler keeps the file -- and that is proven on the
- * phone by `DatabaseRecoveryDeviceTest`, not assumed from this file.
+ * Production's SQLCipher factory needs no such wrapper, since it never
+ * consults the callback and its own handler keeps the file, and
+ * `DatabaseRecoveryDeviceTest` proves that on the phone.
  */
 @RunWith(RobolectricTestRunner::class)
 @SQLiteMode(SQLiteMode.Mode.NATIVE)

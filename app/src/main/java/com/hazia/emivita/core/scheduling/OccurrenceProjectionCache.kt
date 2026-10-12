@@ -54,17 +54,10 @@ data class ProjectionState(
      * True when [COMPUTE_BUDGET_MILLIS] stopped the pass before every medicine
      * was visited, so this state covers only some of them (spec §7 R58).
      *
-     * The budget itself is deliberate -- a pathological config should cost one
-     * partial pass, not a blocked loop. What was wrong until this field existed
-     * is that the partial answer was indistinguishable from a complete one: a
-     * medicine absent from [stockRunOutDates] means "will not run out inside
-     * the window" *and* "was never reached", and a reader had no way to tell
-     * which. That is the same defect shape as R56's `error` token doing three
-     * jobs -- one value standing for two different facts.
-     *
-     * Consumers that draw a conclusion from an *absence* should check this
-     * first. Consumers that only read what is present can ignore it: nothing
-     * here is wrong, there is just less of it.
+     * Without it a medicine absent from [stockRunOutDates] could mean "will not
+     * run out inside the window" or "was never reached". Consumers that draw a
+     * conclusion from an *absence* check this first, while those reading only
+     * what is present can ignore it.
      */
     val truncated: Boolean = false,
     /**
@@ -78,50 +71,25 @@ data class ProjectionState(
 )
 
 /**
- * Singleton forward-simulation cache (spec §2's locked decision, resolved
- * design in §9 #4) -- the Emivita equivalent of medTimer's
- * SimulatedRemindersRepository/SchedulingSimulator, confirmed directly against
- * medTimer's own CONTEXT.md glossary rather than assumed: one shared
- * projection of reminder occurrences over a requested window, computing each
- * tracked medicine's stock run-out date as a side effect of the same pass. The
- * Today screen, History/Calendar, and Widgets (§9 #5-7) all read from [state]
- * instead of each running its own simulation -- the exact mistake medTimer's
- * own ADRs document making and having to undo (§2). LowStockAlert/
- * ExpirationAlert triggering (§9 #8) rides the same recompute pass rather
- * than reading [state] itself -- see [alertEvaluator].
+ * Singleton forward-simulation cache (spec §2's locked decision, §9 #4;
+ * medTimer's SimulatedRemindersRepository): one shared projection of reminder
+ * occurrences and each tracked medicine's stock run-out date, read through
+ * [state] by Today, History/Calendar and Widgets (§9 #5-7) instead of each
+ * running its own simulation, while LowStockAlert/ExpirationAlert triggering
+ * (§9 #8) rides the same pass via [alertEvaluator].
  *
- * **Window ownership** (medTimer's own glossary): each consumer registers the
- * days it needs via [requestWindow], and the effective window is the max of
- * those registrations and [MINIMUM_WINDOW_DAYS] -- a floor, not a fallback.
- * That distinction is the entire point of the mechanism: this projection is
- * *shared*, so a registration means "I need at least this much", never "this
- * much is all anyone needs". The constant used to apply only when no consumer
- * had registered at all, which let the Today screen's 2-day request collapse
- * the window for every other reader of [state] the moment Today composed --
- * silently dropping the stock run-out dates that Stock & Expiration and the
- * stock widget both read. See docs/SPEC.md §7 R28. [releaseWindow] removes a
- * registration but does not force an immediate recompute -- shrinking isn't
- * urgent, it takes effect on the next trigger that happens anyway.
+ * The window is the max of every [requestWindow] registration and
+ * [MINIMUM_WINDOW_DAYS], a floor and never a fallback, because the projection
+ * is shared and one consumer's short request must not shrink it for every
+ * other reader (§7 R28), and [releaseWindow] waits for the next trigger
+ * rather than recomputing.
  *
- * **Two invalidation channels, not one:**
- *  - *Reactive:* the `init` block collects [MedicineDao.observeAllWithReminders]
- *    (a `@Relation`-joined query built specifically for this watcher, see
- *    [com.hazia.emivita.core.data.dao.MedicineWithReminders]) -- Room's own
- *    change-tracking re-fires it on any write to `medicines` or `reminders`,
- *    so a medicine/reminder edit invalidates the cache without the editing
- *    code needing to know the cache exists.
- *  - *Explicit:* [invalidate] is called directly by `DoseEventRepository`
- *    (dose resolution, PRN logging, refill) and `RealSchedulingCoordinator`
- *    (after an alarm-fired reschedule) -- a dose resolution needs the
- *    next-alarm recompute regardless of whether the reactive Flow happens to
- *    fire from the same write.
- *
- * Both funnel into the same conflated [trigger] channel, so a burst of edits
- * collapses into one recompute rather than one per edit (medTimer: a
- * conflated channel + 1s delay), and the computation itself is capped at
- * [COMPUTE_BUDGET_MILLIS] -- a pathological reminder config stops the pass
- * and [state] publishes whatever was projected so far rather than blocking
- * indefinitely.
+ * Two invalidation channels feed one conflated [trigger], so a burst of edits
+ * costs one recompute capped at [COMPUTE_BUDGET_MILLIS]: Room re-fires
+ * [MedicineDao.observeAllWithReminders] on any `medicines`/`reminders` write,
+ * and `DoseEventRepository` and `RealSchedulingCoordinator` call [invalidate]
+ * because a dose resolution needs the next-alarm recompute whether or not
+ * that Flow fires.
  */
 class OccurrenceProjectionCache(
     private val medicineDao: MedicineDao,
@@ -152,22 +120,13 @@ class OccurrenceProjectionCache(
         scope.launch(dispatcher) {
             for (unused in trigger) {
                 delay(DEBOUNCE_MILLIS)
-                // A failed pass must cost one pass, not the loop. An exception
-                // escaping here cancels this coroutine permanently -- the
-                // SupervisorJob in AppContainer keeps its siblings alive, it
-                // does not restart this one -- and every consumer of [state]
-                // then reads a snapshot that never updates again: Today,
-                // History/Calendar and both widgets freeze, and the alert
-                // evaluator that rides this pass stops firing low-stock and
-                // expiration notifications, all with no visible failure.
-                //
-                // That is the same "keep the pass alive" intent
-                // [COMPUTE_BUDGET_MILLIS] already encodes for a pathological
-                // config, extended to a throwing one. Nothing is expected to
-                // throw here -- the calculators return null for invalid configs
-                // rather than raising (see ReminderScheduling.kt) -- but this
-                // loop is the single point every projection consumer depends
-                // on, which is exactly the place not to rely on that holding.
+                // A failed pass must cost one pass, not the loop. An escaping
+                // exception cancels this coroutine for good (AppContainer's
+                // SupervisorJob does not restart it), so [state] would freeze
+                // Today, History/Calendar, both widgets and the low-stock and
+                // expiration alerts with no visible failure. Nothing is expected
+                // to throw (the calculators return null for invalid configs), but
+                // every projection consumer depends on this one loop.
                 runCatching { recompute() }
                     .onFailure { Log.e(TAG, "Projection recompute failed -- keeping the last good state until the next trigger.", it) }
             }
@@ -247,14 +206,13 @@ class OccurrenceProjectionCache(
         }
         for (entry in medicines) {
 
-            // Two passes per medicine (§9 #31, A-24). Pass 1: every dose
-            // reminder that computes its own slots. Pass 2: linked children,
-            // whose one real slot is anchored to the parent's most recent real
-            // event -- plus an *estimate* after every projected parent slot
-            // beyond that, so Today and the stock run-out see the follow-up
-            // dose before the parent has fired. Parents are same-medicine (the
-            // form offers nothing else) and one level deep (A-23): a child of a
-            // child estimates off nothing, as before.
+            // Two passes per medicine (§9 #31, A-24): first every dose reminder
+            // that computes its own slots, then linked children, whose one real
+            // slot is anchored to the parent's most recent real event, plus an
+            // *estimate* after every later projected parent slot so Today and
+            // the stock run-out see the follow-up dose before the parent fires.
+            // Parents are same-medicine and one level deep (A-23): a child of a
+            // child estimates off nothing.
             val medicineOccurrences = mutableListOf<ProjectedOccurrence>()
             val projectedByReminder = mutableMapOf<Long, List<Long>>()
             val (linked, own) = entry.reminders.filter { it.enabled }.partition { it.type == ReminderType.LINKED_FOLLOWING }

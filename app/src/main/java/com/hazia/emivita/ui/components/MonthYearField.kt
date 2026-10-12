@@ -35,10 +35,9 @@ import java.util.Locale
  * year column, one radio node per option, storing the **last day** of that
  * month as an epoch day -- so "expired" flips on the first of the month
  * after, which is what the print means. The schema keeps day granularity
- * ([com.hazia.emivita.core.data.entity.StockInfo.expirationDateEpochDay]);
- * this is only another way to set it. A stored day that is not a month end
- * (set with the exact-day picker) displays as a full date, so switching
- * modes never silently rounds a date the person chose on purpose.
+ * ([com.hazia.emivita.core.data.entity.StockInfo.expirationDateEpochDay]),
+ * and a stored day that is not a month end displays as a full date, so
+ * switching modes never silently rounds a date the person chose on purpose.
  */
 @Composable
 fun MonthYearField(label: String, epochDay: Long?, yearsAhead: Int = 10, onChange: (Long?) -> Unit) {

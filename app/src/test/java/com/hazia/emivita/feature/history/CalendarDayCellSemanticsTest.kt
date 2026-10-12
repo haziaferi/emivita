@@ -20,17 +20,13 @@ import org.robolectric.RobolectricTestRunner
 import java.time.LocalDate
 
 /**
- * The calendar's day cell is the one surface in the app where state is
- * carried by colour alone -- three dots, no text (spec §9 #19 Stage B).
- * R55 gave the adherence chart a texture channel for exactly this reason
- * and the calendar never got its equivalent. A screen reader was told the
- * day number and nothing else.
+ * The calendar's day cell carries state by colour alone, three dots and no
+ * text, so its screen-reader description must say what they mean (spec §9
+ * #19 Stage B).
  *
- * Fixed date: 2026-06-09 is a Tuesday, so the description's weekday and month
- * can be asserted verbatim. Default locale in the test JVM is what
- * `Locale.current` resolves to under Robolectric; the assertions use the
- * English forms and would need the same treatment as `EmergencyCardExporterTest`
- * if the suite ever ran under another default.
+ * Fixed date: 2026-06-09 is a Tuesday, so weekday and month are asserted
+ * verbatim in English, which would need `EmergencyCardExporterTest`'s
+ * treatment if the test JVM's default locale ever changed.
  */
 @RunWith(RobolectricTestRunner::class)
 class CalendarDayCellSemanticsTest {

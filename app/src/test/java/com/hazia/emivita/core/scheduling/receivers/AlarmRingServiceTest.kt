@@ -27,8 +27,8 @@ import org.robolectric.annotation.SQLiteMode
 import java.time.Duration
 
 /**
- * The Alarm tier rings until it is answered (§7 R80; R75's follow-up 1).
- * Posting an Alarm-tier reminder hands the notification to
+ * The Alarm tier rings until it is answered (§7 R80; R75's follow-up 1):
+ * posting an Alarm-tier reminder hands the notification to
  * [AlarmRingService], which shows it as its own and rings under it; the
  * service stops when the dose is answered anywhere, when told to, or after
  * ten minutes -- keeping the notification in that last case. Sound itself

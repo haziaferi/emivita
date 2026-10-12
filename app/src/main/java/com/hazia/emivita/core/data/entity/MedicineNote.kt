@@ -11,8 +11,8 @@ import kotlinx.serialization.Serializable
  * MediTrak's timestamped notes, the adverse-effects record §1's clinician
  * export has no other slot for). Distinct from [Medicine.notes], which is
  * the one standing free-text field: a journal entry is *dated*, and the
- * date is the point -- "dizzy for two days after the dose went up".
- * Cascades with the medicine; an archived medicine keeps its journal.
+ * date is the point -- "dizzy for two days after the dose went up" -- and
+ * it cascades with the medicine, though an archived medicine keeps its journal.
  */
 @Serializable
 @Entity(

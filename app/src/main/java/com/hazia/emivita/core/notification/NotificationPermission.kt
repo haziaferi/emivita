@@ -13,22 +13,19 @@ import android.util.Log
 import androidx.core.app.NotificationManagerCompat
 import androidx.core.content.ContextCompat
 
-/**
- * Posts [notification] only if POST_NOTIFICATIONS is actually held.
- *
- * The permission is a runtime grant from API 33 on, and
- * [com.hazia.emivita.navigation.EmivitaApp] asks for it exactly once -- so a
- * user who declined has a permanently un-granted app, and
- * `NotificationManagerCompat.notify` would throw rather than no-op. Shared by
- * both notification builders, which had identical copies of this guard.
- *
- * [tag] is the caller's log tag, so a dropped notification is attributable to
- * the builder that tried to post it.
- */
 internal fun notificationsPermitted(context: Context): Boolean =
     Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
         ContextCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
 
+/**
+ * Posts [notification] only if POST_NOTIFICATIONS is actually held.
+ *
+ * The permission is a runtime grant from API 33 on and
+ * [com.hazia.emivita.navigation.EmivitaApp] asks for it exactly once, so a
+ * user who declined stays un-granted and `NotificationManagerCompat.notify`
+ * would throw rather than no-op. [tag] is the caller's log tag, so a dropped
+ * notification is attributable to the builder that tried to post it.
+ */
 internal fun postIfPermitted(context: Context, tag: String, notificationId: Int, notification: Notification) {
     // Spelled out here rather than through notificationsPermitted(): lint's
     // MissingPermission check only recognises the check when it is inline.
@@ -56,8 +53,8 @@ internal fun openAppPendingIntent(context: android.content.Context, requestCode:
 /** A real notification on the Standard channel with no dose behind it (§9
  *  #25; Appendix F DP-05, HM-38): the one way to see what a reminder looks
  *  and sounds like on this phone -- channel sound, lock-screen redaction,
- *  battery deferral -- without waiting for one. No actions: there is nothing
- *  to take. Id far below any dose event's. */
+ *  battery deferral -- without waiting for one. It has no actions, since
+ *  there is nothing to take, and an id far below any dose event's. */
 fun postTestReminder(context: android.content.Context) {
     val notification = androidx.core.app.NotificationCompat.Builder(context, ReminderNotificationChannels.CHANNEL_STANDARD)
         .setSmallIcon(com.hazia.emivita.R.drawable.ic_notification_reminder)

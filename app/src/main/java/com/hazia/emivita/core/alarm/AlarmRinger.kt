@@ -15,17 +15,15 @@ import com.hazia.emivita.core.data.settings.SettingsRepository
 import kotlinx.coroutines.flow.first
 
 /**
- * The Alarm tier's sound and vibration (§7 R80; lifted out of
- * `AlarmActivity`, where §7 R59 put it). The chosen tone, else the system's
- * alarm tone, looped through a MediaPlayer on USAGE_ALARM -- the alarm
- * stream, which rings through vibrate mode and, by default, through Do Not
- * Disturb -- and 500 ms on / 500 ms off vibration, until [stop]. The two
- * silent-switch settings are read once per ring (§9 #25).
+ * The Alarm tier's sound and vibration (§7 R59, R80): the chosen tone, else
+ * the system's alarm tone, looped through a MediaPlayer on USAGE_ALARM (which
+ * rings through vibrate mode and, by default, Do Not Disturb) with 500 ms on /
+ * 500 ms off vibration until [stop], the two silent-switch settings read once
+ * per ring (§9 #25).
  *
- * Owned by [AlarmRingService], not by a screen: Android launches the
- * full-screen alarm screen only when the phone is locked or the display is
- * off; unlocked, it shows a heads-up instead, whose channel sound plays once
- * -- R75 found the tone stopping before the dose was dismissed.
+ * Owned by [AlarmRingService], not by a screen, because Android shows the
+ * full-screen alarm only when the phone is locked or the display is off, and
+ * an unlocked phone gets a heads-up whose channel sound plays once (R75).
  */
 class AlarmRinger(private val context: Context, private val settings: SettingsRepository) {
     private var player: MediaPlayer? = null

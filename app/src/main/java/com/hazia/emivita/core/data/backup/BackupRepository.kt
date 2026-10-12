@@ -43,13 +43,6 @@ class BackupRepository(
         medicineNotes = medicineNoteDao.getAllOnce(),
     )
 
-    /** Wholesale replace, not a merge -- restoring a disaster-recovery/migration
-     *  snapshot means "the device now matches this file," not "layer this file
-     *  on top of whatever's already here" (spec §9 #9(a)'s own framing: new
-     *  phone, handing a snapshot to someone). Deletes in FK-dependency order,
-     *  then inserts in the reverse order via REPLACE so every restored row
-     *  keeps its original id -- the cross-references (medicineId, reminderId,
-     *  parentReminderId, ...) only stay correct if ids round-trip exactly. */
     /** Every table, in dependency order -- the restore's first half, and the
      *  whole of "Delete everything" (§9 #29, MT-22). Inside a transaction. */
     private suspend fun deleteEverything() {
@@ -64,11 +57,11 @@ class BackupRepository(
     }
 
     /**
-     * Back to the first-run state (§9 #29; Appendix F MT-22): every row gone,
+     * Back to the first-run state (§9 #29, Appendix F MT-22): every row gone,
      * every alarm cancelled (rescheduleAll only re-arms *enabled* reminders,
      * so the removed ones are cancelled one by one first), the projection
-     * dropped. Settings, the app language and the lock stay: they are the
-     * phone's, not the data's. EmivitaApp recreates the default profile.
+     * dropped. Settings, the app language and the lock stay, because they are
+     * the phone's, not the data's, and EmivitaApp recreates the default profile.
      */
     suspend fun purgeAll() {
         val reminderIds = reminderDao.getAllOnce().map { it.id }
@@ -77,6 +70,13 @@ class BackupRepository(
         occurrenceProjectionCache.invalidate()
     }
 
+    /** Wholesale replace, not a merge -- restoring a disaster-recovery/migration
+     *  snapshot means "the device now matches this file," not "layer this file
+     *  on top of whatever's already here" (spec §9 #9(a)'s own framing: new
+     *  phone, handing a snapshot to someone). Deletes in FK-dependency order,
+     *  then inserts in the reverse order via REPLACE so every restored row
+     *  keeps its original id -- the cross-references (medicineId, reminderId,
+     *  parentReminderId, ...) only stay correct if ids round-trip exactly. */
     suspend fun restoreSnapshot(data: BackupData) {
         database.withTransaction {
             deleteEverything()

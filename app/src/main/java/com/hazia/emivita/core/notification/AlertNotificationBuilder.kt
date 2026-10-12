@@ -98,13 +98,12 @@ class AlertNotificationBuilder(
     }
 
     /**
-     * One line over the stock alerts (§9 #27; DS-05, Dosage's "You have N
+     * One line over the stock alerts (§9 #27, DS-05, Dosage's "You have N
      * treatments low in stock"): the per-medicine cards stay -- they carry
      * the Refill action and are the better data (Appendix F) -- and from two
      * showing a silent summary names them all. Rebuilt after every post,
-     * every refill and every swipe, gone below two, so the count is never
-     * stale for longer than the next event. The R64 `updateGroupSummary`
-     * shape, on the negative ids the alerts use.
+     * refill and swipe and gone below two, in the R64 `updateGroupSummary`
+     * shape on the negative ids the alerts use.
      */
     fun updateStockSummary() {
         val nm = androidx.core.app.NotificationManagerCompat.from(context)

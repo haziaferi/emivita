@@ -26,15 +26,11 @@ private const val TAG = "ReminderActionReceiver"
 
 /**
  * Handles the Take / Skip / Snooze actions posted from a reminder
- * notification (see ReminderNotificationBuilder). Not exported -- only
- * reachable via this app's own notification action PendingIntents.
+ * notification (see ReminderNotificationBuilder), and not exported.
  *
- * Snooze deliberately does NOT cancel/track anything special if the dose
- * gets resolved from elsewhere (the Today screen, the alarm screen) before
- * the snooze fires: the snooze alarm re-enters ReminderAlarmReceiver's normal
- * handling, which already only re-notifies a dose event that's still
- * PENDING. A snoozed-then-resolved dose just silently no-ops when its
- * snooze fires -- one guard, not two places maintaining the same rule.
+ * Snooze deliberately tracks nothing if the dose is resolved elsewhere before
+ * it fires: the snooze alarm re-enters ReminderAlarmReceiver, which only
+ * re-notifies a still-PENDING event, so one guard holds the rule.
  */
 class ReminderActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
@@ -110,9 +106,9 @@ class ReminderActionReceiver : BroadcastReceiver() {
             }
 
             // Swiped away (§9 #25): the setting decides. Snooze is the default
-            // and re-uses the snooze path below; Skip respects the lock the
+            // and re-uses the snooze path below, Skip respects the lock the
             // way the button does (a locked medicine treats a swipe as
-            // Nothing, logged); Nothing leaves the dose Due on Today.
+            // Nothing, logged), and Nothing leaves the dose Due on Today.
             ACTION_SWIPED -> {
                 when (container.settingsRepository.swipeAction.first()) {
                     SwipeAction.NOTHING -> Unit

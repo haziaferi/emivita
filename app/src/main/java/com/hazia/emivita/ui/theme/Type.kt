@@ -7,23 +7,12 @@ import androidx.compose.ui.unit.sp
 
 /**
  * The floor for dose amounts, times and schedule text: never smaller than
- * [Typography.labelMedium] (12sp).
+ * [Typography.labelMedium] (12sp), so safety-critical text never renders at
+ * `labelSmall` (11sp) (docs/SPEC.md section 7 T6, R42).
  *
- * Spec section 7 T6 flagged that nothing stopped dose/schedule-critical text
- * rendering at `labelSmall` (11sp, the smallest style in the ramp), "given the
- * app's own safety-critical-adherence purpose (section 1)", and left it "not
- * yet made a hard rule". Auditing the tree found the rule already holds -- the
- * only `labelSmall` call sites are weekday-column headers, a "no barcode
- * scanner installed" notice, and a storage note, none of which is a dose, a
- * time or a schedule. It held by accident, though: nothing recorded it, so the
- * next screen to reuse `labelSmall` for a chip label was free to reach for it
- * for a dose amount too.
- *
- * Naming it here puts the rule at the point of decision -- beside the ramp
- * anyone picking a style is reading -- rather than in a document they are not.
- * Use this in preference to writing `labelMedium` inline when the text is a
- * dose, a time, or a schedule, so the choice stays greppable and a future
- * change of floor is one edit. See docs/SPEC.md section 7 R42.
+ * Use this rather than `labelMedium` inline when the text is a dose, a time
+ * or a schedule, so the choice stays greppable and a future change of floor
+ * is one edit.
  */
 val Typography.doseCritical: TextStyle get() = labelMedium
 

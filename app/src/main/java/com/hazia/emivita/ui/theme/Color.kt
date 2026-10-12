@@ -3,36 +3,22 @@ package com.hazia.emivita.ui.theme
 import androidx.compose.ui.graphics.Color
 
 /**
- * Four palettes, light and dark, replacing the previous six (spec §6, §7 R76).
+ * Four palettes, light and dark, each derived by `tools/palette_derive.py`
+ * from three agreed colours per register (ground, text, primary) and printed
+ * by it into this file (`--kotlin`) and SPEC Appendix A (`--tables`), so a
+ * hand edit on any side fails `PaletteSpecConsistencyTest` or `--check`
+ * (spec §6, §7 R76).
  *
- * Each is three agreed colours per register -- ground, text, primary -- from a
- * named visual-craft lexicon pair the owner chose from ten candidates, and
- * everything else is derived from those three by the same rules for all four
- * in `tools/palette_derive.py`. This file is printed by that tool (`--kotlin`),
- * as is SPEC Appendix A (`--tables`); `PaletteSpecConsistencyTest` pins the
- * two to each other and `tools/palette_derive.py --check` pins Appendix A to
- * the tool, so a value edited by hand on any side fails a gate.
+ * Cards are tonal (`surfaceContainer`), the palette's hue lives in controls
+ * (mostly the pale `primaryContainer`, solid `primary` only on the toggle and
+ * the timeline rail), a medicine's own colour is its icon tile, and a warning
+ * is a glyph, never a fill: `attention` (burnt orange, never amber or red) for
+ * a missed dose, low stock or an approaching expiry, `error` for genuine
+ * failures only, with `errorContainer` tinting the three permission cards.
  *
- * HOW COLOUR IS APPLIED (the reference app's grammar, adopted in R76): every
- * card is tonal -- `surfaceContainer`, one step off the ground -- and never a
- * hue; the palette's hue lives in controls, mostly as the pale
- * `primaryContainer` (the state disc, the Prendi chip, the tab pill, the FAB),
- * with solid `primary` only on the toggle and the timeline rail; a medicine's
- * own colour is the one saturated thing on a card, its icon tile; and a
- * warning is a glyph, never a fill.
- *
- *   attention   a missed dose, low stock, an approaching expiry: a burnt
- *               orange glyph beside the text. Not amber -- the owner rules
- *               out yellow -- and deliberately NOT red.
- *   error       genuine failures only: validation, a failed backup, a
- *               permission the app cannot work without. `errorContainer`
- *               is a real tint now, for the three permission cards.
- *
- * Every colour that can sit on a card is fitted against the darkest card
- * tier, `surfaceContainerHigh`, not the ground -- muted text, the primary,
- * the attention and error glyphs -- and `onPrimaryContainer` against its own
- * container at 7:1. `PaletteContrastTest` asserts every pair against the
- * ColorScheme the app actually builds, in light, dark and AMOLED.
+ * Every on-card colour is fitted against the darkest card tier,
+ * `surfaceContainerHigh`, and `onPrimaryContainer` against its own container
+ * at 7:1, which `PaletteContrastTest` asserts in light, dark and AMOLED.
  */
 
 /** The 17 colours one palette defines for one register. [colorSchemeFor]

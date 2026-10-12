@@ -25,7 +25,7 @@ import java.time.LocalTime
 import java.time.ZoneId
 
 /**
- * The alarm receiver on the JVM (spec §9 #30; Appendix E B-47). medTimer's
+ * The alarm receiver on the JVM (spec §9 #30, Appendix E B-47). medTimer's
  * processor cases -- `scheduleReminder`, `noReminder`,
  * `reminderNotificationNotActive`, `rescheduleReminderEvent`, `repeat` --
  * in Emivita's terms, plus the paths the E.5.B inventory listed as untested:

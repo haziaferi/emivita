@@ -10,14 +10,12 @@ import android.media.AudioAttributes
 import android.provider.Settings
 
 /**
- * One notification channel per [NotificationPriority] tier. Call
- * [createAll] once, early in [com.hazia.emivita.EmivitaApplication.onCreate].
+ * One notification channel per [NotificationPriority] tier; call [createAll]
+ * once, early in [com.hazia.emivita.EmivitaApplication.onCreate].
  *
- * Not doing yet: requesting `ACCESS_NOTIFICATION_POLICY` / DND-bypass for
- * the Alarm channel. That's a separate, user-facing consent flow (similar
- * in weight to notification-listener access) and isn't declared in the
- * manifest yet -- calling `setBypassDnd(true)` without it would silently
- * do nothing, which is worse than not calling it at all.
+ * Deliberately no DND bypass for the Alarm channel yet: it needs
+ * `ACCESS_NOTIFICATION_POLICY`, a separate user-facing consent flow not in the
+ * manifest, and `setBypassDnd(true)` without it silently does nothing.
  */
 object ReminderNotificationChannels {
     const val CHANNEL_STANDARD = "reminders_standard"
@@ -55,16 +53,11 @@ object ReminderNotificationChannels {
      * [com.hazia.emivita.core.notification.NotificationDelivery.TiersBlocked]
      * for why only `NONE` counts and a merely-quietened channel does not.
      *
-     * Walks [NotificationPriority.entries] rather than a hand-written list of
-     * channel ids on purpose: a new tier has to add a branch to
-     * [channelIdFor] and [tierNameFor] to compile at all, and is then covered
-     * here for free. A separate list would be one more thing to remember, and
-     * forgetting it would silently shrink this check -- which is the exact
-     * defect class this function exists to report.
-     *
-     * A channel that does not exist yet reads as null, not blocked:
-     * [createAll] runs in `EmivitaApplication.onCreate`, so that only happens
-     * before the app has finished starting.
+     * Walks [NotificationPriority.entries] rather than a hand-written id list,
+     * so a new tier (which must add branches to [channelIdFor] and
+     * [tierNameFor] to compile) is covered here without anything to forget. A
+     * channel that does not exist yet reads as not blocked, which only happens
+     * before [createAll] has run in `EmivitaApplication.onCreate`.
      */
     fun blockedTiers(context: Context): List<String> =
         NotificationPriority.entries.filter { isBlocked(context, it) }.map { context.getString(tierNameFor(it)) }

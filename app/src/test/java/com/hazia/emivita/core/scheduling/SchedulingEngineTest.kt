@@ -371,12 +371,10 @@ class SchedulingEngineTest {
     @Test
     fun `weekend mode is applied after the clamp, so a push can land past activeUntil`() = runTest {
         // Pins spec section 4's stated ordering: calculator, then the
-        // activeFrom/activeUntil clamp, then weekend mode. The consequence is
-        // visible here -- a Saturday 23:00 slot passes a clamp that closes on
-        // Saturday, and the overnight weekend window then pushes it into
-        // Sunday, one day outside the range. Ordering the clamp last would
-        // instead drop the dose entirely. Recorded as behavior, not endorsed
-        // as the obviously right call.
+        // activeFrom/activeUntil clamp, then weekend mode, so a Saturday 23:00
+        // slot passes a clamp closing on Saturday and is pushed into Sunday.
+        // Recorded as behavior, not endorsed: ordering the clamp last would
+        // drop the dose instead.
         val engine = engine(
             settings = fakeSettings(
                 WeekendMode.On(days = setOf(6, 7), start = LocalTime.of(22, 0), end = LocalTime.of(6, 0)),
@@ -567,19 +565,12 @@ class SchedulingEngineTest {
 
     @Test
     fun `a three-step taper is three fixed-time reminders with adjacent ranges`() = runTest {
-        // Makes §4's claim executable instead of asserted. §4 says "a taper
-        // schedule is just several ordinary FixedTime reminders with adjacent,
-        // non-overlapping ranges -- no new ReminderConfig type needed, this
-        // clamp is the whole mechanism", while §9's parking lot says tapering
-        // needs "a new `Tapering` ReminderConfig variant (a list of
-        // {dateRange, dose} steps)". The spec endorsed both at once.
-        //
-        // This pins the side that turns out to be right. Note it could not have
-        // passed before §7 R30: the activeFrom clamp used to return null for a
-        // range that had not opened yet, so steps 2 and 3 below -- whose ranges
-        // begin in the future relative to the walk's start -- would each have
-        // projected nothing, and a taper would have delivered its first dose
-        // level forever. See docs/SPEC.md §7 R43.
+        // Makes §4's claim executable: a taper is several ordinary FixedTime
+        // reminders with adjacent, non-overlapping ranges, and needs no new
+        // `Tapering` ReminderConfig variant (docs/SPEC.md §7 R43).
+        // Steps 2 and 3 begin in the future relative to the walk's start, so this
+        // also guards §7 R30's activeFrom clamp, which must not return null for a
+        // range that has not opened yet.
         val engine = engine()
         val taper = listOf(
             // 10mg for three days, then 7.5mg for three, then 5mg for three.

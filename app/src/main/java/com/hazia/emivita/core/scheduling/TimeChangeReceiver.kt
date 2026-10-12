@@ -14,15 +14,11 @@ private const val TAG = "TimeChangeReceiver"
 
 /**
  * Re-bases every alarm when the clock or the zone changes (§7 R60 B F-4;
- * medTimer's `TimeChangeReceiver`).
- *
- * AlarmManager holds absolute instants. A fixed-time reminder at 08:00 is
- * armed as "08:00 in the zone that was current when it was computed"; after
- * a +6 h zone change that instant is 14:00 on the new clock, and nothing
- * re-computed it until the alarm fired or the reminder was edited. Same shape
- * as BootRescheduleReceiver, same answer: re-arm everything from `now`.
- * TIME_SET matters less (an instant is an instant) but a clock moved back
- * leaves an alarm waiting the difference, so it is handled the same way.
+ * medTimer's `TimeChangeReceiver`), re-arming everything from `now` as
+ * BootRescheduleReceiver does. AlarmManager holds absolute instants, so after a
+ * +6 h zone change an 08:00 reminder would otherwise fire at 14:00 on the new
+ * clock. TIME_SET is handled the same way because a clock moved back leaves an
+ * alarm waiting the difference.
  */
 class TimeChangeReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {

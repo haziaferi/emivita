@@ -14,16 +14,12 @@ import java.io.File
 import java.lang.reflect.ParameterizedType
 
 /**
- * The backup carries every table and every column (spec §9 #29; Appendix E
- * E-16). Three migrations added twelve columns and a table since this guard
- * was first listed, and that they reached the backup was an inference from
- * kotlinx serialising whole data classes. Now it is checked against the one
- * artefact that *is* the schema: Room's exported JSON for the current
- * version. Every table there must match exactly one entity list in
- * `BackupData` by its full set of column paths (`stockInfo.quantity` and the
- * like, embedded objects flattened the way Room flattens them), and no
- * `BackupData` list may be left over. Room's annotations are not retained at
- * runtime, which is why the schema file is the reference and not `@Database`.
+ * The backup carries every table and every column (spec §9 #29, Appendix E
+ * E-16), checked against Room's exported schema JSON for the current version,
+ * since Room's annotations are not retained at runtime. Every table there must
+ * match exactly one entity list in `BackupData` by its full set of column
+ * paths (embedded objects flattened as Room flattens them, e.g.
+ * `stockInfo.quantity`), and no `BackupData` list may be left over.
  */
 class BackupCoverageTest {
     private val schemaDir = generateSequence(File("").absoluteFile) { it.parentFile }

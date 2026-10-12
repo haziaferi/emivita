@@ -212,11 +212,9 @@ private fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
 @Composable
 internal fun CalendarDayCell(day: CalendarDay, today: LocalDate, statuses: List<DoseStatus>, selected: Boolean, onClick: () -> Unit) {
     val inMonth = day.position == DayPosition.MonthDate
-    // Accessibility (spec §9 #19 Stage B). The dots below are the one place
-    // in the app where state is carried by colour alone -- R55 gave the chart
-    // a texture channel for exactly this reason and the calendar never got
-    // its equivalent. A screen reader was told the day number and nothing
-    // else. The description names the date and counts each status.
+    // Accessibility (spec §9 #19 Stage B; R55): the dots below carry state by
+    // colour alone, so the description names the date and counts each status
+    // for a screen reader.
     val description = calendarDayDescription(day.date, statuses)
     val showDoses = stringResource(R.string.a11y_show_doses)
     Box(

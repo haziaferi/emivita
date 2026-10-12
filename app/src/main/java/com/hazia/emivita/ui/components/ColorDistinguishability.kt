@@ -7,32 +7,13 @@ import kotlin.math.sqrt
 
 /**
  * "Is this new medicine colour too close to one already in use?" -- spec §3's
- * open question on the colour picker, answered in §7 R47.
- *
- * §3 phrases the test as the candidate's *contrast* against every other
- * assigned colour dropping too low. That metric is wrong for this question and
- * would have shipped a hint that fires on the wrong pairs. Contrast ratio is
- * defined on relative luminance alone, so it is blind to hue: a pure red and a
- * mid green sit at almost identical luminance and score about 1.0:1 while
- * being impossible to confuse, and a slightly darker grey beside a lighter one
- * scores comfortably while being genuinely hard to tell apart on a card edge.
- * Contrast ratio is the right tool for text on a background -- which is what
- * §6 and Appendix A use it for -- and the wrong one for two adjacent fills.
- *
- * What is actually being asked is perceptual distance, so this uses CIELAB
- * and ΔE*ab (CIE76). ΔE76 is the simplest of the ΔE family and is known to
- * under-report differences in saturated blues; that error is in the safe
- * direction here, since it makes the hint slightly more eager rather than
- * quietly missing a collision. ΔE2000 would be more accurate and needs about
- * forty lines of trigonometry to earn a threshold nobody can perceive the
- * difference in.
- *
- * The hint never blocks. §3 left the choice between "surface a hint" and
- * "leave it entirely to the user's judgment"; a non-blocking hint is both --
- * it tells the user what it noticed and then gets out of the way. Two
- * medicines the user genuinely wants in similar colours (a morning and an
- * evening dose of the same drug, say) is a real case, not a mistake to
- * prevent.
+ * open question on the colour picker, answered in §7 R47. Perceptual distance
+ * (CIELAB ΔE*ab, CIE76), not §3's contrast ratio, which is luminance-only and
+ * hue-blind: pure red and mid green score about 1.0:1 yet cannot be confused,
+ * and ΔE76's known under-reporting in saturated blues errs towards an eager
+ * hint, which is the safe side. The hint never blocks, because two medicines
+ * wanted in similar colours (a morning and an evening dose of one drug) is a
+ * real case, not a mistake to prevent.
  */
 data class ColorConflict(val otherName: String, val deltaE: Double)
 

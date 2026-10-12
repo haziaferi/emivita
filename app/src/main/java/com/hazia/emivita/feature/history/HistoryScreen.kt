@@ -102,24 +102,13 @@ private enum class HistoryViewMode(@StringRes val label: Int) {
 }
 
 /**
- * History: past entries from a direct DB query, not the projection cache --
- * spec's own split (§9 #6, "medTimer's own split, per ADR-0002"), the cache
- * only ever looks forward. Reverse-chronological, grouped by day, reusing
- * [DoseEditDialog] (spec §3/§9 #3 -- "swipe-to-edit on a Today/History
- * entry" names both screens explicitly).
- *
- * Refills show up as ordinary rows distinguished by status, per spec §5:
- * "exactly like medTimer folds refills into the same event stream rather
- * than a separate log" -- Today deliberately filters these out (a restock
- * isn't a dose to take), History does not.
- *
- * Three views (§5's ADR-0001 shopping list, §9 #6): the List view here
- * (adherence-summary card + Vico trend chart [AdherenceChart] +
- * reverse-chronological day groups), a Calendar view ([HistoryCalendarView],
- * month grid with per-day taken/skipped/missed dots, which browses its own
- * DB query per visible month rather than [HISTORY_LOOKBACK_DAYS]'s fixed
- * window -- see that file's doc comment), and a Table view
- * ([HistoryTableView], hand-rolled, sortable by tapping a column header).
+ * History: past entries from a direct DB query, not the forward-only projection
+ * cache (§9 #6, per ADR-0002), reverse-chronological by day and reusing
+ * [DoseEditDialog] (spec §3/§9 #3). Refills are ordinary rows distinguished by
+ * status (spec §5), which Today filters out and History deliberately keeps.
+ * Three views (§5's ADR-0001, §9 #6): this List (summary card, [AdherenceChart],
+ * day groups), [HistoryCalendarView] (queries per visible month, not
+ * [HISTORY_LOOKBACK_DAYS]) and the sortable [HistoryTableView].
  */
 @Composable
 fun HistoryScreen(
@@ -392,24 +381,13 @@ private fun adherenceSubtitle(context: Context, events: List<DoseEventWithMedici
     return context.getString(R.string.history_subtitle_join, lead, tail)
 }
 
-/** Taken / (Taken + Skipped) over the visible window, with the missed count
- *  carried alongside rather than dropped.
- *
- *  The percentage's denominator is unchanged -- it is the "did you take what
- *  you meant to take" reading, where a deliberate Skip counts against you and
- *  a dose that fired and was never answered is a different kind of event. What
- *  changed is that the missed count no longer disappears on the way to the
- *  screen. Reporting the ratio alone put two contradictory claims about the
- *  same rows a few dp apart: [AdherenceChart] renders missed as its own series
- *  and its doc comment ranks it explicitly as "worse than a deliberate Skip"
- *  -- which is why it gets the reserved `error` colour -- while the headline
- *  above it counted the Skip and ignored the miss. Ten taken and twenty missed
- *  read as "100% adherence" over a chart that was two-thirds red.
- *
- *  Naming what the percentage is *of* is the other half: "100% adherence" is a
- *  claim about a month, "100% of answered doses taken" is a claim about a
- *  denominator the same card then prints. Whether missed doses belong *in* that
- *  denominator is a product decision, deliberately not made here. */
+/** Taken / (Taken + Skipped) over the visible window -- "did you take what you
+ *  meant to take", where a never-answered dose is a different kind of event --
+ *  with the missed count carried alongside, so ten taken and twenty missed
+ *  cannot read as "100% adherence" over an [AdherenceChart] that is two-thirds
+ *  red. The label names the denominator ("of answered doses") for the same
+ *  reason. Whether missed doses belong in that denominator is a product
+ *  decision, deliberately not made here. */
 private data class AdherenceCounts(val taken: Int, val skipped: Int, val missed: Int) {
     val answered: Int get() = taken + skipped
     val percent: Int get() = if (answered == 0) 0 else (taken * 100) / answered

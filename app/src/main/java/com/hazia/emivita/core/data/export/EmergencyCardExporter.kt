@@ -11,38 +11,22 @@ import android.content.res.Resources
 import com.hazia.emivita.R
 
 /**
- * The emergency/medical card (spec §9's parking lot, promoted in §7 R48).
- *
- * The parking-lot entry is explicit that this is deliberately NOT a
- * lock-screen widget: Android's own Emergency Information / Personal Safety
- * feature already does that better than any third-party app can, because it is
- * readable without unlocking the phone at all. What the OS feature cannot
- * produce is a document -- a page to hand a new doctor, a card to fold into a
- * wallet. That is the whole of this feature, and the reason it is an exporter
- * and not a screen with a big red button.
- *
- * Nothing here is clinical. The card prints what the user typed, in a fixed
- * order, and never checks a medicine against an allergy or a dose against
- * anything. §9's entry calls that out as the boundary ("informational text
- * only, never algorithmically checked against anything"), and a card that
- * silently checked would be making a claim this app is not entitled to make.
- *
- * One page, always. A single sheet is what a wallet and a consultation desk
- * both want, so the medicine list truncates with a count rather than flowing
- * onto a second page nobody will keep with the first -- see [MAX_MEDICINES].
+ * The emergency/medical card (spec §9's parking lot, promoted in §7 R48): an
+ * exporter, not a lock-screen widget, because Android's Emergency Information
+ * already does that readable-while-locked job and cannot produce a page to hand
+ * a doctor or fold into a wallet. Nothing here is clinical: the card prints what
+ * the user typed and never checks a medicine against an allergy or a dose
+ * against anything (§9: "informational text only"). One page, always, so the
+ * medicine list truncates with a count at [MAX_MEDICINES].
  */
 object EmergencyCardExporter {
 
     /**
-     * Every fixed string the card prints, resolved by the caller (spec §9 #19).
-     *
-     * [buildLines] is deliberately pure -- no Context, no resources -- so the
-     * whole document can be asserted line by line in a JVM test. Translating
-     * it therefore cannot mean calling getString() inside; it means handing
-     * the strings in. [ENGLISH] is what the test uses and what production
-     * used to hardcode; [fromContext] is what production uses now. The two
-     * must say the same thing in English, and `EmergencyCardExporterTest`
-     * pins that on the ENGLISH side.
+     * Every fixed string the card prints, resolved by the caller (spec §9 #19),
+     * so [buildLines] stays pure and the whole document can be asserted line by
+     * line in a JVM test. [ENGLISH] is the test's set and [from] is production's.
+     * The two must say the same thing in English, which
+     * `EmergencyCardExporterTest` pins on the ENGLISH side.
      */
     data class CardLabels(
         val title: String,
@@ -130,13 +114,11 @@ object EmergencyCardExporter {
             lines += labels.noneRecorded
         } else {
             medicines.take(MAX_MEDICINES).forEach { m ->
-                // The measurement label only -- never a dose amount. A dose
-                // lives on a reminder, not on the medicine, and a card that
-                // printed one would be asserting a regimen this exporter has
-                // not read. Name, form and reason are what a clinician needs
-                // from a card; the amounts are in the dose-history export.
+                // The measurement label only -- never a dose amount, which lives
+                // on a reminder, so printing one would assert a regimen this
+                // exporter has not read (amounts are in the dose-history export).
                 // Strength before the form (§9 #27): "Sertraline 50 mg (tablets)"
-                // is how a clinician reads a box; still no dose amount.
+                // is how a clinician reads a box.
                 val strength = m.strength?.takeIf { it.isNotBlank() }?.let { " $it" } ?: ""
                 val form = m.doseUnit?.takeIf { it.isNotBlank() }?.let { " ($it)" } ?: ""
                 val indication = m.indication?.takeIf { it.isNotBlank() }?.let { labels.indication(it) } ?: ""

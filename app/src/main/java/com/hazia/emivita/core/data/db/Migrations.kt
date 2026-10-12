@@ -9,18 +9,12 @@ import androidx.sqlite.db.SupportSQLiteDatabase
  * active-range/repeatOnUnanswered/parentReminderId, DoseEvent nullable reminderId
  * + denormalized medicineId + stock snapshot + repeatCount + DoseStatus.REFILLED)
  * ahead of the Add/Edit Medicine + Add/Edit Reminder UI (spec §9 item 1) that
- * writes to it. SQLite's ALTER TABLE can't add a column mid-table, change
- * nullability, or add a foreign key, so the four touched tables are recreated
- * rather than patched column-by-column -- the standard SQLite migration shape,
- * not a shortcut.
+ * writes to it. SQLite's ALTER TABLE can't change nullability or add a foreign
+ * key, so the four touched tables are recreated rather than patched.
  *
- * Covered by MigrationFrom1To2Test, which builds the v1 tables from SQL and
- * asserts the colour rewrite, the sortOrder backfill and the dose-event
- * medicineId denormalisation against real rows. That is host-JVM (Robolectric)
- * coverage of the data movement, not of Room's own schema validator on a real
- * device -- so a first run against a debug build with real data is still worth
- * watching, since the validator is strict about name, type affinity, notNull
- * and default value.
+ * MigrationFrom1To2Test covers the data movement on the host JVM, not Room's
+ * schema validator on a device, which is strict about name, type affinity,
+ * notNull and default value.
  */
 object Migrations {
 
@@ -217,59 +211,23 @@ object Migrations {
 
     /** v4 -> v5: adds `reminders.weekendModeOptIn`, turning weekend mode from
      *  a global that shifted every reminder into a per-reminder opt-in
-     *  (spec §3, §7 R36). NOT NULL with a constant DEFAULT 0, which is the
-     *  other case plain `ALTER TABLE ADD COLUMN` handles -- SQLite only
-     *  rejects a non-constant default.
+     *  (spec §3, §7 R36). The constant `DEFAULT 0` is required by ALTER TABLE
+     *  for a NOT NULL column and must match Room's fresh-install schema, so
+     *  `Reminder.weekendModeOptIn` carries `@ColumnInfo(defaultValue = "0")`:
+     *  remove that annotation and this migration fails schema validation.
      *
-     *  The `DEFAULT 0` is required twice over: ALTER TABLE cannot add a NOT
-     *  NULL column without one, and it has to match what Room generates for a
-     *  fresh install or the runtime schema validation fails on the first
-     *  launch after upgrade. Room does not infer a SQL default from a Kotlin
-     *  one, so `Reminder.weekendModeOptIn` carries an explicit
-     *  `@ColumnInfo(defaultValue = "0")` to make the two agree. Remove that
-     *  annotation and this migration breaks -- see the note on the field.
-     *
-     *  Defaulting existing rows to 0 rather than 1 is the deliberate half:
-     *  before this column, a reminder was shifted iff the global toggle was
-     *  on, so 1 would preserve each row's *observed* behaviour for anyone who
-     *  had that toggle on. It still defaults to 0. Weekend mode delays a dose,
-     *  and silently keeping every existing reminder opted in would carry a
-     *  blanket setting forward as if each reminder had individually asked for
-     *  it -- which is the thing this change exists to stop. Opting back in is
-     *  one switch per reminder in the Advanced section; a dose delayed because
-     *  a migration assumed consent is not recoverable the same way. */
+     *  Existing rows default to 0 even for users who had the global toggle on,
+     *  because weekend mode delays a dose and a migration must not assume each
+     *  reminder's consent; opting back in is one switch per reminder. */
     val MIGRATION_4_5 = object : Migration(4, 5) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE reminders ADD COLUMN weekendModeOptIn INTEGER NOT NULL DEFAULT 0")
         }
     }
 
-    /** v5 -> v6: adds the seven emergency/medical-card columns to `profiles`
-     *  (spec §9 parking lot, promoted in §7 R48).
-     *
-     *  The easiest migration in this file, and deliberately so: seven nullable
-     *  TEXT columns, no default, no FK, no NOT NULL. That is the case plain
-     *  `ALTER TABLE ADD COLUMN` handles outright, so this needs neither
-     *  MIGRATION_1_2's recreate-the-table dance nor MIGRATION_4_5's
-     *  `@ColumnInfo(defaultValue = ...)` pairing -- Room generates the same
-     *  nullable-no-default shape for a fresh install, so the runtime schema
-     *  validation agrees without anything being made to match.
-     *
-     *  Nullable rather than NOT NULL DEFAULT '' on purpose: an empty string
-     *  and "not filled in" are the same thing to a reader but not to a
-     *  renderer, and EmergencyCardExporter omits a whole section when its
-     *  fields are absent rather than printing an empty heading. Null is what
-     *  carries that distinction without every call site having to test for
-     *  blankness as well. */
-    /** v6 -> v7 (§9 #25): the optional pre-alarm lead on a reminder. Nullable
-     *  with no default, like the medical-id columns: absent is "no pre-alarm",
-     *  which a NOT NULL 0 would have to mean by convention instead. */
-    /** v7 -> v8 (§9 #26, history as a record). Six nullable columns and one
-     *  NOT NULL DEFAULT 0 flag, and the notes-journal table. The flag is the
-     *  weekendModeOptIn shape: `@ColumnInfo(defaultValue = "0")` on the
-     *  entity so Room's own CREATE TABLE matches this ALTER on a fresh
-     *  install. The journal's FK cascades with the medicine and carries an
-     *  index on medicineId, as Room's schema for the entity requires. */
+    /** v8 -> v9 (§9 #27, the medicine cabinet, §7 R66): four nullable columns
+     *  on `medicines` -- opened date, use-within days, strength, Rx number --
+     *  so plain `ALTER TABLE ADD COLUMN` matches Room's fresh-install schema. */
     val MIGRATION_8_9 = object : Migration(8, 9) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE medicines ADD COLUMN openedDateEpochDay INTEGER")
@@ -279,6 +237,11 @@ object Migrations {
         }
     }
 
+    /** v7 -> v8 (§9 #26, history as a record): six nullable columns, one
+     *  NOT NULL DEFAULT 0 flag and the notes-journal table. The flag needs
+     *  `@ColumnInfo(defaultValue = "0")` on the entity so Room's own CREATE
+     *  TABLE matches this ALTER on a fresh install. The journal's FK cascades
+     *  with the medicine and carries the index on medicineId Room requires. */
     val MIGRATION_7_8 = object : Migration(7, 8) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE dose_events ADD COLUMN notes TEXT")
@@ -300,12 +263,25 @@ object Migrations {
         }
     }
 
+    /** v6 -> v7 (§9 #25): the optional pre-alarm lead on a reminder. Nullable
+     *  with no default, like the medical-id columns: absent is "no pre-alarm",
+     *  which a NOT NULL 0 would have to mean by convention instead. */
     val MIGRATION_6_7 = object : Migration(6, 7) {
         override fun migrate(db: SupportSQLiteDatabase) {
             db.execSQL("ALTER TABLE reminders ADD COLUMN preAlarmMinutes INTEGER")
         }
     }
 
+    /** v5 -> v6: adds the seven emergency/medical-card columns to `profiles`
+     *  (spec §9 parking lot, promoted in §7 R48): seven nullable TEXT columns
+     *  with no default and no FK, which plain `ALTER TABLE ADD COLUMN` handles
+     *  and which matches Room's fresh-install schema without a
+     *  `@ColumnInfo(defaultValue = ...)` pairing.
+     *
+     *  Nullable rather than NOT NULL DEFAULT '' on purpose, because
+     *  EmergencyCardExporter omits a whole section when its fields are absent
+     *  rather than printing an empty heading, and null carries "not filled in"
+     *  without every call site testing for blankness too. */
     val MIGRATION_5_6 = object : Migration(5, 6) {
         override fun migrate(db: SupportSQLiteDatabase) {
             for (column in listOf(

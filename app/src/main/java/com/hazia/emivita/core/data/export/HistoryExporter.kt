@@ -20,29 +20,20 @@ private val TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm")
 
 /**
  * Human-readable dose-history reports for sharing with a doctor (spec §9
- * #10) -- distinct from #9's JSON backup, which is a disaster-recovery
- * snapshot, not something a person is meant to read. CSV needs no library;
- * PDF uses Android's native `android.graphics.pdf.PdfDocument` (zero new
- * dependency, ADR: diverges from medTimer's third-party `SimplyPDF` on
- * purpose -- see docs/SPEC.md §5's reference-app comparison table).
- *
- * Both entry points take rows already sorted how the report should read
- * (HistoryScreen's own reverse-chronological order) -- this class doesn't
- * re-sort, just formats.
+ * #10), distinct from #9's JSON backup, which is not meant to be read. PDF
+ * uses Android's native `android.graphics.pdf.PdfDocument` rather than
+ * medTimer's third-party `SimplyPDF`, on purpose (docs/SPEC.md §5).
+ * Both entry points take rows already in report order and never re-sort.
  */
 object HistoryExporter {
     fun buildCsv(rows: List<DoseEventWithMedicine>, zone: ZoneId = ZoneId.systemDefault()): String {
         val builder = StringBuilder()
-        // Dose/Measurement kept as separate columns here (unlike the in-app
-        // Table view, which folds the unit into the Dose cell) -- CSV is a
-        // structured/spreadsheet format, where a plain numeric Dose column
-        // stays usable for SUM()/sorting and Measurement carries the label.
-        // Date and Time are the SCHEDULED slot; Recorded is when the dose was
-        // actually answered, blank while it is still unanswered (§7 R60 E F8).
-        // The old row paired the scheduled date with the resolved time, so a
-        // 23:30 dose taken at 00:10 exported as a timestamp that never
-        // happened. medTimer writes reminded and taken as two full columns.
-        // Notes last (§9 #26): the dose's own note, quoted like the name.
+        // Dose and Measurement stay separate columns, unlike the in-app Table
+        // view, so a plain numeric Dose column stays usable for SUM() and sorting.
+        // Date and Time are the SCHEDULED slot and Recorded is when the dose was
+        // answered, blank while unanswered, so a 23:30 dose taken at 00:10 never
+        // exports a timestamp that did not happen (§7 R60 E F8).
+        // Notes come last (§9 #26), quoted like the name.
         builder.append("Date,Time,Recorded,Medicine,Status,Dose,Measurement,Notes\n")
         for (row in rows) {
             val scheduled = Instant.ofEpochMilli(row.doseEvent.scheduledEpochMillis).atZone(zone)

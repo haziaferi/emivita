@@ -23,22 +23,16 @@ import org.junit.Test
 import org.junit.runner.RunWith
 
 /**
- * The whole alarm chain, end to end, on the device it ships to (spec §9 #20).
- *
+ * The whole alarm chain, end to end, on the device it ships to (spec §9 #20):
  * reminder row -> SchedulingEngine -> AlarmScheduler -> AlarmManager ->
- * ReminderAlarmReceiver -> DoseEvent materialised -> notification posted.
+ * ReminderAlarmReceiver -> DoseEvent materialised -> notification posted,
+ * through the real `setExactAndAllowWhileIdle`, PendingIntent, broadcast and
+ * NotificationManager that the JVM suite can only stub.
  *
- * §7 R39 walked this by hand on a OnePlus 9 Pro and it is the thing the JVM
- * suite structurally cannot touch: `setExactAndAllowWhileIdle` under
- * `USE_EXACT_ALARM`, a real PendingIntent, a real broadcast, a real
- * NotificationManager. Every one of those is a stub or a mock on the JVM.
- *
- * Timing is the honest part. With `USE_EXACT_ALARM` held the platform
- * promises an exact firing, and R39 still measured a five-minute delay under
- * battery saver on OxygenOS. So the wait here is generous, and a timeout is
- * reported as what it most likely is -- the OS deferring the alarm -- rather
- * than as a bug in the chain. That is a real result too: it is precisely the
- * condition `BatteryOptimizationCard` exists to warn about.
+ * The wait is generous because §7 R39 measured a five-minute delay under
+ * battery saver on OxygenOS even with `USE_EXACT_ALARM` held. A timeout is
+ * reported as the OS deferring the alarm rather than a bug in the chain,
+ * which is the condition `BatteryOptimizationCard` exists to warn about.
  */
 @RunWith(AndroidJUnit4::class)
 class AlarmChainTest {

@@ -4,7 +4,7 @@ import android.content.Context
 import androidx.core.content.edit
 
 /**
- * The snoozes still running, kept where a reboot cannot erase them (§7 R83 (e)).
+ * The snoozes still running, kept where a reboot cannot erase them (§7 R83 (e)):
  * AlarmManager forgets every alarm at a reboot and a PendingIntent outlives
  * its own firing, so neither can say whether a dose is snoozed. Without this
  * the launch re-post rang a snoozed dose at once, and a reboot lost the snooze.

@@ -18,18 +18,12 @@ import java.time.LocalTime
 import java.time.ZoneId
 
 /**
- * Coverage for the pure scheduling math in ReminderScheduling.kt -- the R3/R23
- * follow-up the file's own header asks for ("this file is exactly the kind of
- * logic that should have tests before anything else does"). No Android
- * dependencies, so plain JUnit: no Robolectric runner, no mocking.
+ * Plain-JUnit coverage for the pure scheduling math in ReminderScheduling.kt
+ * (R3/R23), run in a fixed non-UTC zone on purpose, because a UTC-only suite
+ * cannot catch an offset bug or the DST pair below.
  *
- * Everything runs in a fixed non-UTC zone on purpose. A UTC-only suite cannot
- * catch an offset bug, and two of the cases below (the DST pair) only exist
- * because local wall-clock time and elapsed absolute time diverge.
- *
- * Dates are chosen so the weekday is readable from the constant: 2026-06-01 is
- * a Monday, so 06-06 is a Saturday and 06-07 a Sunday. 2026-03-29 is the
- * European spring-forward date (02:00 -> 03:00).
+ * Dates make the weekday readable: 2026-06-01 is a Monday (06-06 Saturday,
+ * 06-07 Sunday), and 2026-03-29 is the European spring-forward date.
  */
 class ReminderSchedulingTest {
 

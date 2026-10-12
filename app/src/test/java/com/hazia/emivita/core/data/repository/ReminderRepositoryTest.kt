@@ -28,20 +28,15 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 
 /**
- * Covers the LinkedFollowing orphan decision recorded in spec §7 R25.
+ * Covers the LinkedFollowing orphan decision recorded in spec §7 R25: the
+ * `ON DELETE SET_NULL` FK detaches a deleted parent's children, which then
+ * never fire (`SchedulingEngine.nextOccurrenceFor` returns null for a null
+ * parent, pinned in `SchedulingEngineTest`), so `delete()` switches each one
+ * off to make that visible.
  *
- * `Reminder.parentReminderId`'s FK is `ON DELETE SET_NULL`, so deleting a
- * parent detaches its children instead of removing them. Left alone, a
- * detached child keeps its row, keeps `enabled = true`, keeps showing in the
- * medicine's reminder list, and never fires again --
- * `SchedulingEngine.nextOccurrenceFor` returns null for a null parent
- * (pinned in `SchedulingEngineTest`). `delete()` now switches each detached
- * child off so the dead state is visible rather than silent.
- *
- * Real in-memory Room rather than mocked DAOs, for the same reason
- * [MedicineRepositoryTest] gives: `withTransaction` is an inline extension
- * MockK can't intercept, and the SET_NULL behaviour under test is SQLite's,
- * not the repository's.
+ * Real in-memory Room rather than mocked DAOs, as in [MedicineRepositoryTest]:
+ * `withTransaction` is an inline extension MockK can't intercept, and the
+ * SET_NULL behaviour under test is SQLite's, not the repository's.
  */
 @RunWith(RobolectricTestRunner::class)
 class ReminderRepositoryTest {

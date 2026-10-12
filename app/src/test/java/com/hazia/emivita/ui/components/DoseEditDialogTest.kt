@@ -26,16 +26,12 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasText
 
 /**
- * The other half of spec §7 R46 that shipped without verification: how this
- * dialog renders and behaves for a PENDING ("Missed") dose. R46's own note
- * records the device work being abandoned partway through, so nothing ever
- * confirmed the two behaviours it argues for at length (§7 R47).
- *
- * Both are about refusing to guess. Neither status radio starts selected,
- * because resolving a dose the app never saw answered is a choice; and the
- * recorded time starts at the dose's own scheduled slot, because a dose taken
- * on Tuesday and recorded on Friday happened on Tuesday -- which is also what
- * keeps a backdated correction from re-anchoring a live interval reminder.
+ * How this dialog behaves for a PENDING ("Missed") dose, the half of spec §7
+ * R46 that shipped unverified (§7 R47). Neither status radio starts selected,
+ * because resolving a dose the app never saw answered is a choice. The recorded
+ * time starts at the dose's scheduled slot, because a dose taken on Tuesday and
+ * recorded on Friday happened on Tuesday, which also keeps a backdated
+ * correction from re-anchoring a live interval reminder.
  */
 @RunWith(RobolectricTestRunner::class)
 class DoseEditDialogTest {

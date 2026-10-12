@@ -6,13 +6,12 @@ import android.content.Intent
 import android.content.pm.PackageManager
 
 /**
- * The OEM "auto-start" page (§9 #29; Appendix F HM-36). On MIUI, EMUI,
- * ColorOS, Funtouch, OxygenOS and the rest, the battery-optimisation list
- * is not where alarms get killed -- this page is. The component names are
- * public knowledge (dontkillmyapp.com and every "auto-start" gist), re-typed
- * here; the manifest's `<queries>` block lists the packages so
- * `resolveActivity` can see them on API 30+. Tried in order regardless of
- * the reported manufacturer, since forks and re-brands lie about it.
+ * The OEM "auto-start" page (§9 #29; Appendix F HM-36), which on MIUI, EMUI,
+ * ColorOS, Funtouch, OxygenOS and the rest is where alarms get killed, not the
+ * battery-optimisation list. The public component names are re-typed here and
+ * listed in the manifest's `<queries>` block so `resolveActivity` sees them on
+ * API 30+, and tried in order whatever the reported manufacturer, since forks
+ * and re-brands lie about it.
  */
 object AutoStartSettings {
     val COMPONENTS: List<ComponentName> = listOf(

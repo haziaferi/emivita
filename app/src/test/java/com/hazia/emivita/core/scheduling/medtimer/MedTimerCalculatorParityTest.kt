@@ -23,18 +23,14 @@ import java.time.ZoneId
 
 /**
  * medTimer's scheduler tests, transliterated onto Emivita's pure calculators
- * (spec §7 R60, Appendix E). medTimer derives "next" from the event history;
- * Emivita derives it from `notBefore` plus an anchor, so each case below is
- * ported by *meaning* -- "the last event was at X, it is now Y, the next
- * reminder is Z" -- with the medTimer test named so the two can be read side
- * by side. Same calendar as medTimer's `TestHelper`: day 1 is 1970-01-01, a
- * Thursday, and `on(day, minutes)` is that day's wall clock in UTC.
+ * (spec §7 R60, Appendix E), ported by *meaning* -- "the last event was at X,
+ * it is now Y, the next reminder is Z" -- because medTimer derives "next" from
+ * event history and Emivita from `notBefore` plus an anchor. Same calendar as
+ * medTimer's `TestHelper`: day 1 is 1970-01-01, a Thursday, and
+ * `on(day, minutes)` is that day's wall clock in UTC.
  *
- * Three outcomes, all recorded in Appendix E's matrix: a case that passes is
- * parity; a case marked DESIGN asserts Emivita's documented behaviour where
- * it deliberately differs (with the row that decided it); a case that
- * failed on first run was a defect (R60) and now pins the fix. Nothing here
- * is `@Ignore`d.
+ * Every case is parity, a DESIGN divergence citing the Appendix E row that
+ * decided it, or a defect fix pinned since R60, and nothing is `@Ignore`d.
  */
 class MedTimerCalculatorParityTest {
 
@@ -191,9 +187,9 @@ class MedTimerCalculatorParityTest {
     fun `scheduleWindowedIntervalReminderCreated -- created inside the window, DESIGN divergence`() {
         // medTimer: created day 1 02:10 -> first reminder tomorrow 02:00 (its
         // scheduler is event-driven and would otherwise fire the passed slot at
-        // once). Emivita keys on notBefore and fires the rest of today's grid:
-        // 10:00. Appendix E row A-06; Emivita's is the behaviour a user who
-        // adds a reminder at 02:10 expects.
+        // once). Emivita keys on notBefore and fires the rest of today's grid,
+        // 10:00, the behaviour a user who adds a reminder at 02:10 expects
+        // (Appendix E row A-06).
         val (start, end) = twoToElevenForty
         val onReminded = window(480, start, end, IntervalStartBehavior.ON_REMINDED)
         assertAt(on(1, 600), nextDailyWindowOccurrence(onReminded, on(1, 130), null, zone))

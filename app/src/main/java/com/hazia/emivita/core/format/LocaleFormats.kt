@@ -11,19 +11,12 @@ import java.util.Locale
 
 /**
  * Locale-aware rendering for the screens, the widgets and the notification
- * (spec §7 R60 D F3 / E F7 / F 2). The exports keep their invariant formats
- * on purpose: a CSV column and a PDF for a clinician are data, and `0.5` /
- * `2026-09-12` read the same in every country.
- *
- * Time is a skeleton too (§9 #28): `Hm` / `hm` when the app or the phone
- * has said 24- or 12-hour, `jm` -- the locale's own preference -- when
- * neither has. `ofLocalizedTime(SHORT)` used to decide it from the locale
- * alone, so a US-locale phone set to 24-hour still read "8:05 PM" here.
- * Dates use skeletons through [DateFormat.getBestDateTimePattern], the
- * Android way to get "weekday, month day" in the locale's own order rather
- * than a hard-coded `EEE, MMM d` that reads as English everywhere. Every
- * pattern here used to be a literal; the pseudolocale sweep cannot see a
- * pattern string, which is how they survived Stage A.
+ * (spec §7 R60 D F3 / E F7 / F 2), while the exports keep invariant formats on
+ * purpose, since a CSV column and a clinician's PDF are data. Dates and times
+ * are skeletons through [DateFormat.getBestDateTimePattern], never literal
+ * patterns, which the pseudolocale sweep cannot see. Time uses `Hm` / `hm` when
+ * the app or the phone has chosen 24- or 12-hour and `jm` otherwise (§9 #28), so
+ * a US-locale phone set to 24-hour does not read "8:05 PM".
  */
 object LocaleFormats {
     /** The user's choice (TimeFormat.H12/H24 → false/true), null for System;

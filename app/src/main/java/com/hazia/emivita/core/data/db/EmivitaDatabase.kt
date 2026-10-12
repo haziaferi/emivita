@@ -77,12 +77,11 @@ abstract class EmivitaDatabase : RoomDatabase() {
             }
 
         /**
-         * The key first, then [open] (§7 R83 (f)). A lost Keystore key threw
-         * while the factory was being built, outside [openOrRecover]'s retry,
-         * so the app crashed on every launch. Now the unreadable file is set
-         * aside, a new key is made, and the launch dialog says the data
-         * cannot be recovered -- not that it can, which the corruption
-         * wording promises. Parameters are the seams the JVM test drives.
+         * The key first, then [open] (§7 R83 (f)), because a lost Keystore key
+         * throws outside [openOrRecover]'s retry: the unreadable file is set
+         * aside, a new key is made, and the launch dialog says the data cannot
+         * be recovered rather than the corruption wording, which promises it
+         * can. Parameters are the seams the JVM test drives.
          */
         internal fun openGuardingKey(
             context: Context,
@@ -106,18 +105,17 @@ abstract class EmivitaDatabase : RoomDatabase() {
 
         /**
          * The whole open path -- build, probe, set aside, rebuild -- on the
-         * given file and open-helper factory (spec §9 #32). [name] and
-         * [factory] are parameters so the JVM test can run it with the
-         * framework's factory (SQLCipher's native library cannot load there)
-         * and the device test with the real SQLCipher factory on a throwaway
-         * name -- never the owner's file. Production passes [NAME] and SQLCipher.
+         * given file and open-helper factory (spec §9 #32), parameterised so
+         * the JVM test can use the framework's factory (SQLCipher's native
+         * library cannot load there) and the device test the real SQLCipher
+         * factory on a throwaway name, never the owner's file.
          *
          * No corruption wrapper around the factory, unlike Lunar: SQLCipher's
          * `SupportHelper` passes a null `DatabaseErrorHandler` and never calls
          * Room's `Callback.onCorruption`, and its own default handler returns
          * without deleting when a codec is loaded (`DefaultDatabaseErrorHandler`,
-         * sqlcipher-android 4.16.0). The file survives to be set aside here;
-         * `DatabaseRecoveryDeviceTest` is the proof on the real factory.
+         * sqlcipher-android 4.16.0). `DatabaseRecoveryDeviceTest` proves on the
+         * real factory that the file survives to be set aside here.
          */
         internal fun open(context: Context, name: String, factory: SupportSQLiteOpenHelper.Factory): DatabaseOpen<EmivitaDatabase> =
             openOrRecover(

@@ -127,17 +127,6 @@ class AppContainer(
         OccurrenceProjectionCache(database.medicineDao(), schedulingEngine, alertEvaluator, applicationScope)
     }
 
-    /** Re-arm every enabled reminder from scratch, off the calling thread.
-     *  Called from MainActivity.onCreate (§7 R60 B F-3): a user force-stop
-     *  drops every alarm the app holds, and until now nothing re-armed them
-     *  short of a reboot, a backup restore, or editing a reminder -- the app
-     *  opened onto a populated Today screen with no alarm behind any row.
-     *  medTimer restarts its scheduler service on every resume. Idempotent:
-     *  the same request codes with FLAG_UPDATE_CURRENT replace, not stack. */
-    /** Mirror the setAlarmClock setting onto the scheduler and re-arm when it
-     *  flips (§9 #25). Started once from EmivitaApplication; the first value
-     *  arrives before any alarm is armed on a warm start, and rescheduleOnLaunch
-     *  covers the cold one. */
     /** §9 #28: the time-format choice and the phone's 24-hour switch reach
      *  every formatter through LocaleFormats' two hooks. */
     fun observeTimeFormatSetting() {
@@ -149,6 +138,10 @@ class AppContainer(
         }
     }
 
+    /** Mirror the setAlarmClock setting onto the scheduler and re-arm when it
+     *  flips (§9 #25). Started once from EmivitaApplication; the first value
+     *  arrives before any alarm is armed on a warm start, and rescheduleOnLaunch
+     *  covers the cold one. */
     fun observeAlarmClockSetting() {
         applicationScope.launch {
             var first = true
@@ -164,6 +157,11 @@ class AppContainer(
     fun recordDelivered(reminderId: Long, doseEventId: Long, atEpochMillis: Long) =
         DeliveryLedger.recordFirst(appContext, reminderId, doseEventId, atEpochMillis)
 
+    /** Re-arm every enabled reminder from scratch, off the calling thread.
+     *  Called from MainActivity.onCreate (§7 R60 B F-3) because a user
+     *  force-stop drops every alarm the app holds and nothing else re-arms
+     *  them short of a reboot, a restore or an edit. Idempotent: the same
+     *  request codes with FLAG_UPDATE_CURRENT replace, not stack. */
     fun rescheduleOnLaunch() {
         applicationScope.launch {
             // Before the repair (§9 #29, DP-04): did an armed alarm fail to fire?

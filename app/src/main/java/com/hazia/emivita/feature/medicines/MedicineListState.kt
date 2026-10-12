@@ -176,12 +176,12 @@ fun groupByTag(entries: List<MedicineListEntry>, locale: java.util.Locale): List
 }
 
 /**
- * The live search and the tag filter (§9 #27; HM-13 without FTS, HM-02):
+ * The live search and the tag filter (§9 #27, HM-13 without FTS, HM-02):
  * a query matches case-insensitively anywhere in the name, the strength,
- * the indication or a tag name; a selected tag set passes an entry that
+ * the indication or a tag name, and a selected tag set passes an entry that
  * carries **any** of them ("show me the morning kit and the travel kit").
- * Blank query and empty set pass everything. Whitespace around the query
- * is ignored; the tag comparison is exact, since tags are chosen, not typed.
+ * A blank query and an empty set pass everything. The query is trimmed but
+ * the tag comparison is exact, since tags are chosen, not typed.
  */
 fun filterEntries(entries: List<MedicineListEntry>, query: String, selectedTags: Set<String>): List<MedicineListEntry> {
     val q = query.trim()

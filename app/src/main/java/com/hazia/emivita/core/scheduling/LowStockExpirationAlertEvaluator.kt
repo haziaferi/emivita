@@ -13,46 +13,19 @@ import java.time.ZoneId
 
 /**
  * The *event-driven half* of low-stock alerting (spec §3/§9 #8, narrowed by
- * §7 R37) -- evaluated as the last step of [OccurrenceProjectionCache]'s
- * recompute pass, reusing the medicine+reminder snapshot the cache already
- * fetched, so it adds no extra query.
+ * §7 R37), run as the last step of [OccurrenceProjectionCache]'s recompute on
+ * the snapshot it already fetched, and limited to `ONCE_WHEN_BELOW` and
+ * `ALWAYS_WHEN_BELOW`, where "the instant it changes" beats "tomorrow
+ * morning" (medTimer draws the same line), while DAILY and expiration alerts
+ * are scheduled reminders with real alarms.
  *
- * It used to be the *only* path for both alert types, on §9 #8's reasoning
- * that "the cache's existing DB-change and alarm-fired triggers keep it
- * current on their own". That holds for a condition a data change can create
- * -- stock crossing a threshold, which only ever happens because something
- * wrote to the database -- and not for one the calendar creates on its own.
- * Since R37 both alert types are real scheduled reminders with real alarms,
- * and this class keeps only the cases where "the instant it changes" beats
- * "tomorrow morning": `ONCE_WHEN_BELOW` and `ALWAYS_WHEN_BELOW`.
- *
- * That is the same division medTimer draws, arrived at by reading it rather
- * than by inference: `StockHandlingProcessor.checkForThreshold` fires ONCE and
- * ALWAYS inline on every stock decrement, while `OutOfStockScheduling`
- * schedules only DAILY and `ExpirationDateScheduling` schedules both of its
- * modes.
- *
- * **Trigger-mode semantics** (not spelled out beyond the mode names in spec,
- * resolved here consistently with how the cache itself is triggered -- by
- * real data-changing events, not a clock):
- *  - `ALWAYS_WHEN_BELOW`: notify on
- *    every recompute this reminder is evaluated in while the condition
- *    holds. Bounded by real events (debounced at the cache's own 1s), not a
- *    timer -- it fires once per actual stock/reminder change while low,
- *    which is the point of "Always". That bound only holds because the
- *    `lastAlertNotifiedEpochDay` write below is guarded: an unconditional
- *    write is itself a `reminders` change, so it re-triggered the very
- *    recompute that called this, and "bounded by real events" quietly
- *    became a 1s loop. See the comment at that write, and §7 R23.
- *  - `ONCE_WHEN_BELOW`: notify the first time the condition is met, then go
- *    silent, rearming once stock rises back above threshold (a real restock)
- *    so a re-crossing notifies again.
- *  - `DAILY_WHEN_BELOW`: not handled here at all -- see the branch below.
- *
- * [Reminder.lastAlertNotifiedEpochDay] is the one piece of state these modes
- * share to implement this without a second table, and the alarm-driven
- * calculators in ReminderScheduling.kt read the same column, so the restock
- * rearm below re-arms the DAILY alarm too.
+ * `ALWAYS_WHEN_BELOW` notifies on every recompute while low, which stays
+ * bounded by real data changes only because the `lastAlertNotifiedEpochDay`
+ * write below is guarded: an unconditional write is itself a `reminders`
+ * change and turns the recompute into a 1s loop (§7 R23).
+ * `ONCE_WHEN_BELOW` goes silent after the first notice and rearms on a
+ * restock, and because the calculators in ReminderScheduling.kt read the same
+ * [Reminder.lastAlertNotifiedEpochDay], that rearm re-arms the DAILY alarm too.
  */
 class LowStockExpirationAlertEvaluator(
     private val reminderDao: ReminderDao,

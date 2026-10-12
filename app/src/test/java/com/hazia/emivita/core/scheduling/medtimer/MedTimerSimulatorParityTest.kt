@@ -42,16 +42,14 @@ import java.time.ZoneId
  * medTimer's `SchedulingSimulatorTest` -- the eleven cases R60 deselected --
  * ported onto the forward walk it is the model for: [SchedulingEngine.occurrencesFor]
  * per reminder, and [OccurrenceProjectionCache] where a case is about the
- * merged view or the stock arithmetic (spec §9 #30; Appendix E group 7).
- * Same calendar as [MedTimerEngineParityTest]: zone Z, day 1 is 1970-01-01
- * (medTimer's `LocalDate.EPOCH`), `on(day, minutes)`.
+ * merged view or the stock arithmetic (spec §9 #30, Appendix E group 7), on
+ * the same calendar as [MedTimerEngineParityTest] (zone Z, day 1 is
+ * 1970-01-01, `on(day, minutes)`).
  *
- * Three outcomes, as in R60: **parity** (same slots for the same history);
- * **divergence pinned** as Emivita's behaviour with the row that decided it
- * (A-38, A-46; A-20 and A-24 were pinned here by R70 and flipped to parity by
- * §9 #31, R72); **none** for `singleDays`, whose
- * days-of-month pattern Emivita does not have (A-13) -- no test can be
- * honestly written for a feature that is absent.
+ * Three outcomes, as in R60: **parity**; **divergence pinned** with the row
+ * that decided it (A-38, A-46; A-20 and A-24 became parity by §9 #31, R72);
+ * **none** for `singleDays`, a days-of-month pattern Emivita does not have
+ * (A-13), since no honest test exists for an absent feature.
  */
 @OptIn(ExperimentalCoroutinesApi::class)
 class MedTimerSimulatorParityTest {
@@ -185,12 +183,12 @@ class MedTimerSimulatorParityTest {
 
     @Test
     fun `windowedIntervalReversed -- an overnight window crosses midnight and comes back the next evening`() {
-        // Parity since §9 #31 (A-20) on the chain: 11:40, 00:01, 11:40, 00:01 ...
-        // R70 pinned the empty walk this used to be. The walk begins at day 1 00:00,
-        // inside the window that started at 11:40 the day before; Emivita fires its
-        // remaining slot at 00:01 (A-06's rule -- a DailyWindow has no start anchor),
-        // where medTimer's simulator starts its day loop at day 1 and its reminder did
-        // not exist the evening before. Same five-slot rhythm, one slot earlier.
+        // Parity since §9 #31 (A-20) on the chain 11:40, 00:01, 11:40, 00:01 (R70).
+        // The walk begins at day 1 00:00, inside the window opened at 11:40 the day
+        // before, so Emivita fires its remaining slot at 00:01 (A-06's rule -- a
+        // DailyWindow has no start anchor) where medTimer's simulator, whose reminder
+        // did not exist the evening before, starts at day 1. Same five-slot rhythm,
+        // one slot earlier.
         val r = reminder(1, 1, window(741, LocalTime.of(11, 40), LocalTime.of(2, 0)))
         assertSlots(listOf(on(1, 1), on(1, 700), on(2, 1), on(2, 700), on(3, 1)), walk(r, take = 5))
     }

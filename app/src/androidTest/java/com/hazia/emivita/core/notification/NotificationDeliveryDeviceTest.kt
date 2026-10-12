@@ -15,18 +15,13 @@ import org.junit.runner.RunWith
  * The two framework reads behind the notifications-blocked card, on real
  * hardware (spec §7 R58, §9 #20).
  *
- * `NotificationDeliveryTest` on the JVM covers the decision given two plain
- * values. This covers the values themselves: that the three channels
- * `createAll` registers in `EmivitaApplication.onCreate` actually exist on
- * the device, that [ReminderNotificationChannels.blockedTiers] agrees with
- * what NotificationManager reports about them, and that the card's input
- * function is wired to both reads.
+ * The JVM `NotificationDeliveryTest` covers the decision, and this covers the
+ * values: the three channels `createAll` registers exist on the device and
+ * [ReminderNotificationChannels.blockedTiers] and the card's input agree with
+ * NotificationManager.
  *
- * Deliberately asserts *consistency*, not a fixed answer. The developer's own
- * phone may legitimately have a tier blocked or notifications off, and a test
- * that demanded "everything enabled" would fail on the exact state the card
- * exists to describe. What must always hold is that the card and the OS
- * agree.
+ * Asserts consistency, never "everything enabled", because the phone may
+ * legitimately have the very blocked state the card exists to describe.
  */
 @RunWith(AndroidJUnit4::class)
 class NotificationDeliveryDeviceTest {

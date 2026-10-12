@@ -9,11 +9,10 @@ import androidx.room.PrimaryKey
 import com.hazia.emivita.core.data.config.ReminderType
 import kotlinx.serialization.Serializable
 
-/** Nag-until-answered behavior for an unresolved dose. Embedded (not part of the
- *  per-type ReminderConfig JSON) because it's cross-cutting -- every reminder
- *  type can opt into it, independent of its schedule shape (spec §3). Null =
- *  disabled; all-columns-null is how Room persists a null @Embedded object.
- *  Read by ReminderAlarmReceiver's nag scheduling. */
+/** Nag-until-answered behavior for an unresolved dose, read by
+ *  ReminderAlarmReceiver's nag scheduling. Embedded (not part of the per-type
+ *  ReminderConfig JSON) because every reminder type can opt into it (spec §3).
+ *  Null = disabled, which Room persists as all columns null. */
 @Serializable
 data class RepeatConfig(
     val delayMinutes: Int,
@@ -27,17 +26,10 @@ data class RepeatConfig(
         ForeignKey(entity = Medicine::class, parentColumns = ["id"], childColumns = ["medicineId"], onDelete = ForeignKey.CASCADE),
         ForeignKey(entity = DoseGroup::class, parentColumns = ["id"], childColumns = ["groupId"], onDelete = ForeignKey.SET_NULL),
         // Self-referencing: carries which reminder a LinkedFollowing "following
-        // dose" follows. SET_NULL, not CASCADE -- deleting a parent detaches its
-        // children, and ReminderRepository.delete() switches each detached child
-        // off in the same transaction so none is left enabled and unfirable.
-        //
-        // This comment used to justify SET_NULL by a Low-Stock/Expiration alert
-        // "spawned from and tied to the medicine's primary dosing reminder", and
-        // cited spec §3 for a rule §3 did not state -- §3 specified CASCADE. No
-        // alert reminder ever sets this column; only the LinkedFollowing form
-        // writes it, so that rationale described a feature that does not exist.
-        // Settled in favour of SET_NULL and §3 corrected to match: see
-        // docs/SPEC.md §7 R25.
+        // dose" follows, and only that form writes it. SET_NULL, not CASCADE
+        // (docs/SPEC.md §7 R25): deleting a parent detaches its children, and
+        // ReminderRepository.delete() switches each detached child off in the
+        // same transaction so none is left enabled and unfirable.
         ForeignKey(entity = Reminder::class, parentColumns = ["id"], childColumns = ["parentReminderId"], onDelete = ForeignKey.SET_NULL),
     ],
     indices = [Index("medicineId"), Index("groupId"), Index("parentReminderId")],
@@ -63,44 +55,26 @@ data class Reminder(
     val activeFromEpochDay: Long? = null,
     val activeUntilEpochDay: Long? = null,
     @Embedded(prefix = "repeat_") val repeatOnUnanswered: RepeatConfig? = null,
-    // Weekend mode is opt-in per reminder, not a blanket global (spec §3).
-    // SettingsRepository still owns *what* the weekend is -- which days, and
-    // the start/end of the quiet window -- because that describes the user's
-    // week, not any one reminder; this flag decides whether this reminder is
-    // shifted by it. Both the global toggle and this flag must be on.
-    //
-    // Ported deliberately *unlike* the reference: medTimer's SchedulingFactory
-    // wraps every scheduler it builds in WeekendModeSchedulingDecorator with no
-    // per-reminder gate, so the setting there is all-or-nothing across every
-    // medicine. That is the wrong default for a schedule that mixes a
-    // lie-in-friendly supplement with a drug that has to be taken on time: the
-    // global switch made sleeping in on Saturday cost a dose of the second to
-    // buy a lie-in on the first. Defaults to false, so nothing is shifted
-    // until it is asked for.
-    //
-    // @ColumnInfo(defaultValue = "0") is load-bearing, not decoration. A
-    // Kotlin default only affects object construction; without this
-    // annotation Room's generated CREATE TABLE emits `weekendModeOptIn
-    // INTEGER NOT NULL` with no DEFAULT, while MIGRATION_4_5 has to write
-    // `NOT NULL DEFAULT 0` because ALTER TABLE ADD COLUMN cannot add a NOT
-    // NULL column without one. Room compares column default values when it
-    // validates a migrated database against the schema it would have created
-    // itself, so those two spellings diverging is an IllegalStateException on
-    // the first launch after an upgrade -- and one nothing in the test suite
-    // would catch, since the migration tests drive raw SQL and never run
-    // Room's validation. Declared so a migrated table and a freshly-created
-    // one are identical.
+    // Weekend mode is opt-in per reminder, default off, and needs the global
+    // toggle too (spec §3), while SettingsRepository owns which days and hours
+    // the weekend is. Deliberately unlike medTimer's all-or-nothing decorator:
+    // one global switch made a lie-in on a supplement cost a dose of a drug
+    // that must be taken on time.
+    // @ColumnInfo(defaultValue = "0") is load-bearing: MIGRATION_4_5 must write
+    // `NOT NULL DEFAULT 0`, and Room's validation of a migrated database throws
+    // IllegalStateException on first launch if CREATE TABLE lacks the same
+    // default, which the raw-SQL migration tests never exercise.
     @ColumnInfo(defaultValue = "0") val weekendModeOptIn: Boolean = false,
     /** A silent "coming up" notification this many minutes before the dose
-     *  (§9 #25; Appendix F HM-19). Null = none. Read by RealSchedulingCoordinator
+     *  (§9 #25, Appendix F HM-19), null = none. Read by RealSchedulingCoordinator
      *  when it arms the regular slot; the pre-alarm has its own slot. */
     val preAlarmMinutes: Int? = null,
     /** Per-reminder instructions (§9 #26; medTimer's `instructions`) --
      *  "with food", "not with the iron" -- shown in the notification body and
      *  on the Today row. The one text that belongs on the notification. */
     val instructions: String? = null,
-    /** A dose-count-limited course (§9 #26; Appendix F MT-07): "N doses then
-     *  stop". Null = unlimited. Decremented on TAKEN; at 0 the engine arms
+    /** A dose-count-limited course (§9 #26, Appendix F MT-07): "N doses then
+     *  stop", null = unlimited. Decremented on TAKEN, and at 0 the engine arms
      *  nothing more, next to the activeUntil clamp (MT finding 3). */
     val dosesRemaining: Int? = null,
     // LOW_STOCK_ALERT / EXPIRATION_ALERT only (spec §9 #8) -- the epoch day this

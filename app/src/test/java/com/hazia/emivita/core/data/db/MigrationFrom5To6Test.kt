@@ -13,20 +13,14 @@ import org.robolectric.annotation.Config
 
 /**
  * MIGRATION_5_6 adds the seven Medical ID columns to `profiles` (spec section
- * 7 R48). Same direct-fixture technique as [MigrationFrom4To5Test], for the
- * reason [MigrationFrom2To3Test]'s doc comment gives.
+ * 7 R48), tested with [MigrationFrom4To5Test]'s direct-fixture technique (see
+ * [MigrationFrom2To3Test] for why), with the v5 DDL copied from the exported
+ * schema JSON so the fixture is what an installed v5 database really holds.
  *
- * The v5 `profiles` DDL below is copied from the exported schema JSON rather
- * than written from the entity, so the fixture is the shape an installed v5
- * database really has and not the shape today's Kotlin would produce.
- *
- * Two things are worth pinning, and neither is "the columns exist". The first
- * is that existing rows survive with their old data intact and the new columns
- * NULL -- this migration runs against a database that already holds someone's
- * medicines, and a profile row is the parent of every one of them. The second
- * is that the columns arrive *nullable*: EmergencyCardExporter distinguishes
- * "not filled in" from "filled in as empty" and omits a whole contact block
- * for the former, which a NOT NULL DEFAULT '' would have quietly collapsed.
+ * It pins that existing profile rows, the parents of every medicine, survive
+ * intact with the new columns NULL, and that the columns are *nullable*,
+ * because EmergencyCardExporter omits a contact block that is "not filled in"
+ * and a NOT NULL DEFAULT '' would collapse that into "filled in as empty".
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(sdk = [35], application = android.app.Application::class)

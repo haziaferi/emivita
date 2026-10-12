@@ -42,11 +42,10 @@ import java.time.ZoneId
 
 /**
  * Behaviour-derived tests from the cross-app pass (spec §7 R62, Appendix F).
- * Written fresh from the case descriptions -- every app in that pass is GPL,
- * so nothing here is a port. Each case pins where Emivita stands today on a
- * decision another app made differently, and names the Appendix F row that
- * would flip it. When one of those rows is adopted, the test that documents
- * the old behaviour is the first thing to change, and it says so.
+ * Written fresh from the case descriptions, since every app in that pass is
+ * GPL and nothing here may be a port. Each case pins where Emivita stands on a
+ * decision another app made differently and names the Appendix F row whose
+ * adoption would make it the first test to change.
  */
 @RunWith(RobolectricTestRunner::class)
 class CrossAppBehaviourTest {
@@ -88,11 +87,10 @@ class CrossAppBehaviourTest {
 
     @Test
     fun `an as-needed dose has no ceiling -- a second one ten minutes later is accepted`() = runTest {
-        // Pill Time keeps "max N per H hours" and shows the count in red when
-        // reached (display only); Did I Take My Meds? blocks a second take of
-        // the same slot outright. Emivita records both and judges neither.
-        // Appendix F PT-01 (cost M) is the row that would change this; until
-        // then the decision is: an adherence record does not refuse a fact.
+        // Pill Time shows "max N per H hours" in red when reached (display only),
+        // and "Did I Take My Meds?" blocks a second take of the same slot. Emivita
+        // records both and judges neither, because an adherence record does not
+        // refuse a fact, until Appendix F PT-01 (cost M) is adopted.
         val m = medicine()
         val first = repository.logAdhocDose(m.id, 1.0, atEpochMillis = 1_000_000L)
         val second = repository.logAdhocDose(m.id, 1.0, atEpochMillis = 1_600_000L)
@@ -106,8 +104,8 @@ class CrossAppBehaviourTest {
     @Test
     fun `an expiration alert still fires for a pack with no stock left -- open decision`() {
         // HomeMedkit only sweeps medicines with stock > 0 for expiry. Emivita's
-        // calculator has no stock input: an empty, expired pack keeps alerting
-        // daily. Pinned as it is; Appendix F HM-F1 lists it as a finding (S).
+        // calculator has no stock input, so an empty, expired pack keeps alerting
+        // daily, pinned as it is while Appendix F HM-F1 lists it as a finding (S).
         val cfg = ReminderConfig.ExpirationAlert(leadDays = 2, frequency = ExpirationTriggerFrequency.DAILY, hour = 9, minute = 0)
         val zone = ZoneId.of("Z")
         val next = nextExpirationAlertOccurrence(cfg, notBeforeEpochMillis = 0L, expirationEpochDay = 1L, lastNotifiedEpochDay = null, zone = zone)

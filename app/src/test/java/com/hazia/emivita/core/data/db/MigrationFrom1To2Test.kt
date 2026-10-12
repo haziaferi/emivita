@@ -14,18 +14,13 @@ import org.robolectric.annotation.Config
 
 /**
  * MIGRATION_1_2 recreates all four touched tables rather than patching them
- * in place (§comment on the migration itself), which is exactly the shape of
- * migration most likely to silently corrupt data -- a dropped column, a wrong
- * SELECT ordering, or a bad CASE expression only shows up against real rows.
- * No exported v1 schema JSON exists (`app/schemas` only starts at v2 -- this
- * source tree never compiled `EmivitaDatabase` at version 1, so there's
- * nothing for Room's exporter to have captured), so this doesn't use
- * MigrationTestHelper. Instead it builds the v1 table shapes directly from
- * SQL, matching column-for-column what the migration's own SELECT clauses
- * read from `profiles`/`medicines`/`reminders`/`dose_events` -- those SELECTs
- * are themselves an accurate description of what v1 must have looked like,
- * so this isn't a guess. See [MigrationFrom2To3Test] for the schema-JSON-
- * backed alternative, used where a baseline actually exists.
+ * in place (§comment on the migration itself), the shape most likely to
+ * corrupt data silently, since a dropped column, a wrong SELECT ordering, or a
+ * bad CASE expression only shows up against real rows. No v1 schema JSON
+ * exists (`app/schemas` starts at v2), so instead of MigrationTestHelper it
+ * builds the v1 tables in SQL, column-for-column what the migration's own
+ * SELECT clauses read, which describe v1 exactly. See [MigrationFrom2To3Test]
+ * for the schema-JSON-backed alternative, used where a baseline exists.
  */
 // sdk pinned below the app's targetSdk (36) -- Robolectric 4.14.1 only ships
 // framework jars up to SDK 35, and `includeAndroidResources` (needed so

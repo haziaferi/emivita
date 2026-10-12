@@ -349,14 +349,10 @@ fun NotificationsAlertsScreen(onBack: () -> Unit) {
         NotificationTierRow(stringResource(R.string.tier_high), stringResource(R.string.channel_high_desc))
         NotificationTierRow(stringResource(R.string.tier_alarm), stringResource(R.string.channel_alarm_desc))
 
-        // First of the three on purpose: this is the only one of them that
-        // means nothing arrives at all. The other two describe a reminder
-        // that is degraded or late, which is a smaller problem and stays
-        // true underneath this one.
-        // One place for the four things Android can take away (§9 #29, HM-37):
-        // a row each with its state, the card with the reasons only under a
-        // blocked one. Re-read on every resume, since all four change in
-        // system settings behind the app's back.
+        // One place for the four things Android can take away (§9 #29, HM-37),
+        // re-read on every resume since all four change behind the app's back.
+        // The blocked-notifications card leads the three cards on purpose: it is
+        // the only one that means nothing arrives at all (§7 R58).
         PermissionsSection(missedAlarmAt = AlarmWatchdog.notice.collectAsState().value)
         NotificationsBlockedCard()
         FullScreenAlarmAccessCard()
@@ -397,30 +393,15 @@ fun NotificationsAlertsScreen(onBack: () -> Unit) {
 
 /**
  * Warns when the OS is allowed to defer this app's alarms, and offers the way
- * out (spec §7 R39).
+ * out (spec §7 R39): measured on a OnePlus 9 Pro with battery saver on, an
+ * exact alarm with `USE_EXACT_ALARM` held still arrived about five minutes
+ * late, and the exemption is the one remaining lever, which only the user can
+ * grant.
  *
- * Measured, not assumed. On a OnePlus 9 Pro (OxygenOS, Android 14) with
- * battery saver on, a reminder scheduled for 19:50 via
- * `setExactAndAllowWhileIdle` — with `USE_EXACT_ALARM` held and
- * `canScheduleExact()` returning true, so the strongest scheduling call the
- * platform offers — arrived at about 19:55. `dumpsys alarm` showed the OS
- * carrying a four-minute tolerance window on that firing and a **one hour**
- * window on the next day's, with a `battery_saver` policy delta applied and
- * OxygenOS's own app freezer having suspended the process. Everything the app
- * can do at the AlarmManager layer was already being done; the remaining lever
- * is the battery-optimization exemption, which only the user can grant.
- *
- * An app whose entire purpose is timely reminders should say so when it is
- * being throttled rather than quietly arriving late, which is what it did
- * before this card existed.
- *
- * **One tap since §7 R83.** The owner chose the system's direct allow-this-app
- * dialog over the plain list, so the manifest declares
- * `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` (R39 to R82 kept it out on
- * least-privilege grounds); the list stays as the fallback.
- *
- * Re-read on ON_RESUME for the same reason [FullScreenAlarmAccessCard] does:
- * this is a special-access settings screen and does not deliver a result.
+ * The owner chose the system's direct allow-this-app dialog over the plain
+ * list, so the manifest declares `REQUEST_IGNORE_BATTERY_OPTIMIZATIONS` and
+ * the list stays as the fallback (§7 R83). Re-read on ON_RESUME like
+ * [FullScreenAlarmAccessCard], since a special-access screen delivers no result.
  */
 @Composable
 private fun BatteryOptimizationCard() {
@@ -523,22 +504,12 @@ private fun BatteryOptimizationCard() {
 }
 
 /**
- * Shown while notifications cannot actually reach the user (spec §7 R58).
+ * Shown while notifications cannot actually reach the user (spec §7 R58),
+ * since `postIfPermitted` otherwise drops each one with a `Log.w` nobody reads.
  *
- * The audit that opened R58 found the app already had a card for the Alarm
- * tier arriving degraded, and a card for reminders arriving late, and nothing
- * at all for reminders not arriving. Nothing in the tree called
- * `areNotificationsEnabled()`. `EmivitaApp` asks for POST_NOTIFICATIONS once
- * and never again -- correct, PERM-023/024 -- and `postIfPermitted` then
- * drops each notification with a `Log.w` nobody reads, so the app looks
- * entirely healthy while doing nothing.
- *
- * Passive, like both its siblings: it states what is happening and offers the
- * way out. It does not re-prompt for the permission, which is the decision
- * `EmivitaApp` already respected and this card is not here to reopen.
- *
- * Re-read on ON_RESUME for the same reason the other two are: the user leaves
- * for a system settings screen that delivers no result to the caller, so
+ * Passive like its siblings: it never re-prompts for POST_NOTIFICATIONS,
+ * which `EmivitaApp` asks for once by design (PERM-023/024). Re-read on
+ * ON_RESUME, because the system settings screen delivers no result, so
  * `rememberLauncherForActivityResult` would never fire.
  */
 @Composable

@@ -14,12 +14,11 @@ import com.hazia.emivita.R
 
 /**
  * Shown once, before the lock, when the launch had to set an unopenable
- * database aside and start empty (spec §9 #32). Cannot be dismissed by a
- * tap outside or the back gesture: an app that silently starts empty is the
- * failure this exists to prevent, so the person answers it. Two answers,
- * both clear the notice: go to Data & Backup to restore, or carry on empty.
- * A lost key gets its own words (§7 R83 (f)): that file can never be read, so
- * the corruption text's "set aside, not deleted" would promise too much.
+ * database aside and start empty (spec §9 #32), and not dismissable by a tap
+ * outside or back, since silently starting empty is the failure it prevents.
+ * Both answers (restore from Data & Backup, or carry on empty) clear the notice.
+ * A lost key gets its own words (§7 R83 (f)), because that file can never be
+ * read and "set aside, not deleted" would promise too much.
  */
 @Composable
 fun DatabaseRecoveredDialog(keyLost: Boolean, onRestore: () -> Unit, onContinueEmpty: () -> Unit) {

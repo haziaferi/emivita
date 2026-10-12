@@ -28,26 +28,16 @@ import kotlinx.coroutines.launch
 
 /**
  * Rings an Alarm-tier reminder until it is answered (§7 R80; R75's
- * follow-up 1). A foreground service of type `mediaPlayback` whose
- * notification *is* the reminder's: posting an Alarm-tier reminder starts
- * this with the built notification, and `startForeground` shows it, so
- * the heads-up the user sees while the phone is unlocked and the sound
- * they hear come from the same place.
+ * follow-up 1), as a `mediaPlayback` foreground service whose notification
+ * *is* the reminder's, so the heads-up and the sound come from one place.
  *
- * Stops when: the dose is answered anywhere (Prendi / Rinvia / Salta on
- * the heads-up, the alarm screen, Today, the edit dialog -- every path
- * goes through [ReminderNotifications.dismiss], and the service also polls
- * the dose every few seconds so a path that does not cannot leave it
- * ringing); the notification is swiped away (the swipe action dismisses
- * too); or [RING_TIMEOUT_MILLIS] pass unanswered -- the owner's ten
- * minutes, the phone alarm's own default -- after which the sound stops and
- * the notification stays. Leaving the alarm screen without answering does
- * not stop it: it is the Alarm tier (the owner's decision, R80).
- *
- * Started from the alarm-fired receiver, which Android 12+ allows to start
- * a foreground service (an exact alarm firing is on the exemption list);
- * if a device refuses anyway, [ring] falls back to posting the notification
- * with `FLAG_INSISTENT`, which loops the channel's own tone.
+ * Stops when the dose is answered anywhere (every path goes through
+ * [ReminderNotifications.dismiss], and a poll every few seconds catches one
+ * that does not), when the notification is swiped away, or after
+ * [RING_TIMEOUT_MILLIS] (the owner's ten minutes) with the notification left
+ * in place, but not on leaving the alarm screen unanswered (owner's decision,
+ * R80), and an exact alarm may start it on Android 12+, with [ring] falling
+ * back to `FLAG_INSISTENT` if a device refuses anyway.
  */
 class AlarmRingService : Service() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)

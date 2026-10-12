@@ -196,20 +196,13 @@ fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit
 }
 
 /**
- * Shown only while the Alarm tier can't actually do what the row above
- * promises it does.
- *
- * `ReminderNotificationBuilder.configureAlarmPresentation` already checks
- * [NotificationManagerCompat.canUseFullScreenIntent] and degrades to a
- * tap-to-open action when it's false -- correct, but silent: it writes one
- * `Log.i` line and carries on. From Android 14 the permission is not granted
- * at install to an app outside the calling/alarm categories, and the user can
- * revoke it at any time, so the Alarm tier can arrive already degraded on a
- * fresh install with nothing in the app saying so and no way back.
- *
- * Re-read on ON_RESUME rather than through an activity result: this is a
- * special-access settings screen, and those don't deliver a result to the
- * caller, so `rememberLauncherForActivityResult` would never fire.
+ * Shown only while the Alarm tier can't do what the row above promises:
+ * without [NotificationManagerCompat.canUseFullScreenIntent],
+ * `ReminderNotificationBuilder.configureAlarmPresentation` silently degrades to
+ * a tap-to-open action. From Android 14 that permission is not granted at
+ * install outside the calling/alarm categories and can be revoked any time, so
+ * this card is the only visible sign and way back. Re-read on ON_RESUME,
+ * because a special-access settings screen delivers no activity result.
  */
 @Composable
 internal fun FullScreenAlarmAccessCard() {

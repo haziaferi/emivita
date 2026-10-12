@@ -40,25 +40,16 @@ import com.hazia.emivita.R
 import androidx.compose.ui.platform.LocalResources
 
 /**
- * Medical ID (spec section 9's parking lot, promoted in section 7 R48).
+ * Medical ID (spec section 9's parking lot, promoted in section 7 R48): text
+ * the user typed and the app never interprets, with no allergy, interaction or
+ * phone-number checks, which keeps the exported card a document rather than a
+ * medical claim.
  *
- * Everything on this screen is text the user typed and the app never
- * interprets. There is no allergy checking, no interaction warning, no phone
- * number validation -- section 9's entry fixes that boundary ("informational
- * text only, never algorithmically checked against anything"), and it is what
- * keeps the exported card a document rather than a medical claim.
- *
- * The export is the point of the screen, not an afterthought on it. Android's
- * own Emergency Information already covers the lock-screen case better than
- * this app could, being readable without unlocking the phone at all; what it
- * cannot do is produce a page to hand a new doctor or fold into a wallet.
- *
- * This screen is also why Profile.name is now a field anyone sees. EmivitaApp
- * creates the single profile silently as "Me", and justified the fixed string
- * on the grounds that a profile's name is never displayed anywhere. An
- * emergency card prints it at the top, so that stopped being true here --
- * which is why Name is the first field and the one field the export refuses to
- * run without.
+ * The export is the point of the screen, since Android's own Emergency
+ * Information already covers the lock screen but cannot produce a page to hand
+ * a new doctor. The card prints Profile.name at the top, and EmivitaApp creates
+ * the profile silently as "Me", so Name is the first field and the one the
+ * export refuses to run without.
  */
 @Composable
 fun MedicalIdScreen(

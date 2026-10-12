@@ -6,20 +6,14 @@ import org.junit.Test
 import kotlin.math.pow
 
 /**
- * Makes Appendix A's contrast audit executable (spec §7 R47).
+ * Makes Appendix A's contrast audit executable (spec §7 R47), on every build
+ * and against the ColorScheme the app actually constructs, including the roles
+ * Theme.kt derives rather than reads from a table (§7 R44), since a table
+ * proves a token safe but not that the app uses it.
  *
- * Every ratio in Appendix A was computed once, by hand, and written into a
- * table. That is why T1 and T2 could both be marked resolved while §7 R47
- * found the failing technique still live at 27 call sites: the audit proved a
- * *token* was safe and nothing proved the app used it. These assertions run on
- * every build against the ColorScheme the app actually constructs, including
- * the roles Theme.kt derives rather than reads from a table (§7 R44).
- *
- * Pure JVM -- no Robolectric. Compose's Color and ColorScheme are ordinary
- * Kotlin, so nothing here needs an Android runtime.
- *
- * WCAG 2.1 relative luminance and contrast, per the spec's own definition in
- * §7 §4.4. Thresholds: 4.5:1 for normal text, 3:1 for UI boundaries.
+ * Pure JVM, because Compose's Color and ColorScheme need no Android runtime.
+ * WCAG 2.1 relative luminance and contrast per the spec's definition in §7
+ * §4.4, with 4.5:1 for normal text and 3:1 for UI boundaries.
  */
 class PaletteContrastTest {
 

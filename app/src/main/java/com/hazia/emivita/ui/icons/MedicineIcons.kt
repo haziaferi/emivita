@@ -17,15 +17,10 @@ import androidx.annotation.StringRes
 import com.hazia.emivita.R
 
 /**
- * Placeholder icon set (spec §3/§6 "icon-per-type grid"). Stock Material
- * Symbols rather than a custom line-art set, deliberately: see below for why
- * swapping in one later is a rendering-layer change only.
- *
- * `Medicine.iconKey` only ever stores [MedicineIconOption.key] (a stable string,
- * never the ImageVector itself), so swapping this file's contents for a custom
- * SVG/line-art set later -- e.g. one built with the svg-illustration skill --
- * is a rendering-layer change only: no schema migration, no repository change,
- * no form-logic change. [iconFor] is the one seam that would need to start
+ * Placeholder icon set (spec §3/§6 "icon-per-type grid"): stock Material
+ * Symbols, deliberately, because `Medicine.iconKey` stores only the stable
+ * [MedicineIconOption.key], so a custom line-art set later is a rendering-layer
+ * change with no migration. [iconFor] is the one seam that would need to start
  * returning a painter/drawable resource instead of an ImageVector.
  */
 data class MedicineIconOption(
@@ -36,7 +31,7 @@ data class MedicineIconOption(
      *  no composable scope here to call stringResource() in. */
     @StringRes val label: Int,
     val icon: ImageVector,
-    /** The unit a dose of this form is counted in (§9 #27; HM-05's
+    /** The unit a dose of this form is counted in (§9 #27, HM-05's
      *  `DrugType.doseType`, re-thought as the icon's own default). Filled
      *  into the form's unit field only while that field is blank; null for
      *  the forms that say nothing about a unit. @StringRes for the same

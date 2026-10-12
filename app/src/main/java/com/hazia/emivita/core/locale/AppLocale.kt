@@ -9,24 +9,19 @@ import androidx.core.content.edit
 import java.util.Locale
 
 /**
- * The app's own language (spec §9 #28; Appendix F HM-35 / MT-19). One value:
- * a BCP-47 tag, or null for "follow the system".
+ * The app's own language (spec §9 #28, Appendix F HM-35 / MT-19): a BCP-47
+ * tag, or null for "follow the system".
  *
- * Two mechanisms, chosen by SDK because minSdk is 30:
- * - **Android 13+**: [LocaleManager.setApplicationLocales]. The framework
- *   persists it, recreates the activities, and every context the process
- *   gets afterwards -- receivers, notification builders, Glance -- already
- *   speaks the language; Android's own per-app language page shows the same
- *   value, which is why the app registers its locales (`generateLocaleConfig`).
- * - **Android 11-12**: the app wraps its own contexts ([wrap]) from a
- *   synchronous [SharedPreferences][android.content.SharedPreferences] --
- *   synchronous because `attachBaseContext` runs before DataStore exists.
- *   Activities and the Application are wrapped, so screens and notifications
- *   follow; Glance widgets render in the system language (a known limit,
- *   named in R67).
+ * On **Android 13+** it is [LocaleManager.setApplicationLocales], which the
+ * framework persists and applies to every context, Glance included, and shows
+ * on its per-app language page (hence `generateLocaleConfig`), while on
+ * **Android 11-12** the app wraps its activities and Application ([wrap]) from
+ * a synchronous [SharedPreferences][android.content.SharedPreferences],
+ * because `attachBaseContext` runs before DataStore exists, and Glance widgets
+ * stay in the system language (a known limit, R67).
  *
- * The store is written on every version so the value survives a downgrade
- * of the mechanism, and so `current` has one answer on 11-12.
+ * The store is written on every version so the value survives a downgrade of
+ * the mechanism and `current` has one answer on 11-12.
  */
 object AppLocale {
     private const val PREFS = "app_locale"

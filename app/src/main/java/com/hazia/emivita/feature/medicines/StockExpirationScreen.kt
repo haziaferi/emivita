@@ -395,16 +395,10 @@ fun StockExpirationScreen(
                 if (lowStockEnabled && thresholdValue != null) {
                     val existingId = lowStockReminderId
                     val existingReminder = existingId?.let { reminderRepository.getById(it) }
-                    // Carry the existing alert time forward rather than rebuilding
-                    // the config from this screen alone. This screen owns the
-                    // threshold and the trigger mode; it does not own hour/minute,
-                    // which spec §7 R37 added and which the reminder's own edit
-                    // form sets. Constructing a fresh config here and handing it to
-                    // updateConfig -- a full-row write -- silently reset a user's
-                    // 20:00 alert to the 09:00 default every time they adjusted the
-                    // threshold. Same defect shape as §7 R23 and R27: a partial
-                    // object, rebuilt by a screen that does not own all its fields,
-                    // overwriting the ones it cannot see.
+                    // Carry the existing alert time forward: this screen owns the
+                    // threshold and trigger mode but not hour/minute (spec §7 R37),
+                    // and updateConfig is a full-row write, so a fresh config would
+                    // reset a 20:00 alert to the 09:00 default (the §7 R23/R27 shape).
                     val priorLowStock = existingReminder
                         ?.let { reminderRepository.decodeConfig(it) as? ReminderConfig.LowStockAlert }
                     val config = ReminderConfig.LowStockAlert(

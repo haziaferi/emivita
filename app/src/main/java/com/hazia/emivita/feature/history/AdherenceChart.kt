@@ -66,35 +66,6 @@ data class DayAdherenceCounts(
     val total: Int get() = taken + skipped + missed
 }
 
-/**
- * Stacked daily bar chart -- taken/skipped/missed per day across the visible
- * History window. Chosen over a pie for the reason spec §9 #6/T5 already
- * names: this data is "trend-over-time," which a single-window pie can't
- * show and a stacked bar can. It's also the only chart shape the pinned
- * `com.patrykandpatrick.vico:compose-m3:2.1.0` dependency actually supports --
- * Vico 2.x's cartesian module has line/column/candlestick layers only, no
- * pie layer (that existed in Vico 1.x and was dropped); confirmed by
- * inspecting the resolved AAR directly, not assumed from the library's name.
- *
- * Missed uses `attention`, NOT `error`. A fired-and-never-resolved dose is
- * worse than a deliberate Skip and should be the louder of the two, but it is
- * a fact about last Tuesday, not an emergency, and the patient-facing register
- * reserves red for genuine failures. `attention` is the warm clay that says
- * "look at this" without saying "something is wrong". Skip is drawn with
- * `outline` -- a deliberate choice, near-achromatic on purpose so it never
- * shouts as loudly as a taken dose (R56's `neutralFill`, retired in R76 for
- * the same role under the reference app's grammar) -- which is also what
- * holds the three series apart under colour-vision deficiency (see Color.kt).
- *
- * **Colour is no longer load-bearing here (spec §7 R54/R55.)** This was the one
- * surface in the app where state was conveyed by hue alone -- stacked bars read
- * through a legend, no icon or label beside them -- and measured against the
- * candidate palettes the taken/missed pair falls under the categorical floor in
- * 4 of 16 registers once colour-vision deficiency is simulated. Each series now
- * carries a [SeriesPattern] as well, the legend teaches the pattern rather than
- * a bare dot, and the stack order is stated. Three channels: texture, position,
- * colour. Any one of them alone identifies a series.
- */
 /** How the chart meets the width (§9 #34): every day of the window fitted to
  *  it, no zoom, no scroll. Pinned as values so a refactor that drops one of
  *  them fails `AdherenceChartFitTest`, not the owner's eye on the phone. */
@@ -104,6 +75,23 @@ internal object AdherenceChartFit {
     const val SCROLL_ENABLED = false
 }
 
+/**
+ * Stacked daily bar chart of taken/skipped/missed per day across the visible
+ * History window, because the data is a trend over time, which a pie cannot
+ * show (spec §9 #6/T5), and the pinned `com.patrykandpatrick.vico:compose-m3:2.1.0`
+ * has no pie layer anyway (Vico 2.x has line/column/candlestick only).
+ *
+ * Missed uses `attention`, NOT `error`: louder than a deliberate Skip but a
+ * fact about last Tuesday, not an emergency, while Skip is drawn with
+ * near-achromatic `outline` (§7 R76), which also holds the series apart under
+ * colour-vision deficiency (see Color.kt).
+ *
+ * **Colour is not load-bearing here (spec §7 R54/R55)**: with colour-vision
+ * deficiency simulated the taken/missed pair falls under the categorical floor
+ * in 4 of 16 registers, so each series also carries a [SeriesPattern], the
+ * legend teaches the pattern, the stack order is stated, and any one of
+ * texture, position or colour alone identifies a series.
+ */
 @Composable
 fun AdherenceChart(counts: List<DayAdherenceCounts>) {
     val modelProducer = remember { CartesianChartModelProducer() }

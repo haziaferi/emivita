@@ -7,17 +7,12 @@ import com.hazia.emivita.core.di.AppContainer
 import kotlinx.coroutines.flow.first
 
 /**
- * Shared plumbing for the on-device suite (spec §9 #20).
- *
- * Everything here goes through the *real* [AppContainer] of the *real*
- * [EmivitaApplication]: the same SQLCipher database, the same AlarmManager,
- * the same NotificationManager the user's own install uses. That is the whole
- * reason this source set exists. The JVM suite proves the logic; this proves
- * the platform underneath it still does what the logic assumes, on the device
- * generation it ships to.
- *
- * Every test cleans up what it created, because these run against the
- * developer's own installed database, not a scratch one.
+ * Shared plumbing for the on-device suite (spec §9 #20): everything goes through
+ * the real [AppContainer] of the real [EmivitaApplication], with the same
+ * SQLCipher database, AlarmManager and NotificationManager as the user's install.
+ * The JVM suite proves the logic, and this proves the platform still does what
+ * the logic assumes. Every test cleans up what it created, because these run
+ * against the developer's own installed database, not a scratch one.
  */
 object DeviceTestSupport {
 

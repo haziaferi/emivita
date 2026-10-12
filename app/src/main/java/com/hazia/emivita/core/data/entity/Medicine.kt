@@ -44,17 +44,12 @@ data class Medicine(
     // typing a display label here must never silently flip stock-tracking
     // behavior on for a medicine that never asked for it.
     val doseUnit: String? = null,
-    // Boolean? not Boolean -- null = inherit the global
+    // Nullable on purpose -- null = inherit the global
     // lockRemindersUntilTakenByDefault preference, non-null = explicit
     // per-medicine override (spec §3). SettingsRepository.isLockedUntilTaken()
-    // is the one place that resolution happens; the notification builder, the
-    // action receiver and the alarm screen all go through it. TodayScreen
-    // resolves the same two inputs inline instead -- composition cannot call a
-    // suspend function, so it collects the global default as state and applies
-    // this override at each row. It is named here because it *is* an
-    // enforcement point: this list read as exhaustive while Today shipped an
-    // unconditional Skip chip, which is how the gate stayed open on the app's
-    // start destination.
+    // resolves it for the notification builder, the action receiver and the
+    // alarm screen. TodayScreen is a fourth enforcement point that resolves the
+    // same two inputs inline, because composition cannot call a suspend function.
     val remindersLockedUntilTaken: Boolean? = null,
     val notes: String? = null,
     @Embedded val stockInfo: StockInfo = StockInfo(),
@@ -75,8 +70,8 @@ data class Medicine(
      *  history kept for History and the exports. Restorable from Settings >
      *  Data; "Delete permanently" there is the old cascade. */
     @ColumnInfo(defaultValue = "0") val archived: Boolean = false,
-    /** The as-needed ceiling (§9 #26; Pill Time PT-01): at most [prnMaxDoses]
-     *  in any rolling [prnWindowHours]. Both null = no ceiling. Warns with a
+    /** The as-needed ceiling (§9 #26, Pill Time PT-01): at most [prnMaxDoses]
+     *  in any rolling [prnWindowHours], both null = no ceiling. Warns with a
      *  confirm at the ceiling, never refuses (the owner's choice). */
     val prnMaxDoses: Int? = null,
     val prnWindowHours: Int? = null,

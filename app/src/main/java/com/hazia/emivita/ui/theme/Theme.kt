@@ -42,29 +42,19 @@ val legacyPaletteNames: Map<String, MedPalette> = mapOf(
 enum class ThemeMode { LIGHT, DARK, SYSTEM, AMOLED }
 
 /**
- * The palette a fresh install gets, named once so the three places that need it
- * cannot drift apart -- [EmivitaTheme]'s default parameter, `SettingsRepository`'s
- * fallback for an unparseable stored name, and the initial value `EmivitaApp`
- * collects with before DataStore has loaded.
- *
- * The owner's choice (§6, §7 R76): Porcellana, cobalt on porcelain white.
+ * The palette a fresh install gets, the owner's choice (§6, §7 R76): Porcellana,
+ * cobalt on porcelain white, named once so [EmivitaTheme]'s default parameter,
+ * `SettingsRepository`'s fallback for an unparseable stored name and the value
+ * `EmivitaApp` collects with before DataStore loads cannot drift apart.
  *
  * **`res/values/colors.xml`'s and `values-night/colors.xml`'s
- * `splash_background` must equal this palette's light and dark background.**
- * They are native resources, so they cannot read a Compose token; a mismatch
- * flashes between the splash window and Compose's first frame.
- * `PaletteSpecConsistencyTest` asserts both agree, which is the only thing
- * stopping this from being a comment nobody acts on.
+ * `splash_background` must equal this palette's light and dark background**,
+ * since a native resource cannot read a Compose token and a mismatch flashes
+ * between the splash window and Compose's first frame.
+ * `PaletteSpecConsistencyTest` asserts both agree.
  */
 val DEFAULT_PALETTE: MedPalette = MedPalette.PORCELLANA
 
-/**
- * Not a string resource (spec §9 #19). These are the palettes' names in the
- * sense a typeface has a name: `PaletteSpecConsistencyTest` matches them
- * against SPEC Appendix A's headings, so resourcing them would break the one
- * gate that keeps the spec's tables honest, and a translated name would be a
- * different palette to a reader of the spec. Italian, as the owner named them.
- */
 /** Found by en-XA on the device, not by any scanner (spec §9 #19): the
  *  Appearance screen rendered `mode.name.lowercase().replaceFirstChar(...)`,
  *  text derived from an identifier with no literal anywhere to detect. */
@@ -76,6 +66,13 @@ fun ThemeMode.labelRes(): Int = when (this) {
     ThemeMode.AMOLED -> R.string.theme_mode_amoled
 }
 
+/**
+ * Not a string resource (spec §9 #19). These are the palettes' names in the
+ * sense a typeface has a name: `PaletteSpecConsistencyTest` matches them
+ * against SPEC Appendix A's headings, so resourcing them would break the one
+ * gate that keeps the spec's tables honest, and a translated name would be a
+ * different palette to a reader of the spec. Italian, as the owner named them.
+ */
 fun MedPalette.displayName(): String = when (this) {
     MedPalette.PORCELLANA -> "Porcellana"
     MedPalette.ARDESIA -> "Ardesia"
@@ -94,22 +91,6 @@ internal fun tokensFor(palette: MedPalette, dark: Boolean): PaletteTokens = when
 }
 
 /**
- * Expands one palette's tokens into a Material3 ColorScheme (§7 R76).
- *
- * The container slots are real tints now: `primaryContainer` and
- * `errorContainer` come from the tables with their own `on*` colours. Until
- * R76 every `*Container` was its base role and every `on*Container` its base
- * `on*` -- which is why the Stock screen painted solid green, brown and red
- * panels with default text on them (§7 R75). The roles the four palettes do
- * not carry are aliased, not left to Material's baseline: `secondary*` to
- * `primary*` (the tab indicator draws from `secondaryContainer`), `tertiary`
- * to `primary` and `tertiaryContainer` to `surfaceContainerHigh` (nothing in
- * the app asks for a third hue), `surfaceVariant` to `surfaceContainerHigh`.
- * The rest of the surface ladder, `scrim` and the `inverse*` family are
- * derived by [withDerivedSurfaces]; leaving them to Material's baseline is
- * what put a lavender navigation bar under every palette (spec §7 R44).
- */
-/**
  * Linear sRGB interpolation between two palette colours, used only to derive
  * the M3 slots Appendix A does not audit (spec §7 R44).
  *
@@ -127,20 +108,14 @@ private fun blend(base: Color, toward: Color, fraction: Float): Color = Color(
 )
 
 /**
- * The M3 slots this app has no audited tone for, derived from the ones it does.
+ * The M3 slots this app has no audited tone for, derived from the ones it does,
+ * because Material's baseline defaults put a lavender navigation bar and menus
+ * under every palette (§7 R44).
  *
- * These used to be left to `lightColorScheme`/`darkColorScheme`'s own defaults,
- * which are Material's baseline palette -- so on every screen, in all eight
- * palettes, the bottom navigation bar (which draws from `surfaceContainer`) and
- * every menu surface rendered baseline lavender next to an audited amber, green,
- * blue or pink. The file's own doc comment recorded the reliance on those
- * defaults as deliberate; it was, and the consequence was not.
- *
- * The ladder blends `surface` toward `onSurface` in small steps. That direction
- * is correct in both modes without a branch: in light mode `onSurface` is dark
- * so containers darken, in dark mode it is light so they lighten, which is what
- * M3's tonal elevation does in each. Every step stays on the line between two
- * audited tokens, so a container can never leave the palette's own hue.
+ * The ladder blends `surface` toward `onSurface` in small steps, which is right
+ * in both modes without a branch: containers darken in light mode and lighten
+ * in dark mode, as M3's tonal elevation does. Every step stays on the line
+ * between two audited tokens, so a container can never leave the palette's hue.
  */
 private fun ColorScheme.withDerivedSurfaces(t: PaletteTokens, background: Color = t.background, surface: Color = t.surface) = copy(
     surfaceVariant = t.surfaceContainerHigh,
@@ -163,6 +138,17 @@ private fun ColorScheme.withDerivedSurfaces(t: PaletteTokens, background: Color 
 // `internal`, not `private`: PaletteContrastTest reads every palette's resolved
 // scheme to assert Appendix A's audited ratios hold in the built ColorScheme
 // rather than only in the spec's tables (§7 R47).
+/**
+ * Expands one palette's tokens into a Material3 ColorScheme (§7 R76), with
+ * `primaryContainer` and `errorContainer` taken from the tables as real tints
+ * with their own `on*` colours (§7 R75). The roles the four palettes do not
+ * carry are aliased, not left to Material's baseline: `secondary*` to
+ * `primary*` (the tab indicator draws from `secondaryContainer`), `tertiary`
+ * to `primary` and `tertiaryContainer` to `surfaceContainerHigh` (nothing in
+ * the app asks for a third hue), `surfaceVariant` to `surfaceContainerHigh`.
+ * The rest of the surface ladder, `scrim` and the `inverse*` family come from
+ * [withDerivedSurfaces] (spec §7 R44).
+ */
 internal fun colorSchemeFor(palette: MedPalette, dark: Boolean, amoled: Boolean = false): ColorScheme {
     val t = tokensFor(palette, dark)
     if (dark && amoled) {
@@ -190,14 +176,11 @@ internal fun colorSchemeFor(palette: MedPalette, dark: Boolean, amoled: Boolean 
 }
 
 /**
- * The one role Material3's ColorScheme has no slot left for.
- *
- * Every one of its slots is already spoken for by [colorSchemeFor], and the
- * alternative -- borrowing a slot whose name means something else -- is exactly
- * the overload this role exists to undo. So it travels beside the scheme
- * instead, read as `EmivitaTheme.colors.attention`. R56's `neutralFill` and the
- * `on*` pair went with R76: under the reference app's grammar a skip is drawn
- * with `outline` and nothing is ever filled with `attention`.
+ * The one role Material3's ColorScheme has no slot left for, so it travels
+ * beside the scheme as `EmivitaTheme.colors.attention` rather than borrowing a
+ * slot whose name means something else. Under the reference app's grammar
+ * (§7 R76) a skip is drawn with `outline` and nothing is ever filled with
+ * `attention`, so the role has no fill or `on*` pair.
  */
 @Immutable
 data class EmivitaColors(

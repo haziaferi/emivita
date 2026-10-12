@@ -169,18 +169,13 @@ interface DoseEventDao {
     @Query("UPDATE dose_events SET repeatCount = repeatCount + 1 WHERE id = :id")
     suspend fun incrementRepeatCount(id: Long)
 
-    /** Cascade-delete support (spec §9 #1's deferred "what happens to a
-     *  deleted medicine's history" question, resolved: cascade -- and then
-     *  reversed by §9 #26 / §7 R65: Delete on a medicine now *archives* it and
-     *  the history stays; this cascade is reached only from "Delete for good"
-     *  on the archived list, behind a confirm). Reminder's
-     *  own FK (reminders.medicineId, CASCADE) already deletes reminder-linked
-     *  DoseEvents transitively via dose_events.reminderId's own CASCADE FK --
-     *  but PRN/refill events (reminderId = null) are only ever linked by this
-     *  table's denormalized medicineId column, which has no FK constraint at
-     *  all (deliberately, per DoseEvent's own doc comment). This explicit
-     *  query is what actually catches those; MedicineRepository.delete()
-     *  calls it before deleting the Medicine row. */
+    /** Cascade-delete support for "Delete for good" on the archived list
+     *  (spec §9 #1, §9 #26 / §7 R65; plain Delete only archives). Reminder-linked
+     *  DoseEvents go transitively through the reminders' CASCADE FKs, but
+     *  PRN/refill events (reminderId = null) are linked only by the
+     *  denormalized medicineId column, deliberately without an FK, so this
+     *  query is what catches them, called by MedicineRepository.delete()
+     *  before the Medicine row goes. */
     @Query("DELETE FROM dose_events WHERE medicineId = :medicineId")
     suspend fun deleteAllForMedicine(medicineId: Long)
 

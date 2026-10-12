@@ -132,16 +132,13 @@ fun AddMedicineScreen(
 }
 
 /**
- * Edit Medicine (spec §9 item 1). Loads the existing [Medicine] and its
- * current tags, then reuses [MedicineFormBody] with those as the initial
- * values. Tag reconciliation on save is a plain set diff against the
- * snapshot of tags loaded when the screen opened -- fine for a single-user,
- * single-device, non-collaborative app (spec §1), no optimistic-concurrency
- * handling needed.
+ * Edit Medicine (spec §9 item 1): reuses [MedicineFormBody] seeded with the
+ * existing [Medicine] and its tags, and saves tags as a plain set diff against
+ * that snapshot, enough for a single-user, single-device app (spec §1).
  *
- * Delete is not on this form: it acts on the medicine as a whole, cascading
- * to its reminders and dose history, so it lives behind a confirm dialog on
- * MedicineDetailScreen instead. See MedicineRepository.delete.
+ * Delete is not on this form, because it cascades to reminders and dose
+ * history and so lives behind a confirm dialog on MedicineDetailScreen (see
+ * MedicineRepository.delete).
  */
 @Composable
 fun EditMedicineScreen(
@@ -226,9 +223,6 @@ fun EditMedicineScreen(
     )
 }
 
-/** Shared body for both Add and Edit -- see AddMedicineScreen/EditMedicineScreen
- *  above for what differs (title/button text, initial values, and what the
- *  final onSave callback actually does with the field values). */
 /**
  * The profile's other medicines and the colours they already carry, for the
  * picker's differentiation hint (spec §3, §7 R47).
@@ -256,6 +250,9 @@ private fun rememberColorsInUse(
     }
 }
 
+/** Shared body for both Add and Edit -- see AddMedicineScreen/EditMedicineScreen
+ *  above for what differs (title/button text, initial values, and what the
+ *  final onSave callback actually does with the field values). */
 @Composable
 private fun MedicineFormBody(
     title: String,
@@ -560,13 +557,9 @@ private fun MedicineFormBody(
             )
         }
 
-        // Notification priority (spec §7 R59). Medicine.notificationPriority
-        // existed from the start and picked the channel a reminder posts to,
-        // but no screen ever set it: every medicine was STANDARD, and the High
-        // and Alarm tiers -- the full-screen AlarmActivity, the whole reason
-        // FullScreenAlarmAccessCard exists -- were unreachable. Found by the
-        // owner on the device when a reminder made a chime where an alarm was
-        // expected. Names and descriptions are the same resources the
+        // Notification priority (spec §7 R59): the only place a medicine's
+        // channel tier is set, so without it the High and Alarm tiers are
+        // unreachable. Names and descriptions are the same resources the
         // Notifications & Alerts screen and the channels themselves use.
         Spacer(Modifier.height(20.dp))
         Text(stringResource(R.string.add_medicine_notification_priority), style = MaterialTheme.typography.labelLarge)
