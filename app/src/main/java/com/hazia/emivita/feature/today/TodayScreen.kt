@@ -46,6 +46,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -465,7 +466,8 @@ internal fun EntryHost(
     row: @Composable (canSkip: Boolean, onResolve: (DoseStatus) -> Unit, onClick: () -> Unit) -> Unit,
 ) {
     val scope = rememberCoroutineScope()
-    var editing by remember { mutableStateOf(false) }
+    // Saveable, so the Dose Edit dialog survives a rotation (§7 R83 (a)).
+    var editing by rememberSaveable { mutableStateOf(false) }
     row(
         // Same resolution SettingsRepository.isLockedUntilTaken performs: the
         // per-medicine override wins, the global default fills in when it is null.

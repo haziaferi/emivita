@@ -428,10 +428,8 @@ private fun BatteryOptimizationCard() {
     if (exempt) return
 
     // The one-tap system dialog since §7 R83; the plain list where an OEM removed it.
-    val settingsIntent = remember {
-        batteryExemptionRequest(context).takeIf { it.resolveActivity(context.packageManager) != null }
-            ?: Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS)
-    }
+    val oneTap = remember { batteryExemptionRequest(context).takeIf { it.resolveActivity(context.packageManager) != null } }
+    val settingsIntent = remember { oneTap ?: Intent(Settings.ACTION_IGNORE_BATTERY_OPTIMIZATION_SETTINGS) }
     // Every device that reaches this app has the screen (it is standard from
     // API 23 and minSdk is 30), but an OEM can remove it, and starting an
     // unresolvable intent throws.
@@ -463,12 +461,16 @@ private fun BatteryOptimizationCard() {
                 Button(onClick = { context.startActivity(settingsIntent) }) {
                     Text(stringResource(R.string.settings_detail_open_battery_settings))
                 }
-                Spacer(Modifier.height(4.dp))
-                Text(
-                    stringResource(R.string.settings_detail_find_emivita_in_the_list_and_set_it_to_not),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
-                )
+                // The search hint belongs to the list only; the one-tap dialog
+                // needs none (found on the phone, §7 R83).
+                if (oneTap == null) {
+                    Spacer(Modifier.height(4.dp))
+                    Text(
+                        stringResource(R.string.settings_detail_find_emivita_in_the_list_and_set_it_to_not),
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onErrorContainer,
+                    )
+                }
             }
             // The OEM's own kill list (§9 #29, HM-36), when this phone has one.
             val autoStart = remember { AutoStartSettings.intentFor(context) }

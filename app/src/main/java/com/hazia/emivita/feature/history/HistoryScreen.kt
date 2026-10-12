@@ -34,6 +34,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -132,7 +133,10 @@ fun HistoryScreen(
     }.value
 
     val days = remember(events) { groupByDay(events, zone) }
-    var editing by remember { mutableStateOf<DoseEventWithMedicine?>(null) }
+    // The dose being edited, by id, so the dialog survives a rotation or a
+    // process death (§7 R83 (a), found on the phone); the row is looked up again.
+    var editingId by rememberSaveable { mutableStateOf<Long?>(null) }
+    val editing = editingId?.let { id -> events?.firstOrNull { it.doseEvent.id == id } }
     // Remembered across navigation and process death (§7 R60 D F5) -- a
     // person who reads History as a table should not be handed the list
     // every time. Stored by name so a removed case degrades to LIST.
@@ -299,7 +303,7 @@ fun HistoryScreen(
                                 // The row itself already refuses the click for a
                                 // REFILLED entry; re-testing it here is what let
                                 // this surface and the row disagree (§7 R47).
-                                HistoryEntryRow(row, onClick = { editing = row })
+                                HistoryEntryRow(row, onClick = { editingId = row.doseEvent.id })
                                 Spacer(Modifier.height(8.dp))
                             }
                             Spacer(Modifier.height(8.dp))
@@ -315,7 +319,7 @@ fun HistoryScreen(
                 profileId = profileId,
                 zone = zone,
                 doseEventRepository = doseEventRepository,
-                onEntryClick = { editing = it },
+                onEntryClick = { editingId = it.doseEvent.id },
             )
             HistoryViewMode.TABLE -> when {
                 events == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
@@ -330,7 +334,7 @@ fun HistoryScreen(
                 else -> HistoryTableView(
                     events = exportRows,
                     zone = zone,
-                    onRowClick = { editing = it },
+                    onRowClick = { editingId = it.doseEvent.id },
                 )
             }
         }
@@ -345,7 +349,7 @@ fun HistoryScreen(
             originalResolvedAtEpochMillis = row.doseEvent.resolvedAtEpochMillis,
             scheduledEpochMillis = row.doseEvent.scheduledEpochMillis,
             doseEventRepository = doseEventRepository,
-            onDismiss = { editing = null },
+            onDismiss = { editingId = null },
             doseUnit = row.medicine.doseUnit,
             originalNotes = row.doseEvent.notes,
             onReopened = { reopened ->

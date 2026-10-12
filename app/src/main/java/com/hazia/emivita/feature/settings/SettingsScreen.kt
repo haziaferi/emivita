@@ -37,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -181,7 +182,9 @@ fun SettingsScreen(settingsRepository: SettingsRepository, onOpenDetail: (Settin
         biometricEnabled = settingsRepository.biometricLockEnabled.first()
     }
 
-    var activeSheet by remember { mutableStateOf<SettingsDestination?>(null) }
+    // Saveable (§7 R83 (a), found on the phone): a plain remember closed the
+    // sheet on a rotation or a process death, and its saved fields with it.
+    var activeSheet by rememberSaveable { mutableStateOf<SettingsDestination?>(null) }
 
     LazyColumn(
         modifier = Modifier
