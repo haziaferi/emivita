@@ -4,7 +4,7 @@
 # Windows translates \n to \r\n, so a three-line edit came out as a 990-line
 # diff and a ten-file change read as 2765 insertions / 2796 deletions instead
 # of the real 393 / 415. A diff nobody can review is a change nobody has
-# reviewed. Commit b4f897a ("Restore LF line endings across this branch") is
+# reviewed. Commit 71b9a76 ("Restore LF line endings across this branch") is
 # the cleanup for that; this file is the prevention, and it works regardless
 # of which editor, script or agent does the writing.
 #
