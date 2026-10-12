@@ -16,11 +16,6 @@ import com.hazia.emivita.core.data.settings.SettingsRepository
 import com.hazia.emivita.core.scheduling.EXTRA_REMINDER_ID
 import com.hazia.emivita.core.scheduling.ReminderActionReceiver
 import com.hazia.emivita.feature.alarm.AlarmActivity
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
-import java.time.format.FormatStyle
-import com.hazia.emivita.core.format.formatDecimal
 import com.hazia.emivita.core.format.formatDecimalLocalized
 import com.hazia.emivita.core.format.maskedMedicineName
 import kotlinx.coroutines.flow.first

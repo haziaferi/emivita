@@ -54,7 +54,6 @@ import com.hazia.emivita.core.scheduling.OccurrenceProjectionCache
 import com.hazia.emivita.ui.components.DateField
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import java.time.format.DateTimeFormatter
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
 import androidx.compose.ui.platform.LocalResources

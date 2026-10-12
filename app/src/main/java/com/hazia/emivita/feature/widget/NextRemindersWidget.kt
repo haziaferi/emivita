@@ -32,9 +32,6 @@ import androidx.glance.text.TextStyle
 import com.hazia.emivita.EmivitaApplication
 import com.hazia.emivita.MainActivity
 import com.hazia.emivita.core.data.entity.DoseStatus
-import java.time.Instant
-import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import androidx.glance.LocalContext
 import com.hazia.emivita.R
 import com.hazia.emivita.core.format.LocaleFormats

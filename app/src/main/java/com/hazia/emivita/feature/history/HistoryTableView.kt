@@ -36,9 +36,7 @@ import com.hazia.emivita.core.data.entity.DoseStatus
 import com.hazia.emivita.core.format.formatDoseWithUnit
 import com.hazia.emivita.ui.components.parseHexColor
 import com.hazia.emivita.ui.theme.NeutralMedicineAccent
-import java.time.Instant
 import java.time.ZoneId
-import java.time.format.DateTimeFormatter
 import androidx.annotation.StringRes
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R

@@ -3,7 +3,6 @@ package com.hazia.emivita.core.data.export
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
 import com.hazia.emivita.core.data.dao.DoseEventWithMedicine
-import com.hazia.emivita.core.data.entity.DoseStatus
 import com.hazia.emivita.core.format.formatDecimal
 import com.hazia.emivita.core.format.formatDoseWithUnit
 import java.io.OutputStream

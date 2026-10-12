@@ -7,7 +7,6 @@ import androidx.core.app.NotificationCompat
 import com.hazia.emivita.R
 import com.hazia.emivita.core.data.entity.Medicine
 import com.hazia.emivita.core.data.entity.Reminder
-import com.hazia.emivita.core.format.formatDecimal
 import com.hazia.emivita.core.scheduling.AlertActionReceiver
 import java.time.LocalDate
 import com.hazia.emivita.core.format.formatDecimalLocalized

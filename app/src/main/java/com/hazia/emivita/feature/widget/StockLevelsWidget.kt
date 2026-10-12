@@ -30,10 +30,8 @@ import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
 import androidx.glance.text.TextStyle
 import com.hazia.emivita.EmivitaApplication
-import com.hazia.emivita.core.format.formatDecimal
 import com.hazia.emivita.MainActivity
 import java.time.LocalDate
-import java.time.format.DateTimeFormatter
 import androidx.glance.LocalContext
 import com.hazia.emivita.R
 import com.hazia.emivita.core.format.LocaleFormats

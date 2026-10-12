@@ -13,7 +13,6 @@ import com.hazia.emivita.core.data.entity.Medicine
 import com.hazia.emivita.core.data.entity.Profile
 import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.entity.StockInfo
-import com.hazia.emivita.core.scheduling.OccurrenceProjectionCache
 import com.hazia.emivita.core.scheduling.SchedulingCoordinator
 import io.mockk.coVerify
 import io.mockk.mockk

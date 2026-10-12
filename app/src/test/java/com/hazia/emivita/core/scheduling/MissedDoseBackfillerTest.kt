@@ -15,7 +15,6 @@ import com.hazia.emivita.core.data.entity.Profile
 import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.repository.DoseEventRepository
 import com.hazia.emivita.core.data.settings.SettingsRepository
-import io.mockk.coEvery
 import io.mockk.coVerify
 import io.mockk.every
 import io.mockk.mockk

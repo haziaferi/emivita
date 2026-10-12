@@ -26,7 +26,6 @@ import com.hazia.emivita.core.di.LocalAppContainer
 import com.hazia.emivita.core.di.LocalCurrentProfileId
 import com.hazia.emivita.feature.lock.AppLockGate
 import com.hazia.emivita.ui.theme.SavedEmivitaTheme
-import com.hazia.emivita.ui.theme.MedPalette
 import kotlinx.coroutines.launch
 import com.hazia.emivita.feature.disclaimer.DisclaimerDialog
 import com.hazia.emivita.feature.recovery.DatabaseRecoveredDialog

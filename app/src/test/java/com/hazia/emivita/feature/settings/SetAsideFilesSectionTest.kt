@@ -14,7 +14,6 @@ import org.junit.Test
 import org.junit.rules.TemporaryFolder
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
-import java.io.File
 
 /**
  * The set-aside section under Data & Backup (spec §9 #32): absent with no

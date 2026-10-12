@@ -12,7 +12,6 @@ import com.hazia.emivita.core.data.entity.DoseEvent
 import com.hazia.emivita.core.data.entity.DoseStatus
 import com.hazia.emivita.core.data.entity.Medicine
 import com.hazia.emivita.core.data.entity.Reminder
-import com.hazia.emivita.core.data.entity.RepeatConfig
 import com.hazia.emivita.core.di.AppContainer
 import java.time.LocalDate
 import java.time.ZoneId

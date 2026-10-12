@@ -57,6 +57,28 @@ regenerate both, and let `PaletteSpecConsistencyTest` confirm the code.
 python tools/palette_derive.py --check
 ```
 
+Code health is computed, not eyeballed (§7 R82): `code_health.py --check` exits 1
+on a comment block over three sentences, an import no longer used, or a
+top-level declaration referenced only where it is declared. `--selftest` proves
+each detector can still fire — run it before trusting a zero. `split_plan.py`
+scores a proposed split of an oversized file (`--explain` the current one, then
+`--solve` refines every seed); its cost counts boundary-crossing references,
+`private` symbols that would need `internal`, lines over a 450-line cap, part
+count and size spread.
+
+```bash
+python tools/code_health.py --selftest && python tools/code_health.py --check
+python tools/code_health.py --graph app/src/main/java/.../Screen.kt /tmp/g.json
+python tools/split_plan.py /tmp/g.json --solve
+```
+
+- `getValue`/`setValue` back every `var x by remember { … }` and are resolved by
+  convention, never written out: `CONVENTION_IMPORTS` exempts them, and no
+  textual census may call such an import unused. The compiler is the verifier.
+- A `${…}` span inside a string is live Kotlin. Blanking it with the literal
+  hides real references; `code_health.py`'s lexer reads comments and literals in
+  one pass for that reason.
+
 ## On-device tests (§9 #20)
 
 `app/src/androidTest/` runs against the real SQLCipher database, AlarmManager
