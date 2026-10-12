@@ -46,6 +46,12 @@ class SchedulingEngine(
     // passing [fixedZone]; production leaves it null.
     private val zone: ZoneId get() = fixedZone ?: ZoneId.systemDefault()
 
+    /** When a dose actually reached the person, by (reminder, dose event); see
+     *  [DeliveryLedger]. AppContainer wires it; left unset, a follow-up counts
+     *  from its parent's slot, as it did before §7 R83 (c). */
+    @Volatile
+    var deliveredAt: (reminderId: Long, doseEventId: Long) -> Long? = { _, _ -> null }
+
     /** The types that materialize a DoseEvent when they fire. These are the
      *  ones [OccurrenceProjectionCache] projects onto Today, History and the
      *  widgets, and the only ones whose occurrences carry a real dose amount. */
@@ -286,7 +292,12 @@ class SchedulingEngine(
                     null
                 } else {
                     val anchorEpochMillis = when (config.startBehavior) {
-                        IntervalStartBehavior.ON_REMINDED -> doseEventDao.getMostRecentForReminder(parentId)?.scheduledEpochMillis
+                        // From when the parent really rang, if the phone held it
+                        // back past the slot (§7 R83 (c)); on time, the slot.
+                        IntervalStartBehavior.ON_REMINDED -> doseEventDao.getMostRecentForReminder(parentId)?.let { parent ->
+                            deliveredAt(parentId, parent.id)?.takeIf { it > parent.scheduledEpochMillis + DeliveryLedger.LATE_MILLIS }
+                                ?: parent.scheduledEpochMillis
+                        }
                         IntervalStartBehavior.ON_RESOLVED -> doseEventDao.getLastResolved(parentId)?.resolvedAtEpochMillis
                     }
                     // Parent hasn't fired/resolved yet -- nothing to follow. Not

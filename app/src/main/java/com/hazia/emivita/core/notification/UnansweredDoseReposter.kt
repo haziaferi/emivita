@@ -6,6 +6,7 @@ import androidx.core.app.NotificationManagerCompat
 import com.hazia.emivita.core.data.dao.DoseEventDao
 import com.hazia.emivita.core.data.dao.MedicineDao
 import com.hazia.emivita.core.data.dao.ReminderDao
+import com.hazia.emivita.core.scheduling.DeliveryLedger
 import com.hazia.emivita.core.scheduling.SnoozeLedger
 
 /**
@@ -40,7 +41,10 @@ class UnansweredDoseReposter(
             val reminder = reminderDao.getById(reminderId) ?: continue
             if (!reminder.enabled) continue
             val medicine = medicineDao.getById(event.medicineId) ?: continue
-            runCatching { notificationBuilder.buildAndPost(event, reminder, medicine); posted++ }
+            runCatching {
+                notificationBuilder.buildAndPost(event, reminder, medicine); posted++
+                DeliveryLedger.recordFirst(context, reminderId, event.id, nowEpochMillis)
+            }
                 .onFailure { Log.w(TAG, "Could not re-post dose ${event.id}", it) }
         }
         return posted

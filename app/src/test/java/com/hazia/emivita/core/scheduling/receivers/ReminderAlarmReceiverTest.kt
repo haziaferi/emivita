@@ -1,6 +1,9 @@
 package com.hazia.emivita.core.scheduling.receivers
 
+import com.hazia.emivita.core.data.config.IntervalStartBehavior
 import com.hazia.emivita.core.data.config.LowStockTriggerMode
+import com.hazia.emivita.core.data.config.ReminderType
+import com.hazia.emivita.core.scheduling.EXTRA_TRIGGER_AT_EPOCH_MILLIS
 import com.hazia.emivita.core.data.config.ReminderConfig
 import com.hazia.emivita.core.data.entity.DoseStatus
 import com.hazia.emivita.core.data.entity.RepeatConfig
@@ -199,5 +202,29 @@ class ReminderAlarmReceiverTest {
         }
         h.deliver(intent)
         assertEquals(emptyList<Int>(), h.notificationIds)
+    }
+
+    /** §7 R83 (c): the owner's rule for a parent the phone held back -- it
+     *  rings when it can, and its follow-up comes the set delay after that.
+     *  Counted from the slot, the child's time had passed and it was dropped. */
+    @Test
+    fun `a parent delivered ninety minutes late arms its follow-up the delay after the real ring`() {
+        val medicineId = h.medicine()
+        val parentId = h.reminder(medicineId, fixedTime())
+        val childId = runBlocking {
+            h.container.reminderRepository.create(
+                medicineId = medicineId, groupId = null, type = ReminderType.LINKED_FOLLOWING,
+                config = ReminderConfig.LinkedFollowing(delayMinutes = 30, dose = 1.0, startBehavior = IntervalStartBehavior.ON_REMINDED),
+                parentReminderId = parentId,
+            )
+        }
+        val late = h.capture(h.regularAlarms(parentId).single())
+            .putExtra(EXTRA_TRIGGER_AT_EPOCH_MILLIS, System.currentTimeMillis() - 90 * 60_000L)
+        val before = System.currentTimeMillis()
+        h.deliver(late)
+        val after = System.currentTimeMillis()
+
+        val child = h.regularAlarms(childId).single().triggerAtMs
+        assertTrue("30 min after the real ring, not after the slot", child in (before + 30 * 60_000L)..(after + 30 * 60_000L))
     }
 }

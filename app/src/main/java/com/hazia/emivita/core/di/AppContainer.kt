@@ -12,6 +12,7 @@ import com.hazia.emivita.core.data.settings.SettingsRepository
 import com.hazia.emivita.core.notification.AlertNotificationBuilder
 import com.hazia.emivita.core.notification.ReminderNotificationBuilder
 import com.hazia.emivita.core.scheduling.AlarmScheduler
+import com.hazia.emivita.core.scheduling.DeliveryLedger
 import com.hazia.emivita.core.scheduling.LowStockExpirationAlertEvaluator
 import com.hazia.emivita.core.scheduling.OccurrenceProjectionCache
 import com.hazia.emivita.core.scheduling.RealSchedulingCoordinator
@@ -102,7 +103,9 @@ class AppContainer(
     // so RealSchedulingCoordinator and the cache itself (both below, in this file)
     // are the only remaining consumers.
     private val schedulingEngine: SchedulingEngine by lazy {
-        SchedulingEngine(database.doseEventDao(), database.medicineDao(), settingsRepository)
+        SchedulingEngine(database.doseEventDao(), database.medicineDao(), settingsRepository).also {
+            it.deliveredAt = { reminderId, doseEventId -> DeliveryLedger.deliveredAt(appContext, reminderId, doseEventId) }
+        }
     }
 
     // Public since spec §7 R37: ReminderAlarmReceiver posts alert
@@ -157,6 +160,10 @@ class AppContainer(
         }
     }
 
+    /** The moment a dose reached the person; a follow-up counts from it (§7 R83 (c)). */
+    fun recordDelivered(reminderId: Long, doseEventId: Long, atEpochMillis: Long) =
+        DeliveryLedger.recordFirst(appContext, reminderId, doseEventId, atEpochMillis)
+
     fun rescheduleOnLaunch() {
         applicationScope.launch {
             // Before the repair (§9 #29, DP-04): did an armed alarm fail to fire?
@@ -171,7 +178,9 @@ class AppContainer(
                 .onFailure { android.util.Log.e("AppContainer", "backfill on launch failed", it) }
             runCatching { alarmScheduler.rearmSnoozes() }
                 .onFailure { android.util.Log.e("AppContainer", "snooze re-arm on launch failed", it) }
-            runCatching { unansweredDoseReposter.repost() }
+            // A re-posted parent has just reached the person, so its follow-ups
+            // re-anchor on now (§7 R83 (c)).
+            runCatching { if (unansweredDoseReposter.repost() > 0) schedulingCoordinator.rescheduleAll() }
                 .onFailure { android.util.Log.e("AppContainer", "repost on launch failed", it) }
         }
     }

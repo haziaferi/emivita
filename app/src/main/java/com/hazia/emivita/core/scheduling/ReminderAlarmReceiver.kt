@@ -122,6 +122,7 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
             container.doseEventRepository.findByReminderAndTime(reminderId, scheduledEpochMillis)
         }
 
+        if (doseEvent != null) container.recordDelivered(reminderId, doseEvent.id, System.currentTimeMillis())
         if (doseEvent == null) {
             Log.e(TAG, "Could not materialize or find a DoseEvent for reminder $reminderId at $scheduledEpochMillis.")
         } else if (doseEvent.status == DoseStatus.PENDING) {

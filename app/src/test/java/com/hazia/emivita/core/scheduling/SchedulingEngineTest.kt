@@ -525,6 +525,25 @@ class SchedulingEngineTest {
         assertOccursAt("2026-06-01T08:30", engine(dao = dao).nextOccurrenceFor(child, at("2026-06-01T08:30")))
     }
 
+    /** §7 R83 (c): the phone delivered the 08:00 parent at 09:30. The child
+     *  used to be dropped (08:30 had passed); the owner's rule is that it
+     *  comes its delay after the parent really rang. */
+    @Test
+    fun `a parent delivered late moves its follow-up to the delay after the real delivery`() = runTest {
+        val dao = fakeDao(mostRecent = mapOf(PARENT_ID to doseEvent(scheduledEpochMillis = at("2026-06-01T08:00"))))
+        val child = linkedReminder(IntervalStartBehavior.ON_REMINDED, parentReminderId = PARENT_ID)
+        val engine = engine(dao = dao).also { it.deliveredAt = { r, _ -> if (r == PARENT_ID) at("2026-06-01T09:30") else null } }
+        assertOccursAt("2026-06-01T10:00", engine.nextOccurrenceFor(child, at("2026-06-01T09:30")))
+    }
+
+    @Test
+    fun `a parent delivered within a minute of its slot keeps the slot as the anchor`() = runTest {
+        val dao = fakeDao(mostRecent = mapOf(PARENT_ID to doseEvent(scheduledEpochMillis = at("2026-06-01T08:00"))))
+        val child = linkedReminder(IntervalStartBehavior.ON_REMINDED, parentReminderId = PARENT_ID)
+        val engine = engine(dao = dao).also { it.deliveredAt = { _, _ -> at("2026-06-01T08:00") + 40_000L } }
+        assertOccursAt("2026-06-01T08:30", engine.nextOccurrenceFor(child, at("2026-06-01T08:01")))
+    }
+
     @Test
     fun `a child whose parent has never fired has no next occurrence yet`() = runTest {
         val child = linkedReminder(IntervalStartBehavior.ON_REMINDED, parentReminderId = PARENT_ID)
