@@ -165,9 +165,14 @@ en-XA on the device (`isPseudoLocalesEnabled`) is the complement.
   (persisted). Each says why at its declaration.
 - Lint will demand real dashes, ellipses and `<plurals>` the moment text
   lands in XML. Fix them; never baseline them.
-- `LiveControlBesideLabelGateTest` fails the build on a `Switch`/`Checkbox`
-  that is its own tap target beside a label: make the row `toggleable` and
-  the control `onCheckedChange = null` (Stage B's one-node pattern).
+- `LiveControlBesideLabelGateTest` fails the build on a `Switch`, `Checkbox`
+  or `RadioButton` that is its own tap target beside a label. Accepted
+  shapes: the container carries the tap target (`toggleable`, `selectable`,
+  or a `DropdownMenuItem` whose own `onClick` is the node) *and* the control
+  is display-only (`onCheckedChange`/`onClick = null`); or the control names
+  itself with a non-null `contentDescription`. Display-only alone no longer
+  passes — deleting a row's modifier left an inert control and a green build
+  until §7 R82.
 
 A translation's *wording* is reviewed with `tools/strings_review.py` (§7 R81):
 `--check` is deterministic (placeholders the test's regex misses, glyph

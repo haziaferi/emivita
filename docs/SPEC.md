@@ -915,6 +915,33 @@ reference is where the evidence is.
     is exactly the case a fresh implementation has not met yet. When a
     reference exists, port its tests first and read its code second. (R60)
 
+20. **A call that reports failure by returning `false` or `null` has not
+    failed until someone looks.** Five instances in one audit, each silent
+    and each a different file: `DocumentFile.renameTo`'s discarded boolean
+    deleted the good backup and left only a staging file nothing reads;
+    `File.renameTo` in the set-aside path reported a successful recovery that
+    had not happened; `openOutputStream` returning null made a whole write
+    block a no-op that fell through to "Backup exported."; `resolveActivity`
+    returned a component the app may not start, because the `permission`
+    field was never read; and a `CharArray` password going null across an
+    activity round trip downgraded an encrypted export to plaintext and
+    reported success. The Kotlin type system does not flag any of them —
+    `?.`, a discarded `Boolean` and a nullable field are all legal and all
+    quiet. When a platform API's contract says "returns false on failure",
+    the call site either branches on it or the rule is being broken.
+    (R23, R81, R82)
+
+21. **A gate that scans the tree must assert that it scanned the tree.**
+    `walkTopDown()` over a renamed or missing directory yields nothing, every
+    filter passes, and the gate goes green over code it never opened — the
+    same shape as rule 5, one level up: not an unverified claim but an
+    unverifiable one. `HardcodedUiTextGateTest` asserts `sources.size > 50`
+    for this reason; `LiveControlBesideLabelGateTest` shipped in R81 without
+    it and was found by an audit of the suite rather than by the suite. Every
+    source-level gate carries a lower bound on files visited and a
+    `theGateItselfCanFail` self-test that feeds each rule a sample it must
+    bite. A check reporting zero and a check that ran on nothing are
+    indistinguishable from the outside. (R82)
 ---
 
 | # | Finding | Status | Superseded by |
@@ -1702,6 +1729,52 @@ this session.
     day, compact register, next dose first — the owner's mockups as an
     Appearance option, the same rows and actions in all four, no single tap
     changing a dose.
+
+38. **🟡 Decisions the whole-tree audit raised — open, each one a behaviour
+    or a wording choice.** §7 R82. Five review passes returned ~60 findings;
+    the five that were gaps, not choices, are fixed in that row. These six
+    are not gaps and are the owner's to settle, listed here because a
+    decision inside a ledger cell is a decision nobody reads:
+    (a) **Rotation loses every form's input.** `rememberSaveable` appears
+    twice in 119 main files, and `MainActivity` declares no `configChanges`,
+    so Add/Edit Reminder, Add/Edit Medicine, Stock & Expiration, Medical ID,
+    Weekend Mode and Dose Edit all reset — and `AppLockGate` re-challenges
+    biometrics. The sweep touches every form, which is why it is a decision
+    and not a patch.
+    (b) **Drag-to-reorder on Medicines cancels itself the moment it works:**
+    `Modifier.pointerInput(index)` is keyed on the index the drag mutates, so
+    the gesture is torn down mid-drag and `onDrop` never fires. Only the
+    TalkBack move actions reorder today.
+    (c) **A LinkedFollowing child is cancelled with no catch-up** whenever
+    its parent's alarm is delivered later than `delayMinutes` — the OEM
+    deferral `AlarmWatchdog` exists for. Every other reminder type rolls
+    forward; this one yields nothing for 24 hours and Today says nothing.
+    (d) **`AlarmRingService` leaves the foreground it just entered:**
+    `startForeground` at the top of `onStartCommand` is followed
+    unconditionally by `stopRinging(keepNotification = true)`, so the
+    ten-minute ring may run as an ordinary background service.
+    `AlarmRingServiceTest` asserts `lastForegroundNotificationId`, which
+    Robolectric leaves set after `stopForeground` — rule 5's "assert the
+    property, not a proxy for it", so the test passes while the property is
+    false. Wants the phone, not the JVM.
+    (e) **A snoozed dose is re-posted on the next launch.** Snooze leaves the
+    dose `PENDING` and cancels the notification, which is exactly
+    `UnansweredDoseReposter`'s selection criterion; on an Alarm-tier medicine
+    that is a full ring nobody asked for, minutes before the snooze.
+    (f) **The Keystore-loss path needs the owner's words, not just a code
+    move.** A lost `emivita_db_wrap_key` throws from `sqlcipherFactory(...)`,
+    which is evaluated as an *argument* to `open(...)` and so sits outside
+    `openOrRecover`'s retry — an unrecoverable crash loop with no dialog.
+    Moving it inside `build` is necessary and not sufficient: a file set
+    aside after the wrap key is gone can never be decrypted, so the recovery
+    wording that promises "stays recoverable" would become false and the
+    dialog needs a second, honest reason code.
+    Also held pending a decision, both computed and both deliberately
+    unapplied: the 172 comment blocks over the three-sentence cap (2,456
+    lines), and the two file splits `split_plan.py` scored
+    (`SettingsDetailScreens` 538 → 136 at 309/324/315 lines with zero
+    visibility widenings; `AddReminderScreen` 723 → 396.7 at 361/323/449 with
+    seven `private` → `internal`).
 
 ### Not yet scoped — parking lot ❓
 
