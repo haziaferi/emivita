@@ -1,5 +1,8 @@
 package com.hazia.emivita.feature.medicines
 
+import androidx.compose.runtime.mutableIntStateOf
+import com.hazia.emivita.ui.components.unsavedChangesGuard
+import com.hazia.emivita.ui.components.rememberDirty
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -177,9 +180,19 @@ fun StockExpirationScreen(
 
     val runOutDate by occurrenceProjectionCache.state.collectAsState()
 
+    // Back asks before dropping an edit (§9 #29's guard, extended in §7 R84).
+    // The quantity has its own baseline, reset by a refill, which writes it.
+    var refills by rememberSaveable { mutableIntStateOf(0) }
+    val quantityDirty = rememberDirty(filled to refills, quantity)
+    val restDirty = rememberDirty(
+        filled, unit, refillQuantity, lowStockEnabled, threshold, triggerMode, expirationEnabled,
+        expirationDateEpochDay, exactExpiryDay, openedDateEpochDay, useWithinDays, leadDays, frequency,
+    )
+    val back = unsavedChangesGuard(quantityDirty || restDirty, onBack)
+
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
         Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-            IconButton(onClick = onBack) {
+            IconButton(onClick = back) {
                 Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
             }
             Spacer(Modifier.width(4.dp))
@@ -235,6 +248,7 @@ fun StockExpirationScreen(
                         val logged = doseEventRepository.logRefill(medicineId, amount, System.currentTimeMillis())
                         val fresh = medicineRepository.getById(medicineId)
                         quantity = formatDecimalLocalized(fresh?.stockInfo?.quantity ?: 0.0)
+                        refills++
                         saveStatus = resources.getString(
                             if (logged != null) R.string.stock_refilled_status else R.string.stock_refill_needs_unit,
                         )

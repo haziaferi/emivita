@@ -1,5 +1,7 @@
 package com.hazia.emivita.feature.settings
 
+import com.hazia.emivita.ui.components.unsavedChangesGuard
+import com.hazia.emivita.ui.components.rememberDirty
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -138,8 +140,12 @@ fun MedicalIdScreen(
         }
     }
 
+    // Back asks before dropping an edit (§9 #29's guard, extended in §7 R84).
+    val dirty = rememberDirty(filled, name, bloodType, allergies, doctorName, doctorPhone, doctorAddress, pharmacyName, pharmacyPhone)
+    val back = unsavedChangesGuard(dirty, onBack)
+
     Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
-        DetailHeader(stringResource(R.string.medical_id_medical_id), onBack)
+        DetailHeader(stringResource(R.string.medical_id_medical_id), back)
 
         if (!loaded) {
             CircularProgressIndicator()
