@@ -1,0 +1,22 @@
+# Dependency updates as pull requests, never merged automatically: each one
+# must pass CI before it can merge (the master ruleset). Monthly and grouped,
+# so one PR per ecosystem per month. For GitHub Actions, Dependabot moves the
+# SHA pin and its `# vX.Y.Z` comment together, which tools/workflow_check.py
+# then verifies.
+version: 2
+updates:
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      gradle:
+        patterns: ['*']
+
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: monthly
+    groups:
+      actions:
+        patterns: ['*']
