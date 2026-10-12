@@ -58,6 +58,10 @@ jobs:
       # sdkDownload fetches what is missing once this action has set the licences.
       - name: Set up Android SDK
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2
+        # The default list asks for the legacy `tools` package, which
+        # cmdline-tools 16 no longer has; sdkmanager then exits 1.
+        with:
+          packages: platform-tools
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
@@ -98,6 +102,10 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2
+        # The default list asks for the legacy `tools` package, which
+        # cmdline-tools 16 no longer has; sdkmanager then exits 1.
+        with:
+          packages: platform-tools
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4

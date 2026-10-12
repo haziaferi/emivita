@@ -4,12 +4,11 @@
 # zip handling in BackupZipWriter.kt are exactly what its java-kotlin queries
 # look at.
 #
-# On a PRIVATE repository the analysis step runs on any plan, but the upload
-# to code scanning needs GitHub Advanced Security -- so until this repository
-# is public or GHAS is on, the last step fails and the run is red. That is the
-# expected result, not a defect in this file; it is kept so that the day either
-# changes, nothing needs writing. Every action is pinned to a commit SHA with
-# its version beside it (tools/workflow_check.py).
+# On a PRIVATE repository the analysis runs on any plan, but the upload to
+# code scanning needs GitHub Advanced Security. So while the repository is
+# private the results are kept as a run artifact instead, and the day it is
+# public the upload switches itself back on. Every action is pinned to a
+# commit SHA with its version beside it (tools/workflow_check.py).
 name: CodeQL
 
 on:
@@ -58,6 +57,10 @@ jobs:
 
       - name: Set up Android SDK
         uses: android-actions/setup-android@9fc6c4e9069bf8d3d10b2204b1fb8f6ef7065407 # v3.2.2
+        # The default list asks for the legacy `tools` package, which
+        # cmdline-tools 16 no longer has; sdkmanager then exits 1.
+        with:
+          packages: platform-tools
 
       - name: Set up Gradle
         uses: gradle/actions/setup-gradle@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
@@ -71,3 +74,12 @@ jobs:
         uses: github/codeql-action/analyze@faaca9a8f6edddba5725ffe5adefdab6669a2eca # v3.38.0
         with:
           category: '/language:java-kotlin'
+          output: sarif
+          upload: ${{ github.event.repository.private && 'never' || 'always' }}
+
+      - name: Keep the SARIF as an artifact
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: CodeQL SARIF
+          path: sarif
+          retention-days: 14
