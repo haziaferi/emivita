@@ -103,6 +103,13 @@ shell from scratch, which is already done here.
    schema JSON (used for migration tests, §7 finding R11), not something to
    delete.
 
+## License and security reports
+
+Emivita is free software under the GNU General Public License, version 3
+(`LICENSE`). Ideas from the GPL apps in SPEC Appendix F were taken as
+inspiration, never code. Report a vulnerability privately, not in an issue:
+see `SECURITY.md`.
+
 ## Project status
 
 Not tracked here, on purpose. `docs/SPEC.md` is the source of truth: §9's
