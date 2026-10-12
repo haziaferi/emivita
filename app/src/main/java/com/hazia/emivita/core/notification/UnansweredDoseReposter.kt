@@ -6,6 +6,7 @@ import androidx.core.app.NotificationManagerCompat
 import com.hazia.emivita.core.data.dao.DoseEventDao
 import com.hazia.emivita.core.data.dao.MedicineDao
 import com.hazia.emivita.core.data.dao.ReminderDao
+import com.hazia.emivita.core.scheduling.SnoozeLedger
 
 /**
  * Re-post the notifications of doses that fired, were never answered, and
@@ -32,6 +33,9 @@ class UnansweredDoseReposter(
         var posted = 0
         for (event in doseEventDao.getPendingScheduledBetween(nowEpochMillis - LOOKBACK_MILLIS, nowEpochMillis)) {
             if (event.id.toInt() in active) continue
+            // A snoozed dose is PENDING with no notification by design; its own
+            // alarm brings it back (§7 R83 (e)).
+            if (SnoozeLedger.snoozedUntil(context, event.id, nowEpochMillis) != null) continue
             val reminderId = event.reminderId ?: continue
             val reminder = reminderDao.getById(reminderId) ?: continue
             if (!reminder.enabled) continue

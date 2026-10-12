@@ -169,6 +169,8 @@ class AppContainer(
             // unanswered doses get their notification back.
             runCatching { missedDoseBackfiller.backfill() }
                 .onFailure { android.util.Log.e("AppContainer", "backfill on launch failed", it) }
+            runCatching { alarmScheduler.rearmSnoozes() }
+                .onFailure { android.util.Log.e("AppContainer", "snooze re-arm on launch failed", it) }
             runCatching { unansweredDoseReposter.repost() }
                 .onFailure { android.util.Log.e("AppContainer", "repost on launch failed", it) }
         }

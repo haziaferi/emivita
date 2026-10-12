@@ -108,6 +108,20 @@ class AlarmScheduler(private val context: Context) {
      *  event's original slot, not [fireAtEpochMillis], so the receiver looks
      *  up the same DoseEvent rather than trying to materialize a new one. */
     fun scheduleSnooze(reminderId: Long, doseEventId: Long, originalScheduledEpochMillis: Long, fireAtEpochMillis: Long) {
+        SnoozeLedger.record(context, SnoozeLedger.Entry(doseEventId, reminderId, originalScheduledEpochMillis, fireAtEpochMillis))
+        armSnooze(reminderId, doseEventId, originalScheduledEpochMillis, fireAtEpochMillis)
+    }
+
+    /** Re-arms every snooze still running and drops the ended ones (§7 R83 (e)).
+     *  A reboot clears AlarmManager; on a plain launch this re-sets the same slot. */
+    fun rearmSnoozes(nowEpochMillis: Long = System.currentTimeMillis()) {
+        for (e in SnoozeLedger.all(context)) {
+            if (e.fireAtEpochMillis > nowEpochMillis) armSnooze(e.reminderId, e.doseEventId, e.originalScheduledEpochMillis, e.fireAtEpochMillis)
+            else SnoozeLedger.forget(context, e.doseEventId)
+        }
+    }
+
+    private fun armSnooze(reminderId: Long, doseEventId: Long, originalScheduledEpochMillis: Long, fireAtEpochMillis: Long) {
         setAlarm(
             requestCode = snoozeRequestCode(doseEventId),
             reminderId = reminderId,

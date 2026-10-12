@@ -88,4 +88,17 @@ class AlarmSchedulerSlotTest {
         scheduler.scheduleSnooze(reminderId = 7L, doseEventId = 1L, originalScheduledEpochMillis = 1L, fireAtEpochMillis = 5_000L)
         assertEquals(2, shadowOf(alarmManager).scheduledAlarms.size)
     }
+
+    /** §7 R83 (e): AlarmManager forgets a snooze at a reboot; the ledger does not. */
+    @Test
+    fun `after a reboot a running snooze is re-armed at its own time and an ended one is dropped`() {
+        scheduler.scheduleSnooze(reminderId = 7L, doseEventId = 201L, originalScheduledEpochMillis = 1_000L, fireAtEpochMillis = 50_000L)
+        scheduler.scheduleSnooze(reminderId = 7L, doseEventId = 202L, originalScheduledEpochMillis = 2_000L, fireAtEpochMillis = 9_000L)
+        shadowOf(alarmManager).scheduledAlarms.toList().forEach { it.operation?.let(alarmManager::cancel) }   // the reboot
+
+        scheduler.rearmSnoozes(nowEpochMillis = 10_000L)
+
+        assertEquals(listOf(50_000L), shadowOf(alarmManager).scheduledAlarms.map { it.triggerAtMs })
+        assertEquals(listOf(201L), SnoozeLedger.all(context).map { it.doseEventId })
+    }
 }

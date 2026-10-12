@@ -16,6 +16,7 @@ import com.hazia.emivita.core.data.entity.Profile
 import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.entity.StockInfo
 import com.hazia.emivita.core.data.settings.SettingsRepository
+import com.hazia.emivita.core.scheduling.SnoozeLedger
 import io.mockk.coEvery
 import com.hazia.emivita.ui.theme.DEFAULT_PALETTE
 import io.mockk.every
@@ -104,5 +105,16 @@ class UnansweredDoseReposterTest {
         pending(m2, r2, now - hour)                            // paused reminder
         assertEquals(0, reposter.repost(now))
         assertEquals(0, shadowOf(nm).activeNotifications.size)
+    }
+
+    // ---- §7 R83 (e): a snooze is not an unanswered dose ----
+
+    @Test
+    fun `a dose still inside its snooze is not re-posted, and comes back once the snooze has ended`() = runTest {
+        val (m, r) = seed()
+        val id = pending(m, r, now - hour)
+        SnoozeLedger.record(context, SnoozeLedger.Entry(id, r, now - hour, fireAtEpochMillis = now + 5 * 60_000L))
+        assertEquals("snoozed: its own alarm brings it back", 0, reposter.repost(now))
+        assertEquals("the snooze has ended and nothing answered it", 1, reposter.repost(now + 6 * 60_000L))
     }
 }

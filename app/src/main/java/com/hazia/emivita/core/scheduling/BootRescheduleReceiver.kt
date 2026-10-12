@@ -38,6 +38,7 @@ class BootRescheduleReceiver : BroadcastReceiver() {
                 // passed while the phone was off become Missed rows, and the
                 // last day's unanswered doses get their notification back.
                 container.missedDoseBackfiller.backfill()
+                container.alarmScheduler.rearmSnoozes()
                 container.unansweredDoseReposter.repost()
             } catch (t: Throwable) {
                 Log.e(TAG, "Failed to reschedule reminders after ${intent.action}", t)
