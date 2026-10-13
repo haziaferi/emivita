@@ -37,8 +37,8 @@ in `proguard-rules.pro` (§7 R69); the gate reads the DEX, and CI runs it:
 ```
 
 The repository is public and CI runs (§7 R86). `master` takes changes only
-by pull request, merged when "Build, test, lint", "Release build, R8 gate"
-and "Analyze (java-kotlin)" are green: work on a branch, push it, open the
+by pull request, merged when "Build, test, lint", "Release build, R8 gate",
+"Analyze (java-kotlin)" and "Dependency review" are green: work on a branch, push it, open the
 PR, and let the owner merge. Commits use this repository's local git
 identity (`haziaferi`, the GitHub no-reply address); never put a personal
 name, email or contact in a file or in commit metadata. Workflows are still
