@@ -416,6 +416,11 @@ dependencies {
     androidTestImplementation("androidx.test:core:1.6.1")
     androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     testImplementation("org.robolectric:robolectric:4.14.1")
+    // Robolectric 4.14.1 brings Bouncy Castle 1.78.1, which has four advisories
+    // fixed by 1.85 (§7 R86). Test-only, never in the APK; raised all the same.
+    constraints {
+        testImplementation("org.bouncycastle:bcprov-jdk18on:1.86")
+    }
     // ApplicationProvider.getApplicationContext() for Robolectric-backed Room
     // repository tests (spec §7 R3 -- resolve()/tag-dedupe race-prone logic).
     testImplementation("androidx.test:core:1.6.1")
