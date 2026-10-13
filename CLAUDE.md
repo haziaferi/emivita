@@ -36,15 +36,31 @@ in `proguard-rules.pro` (§7 R69); the gate reads the DEX, and CI runs it:
 ./gradlew :app:assembleRelease && python tools/r8_check.py
 ```
 
-CI on this private repository has been billing-blocked since 2026-09-13
-(every run dies in 3 s), so the workflows are verified locally instead
-(§7 R74): every `uses:` pinned to a commit SHA that resolves to its `# vX`
-comment, every `with:` key an input of the action's own `action.yml`, and
-actionlint (a binary under `tools/bin/`, gitignored; fetch a release from
-rhysd/actionlint if it is missing). `--resolve` needs the network.
+The repository is public and CI runs (§7 R86). `master` takes changes only
+by pull request, merged when "Build, test, lint", "Release build, R8 gate"
+and "Analyze (java-kotlin)" are green: work on a branch, push it, open the
+PR, and let the owner merge. Commits use this repository's local git
+identity (`haziaferi`, the GitHub no-reply address); never put a personal
+name, email or contact in a file or in commit metadata. Workflows are still
+checked locally before a push (§7 R74): every `uses:` pinned to a commit SHA
+that resolves to its `# vX` comment, every `with:` key an input of the
+action's own `action.yml`, and actionlint (a binary under `tools/bin/`,
+gitignored; fetch a release from rhysd/actionlint if it is missing).
+`--resolve` needs the network.
 
 ```bash
 python tools/workflow_check.py --resolve
+```
+
+`docs/purpose-map.md` is generated from `docs/purpose-map.json` (§7 R86):
+edit the JSON and re-render. A new route, settings destination, activity,
+widget, channel or top-level `*Dialog` / `*Sheet` / `*Card` composable fails
+the check until it has a place on the map (or, for a card that is part of a
+screen, in `parts`). CI runs `--check`.
+
+```bash
+python tools/purpose_map.py            # re-render, then check
+python tools/purpose_map.py --check    # check only
 ```
 
 The four palettes are derived, not typed (§7 R76): `tools/palette_derive.py`
