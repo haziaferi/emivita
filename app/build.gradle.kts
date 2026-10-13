@@ -273,6 +273,31 @@ android {
     }
 }
 
+// The same patched versions as the root build.gradle.kts (§7 R86), for the
+// app's own configurations: lint and the tests run AGP's tooling too, and the
+// device-test runner (com.google.testing.platform) brings Netty 4.1.93 and
+// protobuf 3.24.4. None of it is in the APK. Keep the two tables equal.
+val patchedVersions = mapOf(
+    "org.bouncycastle:bcprov-jdk18on" to "1.86",
+    "org.bouncycastle:bcpkix-jdk18on" to "1.86",
+    "org.bouncycastle:bcutil-jdk18on" to "1.86",
+    "org.apache.commons:commons-compress" to "1.28.0",
+    "org.bitbucket.b_c:jose4j" to "0.9.6",
+    "org.jdom:jdom2" to "2.0.6.1",
+)
+configurations.configureEach {
+    resolutionStrategy.eachDependency {
+        val key = "${requested.group}:${requested.name}"
+        when {
+            requested.group == "io.netty" && !requested.name.startsWith("netty-tcnative") ->
+                useVersion("4.1.138.Final")
+            key.startsWith("com.google.protobuf:protobuf-") && requested.version.orEmpty().startsWith("3.") ->
+                useVersion("3.25.9")
+            key in patchedVersions -> useVersion(patchedVersions.getValue(key))
+        }
+    }
+}
+
 dependencies {
     // Compose
     val composeBom = platform("androidx.compose:compose-bom:2026.06.00")
@@ -416,11 +441,6 @@ dependencies {
     androidTestImplementation("androidx.test:core:1.6.1")
     androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
     testImplementation("org.robolectric:robolectric:4.14.1")
-    // Robolectric 4.14.1 brings Bouncy Castle 1.78.1, which has four advisories
-    // fixed by 1.85 (§7 R86). Test-only, never in the APK; raised all the same.
-    constraints {
-        testImplementation("org.bouncycastle:bcprov-jdk18on:1.86")
-    }
     // ApplicationProvider.getApplicationContext() for Robolectric-backed Room
     // repository tests (spec §7 R3 -- resolve()/tag-dedupe race-prone logic).
     testImplementation("androidx.test:core:1.6.1")
