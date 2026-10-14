@@ -29,12 +29,18 @@ sealed interface NotificationDelivery {
      * Notifications work, but one or more tiers sit at `IMPORTANCE_NONE` --
      * blocked outright, so nothing posted to them appears at all.
      *
-     * Only `NONE` counts: a tier dropped to silent or min is a preference,
-     * and warning about it would be the nagging PERM-024 names. `NONE` is the
-     * silent failure no permission check can see, an Alarm-tier medicine
-     * posting to a channel nobody will ever look at.
+     * `NONE` is the silent failure no permission check can see, an
+     * Alarm-tier medicine posting to a channel nobody will ever look at.
      */
     data class TiersBlocked(val tiers: List<String>) : NotificationDelivery
+
+    /**
+     * Tiers still on but below the importance Emivita gave them (§7 R91).
+     * Until R91 a quietened tier counted as a preference (PERM-024); the owner
+     * ruled otherwise once R90 found that OxygenOS turns an unblocked channel
+     * back on at LOW, which nobody chose.
+     */
+    data class TiersLowered(val tiers: List<String>) : NotificationDelivery
 }
 
 /**
@@ -47,9 +53,11 @@ sealed interface NotificationDelivery {
 fun notificationDelivery(
     notificationsEnabled: Boolean,
     blockedTiers: List<String>,
+    loweredTiers: List<String> = emptyList(),
 ): NotificationDelivery = when {
     !notificationsEnabled -> NotificationDelivery.AllBlocked
     blockedTiers.isNotEmpty() -> NotificationDelivery.TiersBlocked(blockedTiers)
+    loweredTiers.isNotEmpty() -> NotificationDelivery.TiersLowered(loweredTiers)
     else -> NotificationDelivery.Fine
 }
 
@@ -69,6 +77,8 @@ fun NotificationDelivery.cardTitle(): CardText? = when (this) {
     NotificationDelivery.AllBlocked -> CardText(R.string.notif_card_all_blocked_title)
     is NotificationDelivery.TiersBlocked ->
         CardText(if (tiers.size == 1) R.string.notif_card_one_tier_title else R.string.notif_card_some_tiers_title)
+    is NotificationDelivery.TiersLowered ->
+        CardText(if (tiers.size == 1) R.string.notif_card_one_tier_lowered_title else R.string.notif_card_some_tiers_lowered_title)
 }
 
 /** Card body, or null when there is no card to show. */
@@ -84,6 +94,10 @@ fun NotificationDelivery.cardBody(): CardText? = when (this) {
     // resolves them); only the sentence around them is a resource here.
     is NotificationDelivery.TiersBlocked -> CardText(
         if (tiers.size == 1) R.string.notif_card_one_tier_body else R.string.notif_card_some_tiers_body,
+        listOf(tiers.joinToString(", ")),
+    )
+    is NotificationDelivery.TiersLowered -> CardText(
+        if (tiers.size == 1) R.string.notif_card_one_tier_lowered_body else R.string.notif_card_some_tiers_lowered_body,
         listOf(tiers.joinToString(", ")),
     )
 }

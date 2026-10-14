@@ -397,6 +397,10 @@
     <string name="notif_card_some_tiers_title">Alcuni livelli di promemoria sono bloccati</string>
     <string name="notif_card_one_tier_body">I promemoria di livello %1$s sono bloccati nelle impostazioni delle notifiche di Android, quindi non compaiono mai. Ogni farmaco impostato su quel livello viene programmato e poi scartato in silenzio. Gli altri livelli non ne risentono.</string>
     <string name="notif_card_some_tiers_body">I promemoria di livello %1$s sono bloccati nelle impostazioni delle notifiche di Android, quindi non compaiono mai. Ogni farmaco impostato su uno di quei livelli viene programmato e poi scartato in silenzio. Gli altri livelli non ne risentono.</string>
+    <string name="notif_card_one_tier_lowered_title">Un livello di promemoria è abbassato</string>
+    <string name="notif_card_some_tiers_lowered_title">Alcuni livelli di promemoria sono abbassati</string>
+    <string name="notif_card_one_tier_lowered_body">I promemoria di livello %1$s sono impostati più in basso di come li ha creati Emivita nelle impostazioni delle notifiche di Android, quindi possono arrivare senza suono, senza comparire sullo schermo o, per le sveglie, senza occupare lo schermo. Riattivare un livello bloccato può lasciarlo così. Gli altri livelli non ne risentono.</string>
+    <string name="notif_card_some_tiers_lowered_body">I promemoria dei livelli %1$s sono impostati più in basso di come li ha creati Emivita nelle impostazioni delle notifiche di Android, quindi possono arrivare senza suono, senza comparire sullo schermo o, per le sveglie, senza occupare lo schermo. Riattivare un livello bloccato può lasciarlo così. Gli altri livelli non ne risentono.</string>
     <string name="add_medicine_notification_priority">Priorità di notifica</string>
 
     <!-- Stage A part 4 (§7 R60): -->
