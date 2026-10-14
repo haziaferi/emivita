@@ -513,6 +513,7 @@ private fun NotificationsBlockedCard() {
     fun read(): NotificationDelivery = notificationDelivery(
         notificationsEnabled = NotificationManagerCompat.from(context).areNotificationsEnabled(),
         blockedTiers = ReminderNotificationChannels.blockedTiers(context),
+        loweredTiers = ReminderNotificationChannels.loweredTiers(context),
     )
 
     var delivery by remember { mutableStateOf(read()) }

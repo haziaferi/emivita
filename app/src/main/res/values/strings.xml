@@ -424,6 +424,10 @@
     <string name="notif_card_some_tiers_title">Some reminder tiers are blocked</string>
     <string name="notif_card_one_tier_body">%1$s reminders are blocked in Android\'s own notification settings, so they never appear at all. Any medicine set to that tier is being scheduled and then silently dropped. Other tiers are unaffected.</string>
     <string name="notif_card_some_tiers_body">%1$s reminders are blocked in Android\'s own notification settings, so they never appear at all. Any medicine set to one of those tiers is being scheduled and then silently dropped. Other tiers are unaffected.</string>
+    <string name="notif_card_one_tier_lowered_title">One reminder tier is turned down</string>
+    <string name="notif_card_some_tiers_lowered_title">Some reminder tiers are turned down</string>
+    <string name="notif_card_one_tier_lowered_body">%1$s reminders are set lower in Android\'s notification settings than Emivita set them, so they can arrive without a sound, without showing on screen, or, for alarms, without taking over the screen. Turning a blocked tier back on can leave it like this. Other tiers are unaffected.</string>
+    <string name="notif_card_some_tiers_lowered_body">%1$s reminders are set lower in Android\'s notification settings than Emivita set them, so they can arrive without a sound, without showing on screen, or, for alarms, without taking over the screen. Turning a blocked tier back on can leave it like this. Other tiers are unaffected.</string>
     <!-- Fallback unit when a medicine has none set. %1$s is the amount, already
          formatted; the quantity picks the form. -->
     <plurals name="dose_default_unit">

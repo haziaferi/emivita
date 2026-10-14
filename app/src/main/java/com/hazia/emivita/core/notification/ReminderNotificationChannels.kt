@@ -64,9 +64,29 @@ object ReminderNotificationChannels {
 
     /** True when Android has this tier's channel at IMPORTANCE_NONE: nothing posted to it is
      *  ever shown, so nothing should ring for it either (§7 R81). */
-    fun isBlocked(context: Context, priority: NotificationPriority): Boolean {
-        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return false
-        return manager.getNotificationChannel(channelIdFor(priority))?.importance == NotificationManager.IMPORTANCE_NONE
+    fun isBlocked(context: Context, priority: NotificationPriority): Boolean =
+        importanceOf(context, priority) == NotificationManager.IMPORTANCE_NONE
+
+    /** The importance [createAll] gives each tier's channel. */
+    fun intendedImportance(priority: NotificationPriority): Int = when (priority) {
+        NotificationPriority.STANDARD -> NotificationManager.IMPORTANCE_DEFAULT
+        NotificationPriority.HIGH, NotificationPriority.ALARM -> NotificationManager.IMPORTANCE_HIGH
+    }
+
+    /**
+     * Tiers still on but set below [intendedImportance] (§7 R91, the owner's
+     * call): a quieter channel loses its sound or its heads-up, and the Alarm
+     * tier its full-screen screen. OxygenOS turns an unblocked channel back on
+     * at LOW, so this is where blocking and unblocking leaves someone (§7 R90).
+     */
+    fun loweredTiers(context: Context): List<String> = NotificationPriority.entries.filter {
+        val importance = importanceOf(context, it)
+        importance != null && importance > NotificationManager.IMPORTANCE_NONE && importance < intendedImportance(it)
+    }.map { context.getString(tierNameFor(it)) }
+
+    private fun importanceOf(context: Context, priority: NotificationPriority): Int? {
+        val manager = context.getSystemService(Context.NOTIFICATION_SERVICE) as? NotificationManager ?: return null
+        return manager.getNotificationChannel(channelIdFor(priority))?.importance
     }
 
     fun createAll(context: Context) {
