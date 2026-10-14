@@ -53,7 +53,3 @@ jobs:
         with:
           # The graph submitted a step ago can take a moment to be processed.
           retry-on-snapshot-warnings: true
-          # Kotlin 2.1.0's build-cache deserialization advisory (medium),
-          # fixed in Kotlin 2.4.20. Allowed by the owner until the Kotlin
-          # upgrade, which removes this line (docs/SPEC.md §7 R86).
-          allow-ghsas: GHSA-r937-wjx7-w2jp

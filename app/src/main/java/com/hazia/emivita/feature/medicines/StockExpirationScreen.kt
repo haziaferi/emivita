@@ -254,7 +254,7 @@ fun StockExpirationScreen(
                         )
                     }
                 },
-            ) { Text(stringResource(R.string.stock_refill_now, refillQuantity.toString())) }
+            ) { Text(stringResource(R.string.stock_refill_now, refillQuantity)) }
             if (!trackingSaved) {
                 Text(
                     stringResource(R.string.stock_refill_needs_unit),

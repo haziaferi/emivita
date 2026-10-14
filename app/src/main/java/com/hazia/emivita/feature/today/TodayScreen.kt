@@ -273,7 +273,7 @@ fun TodayScreen(
                                 medicine = medicine,
                                 doseEventRepository = doseEventRepository,
                                 // Re-fetches "last taken" after a log today.
-                                refreshKey = materializedToday?.size ?: 0,
+                                refreshKey = materializedToday.size,
                                 onLog = { logDosePreselected = medicine; showLogDose = true },
                             )
                             Spacer(Modifier.height(8.dp))

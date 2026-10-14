@@ -101,12 +101,14 @@ class AutoSyncManager(
             treeDoc.findFile(stagingName)?.delete()
             val staging = treeDoc.createFile("application/zip", stagingName)
                 ?: error("SAF createFile returned null for $stagingName")
-            val opened = appContext.contentResolver.openOutputStream(staging.uri)
-            if (opened == null) {
-                staging.delete()
-                error("SAF openOutputStream returned null for $stagingName")
-            }
-            opened.use { out -> tempFile.inputStream().use { it.copyTo(out) } }
+            // `?.use` rather than a null check then `use`: Kotlin 2.4's lint no
+            // longer follows the smart cast and reports the stream as leaked.
+            appContext.contentResolver.openOutputStream(staging.uri)
+                ?.use { out -> tempFile.inputStream().use { it.copyTo(out) } }
+                ?: run {
+                    staging.delete()
+                    error("SAF openOutputStream returned null for $stagingName")
+                }
 
             // The previous generation is kept until the swap is confirmed.
             // `renameTo` returns false on providers with no renameDocument, and

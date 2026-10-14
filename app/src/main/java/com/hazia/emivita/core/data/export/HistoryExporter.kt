@@ -102,14 +102,14 @@ object HistoryExporter {
             if (pageNumber == 1) {
                 canvas!!.drawText(context.getString(R.string.pdf_title), marginX, y, titlePaint)
                 y += 22f
-                canvas!!.drawText(subtitle, marginX, y, subtitlePaint)
+                canvas.drawText(subtitle, marginX, y, subtitlePaint)
                 y += 24f
             }
             canvas!!.drawText(context.getString(R.string.pdf_col_date), colDate, y, headerPaint)
-            canvas!!.drawText(context.getString(R.string.pdf_col_time), colTime, y, headerPaint)
-            canvas!!.drawText(context.getString(R.string.pdf_col_medicine), colMedicine, y, headerPaint)
-            canvas!!.drawText(context.getString(R.string.pdf_col_status), colStatus, y, headerPaint)
-            canvas!!.drawText(context.getString(R.string.pdf_col_dose), colDose, y, headerPaint)
+            canvas.drawText(context.getString(R.string.pdf_col_time), colTime, y, headerPaint)
+            canvas.drawText(context.getString(R.string.pdf_col_medicine), colMedicine, y, headerPaint)
+            canvas.drawText(context.getString(R.string.pdf_col_status), colStatus, y, headerPaint)
+            canvas.drawText(context.getString(R.string.pdf_col_dose), colDose, y, headerPaint)
             y += rowHeight
         }
 
@@ -120,10 +120,10 @@ object HistoryExporter {
             val resolvedEpoch = row.doseEvent.resolvedAtEpochMillis ?: row.doseEvent.scheduledEpochMillis
             val time = Instant.ofEpochMilli(resolvedEpoch).atZone(zone).format(TIME_FORMAT)
             canvas!!.drawText(scheduled.format(DATE_FORMAT), colDate, y, rowPaint)
-            canvas!!.drawText(time, colTime, y, rowPaint)
-            canvas!!.drawText(row.medicine.name.take(28), colMedicine, y, rowPaint)
-            canvas!!.drawText(context.getString(doseStatusLabelRes(row.doseEvent.status)), colStatus, y, rowPaint)
-            canvas!!.drawText(formatDoseWithUnit(row.doseEvent.doseAmount, row.medicine.doseUnit, context.resources), colDose, y, rowPaint)
+            canvas.drawText(time, colTime, y, rowPaint)
+            canvas.drawText(row.medicine.name.take(28), colMedicine, y, rowPaint)
+            canvas.drawText(context.getString(doseStatusLabelRes(row.doseEvent.status)), colStatus, y, rowPaint)
+            canvas.drawText(formatDoseWithUnit(row.doseEvent.doseAmount, row.medicine.doseUnit, context.resources), colDose, y, rowPaint)
             y += rowHeight
         }
         page?.let { document.finishPage(it) }

@@ -328,7 +328,7 @@ fun BackupSyncScreen(
                 Button(onClick = { openTreeLauncher.launch(null) }) { Text(stringResource(R.string.backup_sync_choose_sync_folder)) }
             } else {
                 Text(
-                    stringResource(R.string.backup_syncing_to, folder.toUri().lastPathSegment ?: folder.toString()),
+                    stringResource(R.string.backup_syncing_to, folder.toUri().lastPathSegment ?: folder),
                     style = MaterialTheme.typography.bodyMedium,
                 )
                 Spacer(Modifier.height(8.dp))

@@ -71,7 +71,7 @@ fun EmivitaApp(container: AppContainer) {
                     CircularProgressIndicator()
                 }
 
-                profiles!!.isEmpty() -> {
+                profiles.isEmpty() -> {
                     // No onboarding screen -- create the one profile this
                     // single-profile app needs and move on. LaunchedEffect
                     // (not a bare suspend call) so a recomposition triggered
@@ -84,7 +84,7 @@ fun EmivitaApp(container: AppContainer) {
                     }
                 }
 
-                else -> CompositionLocalProvider(LocalCurrentProfileId provides profiles!!.first().id) {
+                else -> CompositionLocalProvider(LocalCurrentProfileId provides profiles.first().id) {
                     // The disclaimer (§9 #29, MT-21) comes before the lock: it
                     // is the one thing a person must read before the app is
                     // theirs at all. null = not loaded yet, no flash either way.
