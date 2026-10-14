@@ -156,7 +156,7 @@
     <string name="settings_detail_theme_mode">Modalità</string>
     <string name="appearance_theme_section">Tema</string>
     <string name="appearance_theme_summary">%1$s · %2$s</string>
-    <string name="appearance_layout_section">Impaginazione di Oggi</string>
+    <string name="appearance_layout_section">Disposizione di Oggi</string>
     <string name="today_layout_timeline">Timeline</string>
     <string name="today_layout_grouped">Per fascia oraria</string>
     <string name="today_layout_compact">Compatta</string>
@@ -559,7 +559,7 @@
     <string name="stock_opened_on">Aperto il</string>
     <string name="stock_use_within_days">Giorni di utilizzo dopo l’apertura</string>
     <string name="stock_effective_expiry">Conta come scaduto dal %1$s</string>
-    <string name="common_clear">Azzera</string>
+    <string name="common_clear">Cancella</string>
     <string name="medicines_sort_group_by_tag">Raggruppa per tag</string>
     <string name="medicines_untagged">Senza tag</string>
     <string name="medicines_search">Cerca tra i farmaci</string>

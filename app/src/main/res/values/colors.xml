@@ -15,5 +15,5 @@
          icon can't follow whichever palette a user has active in-app, so it
          stays neutral instead of quietly picking one palette as the
          "default" everywhere else on the phone. -->
-    <color name="ic_launcher_background">#EFEFEF</color>
+    <color name="ic_launcher_background">#F3F4F6</color>
 </resources>
