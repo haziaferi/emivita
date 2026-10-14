@@ -58,10 +58,10 @@ _the grants, channels and settings without which a reminder is late or silent, a
 
 | Screen | In the code | SPEC | Status | Overlaps |
 |---|---|---|---|---|
-| Notifications & alerts | `route:NotificationsAlertsSettings`, `setting:NotificationsAlerts`, `card:NotificationsBlockedCard`, `card:BatteryOptimizationCard` | §9 #25, R83 | shipped; open (R84): the battery card is drawn in error red, and its button still reads 'Apri le impostazioni della batteria' though it opens the one-tap dialog | Permission setup (first launch) and the missing-permissions card, Reminder notifications and their actions |
+| Notifications & alerts | `route:NotificationsAlertsSettings`, `setting:NotificationsAlerts`, `card:NotificationsBlockedCard`, `card:BatteryOptimizationCard` | §9 #25, R83, R88 | shipped | Permission setup (first launch) and the missing-permissions card, Reminder notifications and their actions |
 | Alarms & Snooze (sheet) | `setting:AlarmsSnooze` | §9 #12 | shipped | Snooze for… (from a notification) |
-| Weekend mode (sheet) | `setting:WeekendMode` | §9 #12, §9 #14 | shipped; open (R84): its bottom buttons sit under the navigation bar | Add or edit a reminder (fixed times, interval, window, cycle, follow-up, taper) |
-| Permission setup (first launch) and the missing-permissions card | `sheet:PermissionSetupSheet`, `card:MissingPermissionsCard`, `card:FullScreenAlarmAccessCard` | §9 #38, R83 | shipped | Notifications & alerts |
+| Weekend mode (sheet) | `setting:WeekendMode` | §9 #12, §9 #14, R88 | shipped | Add or edit a reminder (fixed times, interval, window, cycle, follow-up, taper) |
+| Permission setup (first launch) and the missing-permissions card | `sheet:PermissionSetupSheet`, `card:MissingPermissionsCard`, `card:FullScreenAlarmAccessCard` | §9 #38, R83, R88 | shipped | Notifications & alerts |
 | 'A reminder did not fire' card | `card:MissedAlarmCard` | §9 #29 | shipped | Notifications & alerts |
 
 ## P5 In an emergency
@@ -81,7 +81,7 @@ _the record survives a lost phone, a broken database, or curious hands: backups,
 | Data & Backup (backup, restore, auto-sync, purge) | `route:DataBackupSettings`, `setting:DataBackup`, `dialog:PurgeConfirmDialog` | §9 #9, §9 #29, R83 | shipped | Export history (CSV, PDF): range and medicines, 'No backup yet' card |
 | 'No backup yet' card | `card:NoBackupCard` | §9 #38, R83 | shipped | Data & Backup (backup, restore, auto-sync, purge) |
 | Database set aside (unreadable, or its key lost) | `dialog:DatabaseRecoveredDialog` | §9 #32, R83 | shipped | Data & Backup (backup, restore, auto-sync, purge) |
-| Privacy & security (app lock) | `setting:PrivacySecurity` | §9 #11 | shipped; open (R84): 'Bloccato' is drawn in error red |  |
+| Privacy & security (app lock) | `setting:PrivacySecurity` | §9 #11 | shipped |  |
 | Medical disclaimer (once, first launch) | `dialog:DisclaimerDialog` | §9 #29 | shipped | Permission setup (first launch) and the missing-permissions card |
 
 ## P7 Making it mine
@@ -93,7 +93,7 @@ _how the app looks and reads: palette, Today's layout, language, time format_
 | Settings | `route:Settings` | §9 #12 | shipped |  |
 | Appearance (palette, Today layout, language, time format) | `route:AppearanceSettings`, `setting:Appearance` | §9 #28, §9 #36, §9 #37 | shipped | Today |
 
-Parts of a screen, not screens: `HeroCard`, `OptionCard`, `LayoutCard`, `PaletteCard`, `MedicineCard`.
+Parts of a screen, not screens: `HeroCard`, `OptionCard`, `LayoutCard`, `PaletteCard`, `MedicineCard`, `AttentionCard`.
 
 ## Screens whose purposes overlap
 
@@ -107,4 +107,4 @@ Parts of a screen, not screens: `HeroCard`, `OptionCard`, `LayoutCard`, `Palette
 
 - 2026-10-13: add the purpose map as a reference for the SPEC (this draft; the purposes are the owner's to settle).
 
-_28 screens in 7 purposes; 3 with an open item._
+_28 screens in 7 purposes; 0 with an open item._

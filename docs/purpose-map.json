@@ -28,10 +28,10 @@
     {"id": "history", "name": "History (calendar and list)", "purpose": "P3", "code": ["route:History"], "spec": ["§9 #6", "§9 #26"], "status": "shipped", "overlaps": ["medicine_detail", "dose_edit"]},
     {"id": "export", "name": "Export history (CSV, PDF): range and medicines", "purpose": "P3", "code": ["dialog:ExportScopeDialog"], "spec": ["§9 #10", "§9 #26"], "status": "shipped", "overlaps": ["backup"]},
 
-    {"id": "notifications_alerts", "name": "Notifications & alerts", "purpose": "P4", "code": ["route:NotificationsAlertsSettings", "setting:NotificationsAlerts", "card:NotificationsBlockedCard", "card:BatteryOptimizationCard"], "spec": ["§9 #25", "R83"], "status": "shipped; open (R84): the battery card is drawn in error red, and its button still reads 'Apri le impostazioni della batteria' though it opens the one-tap dialog", "overlaps": ["permission_setup", "notifications"]},
+    {"id": "notifications_alerts", "name": "Notifications & alerts", "purpose": "P4", "code": ["route:NotificationsAlertsSettings", "setting:NotificationsAlerts", "card:NotificationsBlockedCard", "card:BatteryOptimizationCard"], "spec": ["§9 #25", "R83", "R88"], "status": "shipped", "overlaps": ["permission_setup", "notifications"]},
     {"id": "alarms_snooze", "name": "Alarms & Snooze (sheet)", "purpose": "P4", "code": ["setting:AlarmsSnooze"], "spec": ["§9 #12"], "status": "shipped", "overlaps": ["snooze_picker"]},
-    {"id": "weekend_mode", "name": "Weekend mode (sheet)", "purpose": "P4", "code": ["setting:WeekendMode"], "spec": ["§9 #12", "§9 #14"], "status": "shipped; open (R84): its bottom buttons sit under the navigation bar", "overlaps": ["reminder_form"]},
-    {"id": "permission_setup", "name": "Permission setup (first launch) and the missing-permissions card", "purpose": "P4", "code": ["sheet:PermissionSetupSheet", "card:MissingPermissionsCard", "card:FullScreenAlarmAccessCard"], "spec": ["§9 #38", "R83"], "status": "shipped", "overlaps": ["notifications_alerts"]},
+    {"id": "weekend_mode", "name": "Weekend mode (sheet)", "purpose": "P4", "code": ["setting:WeekendMode"], "spec": ["§9 #12", "§9 #14", "R88"], "status": "shipped", "overlaps": ["reminder_form"]},
+    {"id": "permission_setup", "name": "Permission setup (first launch) and the missing-permissions card", "purpose": "P4", "code": ["sheet:PermissionSetupSheet", "card:MissingPermissionsCard", "card:FullScreenAlarmAccessCard"], "spec": ["§9 #38", "R83", "R88"], "status": "shipped", "overlaps": ["notifications_alerts"]},
     {"id": "missed_alarm", "name": "'A reminder did not fire' card", "purpose": "P4", "code": ["card:MissedAlarmCard"], "spec": ["§9 #29"], "status": "shipped", "overlaps": ["notifications_alerts"]},
 
     {"id": "medical_id", "name": "Medical ID", "purpose": "P5", "code": ["route:MedicalIdSettings", "setting:MedicalId"], "spec": ["§9 #18", "R85"], "status": "shipped", "overlaps": []},
@@ -39,13 +39,13 @@
     {"id": "backup", "name": "Data & Backup (backup, restore, auto-sync, purge)", "purpose": "P6", "code": ["route:DataBackupSettings", "setting:DataBackup", "dialog:PurgeConfirmDialog"], "spec": ["§9 #9", "§9 #29", "R83"], "status": "shipped", "overlaps": ["export", "no_backup"]},
     {"id": "no_backup", "name": "'No backup yet' card", "purpose": "P6", "code": ["card:NoBackupCard"], "spec": ["§9 #38", "R83"], "status": "shipped", "overlaps": ["backup"]},
     {"id": "recovered", "name": "Database set aside (unreadable, or its key lost)", "purpose": "P6", "code": ["dialog:DatabaseRecoveredDialog"], "spec": ["§9 #32", "R83"], "status": "shipped", "overlaps": ["backup"]},
-    {"id": "privacy", "name": "Privacy & security (app lock)", "purpose": "P6", "code": ["setting:PrivacySecurity"], "spec": ["§9 #11"], "status": "shipped; open (R84): 'Bloccato' is drawn in error red", "overlaps": []},
+    {"id": "privacy", "name": "Privacy & security (app lock)", "purpose": "P6", "code": ["setting:PrivacySecurity"], "spec": ["§9 #11"], "status": "shipped", "overlaps": []},
     {"id": "disclaimer", "name": "Medical disclaimer (once, first launch)", "purpose": "P6", "code": ["dialog:DisclaimerDialog"], "spec": ["§9 #29"], "status": "shipped", "overlaps": ["permission_setup"]},
 
     {"id": "settings", "name": "Settings", "purpose": "P7", "code": ["route:Settings"], "spec": ["§9 #12"], "status": "shipped", "overlaps": []},
     {"id": "appearance", "name": "Appearance (palette, Today layout, language, time format)", "purpose": "P7", "code": ["route:AppearanceSettings", "setting:Appearance"], "spec": ["§9 #28", "§9 #36", "§9 #37"], "status": "shipped", "overlaps": ["today"]}
   ],
-  "parts": ["HeroCard", "OptionCard", "LayoutCard", "PaletteCard", "MedicineCard"],
+  "parts": ["HeroCard", "OptionCard", "LayoutCard", "PaletteCard", "MedicineCard", "AttentionCard"],
   "overlap_groups": [
     {"id": "O1", "strength": "strong", "screens": ["notifications_alerts", "permission_setup", "missed_alarm"], "why": "three ways to the same grants: the Settings screen, the first-launch sheet with its Today card, and the card after a reminder was held back"},
     {"id": "O2", "strength": "medium", "screens": ["log_dose", "dose_edit"], "why": "both write a dose event; one creates it, the other corrects it"},

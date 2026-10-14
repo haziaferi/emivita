@@ -20,6 +20,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -51,6 +52,7 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.hazia.emivita.R
 import com.hazia.emivita.core.data.settings.SettingsRepository
+import com.hazia.emivita.ui.components.AttentionGlyph
 import kotlinx.coroutines.launch
 
 /** The four grants a reminder depends on (§9 #29, HM-37; asked for since §7 R83). */
@@ -204,7 +206,15 @@ private fun PermissionRow(title: String, granted: Boolean, fixLabel: String, onF
     ) {
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyLarge)
-            Text(stateLabel, style = MaterialTheme.typography.labelMedium, color = if (granted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.error)
+            // A missing grant is a state to fix, not a failure: the attention
+            // glyph beside a neutral label, never red (§6, §7 R88).
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                if (!granted) {
+                    AttentionGlyph()
+                    Spacer(Modifier.width(4.dp))
+                }
+                Text(stateLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            }
         }
         if (!granted) TextButton(onClick = onFix) { Text(fixLabel) }
     }
