@@ -3,11 +3,11 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
-    id("org.jetbrains.kotlin.plugin.serialization") version "2.1.0"
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.4.20"
 }
 
 // Pins the JDK used to actually RUN the Kotlin/Java compiler tasks for this
-// module to 21 -- distinct from compileOptions/kotlinOptions below, which
+// module to 21 -- distinct from compileOptions and compilerOptions, which
 // target compiled bytecode (deliberately kept at 17, see those comments).
 // Without this, the project relies entirely on whichever JDK happens to be
 // configured in Android Studio's own Gradle-JDK setting (README's manual
@@ -21,6 +21,11 @@ plugins {
 // setting any more.
 kotlin {
     jvmToolchain(21)
+    // Bytecode stays at 17, matching compileOptions below. The old
+    // `android { kotlinOptions { jvmTarget } }` is an error from Kotlin 2.4 (§7 R87).
+    compilerOptions {
+        jvmTarget.set(org.jetbrains.kotlin.gradle.dsl.JvmTarget.JVM_17)
+    }
 }
 
 android {
@@ -55,7 +60,6 @@ android {
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
-    kotlinOptions { jvmTarget = "17" }
 
     testOptions {
         // Stubbed android.* calls return 0/null instead of throwing "not

@@ -41,7 +41,7 @@ plugins {
     // migration (new DSL, KMP-style module split) than a personal, single-module
     // app needs. 8.13.2 already supports compileSdk/targetSdk 36.1.
     id("com.android.application") version "8.13.2" apply false
-    id("org.jetbrains.kotlin.android") version "2.1.0" apply false
-    id("org.jetbrains.kotlin.plugin.compose") version "2.1.0" apply false
-    id("com.google.devtools.ksp") version "2.1.0-1.0.29" apply false
+    id("org.jetbrains.kotlin.android") version "2.4.20" apply false
+    id("org.jetbrains.kotlin.plugin.compose") version "2.4.20" apply false
+    id("com.google.devtools.ksp") version "2.3.12" apply false
 }
