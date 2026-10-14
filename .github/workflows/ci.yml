@@ -49,6 +49,11 @@ jobs:
       - name: Validate the Gradle wrapper
         uses: gradle/actions/wrapper-validation@748248ddd2a24f49513d8f472f81c3a07d4d50e1 # v4.4.4
 
+      # Every screen the code can show has a place on docs/purpose-map.md, and
+      # every SPEC reference there resolves (§7 R86). Standard library only.
+      - name: Purpose map matches the code
+        run: python3 tools/purpose_map.py --check
+
       # JDK 21 to match gradle/gradle-daemon-jvm.properties (toolchainVersion=21)
       # and app/build.gradle.kts's jvmToolchain(21). Without it Gradle would try
       # to auto-provision a daemon JVM from foojay on every run.
