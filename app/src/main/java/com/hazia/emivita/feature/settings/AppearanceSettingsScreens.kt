@@ -1,5 +1,6 @@
 package com.hazia.emivita.feature.settings
 
+import com.hazia.emivita.ui.components.AttentionCard
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -223,27 +224,15 @@ internal fun FullScreenAlarmAccessCard() {
     if (granted) return
 
     Spacer(Modifier.height(16.dp))
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.errorContainer,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(Modifier.padding(14.dp)) {
-            Text(
-                stringResource(R.string.settings_detail_alarm_reminders_can_t_take_over_the_screen),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                stringResource(R.string.settings_detail_right_now_an_alarm_tier_reminder_arrives_as),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-            )
-            Spacer(Modifier.height(10.dp))
-            Button(onClick = { context.startActivity(fullScreenIntentSettings(context)) }) {
-                Text(stringResource(R.string.settings_detail_allow_full_screen_alarms))
-            }
+    AttentionCard(stringResource(R.string.settings_detail_alarm_reminders_can_t_take_over_the_screen)) {
+        Text(
+            stringResource(R.string.settings_detail_right_now_an_alarm_tier_reminder_arrives_as),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(10.dp))
+        Button(onClick = { context.startActivity(fullScreenIntentSettings(context)) }) {
+            Text(stringResource(R.string.settings_detail_allow_full_screen_alarms))
         }
     }
 }

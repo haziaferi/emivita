@@ -128,9 +128,15 @@
         android:enableOnBackInvokedCallback="true"
         android:supportsRtl="true">
 
+        <!-- singleTask (SPEC 7 R88): a task first opened by a notification or the
+             alarm clock has a root intent the launcher's does not match, so the
+             icon used to stack a second MainActivity on top (sz=2 on the 6T).
+             MainActivity reads no intent, and every content intent already
+             clears what sits above it. -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
+            android:launchMode="singleTask"
             android:theme="@style/Theme.Emivita">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

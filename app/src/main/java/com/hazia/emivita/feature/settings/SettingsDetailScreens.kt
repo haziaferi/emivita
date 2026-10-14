@@ -1,5 +1,7 @@
 package com.hazia.emivita.feature.settings
 
+import com.hazia.emivita.ui.components.AttentionGlyph
+import com.hazia.emivita.ui.components.AttentionCard
 import android.content.Context
 import android.content.Intent
 import android.net.Uri
@@ -42,8 +44,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
-import androidx.compose.foundation.shape.RoundedCornerShape
-import androidx.compose.material3.Surface
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.app.NotificationManagerCompat
 import androidx.lifecycle.Lifecycle
@@ -439,68 +439,59 @@ private fun BatteryOptimizationCard() {
     }
 
     Spacer(Modifier.height(16.dp))
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.errorContainer,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(Modifier.padding(14.dp)) {
-            Text(
-                stringResource(R.string.settings_detail_reminders_can_arrive_late),
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                stringResource(R.string.settings_detail_battery_optimisation_lets_the_system_hold),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-            )
-            if (resolvable) {
-                Spacer(Modifier.height(10.dp))
-                Button(onClick = { context.startActivity(settingsIntent) }) {
-                    Text(stringResource(R.string.settings_detail_open_battery_settings))
-                }
-                // The search hint belongs to the list only; the one-tap dialog
-                // needs none (found on the phone, §7 R83).
-                if (oneTap == null) {
-                    Spacer(Modifier.height(4.dp))
-                    Text(
-                        stringResource(R.string.settings_detail_find_emivita_in_the_list_and_set_it_to_not),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                    )
-                }
+    AttentionCard(stringResource(R.string.settings_detail_reminders_can_arrive_late)) {
+        Text(
+            stringResource(R.string.settings_detail_battery_optimisation_lets_the_system_hold),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        if (resolvable) {
+            Spacer(Modifier.height(10.dp))
+            // The owner's wording (§7 R88): "Allow", as every grant reads on the
+            // permission sheet, when it opens the one-tap dialog; the list keeps
+            // "Open battery settings", which is what it opens.
+            Button(onClick = { context.startActivity(settingsIntent) }) {
+                Text(stringResource(if (oneTap != null) R.string.permission_allow else R.string.settings_detail_open_battery_settings))
             }
-            // The OEM's own kill list (§9 #29, HM-36), when this phone has one.
-            val autoStart = remember { AutoStartSettings.intentFor(context) }
-            // A page that resolves can still refuse to open (an OEM that exports it
-            // but guards it); say so instead of a button that does nothing (§7.1 rule 17).
-            var autoStartFailed by remember { mutableStateOf(false) }
-            if (autoStart != null) {
-                Spacer(Modifier.height(6.dp))
-                if (autoStartFailed) {
-                    Text(
-                        stringResource(R.string.settings_open_auto_start_failed),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onErrorContainer,
-                    )
-                } else {
-                    Button(onClick = {
-                        try {
-                            context.startActivity(autoStart)
-                        } catch (e: RuntimeException) {
-                            // ActivityNotFoundException and SecurityException are both RuntimeExceptions.
-                            autoStartFailed = true
-                        }
-                    }) { Text(stringResource(R.string.settings_open_auto_start)) }
-                }
+            // The search hint belongs to the list only; the one-tap dialog
+            // needs none (found on the phone, §7 R83).
+            if (oneTap == null) {
+                Spacer(Modifier.height(4.dp))
                 Text(
-                    stringResource(R.string.settings_open_auto_start_desc),
+                    stringResource(R.string.settings_detail_find_emivita_in_the_list_and_set_it_to_not),
                     style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onErrorContainer,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
+        }
+        // The OEM's own kill list (§9 #29, HM-36), when this phone has one.
+        val autoStart = remember { AutoStartSettings.intentFor(context) }
+        // A page that resolves can still refuse to open (an OEM that exports it
+        // but guards it); say so instead of a button that does nothing (§7.1 rule 17).
+        var autoStartFailed by remember { mutableStateOf(false) }
+        if (autoStart != null) {
+            Spacer(Modifier.height(6.dp))
+            if (autoStartFailed) {
+                Text(
+                    stringResource(R.string.settings_open_auto_start_failed),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            } else {
+                Button(onClick = {
+                    try {
+                        context.startActivity(autoStart)
+                    } catch (e: RuntimeException) {
+                        // ActivityNotFoundException and SecurityException are both RuntimeExceptions.
+                        autoStartFailed = true
+                    }
+                }) { Text(stringResource(R.string.settings_open_auto_start)) }
+            }
+            Text(
+                stringResource(R.string.settings_open_auto_start_desc),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
         }
     }
 }
@@ -542,27 +533,15 @@ private fun NotificationsBlockedCard() {
     val body = stringResource(bodyText.res, *bodyText.args.toTypedArray())
 
     Spacer(Modifier.height(16.dp))
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.errorContainer,
-        modifier = Modifier.fillMaxWidth(),
-    ) {
-        Column(Modifier.padding(14.dp)) {
-            Text(
-                title,
-                style = MaterialTheme.typography.titleMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                body,
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-            )
-            Spacer(Modifier.height(10.dp))
-            Button(onClick = { context.startActivity(appNotificationSettings(context)) }) {
-                Text(stringResource(R.string.settings_detail_open_notification_settings))
-            }
+    AttentionCard(title) {
+        Text(
+            body,
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Spacer(Modifier.height(10.dp))
+        Button(onClick = { context.startActivity(appNotificationSettings(context)) }) {
+            Text(stringResource(R.string.settings_detail_open_notification_settings))
         }
     }
 }
@@ -585,10 +564,14 @@ private fun PermissionsSection(missedAlarmAt: Long?) {
     // The watchdog's finding, beside the row that explains it (§9 #29, DP-04):
     // "may" becomes "did, at …" while a missed alarm is on record.
     missedAlarmAt?.let {
-        Text(
-            stringResource(R.string.missed_alarm_body, LocaleFormats.monthDayTime(it)),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.error,
-        )
+        Row(verticalAlignment = Alignment.CenterVertically) {
+            AttentionGlyph()
+            Spacer(Modifier.width(4.dp))
+            Text(
+                stringResource(R.string.missed_alarm_body, LocaleFormats.monthDayTime(it)),
+                style = MaterialTheme.typography.labelMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
     }
 }

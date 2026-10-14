@@ -1,5 +1,6 @@
 package com.hazia.emivita.feature.today
 
+import com.hazia.emivita.ui.components.AttentionCard
 import com.hazia.emivita.feature.permissions.rememberPermissionState
 import com.hazia.emivita.feature.permissions.rememberPermissionFixer
 import com.hazia.emivita.feature.permissions.missingKey
@@ -843,22 +844,15 @@ private fun LogDoseDialog(
  *  and a dismiss. One merged node plus its two buttons. */
 @Composable
 internal fun MissedAlarmCard(plannedAtEpochMillis: Long, onOpen: () -> Unit, onDismiss: () -> Unit) {
-    Surface(
-        shape = RoundedCornerShape(12.dp),
-        color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 8.dp),
-    ) {
-        Column(Modifier.padding(14.dp)) {
-            Text(stringResource(R.string.missed_alarm_title), style = MaterialTheme.typography.titleMedium, color = MaterialTheme.colorScheme.onErrorContainer)
-            Text(
-                stringResource(R.string.missed_alarm_body, LocaleFormats.monthDayTime(plannedAtEpochMillis)),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onErrorContainer,
-            )
-            Row(Modifier.padding(top = 6.dp)) {
-                TextButton(onClick = onOpen) { Text(stringResource(R.string.missed_alarm_open)) }
-                TextButton(onClick = onDismiss) { Text(stringResource(R.string.missed_alarm_dismiss)) }
-            }
+    AttentionCard(stringResource(R.string.missed_alarm_title), modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp)) {
+        Text(
+            stringResource(R.string.missed_alarm_body, LocaleFormats.monthDayTime(plannedAtEpochMillis)),
+            style = MaterialTheme.typography.labelMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        )
+        Row(Modifier.padding(top = 6.dp)) {
+            TextButton(onClick = onOpen) { Text(stringResource(R.string.missed_alarm_open)) }
+            TextButton(onClick = onDismiss) { Text(stringResource(R.string.missed_alarm_dismiss)) }
         }
     }
 }
