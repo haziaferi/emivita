@@ -3,7 +3,7 @@ plugins {
     id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
-    id("org.jetbrains.kotlin.plugin.serialization") version "2.4.20"
+    id("org.jetbrains.kotlin.plugin.serialization") version "2.4.21"
 }
 
 // Pins the JDK used to actually RUN the Kotlin/Java compiler tasks for this
@@ -317,9 +317,9 @@ dependencies {
     implementation("com.google.android.material:material:1.14.0")
 
     // Room + SQLCipher (encrypted local DB)
-    implementation("androidx.room:room-runtime:2.8.4")
-    implementation("androidx.room:room-ktx:2.8.4")
-    ksp("androidx.room:room-compiler:2.8.4")
+    implementation("androidx.room:room-runtime:2.8.5")
+    implementation("androidx.room:room-ktx:2.8.5")
+    ksp("androidx.room:room-compiler:2.8.5")
     // IMPORTANT: net.zetetic:android-database-sqlcipher is the OLD, now-deprecated
     // artifact, and its classes live in the `net.sqlcipher.database` package.
     // EmivitaDatabase.kt imports
@@ -373,7 +373,7 @@ dependencies {
     implementation("androidx.biometric:biometric:1.1.0")
 
     // SAF (sync-safe local backup export)
-    implementation("androidx.documentfile:documentfile:1.0.1")
+    implementation("androidx.documentfile:documentfile:1.1.0")
 
     // NOTE: no androidx.security:security-crypto dependency here on purpose.
     // EncryptedSharedPreferences/MasterKey would be the obvious way to wrap
@@ -389,11 +389,11 @@ dependencies {
     // conflict with section 1's de-googled constraint -- not adopted in any batch.
 
     // JSON backup/restore
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.8.1")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
     // AES-256 password-protected zip read/write (spec §9 #9) -- same shape as
     // Catima's (open-source) optional password-protected export/import, the
     // standard library for this on Android/Kotlin.
-    implementation("net.lingala.zip4j:zip4j:2.11.5")
+    implementation("net.lingala.zip4j:zip4j:2.11.6")
     
     // Charts (History's adherence trend chart, §9 #6) -- a stacked daily
     // bar (taken/skipped/missed), not a pie: Vico 2.x's cartesian module
@@ -412,7 +412,7 @@ dependencies {
     // compiled with an incompatible version of Kotlin... binary version...
     // 2.3.0, expected... 2.1.0") -- confirmed by testing 2.10.1 directly
     // against this build, not assumed. 2.7.0 predates that jump.
-    implementation("com.kizitonwose.calendar:compose:2.7.0") {
+    implementation("com.kizitonwose.calendar:compose:2.10.1") {
         // ui-tooling is declared as an ordinary dependency here, not a
         // debugImplementation, so it lands on releaseRuntimeClasspath and
         // drags androidx.compose.ui.tooling.PreviewActivity -- exported, no
@@ -426,10 +426,10 @@ dependencies {
     }
 
     // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
     implementation("androidx.core:core-ktx:1.15.0")
-    implementation("androidx.core:core-splashscreen:1.0.1")
+    implementation("androidx.core:core-splashscreen:1.2.0")
 
     // Testing
     testImplementation("junit:junit:4.13.2")
@@ -443,14 +443,14 @@ dependencies {
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test:rules:1.6.1")
     androidTestImplementation("androidx.test:core:1.6.1")
-    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
     testImplementation("org.robolectric:robolectric:4.14.1")
     // ApplicationProvider.getApplicationContext() for Robolectric-backed Room
     // repository tests (spec §7 R3 -- resolve()/tag-dedupe race-prone logic).
     testImplementation("androidx.test:core:1.6.1")
-    testImplementation("io.mockk:mockk:1.13.13")
-    testImplementation("app.cash.turbine:turbine:1.2.0")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.9.0")
+    testImplementation("io.mockk:mockk:1.14.11")
+    testImplementation("app.cash.turbine:turbine:1.2.1")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
     // Compose UI tests live in the UNIT test source set, driven by Robolectric,
     // not in an androidTest source set. That is deliberate and is the opposite
     // of what this comment used to advise (spec §7 R47).
@@ -478,6 +478,6 @@ dependencies {
 }
 configurations.all {
     resolutionStrategy {
-        force("org.jetbrains.kotlinx:kotlinx-serialization-core:1.8.1")
+        force("org.jetbrains.kotlinx:kotlinx-serialization-core:1.11.0")
     }
 }
