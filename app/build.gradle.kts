@@ -441,7 +441,7 @@ dependencies {
     androidTestImplementation("androidx.test:rules:1.6.1")
     androidTestImplementation("androidx.test:core:1.6.1")
     androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
-    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("org.robolectric:robolectric:4.17")
     // ApplicationProvider.getApplicationContext() for Robolectric-backed Room
     // repository tests (spec §7 R3 -- resolve()/tag-dedupe race-prone logic).
     testImplementation("androidx.test:core:1.6.1")
