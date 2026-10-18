@@ -347,7 +347,7 @@ dependencies {
     // in-memory database precisely because this native library won't load under
     // Robolectric), so a bump here is only ever really verified by opening an
     // existing database on a real device.
-    implementation("net.zetetic:sqlcipher-android:4.17.0")
+    implementation("net.zetetic:sqlcipher-android:4.19.1")
     implementation("androidx.sqlite:sqlite:2.6.2")
     // Plain (non-SQLCipher) framework SQLite open helper -- migration tests
     // (spec §7 R11) build their "before" fixture with this rather than the
@@ -401,7 +401,7 @@ dependencies {
     // only has line/column/candlestick layers, the pie layer Vico 1.x had
     // was dropped, so pie was never actually available at this pinned
     // version regardless of what an earlier comment here implied.
-    implementation("com.patrykandpatrick.vico:compose-m3:2.1.0")
+    implementation("com.patrykandpatrick.vico:compose-m3:3.3.1")
 
     // History calendar view (spec §5 ADR-0001 shopping list, §9 #6) -- the
     // Android-only `compose` artifact, not `compose-multiplatform`: this app
@@ -441,7 +441,7 @@ dependencies {
     androidTestImplementation("androidx.test:rules:1.6.1")
     androidTestImplementation("androidx.test:core:1.6.1")
     androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
-    testImplementation("org.robolectric:robolectric:4.14.1")
+    testImplementation("org.robolectric:robolectric:4.17")
     // ApplicationProvider.getApplicationContext() for Robolectric-backed Room
     // repository tests (spec §7 R3 -- resolve()/tag-dedupe race-prone logic).
     testImplementation("androidx.test:core:1.6.1")
