@@ -401,7 +401,7 @@ dependencies {
     // only has line/column/candlestick layers, the pie layer Vico 1.x had
     // was dropped, so pie was never actually available at this pinned
     // version regardless of what an earlier comment here implied.
-    implementation("com.patrykandpatrick.vico:compose-m3:2.1.0")
+    implementation("com.patrykandpatrick.vico:compose-m3:3.3.1")
 
     // History calendar view (spec §5 ADR-0001 shopping list, §9 #6) -- the
     // Android-only `compose` artifact, not `compose-multiplatform`: this app
