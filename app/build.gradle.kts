@@ -332,11 +332,10 @@ dependencies {
     // one of the two still receiving updates, including 16KB-page-size-
     // compatible native libraries.
     //
-    // Pinned to 4.17.0, not the current 4.18.0 latest: 4.18.0's AAR metadata
-    // requires consumers to compile against API 37, and checkReleaseAarMetadata
-    // failed outright on compileSdk 36 -- confirmed by trying it, not assumed.
-    // The AGP 9 migration (§7 R94) lifted that gate; the bump itself is its own
-    // change, with a phone check that the existing database still opens.
+    // 4.19.1 (§7 R97): 4.18 needs compileSdk 37, which the AGP 9 migration
+    // (§7 R94) brought; nothing from 4.17 to 4.19.1 touches the on-disk format
+    // or key handling. SQLCipher 5 does (AES-GCM, 512K KDF iterations, 8 KB
+    // pages): it is a migration with its own plan, never a version bump.
     //
     // On upgrading this at all: SQLCipher keeps its on-disk format stable across
     // a 4.x series, and this app hands SupportOpenHelperFactory a raw key
@@ -347,7 +346,7 @@ dependencies {
     // in-memory database precisely because this native library won't load under
     // Robolectric), so a bump here is only ever really verified by opening an
     // existing database on a real device.
-    implementation("net.zetetic:sqlcipher-android:4.17.0")
+    implementation("net.zetetic:sqlcipher-android:4.19.1")
     implementation("androidx.sqlite:sqlite:2.6.2")
     // Plain (non-SQLCipher) framework SQLite open helper -- migration tests
     // (spec §7 R11) build their "before" fixture with this rather than the
