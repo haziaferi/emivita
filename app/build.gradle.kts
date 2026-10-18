@@ -1,6 +1,5 @@
 plugins {
     id("com.android.application")
-    id("org.jetbrains.kotlin.android")
     id("org.jetbrains.kotlin.plugin.compose")
     id("com.google.devtools.ksp")
     id("org.jetbrains.kotlin.plugin.serialization") version "2.4.21"
@@ -30,7 +29,7 @@ kotlin {
 
 android {
     namespace = "com.hazia.emivita"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.hazia.emivita"
@@ -265,9 +264,12 @@ android {
         // the change under test is a gate people switch off. Informational
         // keeps them visible in the report -- which is the whole R23 lesson --
         // without letting them block. OldTargetApi is here for the same
-        // reason and is already a documented decision: compileSdk 37 needs
-        // AGP 9.x, see the note above the dependency block.
-        informational += setOf("GradleDependency", "NewerVersionAvailable", "OldTargetApi")
+        // reason: targetSdk stays 36 by decision while compileSdk is 37 for
+        // the libraries (§7 R94).
+        // AndroidGradlePluginVersion is the same kind: "a newer AGP or Gradle
+        // exists", which failed the AGP 9 build on Gradle 9.8.0 the week 9.8.1
+        // shipped (§7 R94).
+        informational += setOf("GradleDependency", "NewerVersionAvailable", "OldTargetApi", "AndroidGradlePluginVersion")
 
         // CI uploads these as artifacts; the XML is also what any future
         // tooling would parse.
@@ -288,6 +290,7 @@ val patchedVersions = mapOf(
     "org.apache.commons:commons-compress" to "1.28.0",
     "org.bitbucket.b_c:jose4j" to "0.9.6",
     "org.jdom:jdom2" to "2.0.6.1",
+    "org.apache.httpcomponents:httpclient" to "4.5.14",
 )
 configurations.configureEach {
     resolutionStrategy.eachDependency {
@@ -304,12 +307,12 @@ configurations.configureEach {
 
 dependencies {
     // Compose
-    val composeBom = platform("androidx.compose:compose-bom:2026.06.00")
+    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
     implementation("androidx.compose.material3:material3")
     implementation("androidx.compose.material:material-icons-extended")
     implementation("androidx.activity:activity-compose:1.10.1")
-    implementation("androidx.navigation:navigation-compose:2.8.5")
+    implementation("androidx.navigation:navigation-compose:2.10.2")
     implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
     implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
     debugImplementation("androidx.compose.ui:ui-tooling")
@@ -331,11 +334,9 @@ dependencies {
     //
     // Pinned to 4.17.0, not the current 4.18.0 latest: 4.18.0's AAR metadata
     // requires consumers to compile against API 37, and checkReleaseAarMetadata
-    // fails outright on this project's compileSdk 36 -- confirmed by trying it,
-    // not assumed. compileSdk 37 needs AGP 9.x, which the root build.gradle.kts
-    // deliberately avoids (it drops the org.jetbrains.kotlin.android plugin this
-    // build uses). So 4.18.0 is gated behind that whole migration, not behind a
-    // version string. Same shape as the kizitonwose calendar pin below.
+    // failed outright on compileSdk 36 -- confirmed by trying it, not assumed.
+    // The AGP 9 migration (§7 R94) lifted that gate; the bump itself is its own
+    // change, with a phone check that the existing database still opens.
     //
     // On upgrading this at all: SQLCipher keeps its on-disk format stable across
     // a 4.x series, and this app hands SupportOpenHelperFactory a raw key
@@ -406,12 +407,8 @@ dependencies {
     // Android-only `compose` artifact, not `compose-multiplatform`: this app
     // targets Android exclusively (§1), so the plain artifact avoids pulling
     // in KMP-only surface the app would never use.
-    // Pinned to 2.7.0, not the current 2.10.1 latest: newer releases are
-    // compiled with a Kotlin compiler whose metadata this project's pinned
-    // Kotlin 2.1.0 plugin (root build.gradle.kts) can't read ("Module was
-    // compiled with an incompatible version of Kotlin... binary version...
-    // 2.3.0, expected... 2.1.0") -- confirmed by testing 2.10.1 directly
-    // against this build, not assumed. 2.7.0 predates that jump.
+    // Held at 2.7.0 while the project's Kotlin was 2.1.0, which cannot read
+    // the 2.3 metadata newer releases carry; Kotlin 2.4 reads it (§7 R93).
     implementation("com.kizitonwose.calendar:compose:2.10.1") {
         // ui-tooling is declared as an ordinary dependency here, not a
         // debugImplementation, so it lands on releaseRuntimeClasspath and
@@ -428,7 +425,7 @@ dependencies {
     // Coroutines
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
 
-    implementation("androidx.core:core-ktx:1.15.0")
+    implementation("androidx.core:core-ktx:1.19.1")
     implementation("androidx.core:core-splashscreen:1.2.0")
 
     // Testing
