@@ -1,5 +1,11 @@
 package com.hazia.emivita.feature.history
 
+import com.hazia.emivita.core.format.formatDecimalLocalized
+import androidx.compose.ui.unit.sp
+import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.graphics.TileMode
+import androidx.compose.ui.graphics.ImageShader
+import androidx.compose.ui.graphics.ShaderBrush
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -27,25 +33,20 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
 import com.hazia.emivita.ui.theme.EmivitaTheme
 import com.patrykandpatrick.vico.compose.cartesian.CartesianChartHost
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberBottom
-import com.patrykandpatrick.vico.compose.cartesian.axis.rememberStart
 import com.patrykandpatrick.vico.compose.cartesian.layer.rememberColumnCartesianLayer
-import com.patrykandpatrick.vico.compose.cartesian.layer.stacked
 import com.patrykandpatrick.vico.compose.cartesian.rememberCartesianChart
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoScrollState
 import com.patrykandpatrick.vico.compose.cartesian.rememberVicoZoomState
-import com.patrykandpatrick.vico.core.cartesian.Zoom
+import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import com.patrykandpatrick.vico.compose.common.component.rememberLineComponent
 import com.patrykandpatrick.vico.compose.common.component.rememberTextComponent
-import com.patrykandpatrick.vico.compose.common.fill
-import com.patrykandpatrick.vico.core.common.Fill
-import com.patrykandpatrick.vico.core.common.shader.ShaderProvider
-import com.patrykandpatrick.vico.core.cartesian.axis.HorizontalAxis
-import com.patrykandpatrick.vico.core.cartesian.axis.VerticalAxis
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianChartModelProducer
-import com.patrykandpatrick.vico.core.cartesian.data.CartesianValueFormatter
-import com.patrykandpatrick.vico.core.cartesian.data.columnSeries
-import com.patrykandpatrick.vico.core.cartesian.layer.ColumnCartesianLayer
+import com.patrykandpatrick.vico.compose.common.Fill
+import com.patrykandpatrick.vico.compose.cartesian.axis.HorizontalAxis
+import com.patrykandpatrick.vico.compose.cartesian.axis.VerticalAxis
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianChartModelProducer
+import com.patrykandpatrick.vico.compose.cartesian.data.CartesianValueFormatter
+import com.patrykandpatrick.vico.compose.cartesian.data.columnModel
+import com.patrykandpatrick.vico.compose.cartesian.layer.ColumnCartesianLayer
 import java.time.LocalDate
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
@@ -78,8 +79,7 @@ internal object AdherenceChartFit {
 /**
  * Stacked daily bar chart of taken/skipped/missed per day across the visible
  * History window, because the data is a trend over time, which a pie cannot
- * show (spec §9 #6/T5), and the pinned `com.patrykandpatrick.vico:compose-m3:2.1.0`
- * has no pie layer anyway (Vico 2.x has line/column/candlestick only).
+ * show (spec §9 #6/T5), and Vico (`compose-m3` 3.3.1, §7 R95) has no pie layer anyway.
  *
  * Missed uses `attention`, NOT `error`: louder than a deliberate Skip but a
  * fact about last Tuesday, not an emergency, while Skip is drawn with
@@ -93,12 +93,16 @@ internal object AdherenceChartFit {
  * texture, position or colour alone identifies a series.
  */
 @Composable
-fun AdherenceChart(counts: List<DayAdherenceCounts>) {
+fun AdherenceChart(counts: List<DayAdherenceCounts>) = AdherenceChart(counts, DEFAULT_Y_TICKS, null)
+
+/** The chart with its Y-tick rule and a probe of what the axis drew, for the measuring test (§7 R95). */
+@Composable
+internal fun AdherenceChart(counts: List<DayAdherenceCounts>, yTicks: YTicks, tickProbe: ((TickProbe) -> Unit)?) {
     val modelProducer = remember { CartesianChartModelProducer() }
 
     LaunchedEffect(counts) {
         modelProducer.runTransaction {
-            columnSeries {
+            columnModel {
                 series(counts.map { it.taken })
                 series(counts.map { it.skipped })
                 series(counts.map { it.missed })
@@ -154,15 +158,19 @@ fun AdherenceChart(counts: List<DayAdherenceCounts>) {
                             rememberLineComponent(fill = skippedFill, thickness = 6.dp),
                             rememberLineComponent(fill = missedFill, thickness = 6.dp),
                         ),
-                        mergeMode = { ColumnCartesianLayer.MergeMode.stacked() },
+                        mergeMode = { ColumnCartesianLayer.MergeMode.Stacked },
                     ),
                     startAxis = VerticalAxis.rememberStart(
-                        label = rememberTextComponent(color = axisLabelColor),
-                        line = rememberLineComponent(fill = fill(axisLineColor), thickness = 1.dp),
+                        // The app's locale, as Vico 2's default formatter followed it:
+                        // Vico 3's decimal() prints "0.2" on an Italian phone (§7 R95).
+                        valueFormatter = remember { CartesianValueFormatter { _, value, _ -> formatDecimalLocalized(value) } },
+                        itemPlacer = remember(yTicks, counts) { yTickPlacer(yTicks, counts.maxOfOrNull { it.total }?.toDouble() ?: 0.0, tickProbe) },
+                        label = rememberTextComponent(style = TextStyle(color = axisLabelColor, fontSize = 12.sp)),
+                        line = rememberLineComponent(fill = Fill(axisLineColor), thickness = 1.dp),
                     ),
                     bottomAxis = HorizontalAxis.rememberBottom(
-                        label = rememberTextComponent(color = axisLabelColor),
-                        line = rememberLineComponent(fill = fill(axisLineColor), thickness = 1.dp),
+                        label = rememberTextComponent(style = TextStyle(color = axisLabelColor, fontSize = 12.sp)),
+                        line = rememberLineComponent(fill = Fill(axisLineColor), thickness = 1.dp),
                         valueFormatter = dateFormatter,
                     ),
                 ),
@@ -202,7 +210,9 @@ private fun rememberPatternFill(
     surfaceColor: Color,
     density: Float,
 ): Fill = remember(pattern, seriesColor, surfaceColor, density) {
-    Fill(ShaderProvider.bitmap(seriesPatternTile(pattern, seriesColor, surfaceColor, density)))
+    // Vico 3 draws on the Compose canvas (§7 R95): the tile repeats both ways,
+    // as Vico 2's ShaderProvider.bitmap did by default.
+    Fill(ShaderBrush(ImageShader(seriesPatternTile(pattern, seriesColor, surfaceColor, density).asImageBitmap(), TileMode.Repeated, TileMode.Repeated)))
 }
 
 /**

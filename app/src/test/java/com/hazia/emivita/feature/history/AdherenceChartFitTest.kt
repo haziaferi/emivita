@@ -13,7 +13,7 @@ import com.hazia.emivita.ui.layout.nodesInside
 import com.hazia.emivita.ui.layout.px
 import com.hazia.emivita.ui.layout.setContentAtPhoneWidths
 import com.hazia.emivita.ui.layout.tagAt
-import com.patrykandpatrick.vico.core.cartesian.Zoom
+import com.patrykandpatrick.vico.compose.cartesian.Zoom
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
