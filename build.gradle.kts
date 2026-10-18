@@ -34,14 +34,11 @@ buildscript {
 }
 
 plugins {
-    // AGP 8.7.2 only supports compileSdk up to ~35; compileSdk 36 needs AGP 8.9.1+.
-    // Pinned to 8.13.2 (the last AGP 8.x release) rather than jumping to AGP 9.x:
-    // AGP 9 makes Kotlin support built-in and drops compatibility with the
-    // org.jetbrains.kotlin.android plugin below, which would force a much larger
-    // migration (new DSL, KMP-style module split) than a personal, single-module
-    // app needs. 8.13.2 already supports compileSdk/targetSdk 36.1.
-    id("com.android.application") version "8.13.2" apply false
-    id("org.jetbrains.kotlin.android") version "2.4.21" apply false
+    // AGP 9 (§7 R94, the owner's call, reversing the AGP-8 pin once Compose
+    // 1.12, Navigation 2.10 and core-ktx 1.19 required AGP 9.1 and compileSdk
+    // 37). AGP 9 compiles Kotlin itself and registers the `kotlin` extension,
+    // so org.jetbrains.kotlin.android is gone: applying it on top fails.
+    id("com.android.application") version "9.4.1" apply false
     id("org.jetbrains.kotlin.plugin.compose") version "2.4.21" apply false
     id("com.google.devtools.ksp") version "2.3.12" apply false
 }
