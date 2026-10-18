@@ -290,6 +290,7 @@ val patchedVersions = mapOf(
     "org.apache.commons:commons-compress" to "1.28.0",
     "org.bitbucket.b_c:jose4j" to "0.9.6",
     "org.jdom:jdom2" to "2.0.6.1",
+    "org.apache.httpcomponents:httpclient" to "4.5.14",
 )
 configurations.configureEach {
     resolutionStrategy.eachDependency {

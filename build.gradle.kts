@@ -7,7 +7,8 @@
 
 // Patched versions for libraries AGP's own tooling brings (§7 R86): the
 // signer's Bouncy Castle, gRPC's Netty, sdk-common's commons-compress,
-// bundletool's jose4j, jetifier's jdom2. Each had advisories; none of them is
+// bundletool's jose4j, jetifier's jdom2, and since AGP 9 an HttpClient 4.5.6
+// (§7 R94). Each had advisories; none of them is
 // in the APK. app/build.gradle.kts applies the same table to the app's
 // configurations (lint, tests, the device-test runner); keep the two equal.
 buildscript {
@@ -18,6 +19,7 @@ buildscript {
         "org.apache.commons:commons-compress" to "1.28.0",
         "org.bitbucket.b_c:jose4j" to "0.9.6",
         "org.jdom:jdom2" to "2.0.6.1",
+        "org.apache.httpcomponents:httpclient" to "4.5.14",
     )
     configurations.classpath {
         resolutionStrategy.eachDependency {
