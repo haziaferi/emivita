@@ -85,9 +85,11 @@ class AdherenceTickMeasureTest {
             case.value = c
             // Vico draws, and so reports its ticks, only when a frame is rendered,
             // and applies its model off the main thread: capture until it has.
-            var tries = 0
+            // Up to 30 s of real time: Vico builds the model on a background
+            // thread, and a CI runner is several times slower than a desk.
+            val deadline = System.nanoTime() + 30_000_000_000L
             capture()
-            while (probe == null && tries++ < 300) {
+            while (probe == null && System.nanoTime() < deadline) {
                 Thread.sleep(50)
                 compose.mainClock.advanceTimeBy(100)
                 capture()
@@ -95,7 +97,7 @@ class AdherenceTickMeasureTest {
             // One more frame after the first report, so the bars have landed.
             Thread.sleep(100); compose.mainClock.advanceTimeBy(500)
             val image = capture()
-            each(c, checkNotNull(probe) { "no tick report for $c" }, image)
+            each(c, checkNotNull(probe) { "no tick report for $c within 30 s" }, image)
         }
     }
 
