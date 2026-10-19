@@ -1,8 +1,9 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- The dark splash's icon (SPEC 7 R98): the launcher art in near-white on the
-     near-black splash ground, because the black line art would vanish there.
+<!-- The dark splash's icon (SPEC 7 R98, R99): the launcher art in near-white on
+     the near-black splash ground, because the black line art would vanish
+     there, scaled to fit the pre-Android-12 splash circle like ic_splash.
      Used only by values-night/themes.xml; the home-screen icon is unchanged.
-     The foreground PNGs are written by tools/splash_night_icon.py. -->
+     The foreground PNGs are written by tools/splash_icon.py. -->
 <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
     <background android:drawable="@color/splash_background" />
     <foreground android:drawable="@mipmap/ic_splash_foreground_night" />

@@ -1,0 +1,9 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- The light splash's icon (SPEC 7 R99): the launcher art in NearBlack, scaled
+     so all of it fits the circle the pre-Android-12 splash keeps. Used only by
+     values/themes.xml; the home-screen icon is unchanged. The foreground PNGs
+     are written by tools/splash_icon.py. -->
+<adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+    <background android:drawable="@color/splash_background" />
+    <foreground android:drawable="@mipmap/ic_splash_foreground" />
+</adaptive-icon>

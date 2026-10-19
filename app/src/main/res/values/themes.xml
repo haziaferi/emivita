@@ -12,7 +12,7 @@
          Theme.Emivita.Main directly, below. -->
     <style name="Theme.Emivita" parent="Theme.SplashScreen">
         <item name="windowSplashScreenBackground">@color/splash_background</item>
-        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_launcher</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_splash</item>
         <item name="postSplashScreenTheme">@style/Theme.Emivita.Main</item>
     </style>
 
