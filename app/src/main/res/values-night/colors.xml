@@ -1,4 +1,7 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <color name="splash_background">#0F141C</color>
+    <!-- The dark splash: the launcher tile's AMOLED counterpart, the default
+         palette's AMOLED ground (NearBlack in ui/theme/Color.kt), never pure
+         black (SPEC 7 R98). -->
+    <color name="splash_background">#090C11</color>
 </resources>

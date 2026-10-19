@@ -25,8 +25,8 @@ class MedicineAccentTest {
     fun `dark ink on light tiles, white on dark ones`() {
         assertEquals(AccentInk, onAccent(Color(0xFFFFF176)))   // pale yellow
         assertEquals(AccentInk, onAccent(Color(0xFFB8ABA9)))   // the neutral fallback
-        assertEquals(Color.White, onAccent(Color(0xFF1C2D69))) // navy
-        assertEquals(Color.White, onAccent(Color(0xFFA32F29))) // brick red
+        assertEquals(NearWhite, onAccent(Color(0xFF1C2D69))) // navy
+        assertEquals(NearWhite, onAccent(Color(0xFFA32F29))) // brick red
     }
 
     @Test

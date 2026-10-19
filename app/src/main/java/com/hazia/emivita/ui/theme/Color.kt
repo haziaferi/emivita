@@ -58,12 +58,12 @@ object PorcellanaPalette {
         outline = Color(0xFF7691A6),
         outlineVariant = Color(0xFFCDD3DE),
         primary = Color(0xFF17488C),
-        onPrimary = Color(0xFFFFFFFF),
+        onPrimary = Color(0xFFF5F6F8),
         primaryContainer = Color(0xFFBBC9DC),
         onPrimaryContainer = Color(0xFF143767),
         attention = Color(0xFFA05027),
         error = Color(0xFF9E2A25),
-        onError = Color(0xFFFFFFFF),
+        onError = Color(0xFFF5F6F8),
         errorContainer = Color(0xFFE2C9CA),
         onErrorContainer = Color(0xFF572F45),
     )
@@ -77,15 +77,16 @@ object PorcellanaPalette {
         outline = Color(0xFF60656C),
         outlineVariant = Color(0xFF353A42),
         primary = Color(0xFF8FB0E0),
-        onPrimary = Color(0xFF1A2028),
+        onPrimary = Color(0xFF212A36),
         primaryContainer = Color(0xFF45566E),
-        onPrimaryContainer = Color(0xFFF9F9FD),
+        onPrimaryContainer = Color(0xFFF1F3FB),
         attention = Color(0xFFE0925F),
         error = Color(0xFFF09590),
         onError = Color(0xFF3A0B08),
         errorContainer = Color(0xFF654548),
         onErrorContainer = Color(0xFFF8E8E9),
     )
+    val AmoledGround = Color(0xFF090C11)
 }
 
 // ---------- Ardesia ----------
@@ -101,12 +102,12 @@ object ArdesiaPalette {
         outline = Color(0xFF818E96),
         outlineVariant = Color(0xFFC8CFD2),
         primary = Color(0xFF2D6276),
-        onPrimary = Color(0xFFFFFFFF),
+        onPrimary = Color(0xFFEEF4F6),
         primaryContainer = Color(0xFFBCCED5),
         onPrimaryContainer = Color(0xFF1C3E49),
         attention = Color(0xFF9C4E26),
         error = Color(0xFF9E2A25),
-        onError = Color(0xFFFFFFFF),
+        onError = Color(0xFFEEF4F6),
         errorContainer = Color(0xFFDCC8C8),
         onErrorContainer = Color(0xFF5C292A),
     )
@@ -120,15 +121,16 @@ object ArdesiaPalette {
         outline = Color(0xFF697376),
         outlineVariant = Color(0xFF3D494D),
         primary = Color(0xFF7FB2C6),
-        onPrimary = Color(0xFF172024),
+        onPrimary = Color(0xFF1E2C32),
         primaryContainer = Color(0xFF425F6A),
-        onPrimaryContainer = Color(0xFFFFFFFF),
+        onPrimaryContainer = Color(0xFFEBF3F8),
         attention = Color(0xFFE0925F),
         error = Color(0xFFF09590),
         onError = Color(0xFF3A0B08),
         errorContainer = Color(0xFF684E50),
-        onErrorContainer = Color(0xFFFDF6F6),
+        onErrorContainer = Color(0xFFFAE9E9),
     )
+    val AmoledGround = Color(0xFF090F11)
 }
 
 // ---------- Sangue di bue ----------
@@ -144,12 +146,12 @@ object SangueDiBuePalette {
         outline = Color(0xFF858483),
         outlineVariant = Color(0xFFC3C2C0),
         primary = Color(0xFF6E241F),
-        onPrimary = Color(0xFFFFFFFF),
+        onPrimary = Color(0xFFE9E7E4),
         primaryContainer = Color(0xFFC9B4B1),
         onPrimaryContainer = Color(0xFF471F1D),
         attention = Color(0xFF904823),
         error = Color(0xFF9E2A25),
-        onError = Color(0xFFFFFFFF),
+        onError = Color(0xFFE9E7E4),
         errorContainer = Color(0xFFD8BDBA),
         onErrorContainer = Color(0xFF5A2120),
     )
@@ -163,15 +165,16 @@ object SangueDiBuePalette {
         outline = Color(0xFF60605F),
         outlineVariant = Color(0xFF323334),
         primary = Color(0xFFD96B5E),
-        onPrimary = Color(0xFF271311),
+        onPrimary = Color(0xFF311D1C),
         primaryContainer = Color(0xFF633631),
         onPrimaryContainer = Color(0xFFF1D1CF),
         attention = Color(0xFFE0925F),
         error = Color(0xFFF09590),
         onError = Color(0xFF3A0B08),
         errorContainer = Color(0xFF644241),
-        onErrorContainer = Color(0xFFF6E2E2),
+        onErrorContainer = Color(0xFFF2D8D8),
     )
+    val AmoledGround = Color(0xFF0C0C0E)
 }
 
 // ---------- Sabbia ----------
@@ -187,12 +190,12 @@ object SabbiaPalette {
         outline = Color(0xFF8F8A84),
         outlineVariant = Color(0xFFD2D0CC),
         primary = Color(0xFF6F634B),
-        onPrimary = Color(0xFFFFFFFF),
+        onPrimary = Color(0xFFF5F3EF),
         primaryContainer = Color(0xFFD2CEC4),
         onPrimaryContainer = Color(0xFF413B31),
         attention = Color(0xFF9C4E26),
         error = Color(0xFF9E2A25),
-        onError = Color(0xFFFFFFFF),
+        onError = Color(0xFFF5F3EF),
         errorContainer = Color(0xFFE2C7C3),
         onErrorContainer = Color(0xFF612925),
     )
@@ -206,16 +209,23 @@ object SabbiaPalette {
         outline = Color(0xFF686561),
         outlineVariant = Color(0xFF3F3D39),
         primary = Color(0xFFC0AE8E),
-        onPrimary = Color(0xFF231F1A),
+        onPrimary = Color(0xFF2E2A23),
         primaryContainer = Color(0xFF605849),
-        onPrimaryContainer = Color(0xFFFFFFFF),
+        onPrimaryContainer = Color(0xFFF7ECEA),
         attention = Color(0xFFE0925F),
         error = Color(0xFFF09590),
         onError = Color(0xFF3A0B08),
         errorContainer = Color(0xFF6C4845),
-        onErrorContainer = Color(0xFFFBF0EF),
+        onErrorContainer = Color(0xFFF9EBE9),
     )
+    val AmoledGround = Color(0xFF0E0D0C)
 }
+
+// ---------- No pure white or black (§7 R98) ----------
+// The default palette's extremes, for what no palette colours: the picker, a
+// medicine tile's light ink, the scrim, the notification mask.
+val NearWhite = Color(0xFFF5F6F8)
+val NearBlack = Color(0xFF090C11)
 
 /**
  * Fallback accent for a medicine or profile with no colour of its own -- the

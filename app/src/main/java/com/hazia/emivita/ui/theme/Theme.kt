@@ -83,6 +83,14 @@ fun MedPalette.displayName(): String = when (this) {
 
 /** One palette's register, as Color.kt declares it (printed there by
  *  `tools/palette_derive.py`). */
+/** The palette's AMOLED ground: its dark seed at 5 % lightness, never #000000 (§7 R98). */
+internal fun amoledGroundFor(palette: MedPalette): Color = when (palette) {
+    MedPalette.PORCELLANA -> PorcellanaPalette.AmoledGround
+    MedPalette.ARDESIA -> ArdesiaPalette.AmoledGround
+    MedPalette.SANGUE_DI_BUE -> SangueDiBuePalette.AmoledGround
+    MedPalette.SABBIA -> SabbiaPalette.AmoledGround
+}
+
 internal fun tokensFor(palette: MedPalette, dark: Boolean): PaletteTokens = when (palette) {
     MedPalette.PORCELLANA -> if (dark) PorcellanaPalette.Dark else PorcellanaPalette.Light
     MedPalette.ARDESIA -> if (dark) ArdesiaPalette.Dark else ArdesiaPalette.Light
@@ -131,7 +139,7 @@ private fun ColorScheme.withDerivedSurfaces(t: PaletteTokens, background: Color 
     // audited tokens already give directly.
     inverseSurface = t.onSurface,
     inverseOnSurface = background,
-    scrim = Color.Black,
+    scrim = NearBlack,
     surfaceTint = t.primary,
 )
 
@@ -152,11 +160,12 @@ private fun ColorScheme.withDerivedSurfaces(t: PaletteTokens, background: Color 
 internal fun colorSchemeFor(palette: MedPalette, dark: Boolean, amoled: Boolean = false): ColorScheme {
     val t = tokensFor(palette, dark)
     if (dark && amoled) {
-        // The dark scheme with its ground switched off: black background and
-        // surface; the cards keep their dark tone, so they still step up from
-        // the page (§9 #29, HM-34).
-        return colorSchemeFor(palette, dark = true).copy(background = Color.Black, surface = Color.Black)
-            .withDerivedSurfaces(t, background = Color.Black, surface = Color.Black)
+        // The dark scheme with its ground at the palette's AMOLED near-black,
+        // not #000000 (§7 R98): the cards keep their dark tone, so they still
+        // step up from the page (§9 #29, HM-34).
+        val ground = amoledGroundFor(palette)
+        return colorSchemeFor(palette, dark = true).copy(background = ground, surface = ground)
+            .withDerivedSurfaces(t, background = ground, surface = ground)
     }
     val slots = ColorScheme(
         primary = t.primary, onPrimary = t.onPrimary, primaryContainer = t.primaryContainer, onPrimaryContainer = t.onPrimaryContainer,
@@ -167,7 +176,7 @@ internal fun colorSchemeFor(palette: MedPalette, dark: Boolean, amoled: Boolean 
         surfaceVariant = t.surfaceContainerHigh, onSurfaceVariant = t.onSurfaceVariant, surfaceTint = t.primary,
         inverseSurface = t.onSurface, inverseOnSurface = t.background,
         error = t.error, onError = t.onError, errorContainer = t.errorContainer, onErrorContainer = t.onErrorContainer,
-        outline = t.outline, outlineVariant = t.outlineVariant, scrim = Color.Black,
+        outline = t.outline, outlineVariant = t.outlineVariant, scrim = NearBlack,
         surfaceBright = t.surface, surfaceDim = t.surface, surfaceContainer = t.surfaceContainer,
         surfaceContainerHigh = t.surfaceContainerHigh, surfaceContainerHighest = t.surfaceContainerHigh,
         surfaceContainerLow = t.surface, surfaceContainerLowest = t.background,

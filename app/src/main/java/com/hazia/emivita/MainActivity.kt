@@ -17,7 +17,12 @@ class MainActivity : FragmentActivity() {
     override fun attachBaseContext(newBase: Context) = super.attachBaseContext(AppLocale.wrap(newBase))
 
     override fun onCreate(savedInstanceState: Bundle?) {
-        installSplashScreen()
+        // The splash fades out over the app's first frame (§7 R98): it is drawn
+        // from a fixed resource before the user's palette and theme are known,
+        // so it can match none of them exactly, and a cut would show the step.
+        installSplashScreen().setOnExitAnimationListener { splash ->
+            splash.view.animate().alpha(0f).setDuration(SPLASH_FADE_MS).withEndAction { splash.remove() }.start()
+        }
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
 
@@ -29,3 +34,5 @@ class MainActivity : FragmentActivity() {
         }
     }
 }
+
+private const val SPLASH_FADE_MS = 200L

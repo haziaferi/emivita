@@ -1,19 +1,15 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <!-- Matches DaylightPalette.LightBackground in ui/theme/Color.kt.
-         This is a native (non-Compose) resource, so it can only ever be one
-         flat value; it is what's visible for the brief window between the
-         splash screen and Compose's first frame, since Compose repaints
-         over it immediately with whatever palette EmivitaTheme is given.
-         Update this if MainActivity's default EmivitaTheme() call ever
-         stops defaulting to DAYLIGHT, or accept the brief mismatch. -->
-    <color name="splash_background">#F5F6F8</color>
+    <!-- The splash ground is the launcher icon's own tile (SPEC 7 R98, the
+         owner's choice), so the tile disappears into it; values-night has
+         the dark splash's near-black. The window shows this colour from the
+         splash until Compose's first frame, which repaints with the user's
+         palette. -->
+    <color name="splash_background">@color/ic_launcher_background</color>
 
-    <!-- Adaptive icon background layer. Deliberately a flat, zero-hue gray
-         rather than any palette's LightBackground in Color.kt; every one of
-         the 6 palettes there carries a warm or cool tint, and the launcher
-         icon can't follow whichever palette a user has active in-app, so it
-         stays neutral instead of quietly picking one palette as the
-         "default" everywhere else on the phone. -->
+    <!-- Adaptive icon background layer: a near-neutral grey chosen by
+         colour-fitness scoring (SPEC 7 R92) to vanish against the light
+         splash. It belongs to no palette, because the launcher icon cannot
+         follow the one a user has active in the app. -->
     <color name="ic_launcher_background">#F3F4F6</color>
 </resources>

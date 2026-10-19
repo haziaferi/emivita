@@ -33,14 +33,20 @@ def cr(a, b): return round(cr_exact(a, b), 2)
 def mix(a, b, t): ra, rb = h2r(a), h2r(b); return r2h(tuple(ra[i] * (1 - t) + rb[i] * t for i in range(3)))
 def hsl(h): r, g, b = h2r(h); H, L, S = colorsys.rgb_to_hls(r, g, b); return H, S, L
 def setL(h, L): H, S, _ = hsl(h); return r2h(colorsys.hls_to_rgb(H, L, S))
-def fitL(fg, bg, target):
-    """Move fg's lightness away from bg, keeping hue and saturation, until the pair reaches target."""
+def fitL(fg, bg, target, band=(0.0, 1.0)):
+    """Move fg's lightness away from bg, keeping hue and saturation, until the pair reaches target.
+
+    `band` bounds the lightness: no colour leaves it, so none becomes pure
+    white or pure black (§7 R98, the owner's rule); a pair that cannot reach
+    its target inside the band stops at the edge and fails its CHECK."""
     # Unrounded, and a hair above the floor: the Kotlin test compares exact
     # ratios, and a value that rounds to 3.00 from 2.996 would fail there.
-    H, S, L = hsl(fg); bg_is_light = lum(bg) > 0.3
+    H, S, L = hsl(fg); bg_is_light = lum(bg) > 0.3; lo, hi = band
     for _ in range(200):
         if cr_exact(fg, bg) >= target + 0.02: return fg
-        L += -0.005 if bg_is_light else 0.005; fg = setL(fg, L)
+        nxt = L + (-0.005 if bg_is_light else 0.005)
+        if not lo <= nxt <= hi: return fg
+        L = nxt; fg = setL(fg, L)
     return fg
 
 # ---- the seeds: (ground, text, primary) per register ------------------------
@@ -57,34 +63,46 @@ SEEDS = [
 ]
 ATTENTION = {"light": "#B85C2E", "dark": "#E0925F"}   # burnt orange: the register rules out yellow
 ERROR = {"light": "#9E2A25", "dark": "#F09590"}
-ON_ERROR = {"light": "#FFFFFF", "dark": "#3A0B08"}
+ON_ERROR_DARK = "#3A0B08"
+# No pure white or pure black on any screen (§7 R98, the owner's rule). A
+# palette's lightest colour is its own light ground, its darkest its AMOLED
+# ground: the dark seed's hue and saturation at HSL lightness 5 %, the OLED
+# floor the colour tooling uses (Material's #121212 sits at 7 %), so black
+# pixels still switch off almost fully without the smear of true #000000.
+AMOLED_L = 0.05
+def amoled_ground(dark_seed_ground): return setL(dark_seed_ground, AMOLED_L)
 
 ROLES = ["background", "surface", "surfaceContainer", "surfaceContainerHigh", "onSurface", "onSurfaceVariant",
          "outline", "outlineVariant", "primary", "onPrimary", "primaryContainer", "onPrimaryContainer",
          "attention", "error", "onError", "errorContainer", "onErrorContainer"]
 
-def derive(surf, text, prim, light):
+def derive(surf, text, prim, light, near_white, near_black):
+    """`near_white` and `near_black` are the palette's own extremes (its light
+    ground and its AMOLED ground); every fitted colour stays between them."""
     mode = "light" if light else "dark"
+    band = (hsl(near_black)[2], hsl(near_white)[2])
     t = {"background": surf, "surface": surf}
     t["surfaceContainer"] = mix(surf, text, 0.045 if light else 0.06)
     t["surfaceContainerHigh"] = mix(surf, text, 0.09 if light else 0.11)
     # Anything that can sit on a card is fitted against the darkest card tier,
     # not the ground: muted text, the primary, the attention and error glyphs.
     high = t["surfaceContainerHigh"]
-    prim = fitL(prim, high, 4.5)
+    prim = fitL(prim, high, 4.5, band)
     t["onSurface"] = text
-    t["onSurfaceVariant"] = fitL(mix(text, surf, 0.55), high, 4.5)
-    t["outline"] = fitL(mix(text, surf, 0.62), surf, 3.0)
+    t["onSurfaceVariant"] = fitL(mix(text, surf, 0.55), high, 4.5, band)
+    t["outline"] = fitL(mix(text, surf, 0.62), surf, 3.0, band)
     t["outlineVariant"] = mix(surf, text, 0.18)
     t["primary"] = prim
-    t["onPrimary"] = "#FFFFFF" if light else fitL(mix(prim, "#000000", 0.82), prim, 4.5)
+    # Ink on a filled primary: the light ground in light mode, where white
+    # was (§7 R98); fitted only if that ever fell short.
+    t["onPrimary"] = fitL(near_white, prim, 4.5, band) if light else fitL(mix(prim, near_black, 0.82), prim, 4.5, band)
     t["primaryContainer"] = mix(surf, prim, 0.26 if light else 0.42)
-    t["onPrimaryContainer"] = fitL(mix(prim, text, 0.45 if light else 0.35), t["primaryContainer"], 7.0)
-    t["attention"] = fitL(ATTENTION[mode], high, 4.5)
-    t["error"] = fitL(ERROR[mode], high, 4.5)
-    t["onError"] = ON_ERROR[mode]
+    t["onPrimaryContainer"] = fitL(mix(prim, text, 0.45 if light else 0.35), t["primaryContainer"], 7.0, band)
+    t["attention"] = fitL(ATTENTION[mode], high, 4.5, band)
+    t["error"] = fitL(ERROR[mode], high, 4.5, band)
+    t["onError"] = fitL(near_white, t["error"], 4.5, band) if light else ON_ERROR_DARK
     t["errorContainer"] = mix(surf, t["error"], 0.22 if light else 0.38)
-    t["onErrorContainer"] = fitL(mix(t["error"], text, 0.5), t["errorContainer"], 7.0)
+    t["onErrorContainer"] = fitL(mix(t["error"], text, 0.5), t["errorContainer"], 7.0, band)
     return t
 
 CHECKS = [  # (label, fg, bg, floor)
@@ -108,12 +126,31 @@ CHECKS = [  # (label, fg, bg, floor)
 def palettes():
     out = []
     for enum, name, source, L, D in SEEDS:
-        light, dark = derive(*L, light=True), derive(*D, light=False)
-        out.append({"enum": enum, "name": name, "source": source, "light": light, "dark": dark})
+        near_white, near_black = L[0], amoled_ground(D[0])
+        light = derive(*L, light=True, near_white=near_white, near_black=near_black)
+        dark = derive(*D, light=False, near_white=near_white, near_black=near_black)
+        out.append({"enum": enum, "name": name, "source": source, "light": light, "dark": dark, "amoled": near_black})
     return out
+
+# The palette-free places (the colour picker, a medicine tile's light ink, the
+# scrim, the notification mask) take the default palette's extremes (§7 R98).
+def near_white(): return palettes()[0]["light"]["background"]
+def near_black(): return palettes()[0]["amoled"]
+
+PURE = {"#FFFFFF", "#000000"}
+def pure_hits():
+    """Every derived value that is pure white or pure black: the rule says none."""
+    hits = []
+    for p in palettes():
+        for reg in ("light", "dark"):
+            hits += [f"{p['name']} {reg} {r}" for r in ROLES if p[reg][r].upper() in PURE]
+        if p["amoled"].upper() in PURE: hits.append(f"{p['name']} amoled ground")
+    return hits
 
 def checks_line(t):
     return " · ".join(f"{label} {cr(t[fg], t[bg])}" for label, fg, bg, _ in CHECKS)
+
+def amoled_tokens(p): return dict(p["dark"], background=p["amoled"], surface=p["amoled"])
 
 def tables():
     lines = []
@@ -125,6 +162,7 @@ def tables():
             lines.append(f"| {r} | `{p['light'][r]}` | `{p['dark'][r]}` |")
         lines.append("")
         lines.append(f"Checks — Light: {checks_line(p['light'])}. Dark: {checks_line(p['dark'])}.\n")
+        lines.append(f"AMOLED ground `{p['amoled']}` (dark scheme, ground and surface swapped) — checks: {checks_line(amoled_tokens(p))}.\n")
     return "\n".join(lines)
 
 def kotlin():
@@ -139,7 +177,13 @@ def kotlin():
             for r in ROLES:
                 lines.append(f"        {r} = Color(0xFF{p[reg][r][1:]}),")
             lines.append("    )")
+        lines.append(f"    val AmoledGround = Color(0xFF{p['amoled'][1:]})")
         lines.append("}\n")
+    lines.append("// ---------- No pure white or black (§7 R98) ----------")
+    lines.append("// The default palette's extremes, for what no palette colours: the picker, a")
+    lines.append("// medicine tile's light ink, the scrim, the notification mask.")
+    lines.append(f"val NearWhite = Color(0xFF{near_white()[1:]})")
+    lines.append(f"val NearBlack = Color(0xFF{near_black()[1:]})")
     return "\n".join(lines)
 
 def check():
@@ -148,7 +192,7 @@ def check():
     section = spec[a:b]
     want = tables()
     # Compare every table row and heading the generator prints, in order.
-    keep = lambda l: re.match(r"^\| \w+ \| `#", l) or l.startswith("### ") or l.startswith("Checks — ")
+    keep = lambda l: re.match(r"^\| \w+ \| `#", l) or l.startswith("### ") or l.startswith("Checks — ") or l.startswith("AMOLED ground")
     wanted = [l for l in want.splitlines() if keep(l)]
     have = [l for l in section.splitlines() if keep(l)]
     if wanted != have:
@@ -165,14 +209,16 @@ def main(argv):
     worst_all = 99
     for p in palettes():
         for reg in ("light", "dark", "amoled"):
-            t = dict(p["dark"], background="#000000", surface="#000000") if reg == "amoled" else p[reg]
+            t = amoled_tokens(p) if reg == "amoled" else p[reg]
             fails = [(label, cr(t[fg], t[bg]), floor) for label, fg, bg, floor in CHECKS if cr(t[fg], t[bg]) < floor]
             worst = min(cr(t[fg], t[bg]) / floor for _, fg, bg, floor in CHECKS)
             worst_all = min(worst_all, worst)
             print(f"{p['name']:14} {reg:6} " + " ".join(f"{cr(t[fg], t[bg]):>5}" for _, fg, bg, _ in CHECKS) + ("" if not fails else f"   BELOW FLOOR: {fails}"))
     print("columns: " + " | ".join(label for label, *_ in CHECKS))
     print(f"every pair at or above its floor: {'yes' if worst_all >= 1 else 'NO'}")
-    return 0 if worst_all >= 1 else 1
+    hits = pure_hits()
+    print(f"pure white or black (§7 R98): {'none' if not hits else hits}")
+    return 0 if worst_all >= 1 and not hits else 1
 
 if __name__ == "__main__":
     sys.exit(main(sys.argv[1:]))
