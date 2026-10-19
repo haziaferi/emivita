@@ -230,6 +230,8 @@ fun EmivitaTheme(
     // (§7 R76): enableEdgeToEdge decides from the system setting, so a dark
     // or AMOLED theme on a phone in light mode drew dark icons on black and
     // the clock vanished. A theme is the one place that knows which it is.
+    // Three-button navigation also gets a system contrast scrim, 90 % white in
+    // light mode (§7 R99); the icons follow the app's mode, so it is not needed.
     val view = LocalView.current
     if (!view.isInEditMode) {
         SideEffect {
@@ -237,6 +239,7 @@ fun EmivitaTheme(
                 val bars = WindowCompat.getInsetsController(window, view)
                 bars.isAppearanceLightStatusBars = !useDark
                 bars.isAppearanceLightNavigationBars = !useDark
+                window.isNavigationBarContrastEnforced = false
             }
         }
     }
