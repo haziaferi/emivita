@@ -117,27 +117,21 @@ class PaletteSpecConsistencyTest {
     }
 
     /**
-     * `splash_background` is a native resource painted before Compose's first
-     * frame, so it cannot read a token and has to be kept in step by hand. This
-     * is the only thing that notices when it is not.
+     * The splash grounds, the owner's choice (§7 R98): light is the launcher
+     * icon's own tile, so the tile vanishes into it; dark is that tile's
+     * AMOLED counterpart, the default palette's AMOLED ground (never pure
+     * black). Native resources cannot read a token, so this pins them.
      */
     @Test
-    fun splashBackgroundMatchesTheDefaultPalette() {
-        // Both qualifiers: the night one had sat at a warm brown matching no
-        // palette from R56 to R75, because only `values/` was pinned.
-        for ((folder, dark) in listOf("values" to false, "values-night" to true)) {
-            val xml = repoFile("app/src/main/res/$folder/colors.xml").readText()
-            val declared = Regex("""<color name="splash_background">(#[0-9A-Fa-f]{6})</color>""")
-                .find(xml)?.groupValues?.get(1)?.uppercase()
-            assertTrue("splash_background not found in res/$folder/colors.xml", declared != null)
-            val expected = colorSchemeFor(DEFAULT_PALETTE, dark).background.hex()
-            assertEquals(
-                "res/$folder splash_background is $declared but the default palette " +
-                    "(${DEFAULT_PALETTE.displayName()}) has a ${if (dark) "dark" else "light"} background of $expected -- " +
-                    "they must match, or the splash flashes a different colour before Compose starts",
-                expected, declared,
-            )
-        }
+    fun splashGroundsAreTheLauncherTileAndItsAmoledCounterpart() {
+        val day = repoFile("app/src/main/res/values/colors.xml").readText()
+        assertTrue(
+            "the light splash should be the launcher tile",
+            Regex("""<color name="splash_background">@color/ic_launcher_background</color>""").containsMatchIn(day),
+        )
+        val night = repoFile("app/src/main/res/values-night/colors.xml").readText()
+        val declared = Regex("""<color name="splash_background">(#[0-9A-Fa-f]{6})</color>""").find(night)?.groupValues?.get(1)?.uppercase()
+        assertEquals("the dark splash should be the default palette's AMOLED ground", amoledGroundFor(DEFAULT_PALETTE).hex(), declared)
     }
 
     /** A name stored by the six-palette build lands on its nearest of the

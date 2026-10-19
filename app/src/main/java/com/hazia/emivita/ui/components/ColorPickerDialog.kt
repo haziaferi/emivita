@@ -1,5 +1,7 @@
 package com.hazia.emivita.ui.components
 
+import com.hazia.emivita.ui.theme.NearBlack
+import com.hazia.emivita.ui.theme.NearWhite
 import android.graphics.Color as AndroidColor
 import androidx.compose.foundation.Canvas
 import androidx.compose.foundation.background
@@ -98,7 +100,9 @@ fun ColorPickerDialog(
     var hexText by remember { mutableStateOf(Color(AndroidColor.HSVToColor(floatArrayOf(hue, saturation, value))).toHexString()) }
     var hexError by remember { mutableStateOf(false) }
 
-    fun currentColor() = Color(AndroidColor.HSVToColor(floatArrayOf(hue, saturation, value)))
+    // Brightness stays between NearBlack's and NearWhite's (§7 R98): the square's
+    // corners give near-black and near-white, never #000000 or #FFFFFF.
+    fun currentColor() = Color(AndroidColor.HSVToColor(floatArrayOf(hue, saturation, value.coerceIn(PICKER_VALUE_MIN, PICKER_VALUE_MAX))))
     fun syncHexFromHsv() { hexText = currentColor().toHexString(); hexError = false }
 
     AlertDialog(
@@ -130,18 +134,18 @@ fun ColorPickerDialog(
                             }
                         },
                 ) {
-                    // white-to-transparent (saturation) then transparent-to-black (value)
+                    // near-white-to-transparent (saturation) then transparent-to-near-black (value)
                     Box(
                         Modifier
                             .fillMaxWidth()
                             .height(squareSize)
-                            .background(Brush.horizontalGradient(listOf(Color.White, Color.Transparent))),
+                            .background(Brush.horizontalGradient(listOf(NearWhite, Color.Transparent))),
                     )
                     Box(
                         Modifier
                             .fillMaxWidth()
                             .height(squareSize)
-                            .background(Brush.verticalGradient(listOf(Color.Transparent, Color.Black))),
+                            .background(Brush.verticalGradient(listOf(Color.Transparent, NearBlack))),
                     )
                     val markerX = (saturation * squareSize.value).dp
                     val markerY = ((1f - value) * squareSize.value).dp
@@ -153,8 +157,8 @@ fun ColorPickerDialog(
                             .background(Color.Transparent),
                     ) {
                         Canvas(Modifier.size(16.dp)) {
-                            drawCircle(Color.White, radius = 7.dp.toPx(), style = Stroke(width = 2.dp.toPx()))
-                            drawCircle(Color.Black.copy(alpha = 0.4f), radius = 7.dp.toPx(), style = Stroke(width = 1.dp.toPx()))
+                            drawCircle(NearWhite, radius = 7.dp.toPx(), style = Stroke(width = 2.dp.toPx()))
+                            drawCircle(NearBlack.copy(alpha = 0.4f), radius = 7.dp.toPx(), style = Stroke(width = 1.dp.toPx()))
                         }
                     }
                 }
@@ -245,3 +249,6 @@ fun ColorPickerDialog(
         dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } },
     )
 }
+
+private val PICKER_VALUE_MIN = maxOf(NearBlack.red, NearBlack.green, NearBlack.blue)
+private val PICKER_VALUE_MAX = maxOf(NearWhite.red, NearWhite.green, NearWhite.blue)

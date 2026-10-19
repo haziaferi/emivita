@@ -1,0 +1,10 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <!-- Dark mode's splash (SPEC 7 R98): the same style as values/themes.xml
+         with the near-white icon, so the art shows on the near-black ground. -->
+    <style name="Theme.Emivita" parent="Theme.SplashScreen">
+        <item name="windowSplashScreenBackground">@color/splash_background</item>
+        <item name="windowSplashScreenAnimatedIcon">@mipmap/ic_splash_night</item>
+        <item name="postSplashScreenTheme">@style/Theme.Emivita.Main</item>
+    </style>
+</resources>
