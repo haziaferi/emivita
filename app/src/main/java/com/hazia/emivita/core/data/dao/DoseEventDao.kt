@@ -53,6 +53,8 @@ private const val JOINED_SELECT = """
     INNER JOIN medicines ON dose_events.medicineId = medicines.id
 """
 
+data class AnsweredSlot(val reminderId: Long, val scheduledEpochMillis: Long)
+
 @Dao
 interface DoseEventDao {
 
@@ -69,6 +71,14 @@ interface DoseEventDao {
             "AND scheduledEpochMillis BETWEEN :startEpochMillis AND :endEpochMillis ORDER BY scheduledEpochMillis ASC"
     )
     suspend fun getPendingScheduledBetween(startEpochMillis: Long, endEpochMillis: Long): List<DoseEvent>
+
+    /** Slots already answered, early ones included (§7 R104, census A-38): the
+     *  projection drops them, as medTimer's simulation lets a real event replace one. */
+    @Query(
+        "SELECT reminderId, scheduledEpochMillis FROM dose_events WHERE reminderId IS NOT NULL " +
+            "AND status IN ('TAKEN', 'SKIPPED') AND scheduledEpochMillis >= :fromEpochMillis AND scheduledEpochMillis <= :toEpochMillis"
+    )
+    suspend fun getAnsweredSlots(fromEpochMillis: Long, toEpochMillis: Long): List<AnsweredSlot>
 
     @Query("SELECT * FROM dose_events WHERE reminderId = :reminderId AND scheduledEpochMillis = :scheduledEpochMillis LIMIT 1")
     suspend fun findByReminderAndTime(reminderId: Long, scheduledEpochMillis: Long): DoseEvent?

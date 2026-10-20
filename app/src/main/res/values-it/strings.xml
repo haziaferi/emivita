@@ -338,6 +338,8 @@
     <string name="backup_export_password_lost">Esportazione annullata: la password è andata perduta mentre il selettore di file era aperto e questo backup doveva essere protetto da password. Tocca «Esporta backup» e inseriscila di nuovo.</string>
     <string name="backup_unreadable_file">Impossibile leggere il file selezionato.</string>
     <string name="backup_restore_complete">Ripristino completato.</string>
+    <string name="backup_restore_confirm_title">Sostituire tutto con questo backup?</string>
+    <string name="backup_restore_confirm_action">Ripristina</string>
     <string name="backup_invalid_file">Questo file non è un backup Emivita valido.</string>
     <string name="backup_restore_failed">Ripristino non riuscito: %1$s</string>
     <string name="medical_id_name_helper">Stampato in cima alla scheda</string>
