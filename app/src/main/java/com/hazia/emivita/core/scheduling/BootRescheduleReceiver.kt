@@ -40,6 +40,8 @@ class BootRescheduleReceiver : BroadcastReceiver() {
                 container.missedDoseBackfiller.backfill()
                 container.alarmScheduler.rearmSnoozes()
                 if (container.unansweredDoseReposter.repost() > 0) container.schedulingCoordinator.rescheduleAll()
+                // A reboot forgets the weekly backup's alarm too (§7 R101).
+                container.autoSyncManager.runWeekly()
             } catch (t: Throwable) {
                 Log.e(TAG, "Failed to reschedule reminders after ${intent.action}", t)
             } finally {
