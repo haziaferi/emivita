@@ -23,6 +23,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.channels.Channel
+import com.hazia.emivita.feature.widget.StockLevelsWidget
+import com.hazia.emivita.feature.widget.NextRemindersWidget
+import androidx.glance.appwidget.updateAll
 import com.hazia.emivita.core.notification.UnansweredDoseReposter
 import com.hazia.emivita.core.scheduling.MissedDoseBackfiller
 import com.hazia.emivita.core.format.LocaleFormats
@@ -124,7 +128,29 @@ class AppContainer(
     // ExpirationAlert triggering (§9 item 8, via alertEvaluator) as the last step
     // of its own recompute pass. See OccurrenceProjectionCache's own doc comment.
     val occurrenceProjectionCache: OccurrenceProjectionCache by lazy {
-        OccurrenceProjectionCache(database.medicineDao(), schedulingEngine, alertEvaluator, applicationScope)
+        OccurrenceProjectionCache(
+            database.medicineDao(), schedulingEngine, alertEvaluator, applicationScope,
+            onPublished = { widgetRefresh.trySend(Unit) },
+            answeredSlots = { from, to ->
+                database.doseEventDao().getAnsweredSlots(from, to).mapTo(HashSet()) { it.reminderId to it.scheduledEpochMillis }
+            },
+        )
+    }
+
+    // The widgets follow the data, as medTimer's do (§7 R104, census E-37),
+    // not only a 30-minute timer: each finished projection pass re-renders
+    // both, conflated so a burst of passes costs one refresh.
+    private val widgetRefresh: Channel<Unit> by lazy {
+        Channel<Unit>(capacity = Channel.CONFLATED).also { channel ->
+            applicationScope.launch {
+                for (unused in channel) {
+                    runCatching {
+                        NextRemindersWidget().updateAll(appContext)
+                        StockLevelsWidget().updateAll(appContext)
+                    }.onFailure { android.util.Log.w("AppContainer", "widget refresh failed", it) }
+                }
+            }
+        }
     }
 
     /** §9 #28: the time-format choice and the phone's 24-hour switch reach

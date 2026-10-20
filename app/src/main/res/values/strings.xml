@@ -365,6 +365,8 @@
     <string name="backup_export_password_lost">Export cancelled: the password was lost while the file picker was open, and this backup was meant to be password-protected. Tap Export backup and enter it again.</string>
     <string name="backup_unreadable_file">Couldn\'t read the selected file.</string>
     <string name="backup_restore_complete">Restore complete.</string>
+    <string name="backup_restore_confirm_title">Replace everything with this backup?</string>
+    <string name="backup_restore_confirm_action">Restore</string>
     <string name="backup_invalid_file">This file isn\'t a valid Emivita backup.</string>
     <string name="backup_restore_failed">Restore failed: %1$s</string>
     <string name="medical_id_name_helper">Printed at the top of the card</string>

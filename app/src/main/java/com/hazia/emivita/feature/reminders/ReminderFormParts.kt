@@ -110,7 +110,8 @@ internal class AdvancedReminderFieldsState(initialReminder: Reminder?) {
     var autoResolve by mutableStateOf(initialReminder?.autoResolve ?: false)
     var activeFromEpochDay by mutableStateOf(initialReminder?.activeFromEpochDay)
     var activeUntilEpochDay by mutableStateOf(initialReminder?.activeUntilEpochDay)
-    var nagEnabled by mutableStateOf(initialReminder?.repeatOnUnanswered != null)
+    // On for a new reminder, as in medTimer (the owner, §7 R104); an existing one keeps its own.
+    var nagEnabled by mutableStateOf(initialReminder?.let { it.repeatOnUnanswered != null } ?: true)
     var nagDelayMinutes by mutableStateOf(initialReminder?.repeatOnUnanswered?.delayMinutes?.toString() ?: "30")
     var nagMaxRepeats by mutableStateOf(initialReminder?.repeatOnUnanswered?.maxRepeats?.toString() ?: "3")
     var weekendModeOptIn by mutableStateOf(initialReminder?.weekendModeOptIn ?: false)

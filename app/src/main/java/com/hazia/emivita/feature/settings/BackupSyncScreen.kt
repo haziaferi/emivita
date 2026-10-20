@@ -222,8 +222,11 @@ fun BackupSyncScreen(
         }
     }
 
+    // Asked before anything is read, as medTimer does (§7 R104, census E-07):
+    // a restore replaces every row, and an unencrypted file used to go straight in.
+    var confirmRestoreUri by remember { mutableStateOf<Uri?>(null) }
     val openDocumentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) scope.launch { attemptRestore(uri, null) }
+        if (uri != null) confirmRestoreUri = uri
     }
 
     // ---- Auto-sync folder (b) ----------------------------------------------
@@ -365,6 +368,23 @@ fun BackupSyncScreen(
         if (profileId != null && medicineRepository != null) {
             ArchivedMedicinesSection(profileId, medicineRepository)
         }
+    }
+
+    confirmRestoreUri?.let { uri ->
+        AlertDialog(
+            onDismissRequest = { confirmRestoreUri = null },
+            title = { Text(stringResource(R.string.backup_restore_confirm_title)) },
+            text = { Text(stringResource(R.string.backup_sync_replaces_everything_currently_on_this_device)) },
+            confirmButton = {
+                TextButton(onClick = {
+                    confirmRestoreUri = null
+                    scope.launch { attemptRestore(uri, null) }
+                }) { Text(stringResource(R.string.backup_restore_confirm_action)) }
+            },
+            dismissButton = {
+                TextButton(onClick = { confirmRestoreUri = null }) { Text(stringResource(R.string.common_cancel)) }
+            },
+        )
     }
 
     if (showUnencryptedConfirm) {

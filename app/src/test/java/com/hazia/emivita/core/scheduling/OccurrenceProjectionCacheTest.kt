@@ -27,6 +27,7 @@ import kotlinx.coroutines.test.TestScope
 import kotlinx.coroutines.test.advanceUntilIdle
 import kotlinx.coroutines.test.runTest
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertFalse
 import org.junit.After
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -90,7 +91,13 @@ class OccurrenceProjectionCacheTest {
         cacheScopes.forEach { it.cancel() }
     }
 
-    private fun TestScope.buildCache(medicines: List<MedicineWithReminders>, clock: () -> Long = { now }): OccurrenceProjectionCache {
+    private fun TestScope.buildCache(
+        medicines: List<MedicineWithReminders>,
+        // Before [clock]: tests pass the clock as a trailing lambda.
+        onPublished: () -> Unit = {},
+        answeredSlots: Set<Pair<Long, Long>> = emptySet(),
+        clock: () -> Long = { now },
+    ): OccurrenceProjectionCache {
         val medicineDao = mockk<MedicineDao>()
         coEvery { medicineDao.getAllWithReminders() } returns medicines
         // Empty rather than a real Flow: the reactive watcher is not what these
@@ -112,7 +119,45 @@ class OccurrenceProjectionCacheTest {
             fixedZone = zone,
             nowEpochMillis = clock,
             dispatcher = UnconfinedTestDispatcher(testScheduler),
+            onPublished = onPublished,
+            answeredSlots = { _, _ -> answeredSlots },
         )
+    }
+
+    // ---- Readers outside core (§7 R104) --------------------------------------
+
+    @Test
+    fun `each finished pass is reported once, the states published mid-pass are not`() = runTest {
+        var finished = 0
+        val cache = buildCache(
+            listOf(medicineWithDailyDose(1L, stockQuantity = 30.0, doseAmount = 1.0), medicineWithDailyDose(2L, stockQuantity = 30.0, doseAmount = 1.0)),
+            onPublished = { finished++ },
+        )
+        advanceUntilIdle()
+        assertEquals(1, finished)
+        assertFalse(cache.state.value.inProgress)
+
+        cache.invalidate()
+        advanceUntilIdle()
+        assertEquals(2, finished)
+    }
+
+    @Test
+    fun `a slot already answered is not projected, nor counted against the stock again`() = runTest {
+        // Census A-38: a dose taken early with "Take now" stayed on the widget as
+        // upcoming, and the run-out walk subtracted it a second time.
+        val plain = buildCache(listOf(medicineWithDailyDose(stockQuantity = 10.0, doseAmount = 1.0)))
+        advanceUntilIdle()
+        val first = plain.state.value.occurrences.first()
+        assertEquals(LocalDate.parse("2026-06-10"), plain.state.value.stockRunOutDates[1L])
+
+        val answered = buildCache(
+            listOf(medicineWithDailyDose(stockQuantity = 10.0, doseAmount = 1.0)),
+            answeredSlots = setOf(first.reminderId to first.epochMillis),
+        )
+        advanceUntilIdle()
+        assertFalse(answered.state.value.occurrences.any { it.epochMillis == first.epochMillis })
+        assertEquals(LocalDate.parse("2026-06-11"), answered.state.value.stockRunOutDates[1L])
     }
 
     // ---- Window arithmetic --------------------------------------------------

@@ -102,6 +102,12 @@ class OccurrenceProjectionCache(
     // the debounce below is real wall-clock time on Dispatchers.Default, which
     // a test cannot advance. Production never passes this.
     private val dispatcher: CoroutineDispatcher = Dispatchers.Default,
+    // Called after each finished pass, so a reader outside core (the widgets,
+    // §7 R104) can follow the projection without core knowing about it.
+    private val onPublished: () -> Unit = {},
+    // (reminderId, slot) pairs already Taken or Skipped in the window; their
+    // projected slots are dropped (§7 R104, census A-38). Tests leave it empty.
+    private val answeredSlots: suspend (Long, Long) -> Set<Pair<Long, Long>> = { _, _ -> emptySet() },
 ) {
     // Read on every use, never captured (§7 R60 B F-4). These are lazy
     // singletons in AppContainer; a `ZoneId.systemDefault()` default parameter
@@ -203,7 +209,9 @@ class OccurrenceProjectionCache(
                 truncated = truncated,
                 inProgress = inProgress,
             )
+            if (!inProgress) onPublished()
         }
+        val answered = answeredSlots(start, toEpochMillis)
         for (entry in medicines) {
 
             // Two passes per medicine (§9 #31, A-24): first every dose reminder
@@ -230,6 +238,7 @@ class OccurrenceProjectionCache(
                 val forReminder = schedulingEngine.occurrencesFor(reminder, start, toEpochMillis, weekendMode = weekendMode)
                 projectedByReminder[reminder.id] = forReminder.map { it.epochMillis }
                 forReminder.forEach { occurrence ->
+                    if ((reminder.id to occurrence.epochMillis) in answered) return@forEach
                     medicineOccurrences += ProjectedOccurrence(reminder.id, entry.medicine.id, occurrence.epochMillis, occurrence.doseAmount)
                 }
             }

@@ -5,6 +5,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.key
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.asImageBitmap
@@ -75,7 +76,10 @@ class AdherenceTickMeasureTest {
             CompositionLocalProvider(LocalDensity provides Density(base.density, c.fontScale)) {
                 EmivitaTheme(themeMode = ThemeMode.LIGHT) {
                     Box(Modifier.background(MaterialTheme.colorScheme.surface)) {
-                        AdherenceChart(days(c.max), c.ticks) { probe = it }
+                        // A fresh chart per case (§7 R104): reusing one left its first
+                        // draw of a new case to Vico's off-thread model swap, which on a
+                        // slow CI runner sometimes never repainted inside the 30 s wait.
+                        key(c) { AdherenceChart(days(c.max), c.ticks) { probe = it } }
                     }
                 }
             }
