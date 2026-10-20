@@ -32,7 +32,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.hazia.emivita.core.data.dao.DoseEventWithMedicine
-import com.hazia.emivita.core.data.entity.DoseStatus
+import com.hazia.emivita.core.data.entity.isAlertSeen
+import com.hazia.emivita.core.data.entity.isRecordOnly
 import com.hazia.emivita.core.format.formatDoseWithUnit
 import com.hazia.emivita.ui.components.parseHexColor
 import com.hazia.emivita.ui.theme.NeutralMedicineAccent
@@ -100,7 +101,7 @@ fun HistoryTableView(
         LazyColumn(contentPadding = PaddingValues(bottom = 8.dp)) {
             items(sorted, key = { it.doseEvent.id }) { row ->
                 HistoryTableRow(row, zone, onClick = {
-                    if (row.doseEvent.status != DoseStatus.REFILLED) onRowClick(row) // §7 R46
+                    if (!row.doseEvent.status.isRecordOnly) onRowClick(row) // §7 R46
                 })
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
             }
@@ -142,7 +143,7 @@ private fun HistoryTableHeader(sortColumn: HistoryTableColumn, descending: Boole
 private fun HistoryTableRow(row: DoseEventWithMedicine, zone: ZoneId, onClick: () -> Unit) {
     val medicine = row.medicine
     val accent = medicine.color?.let { parseHexColor(it) } ?: NeutralMedicineAccent
-    val editable = row.doseEvent.status != DoseStatus.REFILLED
+    val editable = !row.doseEvent.status.isRecordOnly
     val time = remember(row.doseEvent.resolvedAtEpochMillis, row.doseEvent.scheduledEpochMillis) {
         val epochMillis = row.doseEvent.resolvedAtEpochMillis ?: row.doseEvent.scheduledEpochMillis
         LocaleFormats.monthDayTime(epochMillis, zone)
@@ -184,7 +185,9 @@ private fun HistoryTableRow(row: DoseEventWithMedicine, zone: ZoneId, onClick: (
                 overflow = TextOverflow.Ellipsis,
             )
             Text(
-                formatDoseWithUnit(row.doseEvent.doseAmount, row.medicine.doseUnit, LocalResources.current),
+                // A seen alert (§7 R105) has no amount.
+                if (row.doseEvent.status.isAlertSeen) ""
+                else formatDoseWithUnit(row.doseEvent.doseAmount, row.medicine.doseUnit, LocalResources.current),
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.weight(HistoryTableColumn.DOSE.weight),
                 maxLines = 1,

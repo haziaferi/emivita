@@ -23,7 +23,7 @@ class TranslationCompletenessTest {
     /** Values that are the same word in Italian, or are not words. */
     private val identical = setOf(
         "app_name", "common_ok", "unit_ml", "add_medicine_strength_hint", "field_label_value", "widget_stock_row",
-        "a11y_calendar_day", "a11y_count_status", "history_entry_summary", "today_entry_summary", "reminder_label_at",
+        "a11y_calendar_day", "a11y_count_status", "history_entry_summary", "history_entry_summary_no_amount", "today_entry_summary", "reminder_label_at",
         "backup_sync_password", "tier_standard", "snooze_picker_minutes", "history_table_dose",
         "pdf_col_dose", "dose_default_unit.one",
         // Format-only: two placeholders and a middle dot, nothing to translate.

@@ -1,5 +1,7 @@
 package com.hazia.emivita.core.data.repository
 
+import com.hazia.emivita.core.data.entity.isRecordOnly
+import com.hazia.emivita.core.data.entity.isAlertSeen
 import androidx.room.withTransaction
 import com.hazia.emivita.core.data.backup.AutoSyncManager
 import com.hazia.emivita.core.data.dao.DoseEventDao
@@ -274,6 +276,26 @@ class DoseEventRepository(
         return reopened
     }
 
+    /** A stock or expiry alert swiped away, recorded as seen in History (§7 R105,
+     *  census B-44, as medTimer records it). Tied to the medicine, not the alert
+     *  reminder, whose deletion would cascade the record away; no stock effect. */
+    suspend fun recordAlertSeen(medicineId: Long, status: DoseStatus, atEpochMillis: Long): Long {
+        require(status.isAlertSeen) { "recordAlertSeen is for the seen-alert statuses, was $status" }
+        val id = doseEventDao.insert(
+            DoseEvent(
+                reminderId = null,
+                medicineId = medicineId,
+                scheduledEpochMillis = atEpochMillis,
+                doseAmount = 0.0,
+                status = status,
+                resolvedAtEpochMillis = atEpochMillis,
+                createdAtEpochMillis = atEpochMillis,
+            ),
+        )
+        autoSyncManager.notifyChanged()
+        return id
+    }
+
     /** Soft delete (§9 #26): the row stays so its slot cannot come back and
      *  History's exclusion is a status, not an absence; a Taken dose gives its
      *  stock back. Not for refills -- a refill's stock is undone by its own
@@ -282,7 +304,7 @@ class DoseEventRepository(
         var medicineId = -1L
         val done = database.withTransaction {
             val event = doseEventDao.getById(doseEventId) ?: return@withTransaction false
-            if (event.status == DoseStatus.REFILLED || event.status == DoseStatus.DELETED) return@withTransaction false
+            if (event.status.isRecordOnly || event.status == DoseStatus.DELETED) return@withTransaction false
             medicineId = event.medicineId
             if (event.status == DoseStatus.TAKEN && event.stockBefore != event.stockAfter) {
                 medicineDao.incrementStock(event.medicineId, event.stockBefore - event.stockAfter)
