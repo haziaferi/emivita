@@ -55,11 +55,10 @@ private data class NextReminderRow(
  * (Today/History/Widgets all sharing one projection pass -- see the cache's
  * own doc comment).
  *
- * Deliberately periodic refresh (`android:updatePeriodMillis`, see
- * next_reminders_widget_info.xml), not a live push from the cache -- wiring
- * the cache itself to know about widgets would put a feature-layer dependency
- * inside core/scheduling, and the Take action below already forces an
- * immediate refresh the moment someone actually interacts with the widget.
+ * Refreshed after every finished projection pass (§7 R104, as medTimer's
+ * widget follows its simulation), through a callback AppContainer hands the
+ * cache, so core/scheduling still knows nothing of widgets; the 30-minute
+ * `android:updatePeriodMillis` stays as the backstop for the clock alone.
  */
 class NextRemindersWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
