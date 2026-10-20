@@ -86,6 +86,8 @@ class SettingsRepository(context: Context) {
         // §7 R83 (f): the last backup that was written, manual or automatic.
         // Absent means none ever was, which is what the Today card reads.
         val LAST_BACKUP_EPOCH_MILLIS = longPreferencesKey("last_backup_epoch_millis")
+        // §7 R101: when the last dated weekly copy was written; absent, none was.
+        val LAST_WEEKLY_BACKUP_EPOCH_MILLIS = longPreferencesKey("last_weekly_backup_epoch_millis")
         // Which of History's three views was open last (§7 R60 D F5); the
         // enum name, tolerant of a value from a removed case.
         val HISTORY_VIEW_MODE = stringPreferencesKey("history_view_mode")
@@ -351,6 +353,12 @@ class SettingsRepository(context: Context) {
 
     suspend fun setLastBackup(epochMillis: Long) {
         dataStore.edit { it[Keys.LAST_BACKUP_EPOCH_MILLIS] = epochMillis }
+    }
+
+    val lastWeeklyBackupEpochMillis: Flow<Long?> = dataStore.data.map { it[Keys.LAST_WEEKLY_BACKUP_EPOCH_MILLIS] }.distinctUntilChanged()
+
+    suspend fun setLastWeeklyBackup(epochMillis: Long) {
+        dataStore.edit { it[Keys.LAST_WEEKLY_BACKUP_EPOCH_MILLIS] = epochMillis }
     }
 
     /** Resolves [Medicine.remindersLockedUntilTaken]'s "no override, inherit
