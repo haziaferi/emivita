@@ -354,6 +354,26 @@ class DoseEventRepositoryTest {
     }
 
     @Test
+    fun `a dose skipped against short stock and taken after a refill spends the whole dose`() = runTest {
+        // Appendix E C F-3 (§7 R103): the skip recorded the floored pair (1, 0),
+        // so the switch spent 1 of the 2-unit dose and the bottle read one high.
+        // A skipped dose consumed nothing; taking it consumes from stock now.
+        val medicineId = seedMedicineWithStock(1.0)
+        val reminderId = seedReminder(medicineId)
+        val eventId = seedPendingEvent(reminderId, medicineId, doseAmount = 2.0)
+        repository.resolve(eventId, DoseStatus.SKIPPED)
+        repository.logRefill(medicineId, refillAmount = 29.0, atEpochMillis = 1)
+        assertEquals(30.0, stockOf(medicineId), 0.001)
+
+        repository.switchStatus(eventId, DoseStatus.TAKEN)
+        assertEquals(28.0, stockOf(medicineId), 0.001)
+
+        // Still exactly reversible: the pair now records what this take consumed.
+        repository.switchStatus(eventId, DoseStatus.SKIPPED)
+        assertEquals(30.0, stockOf(medicineId), 0.001)
+    }
+
+    @Test
     fun `logRefill on a medicine with no unit records nothing and returns null`() = runTest {
         // §7 R60 C F-2: withStockSentinels skips an untracked medicine, so this
         // used to insert a REFILLED row whose sentinels said "not tracked" while

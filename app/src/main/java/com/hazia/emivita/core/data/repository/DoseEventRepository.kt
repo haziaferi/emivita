@@ -153,12 +153,11 @@ class DoseEventRepository(
      *  an absolute `setStock`, which would discard every stock change made
      *  since (spec §7 R27).
      *
-     *  The delta comes from stockBefore/stockAfter, not from the current
-     *  doseAmount that [editDoseAmount] can change, so switches stay exactly
-     *  reversible, and [hypotheticalStockSentinels] flooring stockAfter at 0
-     *  means a dose taken against insufficient stock hands back only what it
-     *  consumed. A no-op for an untracked event (stockBefore == stockAfter:
-     *  the -1.0 sentinel pair or a zero dose). */
+     *  To Skipped, the recorded pair is handed back, so a dose taken against
+     *  insufficient stock returns only what it consumed; to Taken, the pair is
+     *  recomputed against today's stock and rewritten (§7 R103), so switches
+     *  stay exactly reversible. A no-op for an untracked event
+     *  (stockBefore == stockAfter: the -1.0 sentinel pair or a zero dose). */
     suspend fun switchStatus(doseEventId: Long, newStatus: DoseStatus) {
         require(newStatus == DoseStatus.TAKEN || newStatus == DoseStatus.SKIPPED) {
             "switchStatus is for Taken<->Skipped only, was $newStatus"
@@ -183,11 +182,17 @@ class DoseEventRepository(
             // wrongly shift an ON_RESOLVED interval reminder's anchor.
             doseEventDao.updateStatus(doseEventId, newStatus, event.resolvedAtEpochMillis ?: System.currentTimeMillis())
             if (event.stockBefore != event.stockAfter) {
-                val consumed = event.stockBefore - event.stockAfter
                 if (newStatus == DoseStatus.TAKEN) {
-                    medicineDao.decrementStock(event.medicineId, consumed)
+                    // A skipped dose consumed nothing, so taking it consumes from
+                    // the stock there is now, and the pair records that (§7 R103):
+                    // the pair kept from the skip was floored against the stock of
+                    // that moment, and a refill since made it short by the floor.
+                    hypotheticalStockSentinels(event.medicineId, event.doseAmount)?.let { (before, after) ->
+                        doseEventDao.updateStockSentinels(doseEventId, before, after)
+                        medicineDao.decrementStock(event.medicineId, before - after)
+                    }
                 } else {
-                    medicineDao.incrementStock(event.medicineId, consumed)
+                    medicineDao.incrementStock(event.medicineId, event.stockBefore - event.stockAfter)
                 }
             }
             true
