@@ -114,7 +114,7 @@ abstract class EmivitaDatabase : RoomDatabase() {
          * `SupportHelper` passes a null `DatabaseErrorHandler` and never calls
          * Room's `Callback.onCorruption`, and its own default handler returns
          * without deleting when a codec is loaded (`DefaultDatabaseErrorHandler`,
-         * sqlcipher-android 4.16.0). `DatabaseRecoveryDeviceTest` proves on the
+         * sqlcipher-android 4.16.0, re-read in 4.19.1). `DatabaseRecoveryDeviceTest` proves on the
          * real factory that the file survives to be set aside here.
          */
         internal fun open(context: Context, name: String, factory: SupportSQLiteOpenHelper.Factory): DatabaseOpen<EmivitaDatabase> =

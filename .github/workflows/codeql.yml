@@ -48,7 +48,7 @@ jobs:
           languages: java-kotlin
 
       # The same toolchain ci.yml uses: JDK 21 for the daemon and the
-      # toolchain, the SDK action for licences, AGP's sdkDownload for API 36.
+      # toolchain, the SDK action for licences, AGP's sdkDownload for API 37.
       - name: Set up JDK 21
         uses: actions/setup-java@b843ebf9b913146b38da2eaa7aeddf76074ae1ad # v6.1.0
         with:
