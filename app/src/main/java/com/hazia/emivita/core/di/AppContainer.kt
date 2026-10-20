@@ -180,6 +180,9 @@ class AppContainer(
             // re-anchor on now (§7 R83 (c)).
             runCatching { if (unansweredDoseReposter.repost() > 0) schedulingCoordinator.rescheduleAll() }
                 .onFailure { android.util.Log.e("AppContainer", "repost on launch failed", it) }
+            // The weekly backup copy, if one is due, and its next alarm (§7 R101).
+            runCatching { autoSyncManager.runWeekly() }
+                .onFailure { android.util.Log.e("AppContainer", "weekly backup on launch failed", it) }
         }
     }
 

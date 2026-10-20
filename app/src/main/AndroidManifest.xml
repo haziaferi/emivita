@@ -182,6 +182,11 @@
             android:name=".core.scheduling.ReminderActionReceiver"
             android:exported="false" />
 
+        <!-- The weekly dated backup copy (SPEC 7 R101), from its inexact alarm. -->
+        <receiver
+            android:name=".core.data.backup.WeeklyBackupReceiver"
+            android:exported="false" />
+
         <!-- Handles Refill from a LowStockAlert notification (spec §9 item 8). -->
         <receiver
             android:name=".core.scheduling.AlertActionReceiver"

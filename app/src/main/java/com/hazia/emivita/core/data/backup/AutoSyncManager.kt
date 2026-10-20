@@ -12,7 +12,10 @@ import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import java.io.File
+import java.time.ZoneId
 import java.util.Arrays
 
 private const val AUTO_SYNC_DEBOUNCE_MILLIS = 12_000L // vs #4's cache at 1s, per spec §9 #9(b)
@@ -38,7 +41,12 @@ class AutoSyncManager(
     private val backupRepository: BackupRepository,
     private val scope: CoroutineScope,
     private val nowEpochMillis: () -> Long = System::currentTimeMillis,
+    private val zone: () -> ZoneId = ZoneId::systemDefault,
+    private val armWeekly: (Long) -> Unit = { WeeklyBackupAlarm.arm(appContext, it) },
 ) {
+    // The after-every-change write and the weekly one never overlap in a folder.
+    private val folderLock = Mutex()
+
     private val trigger = Channel<Unit>(capacity = Channel.CONFLATED)
 
     init {
@@ -56,6 +64,26 @@ class AutoSyncManager(
     }
 
     private suspend fun writeIfConfigured() {
+        withFolder { treeDoc, password -> writeTo(treeDoc, password) }
+        // A change is a moment the app is running with a working folder: the
+        // weekly copy is checked here too, so it starts the week it is set up.
+        runWeekly()
+    }
+
+    /**
+     * The weekly copy (§7 R101), when one is due, then the alarm for the next.
+     * Called on launch, after a reboot, from that alarm, and after each
+     * after-every-change write. Unconfigured, it writes nothing and arms
+     * nothing; the next launch or change after setup starts it.
+     */
+    suspend fun runWeekly() {
+        var configured = false
+        runCatching { withFolder { treeDoc, password -> configured = true; writeWeeklyIfDue(treeDoc, password) } }
+            .onFailure { Log.w(TAG, "Weekly backup failed -- the alarm retries it.", it) }
+        if (configured) armWeekly(WeeklyBackups.nextDue(settingsRepository.lastWeeklyBackupEpochMillis.first(), nowEpochMillis()))
+    }
+
+    private suspend fun withFolder(block: suspend (DocumentFile, CharArray) -> Unit) {
         // A recovery replaced the database with an empty one, so a snapshot now
         // would overwrite the only off-device copy with a backup of nothing --
         // destroying the data precisely when it is needed (SPEC §7 R82). The
@@ -70,20 +98,50 @@ class AutoSyncManager(
         // the plaintext live for the lifetime of a debounced background write
         // undoes it.
         try {
-            writeTo(folderUriString, password)
+            val treeDoc = DocumentFile.fromTreeUri(appContext, folderUriString.toUri()) ?: return
+            // Permission can be revoked outside the app (storage settings, folder
+            // deleted) -- nothing to do until the user re-grants it from the
+            // Backup & Sync screen; not treated as an error to surface anywhere,
+            // matching the "no user present" framing of this whole write path.
+            if (!treeDoc.canWrite()) return
+            folderLock.withLock { block(treeDoc, password) }
         } finally {
             Arrays.fill(password, '\u0000')
         }
     }
 
-    private suspend fun writeTo(folderUriString: String, password: CharArray) {
-        val treeDoc = DocumentFile.fromTreeUri(appContext, folderUriString.toUri()) ?: return
-        // Permission can be revoked outside the app (storage settings, folder
-        // deleted) -- nothing to do until the user re-grants it from the
-        // Backup & Sync screen; not treated as an error to surface anywhere,
-        // matching the "no user present" framing of this whole write path.
-        if (!treeDoc.canWrite()) return
+    /** A dated file of its own, so nothing is renamed over; staged like the sync file. */
+    private suspend fun writeWeeklyIfDue(treeDoc: DocumentFile, password: CharArray) {
+        val now = nowEpochMillis()
+        if (!WeeklyBackups.isDue(settingsRepository.lastWeeklyBackupEpochMillis.first(), now)) return
+        val name = WeeklyBackups.fileName(now, zone())
+        val json = BackupJson.encodeToString(BackupData.serializer(), backupRepository.exportSnapshot(now))
+        val tempFile = File.createTempFile("emivita_weekly", ".zip", appContext.cacheDir)
+        try {
+            BackupZipWriter.write(tempFile, json, password)
+            val stagingName = "$name.new"
+            treeDoc.findFile(stagingName)?.delete()
+            val staging = treeDoc.createFile("application/zip", stagingName)
+                ?: error("SAF createFile returned null for $stagingName")
+            appContext.contentResolver.openOutputStream(staging.uri)
+                ?.use { out -> tempFile.inputStream().use { it.copyTo(out) } }
+                ?: run {
+                    staging.delete()
+                    error("SAF openOutputStream returned null for $stagingName")
+                }
+            // Only today's own name is replaced, and only once the new copy is whole.
+            treeDoc.findFile(name)?.delete()
+            if (!staging.renameTo(name)) error("SAF renameTo refused $stagingName")
+            val names = treeDoc.listFiles().mapNotNull { it.name }
+            WeeklyBackups.toPrune(names).forEach { treeDoc.findFile(it)?.delete() }
+            settingsRepository.setLastWeeklyBackup(now)
+            settingsRepository.setLastBackup(now)
+        } finally {
+            tempFile.delete()
+        }
+    }
 
+    private suspend fun writeTo(treeDoc: DocumentFile, password: CharArray) {
         val json = BackupJson.encodeToString(BackupData.serializer(), backupRepository.exportSnapshot(nowEpochMillis()))
         val tempFile = File.createTempFile("emivita_autosync", ".zip", appContext.cacheDir)
         try {
