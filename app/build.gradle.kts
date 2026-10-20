@@ -477,3 +477,9 @@ configurations.all {
         force("org.jetbrains.kotlinx:kotlinx-serialization-core:1.11.0")
     }
 }
+
+// A failing test's message in the console, not only in the HTML report CI does
+// not keep (§7 R104): the tick test's timeout names its case only there.
+tasks.withType<Test>().configureEach {
+    testLogging { exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL }
+}
