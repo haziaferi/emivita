@@ -70,7 +70,7 @@ def spec_refs():
 def checks(m):
     bad = []
     ids = {s["id"] for s in m["screens"]}
-    purposes = {p["id"] for p in m["purposes"]}
+    purposes = {p["id"] for p in m["purposes"] + m.get("not_purposes", [])}
     placed = {c for s in m["screens"] for c in s["code"]}
     parts = {"card:" + p for p in m["parts"]}
     code = census()
@@ -96,7 +96,8 @@ def checks(m):
 
 
 def render(m):
-    by = {p["id"]: [] for p in m["purposes"]}
+    groups = m["purposes"] + m.get("not_purposes", [])
+    by = {p["id"]: [] for p in groups}
     for s in m["screens"]:
         by[s["purpose"]].append(s)
     name = {s["id"]: s["name"] for s in m["screens"]}
@@ -104,7 +105,10 @@ def render(m):
            "Generated from `purpose-map.json` by `tools/purpose_map.py`; edit the JSON, not this page.", "",
            "## Purposes", "", "| | Purpose | Its job | Screens |", "|---|---|---|---|"]
     out += ["| %s | **%s** | %s | %d |" % (p["id"], p["name"], p["job"], len(by[p["id"]])) for p in m["purposes"]]
-    for p in m["purposes"]:
+    if m.get("not_purposes"):
+        out += ["", "Screens that serve no purpose of their own (the owner, 2026-10-20): " +
+                "; ".join("**%s** (%s)" % (p["name"], p["job"]) for p in m["not_purposes"]) + "."]
+    for p in groups:
         out += ["", "## %s %s" % (p["id"], p["name"]), "", "_%s_" % p["job"], "",
                 "| Screen | In the code | SPEC | Status | Overlaps |", "|---|---|---|---|---|"]
         for s in by[p["id"]]:

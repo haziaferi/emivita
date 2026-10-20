@@ -1,13 +1,15 @@
 {
-  "about": "Emivita's screens by purpose: what each one is for, where SPEC specifies it, its status, and what it overlaps with. A reference for SPEC, in the format of Factotum's purpose map (screens by what they do, not by where they sit in the navigation). A DRAFT of 2026-10-13: the screens, their jobs and their SPEC references describe the shipped app; the grouping into purposes is a proposal the owner settles. Rendered by tools/purpose_map.py, which also checks that every screen the code can show has a place here.",
+  "about": "Emivita's screens by purpose: what each one is for, where SPEC specifies it, its status, and what it overlaps with. A reference for SPEC, in the format of Factotum's purpose map (screens by what they do, not by where they sit in the navigation). Drafted 2026-10-13; the purposes were settled with the owner on 2026-10-20 (§7 R102): five purposes, and Settings and the first-launch notice outside them. Rendered by tools/purpose_map.py, which also checks that every screen the code can show has a place here.",
   "purposes": [
-    {"id": "P1", "name": "Taking today's doses", "job": "see what is due, be told when, and answer it: taken, skipped, snoozed, or an extra dose"},
-    {"id": "P2", "name": "The medicine cabinet", "job": "what I take, in what form, on which schedule, and how much is left before it runs out or expires"},
+    {"id": "P1", "name": "Taking today's doses", "job": "see what is due, be told when, and answer it: taken, skipped, snoozed, or an extra dose; and when not to be told (weekend mode)"},
+    {"id": "P2", "name": "The cabinet, and me", "job": "what I take, in what form, on which schedule, and how much is left before it runs out or expires; and what a stranger or a doctor needs to know about me, reachable at once"},
     {"id": "P3", "name": "Looking back", "job": "the record of what was taken and missed, corrected when it is wrong, and handed to a doctor"},
-    {"id": "P4", "name": "Making sure it rings", "job": "the grants, channels and settings without which a reminder is late or silent, and the signs when one was held back"},
-    {"id": "P5", "name": "In an emergency", "job": "what a stranger or a doctor needs to know about me, reachable at once"},
-    {"id": "P6", "name": "Keeping the data safe", "job": "the record survives a lost phone, a broken database, or curious hands: backups, recovery, the lock"},
-    {"id": "P7", "name": "Making it mine", "job": "how the app looks and reads: palette, Today's layout, language, time format"}
+    {"id": "P4", "name": "Relying on it", "job": "reminders that ring on time and a record that survives: the grants and channels without which a reminder is late or silent, the signs when one was held back, backups, recovery, the lock"},
+    {"id": "P5", "name": "Making it mine", "job": "how the app looks and reads: palette, Today's layout, language, time format"}
+  ],
+  "not_purposes": [
+    {"id": "N1", "name": "Getting around", "job": "navigation, not a purpose; its screen is still built for density and the fewest taps, where medTimer's is not"},
+    {"id": "N2", "name": "Notices", "job": "said once, at first launch"}
   ],
   "screens": [
     {"id": "today", "name": "Today", "purpose": "P1", "code": ["route:Today"], "spec": ["§9 #5", "§9 #37", "R77"], "status": "shipped", "overlaps": ["widget_next"]},
@@ -15,8 +17,8 @@
     {"id": "snooze_picker", "name": "Snooze for… (from a notification)", "purpose": "P1", "code": ["activity:SnoozePickerActivity"], "spec": ["§9 #25", "R64"], "status": "shipped", "overlaps": ["alarms_snooze"]},
     {"id": "notifications", "name": "Reminder notifications and their actions", "purpose": "P1", "code": ["channel:reminders_alarm_v2", "channel:reminders_high", "channel:reminders_standard"], "spec": ["§9 #25", "R64"], "status": "shipped", "overlaps": ["alarm", "notifications_alerts"]},
     {"id": "log_dose", "name": "Log a dose (as needed, or an extra one)", "purpose": "P1", "code": ["dialog:LogDoseDialog"], "spec": ["§9 #2"], "status": "shipped", "overlaps": ["dose_edit"]},
-    {"id": "dose_edit", "name": "Edit a dose (status, time, note)", "purpose": "P3", "code": ["dialog:DoseEditDialog"], "spec": ["§9 #3", "§9 #26"], "status": "shipped", "overlaps": ["log_dose", "history"]},
     {"id": "widget_next", "name": "Next reminders widget", "purpose": "P1", "code": ["widget:NextRemindersWidgetReceiver"], "spec": ["§9 #7"], "status": "shipped", "overlaps": ["today"]},
+    {"id": "weekend_mode", "name": "Weekend mode (sheet)", "purpose": "P1", "code": ["setting:WeekendMode"], "spec": ["§9 #12", "§9 #14", "R88"], "status": "shipped", "overlaps": ["reminder_form"]},
 
     {"id": "medicines", "name": "Medicines list", "purpose": "P2", "code": ["route:Medicines"], "spec": ["§9 #1", "§9 #27"], "status": "shipped", "overlaps": []},
     {"id": "medicine_detail", "name": "A medicine's page (reminders, stock, chart)", "purpose": "P2", "code": ["route:MedicineDetail"], "spec": ["§9 #24", "§9 #27"], "status": "shipped", "overlaps": ["history"]},
@@ -24,34 +26,35 @@
     {"id": "reminder_form", "name": "Add or edit a reminder (fixed times, interval, window, cycle, follow-up, taper)", "purpose": "P2", "code": ["route:AddReminder", "route:EditReminder"], "spec": ["§9 #1", "§9 #14", "§9 #24", "§9 #31"], "status": "shipped", "overlaps": ["weekend_mode"]},
     {"id": "stock", "name": "Stock and expiration", "purpose": "P2", "code": ["route:StockExpiration"], "spec": ["§9 #8", "§9 #27", "R85"], "status": "shipped", "overlaps": ["widget_stock"]},
     {"id": "widget_stock", "name": "Stock levels widget", "purpose": "P2", "code": ["widget:StockLevelsWidgetReceiver"], "spec": ["§9 #7"], "status": "shipped", "overlaps": ["stock"]},
+    {"id": "medical_id", "name": "Medical ID", "purpose": "P2", "code": ["route:MedicalIdSettings", "setting:MedicalId"], "spec": ["§9 #18", "R85"], "status": "shipped", "overlaps": []},
 
+    {"id": "dose_edit", "name": "Edit a dose (status, time, note)", "purpose": "P3", "code": ["dialog:DoseEditDialog"], "spec": ["§9 #3", "§9 #26"], "status": "shipped", "overlaps": ["log_dose", "history"]},
     {"id": "history", "name": "History (calendar and list)", "purpose": "P3", "code": ["route:History"], "spec": ["§9 #6", "§9 #26"], "status": "shipped", "overlaps": ["medicine_detail", "dose_edit"]},
     {"id": "export", "name": "Export history (CSV, PDF): range and medicines", "purpose": "P3", "code": ["dialog:ExportScopeDialog"], "spec": ["§9 #10", "§9 #26"], "status": "shipped", "overlaps": ["backup"]},
 
     {"id": "notifications_alerts", "name": "Notifications & alerts", "purpose": "P4", "code": ["route:NotificationsAlertsSettings", "setting:NotificationsAlerts", "card:NotificationsBlockedCard", "card:BatteryOptimizationCard"], "spec": ["§9 #25", "R83", "R88"], "status": "shipped", "overlaps": ["permission_setup", "notifications"]},
     {"id": "alarms_snooze", "name": "Alarms & Snooze (sheet)", "purpose": "P4", "code": ["setting:AlarmsSnooze"], "spec": ["§9 #12"], "status": "shipped", "overlaps": ["snooze_picker"]},
-    {"id": "weekend_mode", "name": "Weekend mode (sheet)", "purpose": "P4", "code": ["setting:WeekendMode"], "spec": ["§9 #12", "§9 #14", "R88"], "status": "shipped", "overlaps": ["reminder_form"]},
-    {"id": "permission_setup", "name": "Permission setup (first launch) and the missing-permissions card", "purpose": "P4", "code": ["sheet:PermissionSetupSheet", "card:MissingPermissionsCard", "card:FullScreenAlarmAccessCard"], "spec": ["§9 #38", "R83", "R88"], "status": "shipped", "overlaps": ["notifications_alerts"]},
-    {"id": "missed_alarm", "name": "'A reminder did not fire' card", "purpose": "P4", "code": ["card:MissedAlarmCard"], "spec": ["§9 #29"], "status": "shipped", "overlaps": ["notifications_alerts"]},
+    {"id": "permission_setup", "name": "Permission setup (first launch) and the missing-permissions card", "purpose": "P4", "code": ["sheet:PermissionSetupSheet", "card:MissingPermissionsCard", "card:FullScreenAlarmAccessCard"], "spec": ["§9 #38", "R83", "R88", "R102"], "status": "shipped; open: say what is missing and open Notifications & alerts, not grant in place (§7 R102)", "overlaps": ["notifications_alerts"]},
+    {"id": "missed_alarm", "name": "'A reminder did not fire' card", "purpose": "P4", "code": ["card:MissedAlarmCard"], "spec": ["§9 #29", "R102"], "status": "shipped; open: say what is missing and open Notifications & alerts, not grant in place (§7 R102)", "overlaps": ["notifications_alerts"]},
+    {"id": "backup", "name": "Data & Backup (backup, restore, auto-sync, purge)", "purpose": "P4", "code": ["route:DataBackupSettings", "setting:DataBackup", "dialog:PurgeConfirmDialog"], "spec": ["§9 #9", "§9 #29", "R83"], "status": "shipped", "overlaps": ["export", "no_backup"]},
+    {"id": "no_backup", "name": "'No backup yet' card", "purpose": "P4", "code": ["card:NoBackupCard"], "spec": ["§9 #38", "R83"], "status": "shipped", "overlaps": ["backup"]},
+    {"id": "recovered", "name": "Database set aside (unreadable, or its key lost)", "purpose": "P4", "code": ["dialog:DatabaseRecoveredDialog"], "spec": ["§9 #32", "R83"], "status": "shipped", "overlaps": ["backup"]},
+    {"id": "privacy", "name": "Privacy & security (app lock)", "purpose": "P4", "code": ["setting:PrivacySecurity"], "spec": ["§9 #11"], "status": "shipped", "overlaps": []},
 
-    {"id": "medical_id", "name": "Medical ID", "purpose": "P5", "code": ["route:MedicalIdSettings", "setting:MedicalId"], "spec": ["§9 #18", "R85"], "status": "shipped", "overlaps": []},
+    {"id": "appearance", "name": "Appearance (palette, Today layout, language, time format)", "purpose": "P5", "code": ["route:AppearanceSettings", "setting:Appearance"], "spec": ["§9 #28", "§9 #36", "§9 #37"], "status": "shipped", "overlaps": ["today"]},
 
-    {"id": "backup", "name": "Data & Backup (backup, restore, auto-sync, purge)", "purpose": "P6", "code": ["route:DataBackupSettings", "setting:DataBackup", "dialog:PurgeConfirmDialog"], "spec": ["§9 #9", "§9 #29", "R83"], "status": "shipped", "overlaps": ["export", "no_backup"]},
-    {"id": "no_backup", "name": "'No backup yet' card", "purpose": "P6", "code": ["card:NoBackupCard"], "spec": ["§9 #38", "R83"], "status": "shipped", "overlaps": ["backup"]},
-    {"id": "recovered", "name": "Database set aside (unreadable, or its key lost)", "purpose": "P6", "code": ["dialog:DatabaseRecoveredDialog"], "spec": ["§9 #32", "R83"], "status": "shipped", "overlaps": ["backup"]},
-    {"id": "privacy", "name": "Privacy & security (app lock)", "purpose": "P6", "code": ["setting:PrivacySecurity"], "spec": ["§9 #11"], "status": "shipped", "overlaps": []},
-    {"id": "disclaimer", "name": "Medical disclaimer (once, first launch)", "purpose": "P6", "code": ["dialog:DisclaimerDialog"], "spec": ["§9 #29"], "status": "shipped", "overlaps": ["permission_setup"]},
+    {"id": "settings", "name": "Settings", "purpose": "N1", "code": ["route:Settings"], "spec": ["§9 #12", "R102"], "status": "shipped; open: density and the fewest taps (the owner, §7 R102)", "overlaps": []},
 
-    {"id": "settings", "name": "Settings", "purpose": "P7", "code": ["route:Settings"], "spec": ["§9 #12"], "status": "shipped", "overlaps": []},
-    {"id": "appearance", "name": "Appearance (palette, Today layout, language, time format)", "purpose": "P7", "code": ["route:AppearanceSettings", "setting:Appearance"], "spec": ["§9 #28", "§9 #36", "§9 #37"], "status": "shipped", "overlaps": ["today"]}
+    {"id": "disclaimer", "name": "Medical disclaimer (once, first launch)", "purpose": "N2", "code": ["dialog:DisclaimerDialog"], "spec": ["§9 #29"], "status": "shipped", "overlaps": ["permission_setup"]}
   ],
   "parts": ["HeroCard", "OptionCard", "LayoutCard", "PaletteCard", "MedicineCard", "AttentionCard"],
   "overlap_groups": [
-    {"id": "O1", "strength": "strong", "screens": ["notifications_alerts", "permission_setup", "missed_alarm"], "why": "three ways to the same grants: the Settings screen, the first-launch sheet with its Today card, and the card after a reminder was held back"},
+    {"id": "O1", "strength": "strong", "screens": ["notifications_alerts", "permission_setup", "missed_alarm"], "why": "three ways to the same grants: the Settings screen, the first-launch sheet with its Today card, and the card after a reminder was held back; the owner (2026-10-20): Notifications & alerts is the one place that grants, and the first-launch sheet and both cards say what is missing and open it"},
     {"id": "O2", "strength": "medium", "screens": ["log_dose", "dose_edit"], "why": "both write a dose event; one creates it, the other corrects it"},
     {"id": "O3", "strength": "medium", "screens": ["backup", "export"], "why": "both take data off the phone: the backup to restore it, the export to read it"}
   ],
   "owner_answers": [
-    "2026-10-13: add the purpose map as a reference for the SPEC (this draft; the purposes are the owner's to settle)."
+    "2026-10-13: add the purpose map as a reference for the SPEC (this draft; the purposes are the owner's to settle).",
+    "2026-10-20: five purposes, not seven: Medical ID joins the cabinet (P2, 'The cabinet, and me'), and making it ring joins keeping the data safe (P4, 'Relying on it'); Weekend mode belongs to taking doses (P1); grants have one home, Notifications & alerts, which the sheet and the cards open; Settings is navigation, not a purpose, but its screen is still built for density and the fewest taps, where medTimer's is not. The purpose names and the disclaimer's place as a one-time notice are proposals the owner has not yet confirmed."
   ]
 }
