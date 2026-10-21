@@ -100,6 +100,8 @@ internal data class AdvancedFields(
     val preAlarmMinutes: Int?,
     val instructions: String?,
     val dosesRemaining: Int?,
+    val stickyUntilAnswered: Boolean,
+    val variableAmount: Boolean,
 )
 
 /** State holder for [AdvancedReminderFieldsSection] -- a plain class with
@@ -120,18 +122,22 @@ internal class AdvancedReminderFieldsState(initialReminder: Reminder?) {
     var instructions by mutableStateOf(initialReminder?.instructions ?: "")
     var courseEnabled by mutableStateOf(initialReminder?.dosesRemaining != null)
     var dosesRemaining by mutableStateOf(initialReminder?.dosesRemaining?.toString() ?: "10")
+    var stickyUntilAnswered by mutableStateOf(initialReminder?.stickyUntilAnswered ?: false)
+    var variableAmount by mutableStateOf(initialReminder?.variableAmount ?: false)
 
     companion object {
         /** Field by field, so the section survives a rotation (§7 R83 (a)). */
         val Saver: Saver<AdvancedReminderFieldsState, Any> = listSaver(
             save = { listOf(it.autoResolve, it.activeFromEpochDay, it.activeUntilEpochDay, it.nagEnabled, it.nagDelayMinutes, it.nagMaxRepeats,
-                it.weekendModeOptIn, it.preAlarmEnabled, it.preAlarmMinutes, it.instructions, it.courseEnabled, it.dosesRemaining) },
+                it.weekendModeOptIn, it.preAlarmEnabled, it.preAlarmMinutes, it.instructions, it.courseEnabled, it.dosesRemaining,
+                it.stickyUntilAnswered, it.variableAmount) },
             restore = { v ->
                 AdvancedReminderFieldsState(null).apply {
                     autoResolve = v[0] as Boolean; activeFromEpochDay = v[1] as Long?; activeUntilEpochDay = v[2] as Long?
                     nagEnabled = v[3] as Boolean; nagDelayMinutes = v[4] as String; nagMaxRepeats = v[5] as String
                     weekendModeOptIn = v[6] as Boolean; preAlarmEnabled = v[7] as Boolean; preAlarmMinutes = v[8] as String
                     instructions = v[9] as String; courseEnabled = v[10] as Boolean; dosesRemaining = v[11] as String
+                    stickyUntilAnswered = v[12] as Boolean; variableAmount = v[13] as Boolean
                 }
             },
         )
@@ -150,6 +156,8 @@ internal class AdvancedReminderFieldsState(initialReminder: Reminder?) {
         preAlarmMinutes = if (preAlarmEnabled) preAlarmMinutes.toIntOrNull()?.takeIf { it > 0 } else null,
         instructions = instructions.trim().ifBlank { null },
         dosesRemaining = if (courseEnabled) dosesRemaining.toIntOrNull()?.takeIf { it >= 0 } else null,
+        stickyUntilAnswered = stickyUntilAnswered,
+        variableAmount = variableAmount,
     )
 }
 
@@ -257,6 +265,40 @@ private fun AdvancedReminderFields(state: AdvancedReminderFieldsState) {
             singleLine = true,
             modifier = Modifier.fillMaxWidth(),
         )
+    }
+
+    // The notification's own behaviour (§7 R109, Appendix E B-42 and B-45).
+    Spacer(Modifier.height(12.dp))
+    Row(
+        Modifier.fillMaxWidth().toggleable(value = state.stickyUntilAnswered, role = Role.Switch) { state.stickyUntilAnswered = it },
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.add_reminder_sticky), style = MaterialTheme.typography.bodyMedium)
+            Text(
+                stringResource(R.string.add_reminder_sticky_desc),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(checked = state.stickyUntilAnswered, onCheckedChange = null)
+    }
+    Spacer(Modifier.height(12.dp))
+    Row(
+        Modifier.fillMaxWidth().toggleable(value = state.variableAmount, role = Role.Switch) { state.variableAmount = it },
+        horizontalArrangement = Arrangement.SpaceBetween,
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Column(Modifier.weight(1f)) {
+            Text(stringResource(R.string.add_reminder_variable_amount), style = MaterialTheme.typography.bodyMedium)
+            Text(
+                stringResource(R.string.add_reminder_variable_amount_desc),
+                style = MaterialTheme.typography.labelSmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+        Switch(checked = state.variableAmount, onCheckedChange = null)
     }
 
     // Instructions (§9 #26; medTimer): the one line that goes on the notification.

@@ -1,5 +1,6 @@
 package com.hazia.emivita.core.notification
 
+import com.hazia.emivita.core.data.settings.SwipeAction
 import android.app.NotificationManager
 import android.content.Context
 import androidx.room.Room
@@ -55,6 +56,7 @@ class UnansweredDoseReposterTest {
             every { it.hideMedicineNames } returns flowOf(false)
             every { it.palette } returns flowOf(DEFAULT_PALETTE)
             every { it.snoozeAskEachTime } returns flowOf(false)
+            every { it.swipeAction } returns flowOf(SwipeAction.NOTHING) // every button shown, as before §7 R109
         }
         val groups = mockk<DoseGroupDao>().also { coEvery { it.getById(any()) } returns null }
         val builder = ReminderNotificationBuilder(context, groups, settings)

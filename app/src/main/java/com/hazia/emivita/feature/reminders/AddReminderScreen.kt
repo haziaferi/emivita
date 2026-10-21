@@ -126,6 +126,7 @@ fun AddReminderScreen(
                     activeUntilEpochDay = advanced.activeUntilEpochDay, repeatOnUnanswered = advanced.repeatOnUnanswered,
                     weekendModeOptIn = advanced.weekendModeOptIn, preAlarmMinutes = advanced.preAlarmMinutes,
                     instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
+                    stickyUntilAnswered = advanced.stickyUntilAnswered, variableAmount = advanced.variableAmount,
                 )
                 onDone()
             },
@@ -148,6 +149,7 @@ fun AddReminderScreen(
                     activeUntilEpochDay = advanced.activeUntilEpochDay, repeatOnUnanswered = advanced.repeatOnUnanswered,
                     weekendModeOptIn = advanced.weekendModeOptIn, preAlarmMinutes = advanced.preAlarmMinutes,
                     instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
+                    stickyUntilAnswered = advanced.stickyUntilAnswered, variableAmount = advanced.variableAmount,
                 )
                 onDone()
             },
@@ -173,6 +175,7 @@ fun AddReminderScreen(
                     activeUntilEpochDay = advanced.activeUntilEpochDay, repeatOnUnanswered = advanced.repeatOnUnanswered,
                     weekendModeOptIn = advanced.weekendModeOptIn, preAlarmMinutes = advanced.preAlarmMinutes,
                     instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
+                    stickyUntilAnswered = advanced.stickyUntilAnswered, variableAmount = advanced.variableAmount,
                 )
                 onDone()
             },
@@ -201,6 +204,7 @@ fun AddReminderScreen(
                     activeUntilEpochDay = advanced.activeUntilEpochDay, repeatOnUnanswered = advanced.repeatOnUnanswered,
                     weekendModeOptIn = advanced.weekendModeOptIn, preAlarmMinutes = advanced.preAlarmMinutes,
                     instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
+                    stickyUntilAnswered = advanced.stickyUntilAnswered, variableAmount = advanced.variableAmount,
                 )
                 onDone()
             },
@@ -277,6 +281,7 @@ fun EditReminderScreen(
                     current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
                     advanced.activeUntilEpochDay, advanced.repeatOnUnanswered, advanced.weekendModeOptIn,
                     preAlarmMinutes = advanced.preAlarmMinutes, instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
+                    stickyUntilAnswered = advanced.stickyUntilAnswered, variableAmount = advanced.variableAmount,
                 )
                 onDone()
             },
@@ -294,6 +299,7 @@ fun EditReminderScreen(
                     current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
                     advanced.activeUntilEpochDay, advanced.repeatOnUnanswered, advanced.weekendModeOptIn,
                     preAlarmMinutes = advanced.preAlarmMinutes, instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
+                    stickyUntilAnswered = advanced.stickyUntilAnswered, variableAmount = advanced.variableAmount,
                 )
                 onDone()
             },
@@ -311,6 +317,7 @@ fun EditReminderScreen(
                     current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
                     advanced.activeUntilEpochDay, advanced.repeatOnUnanswered, advanced.weekendModeOptIn,
                     preAlarmMinutes = advanced.preAlarmMinutes, instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
+                    stickyUntilAnswered = advanced.stickyUntilAnswered, variableAmount = advanced.variableAmount,
                 )
                 onDone()
             },
@@ -348,6 +355,7 @@ fun EditReminderScreen(
                     current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
                     advanced.activeUntilEpochDay, advanced.repeatOnUnanswered, advanced.weekendModeOptIn,
                     preAlarmMinutes = advanced.preAlarmMinutes, instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
+                    stickyUntilAnswered = advanced.stickyUntilAnswered, variableAmount = advanced.variableAmount,
                     parentReminderId = parentId,
                 )
                 onDone()

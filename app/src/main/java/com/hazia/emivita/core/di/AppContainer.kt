@@ -25,6 +25,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.drop
 import com.hazia.emivita.feature.widget.StockLevelsWidget
 import com.hazia.emivita.feature.widget.NextRemindersWidget
@@ -158,11 +159,12 @@ class AppContainer(
         }
     }
 
-    /** A hide-names flip re-renders the placed widgets (§7 R108, census E-36),
-     *  through the same conflated channel as a projection pass. */
+    /** A hide-names or palette flip re-renders the placed widgets (§7 R108,
+     *  R109), through the same conflated channel as a projection pass. */
     fun observeWidgetSettings() {
         applicationScope.launch {
-            settingsRepository.hideMedicineNames.distinctUntilChanged().drop(1).collect { widgetRefresh.trySend(Unit) }
+            combine(settingsRepository.hideMedicineNames, settingsRepository.palette) { hide, palette -> hide to palette }
+                .distinctUntilChanged().drop(1).collect { widgetRefresh.trySend(Unit) }
         }
     }
 

@@ -225,6 +225,16 @@ object Migrations {
         }
     }
 
+    /** v9 -> v10 (§7 R109, Appendix E B-42 and B-45): two per-reminder flags,
+     *  off for every existing reminder. `NOT NULL DEFAULT 0` matches the
+     *  entity's `@ColumnInfo(defaultValue = "0")`, as MIGRATION_4_5 does. */
+    val MIGRATION_9_10 = object : Migration(9, 10) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE reminders ADD COLUMN stickyUntilAnswered INTEGER NOT NULL DEFAULT 0")
+            db.execSQL("ALTER TABLE reminders ADD COLUMN variableAmount INTEGER NOT NULL DEFAULT 0")
+        }
+    }
+
     /** v8 -> v9 (§9 #27, the medicine cabinet, §7 R66): four nullable columns
      *  on `medicines` -- opened date, use-within days, strength, Rx number --
      *  so plain `ALTER TABLE ADD COLUMN` matches Room's fresh-install schema. */

@@ -21,6 +21,9 @@ import com.hazia.emivita.core.format.maskedMedicineName
 import kotlinx.coroutines.flow.first
 import com.hazia.emivita.core.format.LocaleFormats
 import com.hazia.emivita.core.alarm.AlarmRingService
+import android.os.Build
+import com.hazia.emivita.core.data.settings.SwipeAction
+import com.hazia.emivita.feature.alarm.TakeAmountActivity
 
 const val ACTION_TAKE = "com.hazia.emivita.action.TAKE"
 const val ACTION_SKIP = "com.hazia.emivita.action.SKIP"
@@ -61,20 +64,29 @@ class ReminderNotificationBuilder(
         val notificationId = doseEvent.id.toInt()
         val hideNames = settingsRepository.hideMedicineNames.first()
         val title = maskedMedicineName(medicine.name, hideNames)
+        val ringsInService = priority == NotificationPriority.ALARM && notificationsPermitted(context) && !ReminderNotificationChannels.isBlocked(context, priority)
+
+        // No button for what a swipe already does (§7 R109, Appendix E B-10,
+        // medTimer as-is), unless the reminder cannot be swiped at all (B-42).
+        val swipe = if (reminderCanBeSwiped(reminder.stickyUntilAnswered, ringsInService)) settingsRepository.swipeAction.first() else null
+        // Take asks the amount on a variable-amount reminder (B-45).
+        val takeIntent = if (reminder.variableAmount) takeAmountPendingIntent(doseEvent.id) else actionPendingIntent(ACTION_TAKE, doseEvent.id, requestCodeSalt = 1)
 
         // The lock-screen copy (§9 #25; Appendix F PT-06 / DP-F1): it names no
         // medicine and carries the same actions, so a phone set to hide
         // sensitive content can still answer a Standard or High reminder
         // without unlocking.
-        val publicVersion = NotificationCompat.Builder(context, channelId)
+        val publicBuilder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification_reminder)
             .setColor(accentArgb)
             .setContentTitle(context.getString(R.string.notif_public_title))
             .setContentText(context.getString(R.string.notif_public_text))
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
-            .addAction(0, context.getString(R.string.common_take), actionPendingIntent(ACTION_TAKE, doseEvent.id, requestCodeSalt = 1))
-            .addAction(0, context.getString(R.string.common_snooze), actionPendingIntent(ACTION_SNOOZE, doseEvent.id, requestCodeSalt = 3))
-            .build()
+            .addAction(0, context.getString(R.string.common_take), takeIntent)
+        if (swipe != SwipeAction.SNOOZE) {
+            publicBuilder.addAction(0, context.getString(R.string.common_snooze), actionPendingIntent(ACTION_SNOOZE, doseEvent.id, requestCodeSalt = 3))
+        }
+        val publicVersion = publicBuilder.build()
 
         // Snooze: one tap for the saved duration, or the picker when the user
         // asked to choose each time (§9 #25; medTimer's "Custom…" preference).
@@ -83,7 +95,8 @@ class ReminderNotificationBuilder(
 
         val builder = NotificationCompat.Builder(context, channelId)
             .setSmallIcon(R.drawable.ic_notification_reminder)
-            .setColor(accentArgb)
+            // The medicine's colour and icon (B-43), neither when names are hidden.
+            .setColor(reminderNotificationColour(medicine, hideNames, accentArgb))
             .setContentTitle(title)
             .setContentText(contentText(doseEvent, reminder, medicine))
             .setStyle(NotificationCompat.BigTextStyle().bigText(contentText(doseEvent, reminder, medicine)))
@@ -103,8 +116,10 @@ class ReminderNotificationBuilder(
             // A swipe records what the owner chose it to (Snooze by default);
             // the receiver reads the setting at swipe time, not post time.
             .setDeleteIntent(actionPendingIntent(ACTION_SWIPED, doseEvent.id, requestCodeSalt = 4))
-            .addAction(0, context.getString(R.string.common_take), actionPendingIntent(ACTION_TAKE, doseEvent.id, requestCodeSalt = 1))
-            .addAction(0, context.getString(R.string.common_snooze), snoozeIntent)
+            .setOngoing(reminder.stickyUntilAnswered)
+            .addAction(0, context.getString(R.string.common_take), takeIntent)
+        if (swipe != SwipeAction.SNOOZE) builder.addAction(0, context.getString(R.string.common_snooze), snoozeIntent)
+        if (!hideNames) builder.setLargeIcon(medicineLargeIcon(context, medicine))
 
         // Lock-until-taken (spec §3's own bug writeup: this field was typed as
         // a plain Boolean and nothing read the resolved value at all -- both
@@ -112,7 +127,7 @@ class ReminderNotificationBuilder(
         // and disabling it, so there's no button at all to defensively guard
         // against surviving a later setting change (ReminderActionReceiver/
         // AlarmActivity still re-check independently regardless).
-        if (!settingsRepository.isLockedUntilTaken(medicine)) {
+        if (!settingsRepository.isLockedUntilTaken(medicine) && swipe != SwipeAction.SKIP) {
             builder.addAction(0, context.getString(R.string.common_skip), actionPendingIntent(ACTION_SKIP, doseEvent.id, requestCodeSalt = 2))
         }
 
@@ -126,7 +141,7 @@ class ReminderNotificationBuilder(
             builder.setContentIntent(openAppPendingIntent(context, doseEvent.id.toInt()))
         }
 
-        if (priority == NotificationPriority.ALARM && notificationsPermitted(context) && !ReminderNotificationChannels.isBlocked(context, priority)) {
+        if (ringsInService) {
             // The Alarm tier rings until answered (§7 R80): the service posts
             // this notification as its own and loops the tone under it. Not
             // when the user has blocked the Alarm channel in Android (§7 R81):
@@ -181,6 +196,11 @@ class ReminderNotificationBuilder(
             .build()
         postIfPermitted(context, TAG, REMINDER_GROUP_SUMMARY_ID, summary)
     }
+
+    private fun takeAmountPendingIntent(doseEventId: Long): PendingIntent = PendingIntent.getActivity(
+        context, (doseEventId * 10 + 6).toInt(), TakeAmountActivity.intent(context, doseEventId),
+        PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+    )
 
     private fun snoozePickerPendingIntent(doseEventId: Long): PendingIntent {
         val intent = Intent(context, com.hazia.emivita.feature.alarm.SnoozePickerActivity::class.java).apply {
@@ -297,3 +317,9 @@ class ReminderNotificationBuilder(
 
 /** Negative, below the alert range (-reminderId) by a fixed offset. */
 fun preAlarmNotificationId(reminderId: Long): Int = -(2_000_000 + reminderId.toInt())
+
+/** Whether the user can swipe a reminder away: not when it is kept on screen
+ *  (B-42), nor while the Alarm tier rings in its foreground service below
+ *  Android 13, whose notification the shade cannot clear (§7 R80, R109). */
+internal fun reminderCanBeSwiped(sticky: Boolean, ringsInService: Boolean, sdk: Int = Build.VERSION.SDK_INT): Boolean =
+    !sticky && !(ringsInService && sdk < Build.VERSION_CODES.TIRAMISU)

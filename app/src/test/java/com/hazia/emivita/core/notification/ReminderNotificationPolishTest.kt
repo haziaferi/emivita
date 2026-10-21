@@ -1,5 +1,6 @@
 package com.hazia.emivita.core.notification
 
+import com.hazia.emivita.core.data.settings.SwipeAction
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
@@ -77,6 +78,7 @@ class ReminderNotificationPolishTest {
             every { it.hideMedicineNames } returns flowOf(hideNames)
             every { it.palette } returns flowOf(DEFAULT_PALETTE)
             every { it.snoozeAskEachTime } returns flowOf(askEachTime)
+            every { it.swipeAction } returns flowOf(SwipeAction.NOTHING) // every button shown, as before §7 R109
         }
         val groups = mockk<DoseGroupDao>().also { coEvery { it.getById(any()) } returns null }
         ReminderNotificationBuilder(context, groups, settings).buildAndPost(event, reminder, medicine)
@@ -140,6 +142,7 @@ class ReminderNotificationPolishTest {
             every { it.hideMedicineNames } returns flowOf(false)
             every { it.palette } returns flowOf(DEFAULT_PALETTE)
             every { it.snoozeAskEachTime } returns flowOf(false)
+            every { it.swipeAction } returns flowOf(SwipeAction.NOTHING) // every button shown, as before §7 R109
         }
         ReminderNotificationBuilder(context, mockk(relaxed = true), settings).updateGroupSummary()
         assertEquals(null, shadowOf(nm).getNotification(REMINDER_GROUP_SUMMARY_ID))

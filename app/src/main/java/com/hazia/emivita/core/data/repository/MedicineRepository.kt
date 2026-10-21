@@ -116,6 +116,8 @@ class MedicineRepository(
                     preAlarmMinutes = r.preAlarmMinutes,
                     instructions = r.instructions,
                     dosesRemaining = r.dosesRemaining,
+                    stickyUntilAnswered = r.stickyUntilAnswered,
+                    variableAmount = r.variableAmount,
                 )
                 idMap[r.id] = copiedId
             }

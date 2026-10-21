@@ -101,6 +101,7 @@ private fun AlarmScreen(reminderId: Long, doseEventId: Long, onFinished: () -> U
     var medicine by remember { mutableStateOf<Medicine?>(null) }
     var loadFailed by remember { mutableStateOf(false) }
     var locked by remember { mutableStateOf(false) }
+    var askAmount by remember { mutableStateOf(false) }
     var snoozeMinutes by remember { mutableIntStateOf(DEFAULT_SNOOZE_MINUTES.toInt()) }
 
     LaunchedEffect(reminderId, doseEventId) {
@@ -116,6 +117,7 @@ private fun AlarmScreen(reminderId: Long, doseEventId: Long, onFinished: () -> U
         } else {
             medicine = med
             locked = container.settingsRepository.isLockedUntilTaken(med)
+            askAmount = reminder.variableAmount
         }
     }
 
@@ -142,9 +144,15 @@ private fun AlarmScreen(reminderId: Long, doseEventId: Long, onFinished: () -> U
 
             Button(
                 onClick = {
-                    scope.launch {
-                        resolveAndDismiss(container, context, doseEventId, DoseStatus.TAKEN)
+                    // A variable-amount reminder asks how much, as its notification's Take does (§7 R109).
+                    if (askAmount) {
+                        context.startActivity(TakeAmountActivity.intent(context, doseEventId))
                         onFinished()
+                    } else {
+                        scope.launch {
+                            resolveAndDismiss(container, context, doseEventId, DoseStatus.TAKEN)
+                            onFinished()
+                        }
                     }
                 },
                 modifier = Modifier.fillMaxWidth(),
