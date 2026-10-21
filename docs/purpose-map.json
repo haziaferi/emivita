@@ -17,7 +17,7 @@
     {"id": "snooze_picker", "name": "Snooze for… (from a notification)", "purpose": "P1", "code": ["activity:SnoozePickerActivity"], "spec": ["§9 #25", "R64"], "status": "shipped", "overlaps": ["alarms_snooze"]},
     {"id": "notifications", "name": "Reminder notifications and their actions", "purpose": "P1", "code": ["channel:reminders_alarm_v2", "channel:reminders_high", "channel:reminders_standard"], "spec": ["§9 #25", "R64"], "status": "shipped", "overlaps": ["alarm", "notifications_alerts"]},
     {"id": "log_dose", "name": "Log a dose (as needed, or an extra one)", "purpose": "P1", "code": ["dialog:LogDoseDialog"], "spec": ["§9 #2"], "status": "shipped", "overlaps": ["dose_edit"]},
-    {"id": "widget_next", "name": "Next reminders widget", "purpose": "P1", "code": ["widget:NextRemindersWidgetReceiver"], "spec": ["§9 #7"], "status": "shipped", "overlaps": ["today"]},
+    {"id": "widget_next", "name": "Next reminders widget", "purpose": "P1", "code": ["widget:NextRemindersWidgetReceiver"], "spec": ["§9 #7", "R108"], "status": "shipped", "overlaps": ["today"]},
     {"id": "weekend_mode", "name": "Weekend mode (sheet)", "purpose": "P1", "code": ["setting:WeekendMode"], "spec": ["§9 #12", "§9 #14", "R88"], "status": "shipped", "overlaps": ["reminder_form"]},
 
     {"id": "medicines", "name": "Medicines list", "purpose": "P2", "code": ["route:Medicines"], "spec": ["§9 #1", "§9 #27"], "status": "shipped", "overlaps": []},
@@ -25,7 +25,7 @@
     {"id": "medicine_form", "name": "Add or edit a medicine", "purpose": "P2", "code": ["route:AddMedicine", "route:EditMedicine", "dialog:ColorPickerDialog"], "spec": ["§9 #1", "§9 #27"], "status": "shipped", "overlaps": []},
     {"id": "reminder_form", "name": "Add or edit a reminder (fixed times, interval, window, cycle, follow-up, taper)", "purpose": "P2", "code": ["route:AddReminder", "route:EditReminder"], "spec": ["§9 #1", "§9 #14", "§9 #24", "§9 #31"], "status": "shipped", "overlaps": ["weekend_mode"]},
     {"id": "stock", "name": "Stock and expiration", "purpose": "P2", "code": ["route:StockExpiration"], "spec": ["§9 #8", "§9 #27", "R85"], "status": "shipped", "overlaps": ["widget_stock"]},
-    {"id": "widget_stock", "name": "Stock levels widget", "purpose": "P2", "code": ["widget:StockLevelsWidgetReceiver"], "spec": ["§9 #7"], "status": "shipped", "overlaps": ["stock"]},
+    {"id": "widget_stock", "name": "Stock levels widget", "purpose": "P2", "code": ["widget:StockLevelsWidgetReceiver"], "spec": ["§9 #7", "R108"], "status": "shipped", "overlaps": ["stock"]},
     {"id": "medical_id", "name": "Medical ID", "purpose": "P2", "code": ["route:MedicalIdSettings", "setting:MedicalId"], "spec": ["§9 #18", "R85"], "status": "shipped", "overlaps": []},
 
     {"id": "dose_edit", "name": "Edit a dose (status, time, note)", "purpose": "P3", "code": ["dialog:DoseEditDialog"], "spec": ["§9 #3", "§9 #26"], "status": "shipped", "overlaps": ["log_dose", "history"]},

@@ -263,6 +263,8 @@
     <string name="widget_all_caught_up">All caught up</string>
     <string name="widget_stock_levels_header">Stock levels</string>
     <string name="widget_no_tracked_stock">No tracked stock</string>
+    <string name="widget_last_taken">Last: %1$s, taken at %2$s</string>
+    <string name="widget_last_skipped">Last: %1$s, skipped at %2$s</string>
     <string name="widget_stock_row">%1$s • %2$s</string>
     
     <!-- Format strings. Positional args (%1$s) so a translation can reorder
@@ -503,8 +505,8 @@
     <string name="settings_swipe_nothing">Nothing — it stays due on Today</string>
     <string name="settings_swipe_snooze">Snooze it</string>
     <string name="settings_swipe_skip">Record it as skipped</string>
-    <string name="settings_hide_names">Hide medicine names in notifications</string>
-    <string name="settings_hide_names_desc">Shows only the first letter, so a glance at the shade says a dose is due without saying of what.</string>
+    <string name="settings_hide_names">Hide medicine names in notifications and widgets</string>
+    <string name="settings_hide_names_desc">Show only the initial in notifications and widgets.</string>
     <string name="settings_alarm_tier_title">Alarm tier</string>
     <string name="settings_alarm_tier_desc">Applies to medicines set to the Alarm tier: the full-screen alarm that rings until answered.</string>
     <string name="settings_alarm_tone">Alarm sound</string>

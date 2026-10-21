@@ -1,5 +1,7 @@
 package com.hazia.emivita.feature.today
 
+import com.hazia.emivita.core.scheduling.receivers.closedAfterCompose
+import org.junit.rules.TestRule
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasText
@@ -13,7 +15,6 @@ import com.hazia.emivita.core.scheduling.receivers.ReceiverHarness
 import com.hazia.emivita.core.scheduling.receivers.TestEmivitaApplication
 import com.hazia.emivita.ui.theme.EmivitaTheme
 import kotlinx.coroutines.runBlocking
-import org.junit.After
 import org.junit.Assert.assertEquals
 import org.junit.Rule
 import org.junit.Test
@@ -36,13 +37,13 @@ import java.time.ZoneId
 @Config(application = TestEmivitaApplication::class, qualifiers = "w412dp-h869dp")
 @SQLiteMode(SQLiteMode.Mode.NATIVE)
 class TodayTakeAllTest {
-    @get:Rule
     val compose = createComposeRule()
 
     private val h = ReceiverHarness()
 
-    @After
-    fun tearDown() = h.close()
+    @get:Rule
+    val rules: TestRule = closedAfterCompose(h, compose)
+
 
     private fun at(hour: Int): Long = LocalDate.now().atTime(hour, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 

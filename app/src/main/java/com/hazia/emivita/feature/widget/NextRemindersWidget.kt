@@ -7,15 +7,16 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
+import androidx.glance.LocalSize
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
-import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Alignment
@@ -34,11 +35,15 @@ import com.hazia.emivita.MainActivity
 import com.hazia.emivita.core.data.entity.DoseStatus
 import androidx.glance.LocalContext
 import com.hazia.emivita.R
+import com.hazia.emivita.core.di.AppContainer
 import com.hazia.emivita.core.format.LocaleFormats
+import com.hazia.emivita.core.format.maskedMedicineName
+import kotlinx.coroutines.flow.first
 
-private const val MAX_ROWS = 4
+/** How far back the last answered dose is looked for, and how far ahead a dose answered early may sit. */
+private const val LAST_DOSE_WINDOW_MILLIS = 7L * 24 * 60 * 60 * 1000
 
-private data class NextReminderRow(
+internal data class NextReminderRow(
     val reminderId: Long,
     val medicineId: Long,
     val medicineName: String,
@@ -47,6 +52,12 @@ private data class NextReminderRow(
     /** §9 #31 (A-24): a follow-up projected off its parent's slot, shown as "≈". */
     val estimated: Boolean = false,
 )
+
+/** A dose answered Taken or Skipped: the line above the upcoming rows (§7 R108, census E-40). */
+internal data class AnsweredDose(val medicineName: String, val status: DoseStatus, val atEpochMillis: Long)
+
+/** What the Next-doses widget draws: the upcoming rows, as many as a tall widget can show, and the last answer. */
+internal data class NextDosesData(val rows: List<NextReminderRow>, val last: AnsweredDose?)
 
 /**
  * Home-screen widget for spec §9 #7 -- reads [com.hazia.emivita.core.scheduling.OccurrenceProjectionCache]'s
@@ -59,46 +70,76 @@ private data class NextReminderRow(
  * widget follows its simulation), through a callback AppContainer hands the
  * cache, so core/scheduling still knows nothing of widgets; the 30-minute
  * `android:updatePeriodMillis` stays as the backstop for the clock alone.
+ * Composed at the size the launcher reports (§7 R108, census E-38), so its
+ * rows fill the size the owner picks; names follow hide-names (E-36).
  */
 class NextRemindersWidget : GlanceAppWidget() {
+    override val sizeMode: SizeMode = SizeMode.Exact
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val container = (context.applicationContext as EmivitaApplication).container
-        val now = System.currentTimeMillis()
-        val state = container.occurrenceProjectionCache.state.value
-
-        // Plain List chain, not asSequence() -- Sequence's mapNotNull stores the
-        // transform as a real function object rather than inlining it, which
-        // can't call a suspend function (getById) the way List's inline
-        // mapNotNull below can.
-        val candidates = state.occurrences
-            .filter { it.epochMillis >= now }
-            .sortedBy { it.epochMillis }
-            .distinctBy { it.reminderId } // one row per reminder -- its soonest occurrence
-            .take(MAX_ROWS)
-
-        val rows = candidates.mapNotNull { occurrence ->
-            val medicine = container.medicineRepository.getById(occurrence.medicineId) ?: return@mapNotNull null
-            NextReminderRow(
-                reminderId = occurrence.reminderId,
-                medicineId = occurrence.medicineId,
-                medicineName = medicine.name,
-                epochMillis = occurrence.epochMillis,
-                doseAmount = occurrence.doseAmount,
-                estimated = occurrence.estimated,
-            )
-        }
-
+        val data = loadNextDoses(container, System.currentTimeMillis())
         val palette = container.settingsRepository.widgetPalette()
         provideContent {
             WidgetTheme(palette) {
-                NextRemindersContent(rows)
+                NextRemindersContent(data)
             }
         }
     }
 }
 
+internal suspend fun loadNextDoses(container: AppContainer, now: Long): NextDosesData {
+    val state = container.occurrenceProjectionCache.state.value
+    val hide = container.settingsRepository.hideMedicineNames.first()
+
+    // Plain List chain, not asSequence() -- Sequence's mapNotNull stores the
+    // transform as a real function object rather than inlining it, which
+    // can't call a suspend function (getById) the way List's inline
+    // mapNotNull below can.
+    val candidates = state.occurrences
+        .filter { it.epochMillis >= now }
+        .sortedBy { it.epochMillis }
+        .distinctBy { it.reminderId } // one row per reminder -- its soonest occurrence
+        .take(MAX_WIDGET_ROWS)
+
+    val rows = candidates.mapNotNull { occurrence ->
+        val medicine = container.medicineRepository.getById(occurrence.medicineId) ?: return@mapNotNull null
+        NextReminderRow(
+            reminderId = occurrence.reminderId,
+            medicineId = occurrence.medicineId,
+            medicineName = maskedMedicineName(medicine.name, hide),
+            epochMillis = occurrence.epochMillis,
+            doseAmount = occurrence.doseAmount,
+            estimated = occurrence.estimated,
+        )
+    }
+    return NextDosesData(rows, lastAnsweredDose(container, now, hide))
+}
+
+/**
+ * The dose most recently answered Taken or Skipped, of every profile, as the
+ * rows are. Slots up to a week either side of [now] are read, because Take now
+ * answers a slot still to come (§7 R65).
+ */
+private suspend fun lastAnsweredDose(container: AppContainer, now: Long, hide: Boolean): AnsweredDose? =
+    container.profileRepository.observeAll().first()
+        .flatMap { container.doseEventRepository.getInRangeOnce(it.id, now - LAST_DOSE_WINDOW_MILLIS, now + LAST_DOSE_WINDOW_MILLIS, null) }
+        .map { it.doseEvent to it.medicine }
+        .filter { (e, _) -> (e.status == DoseStatus.TAKEN || e.status == DoseStatus.SKIPPED) && (e.resolvedAtEpochMillis ?: Long.MAX_VALUE) <= now }
+        .maxByOrNull { (e, _) -> e.resolvedAtEpochMillis!! }
+        ?.let { (e, m) -> AnsweredDose(maskedMedicineName(m.name, hide), e.status, e.resolvedAtEpochMillis!!) }
+
 @Composable
-private fun NextRemindersContent(rows: List<NextReminderRow>) {
+internal fun NextRemindersContent(data: NextDosesData) {
+    val context = LocalContext.current
+    val size = LocalSize.current
+    val metrics = WidgetMetrics(context, size.width.value, size.height.value)
+    val header = context.getString(R.string.widget_next_doses_header)
+    val lastText = data.last?.let { last ->
+        val res = if (last.status == DoseStatus.SKIPPED) R.string.widget_last_skipped else R.string.widget_last_taken
+        context.getString(res, last.medicineName, LocaleFormats.time(last.atEpochMillis))
+    }
+    val take = context.getString(R.string.common_take)
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -107,52 +148,60 @@ private fun NextRemindersContent(rows: List<NextReminderRow>) {
             .clickable(actionStartActivity<MainActivity>()),
     ) {
         Text(
-            LocalContext.current.getString(R.string.widget_next_doses_header),
+            header,
             style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = GlanceTheme.colors.onBackground),
         )
         Spacer(modifier = GlanceModifier.height(4.dp))
-        if (rows.isEmpty()) {
+        val lastLines = lastText?.let { metrics.lines(it, 11f, metrics.rowTextWidth(null)) } ?: 0
+        if (lastText != null) {
             Text(
-                LocalContext.current.getString(R.string.widget_all_caught_up),
+                lastText,
+                modifier = GlanceModifier.padding(bottom = 2.dp),
+                style = TextStyle(fontSize = 11.sp, color = GlanceTheme.colors.onSurfaceVariant),
+                maxLines = lastLines,
+            )
+        }
+        if (data.rows.isEmpty()) {
+            Text(
+                context.getString(R.string.widget_all_caught_up),
                 style = TextStyle(fontSize = 13.sp, color = GlanceTheme.colors.onSurfaceVariant),
             )
         } else {
-            rows.forEachIndexed { index, row ->
-                NextReminderRowItem(row, showTakeAction = index == 0)
+            val above = metrics.headerDp(header) + (lastText?.let { metrics.textDp(it, 11f, metrics.rowTextWidth(null)) + 2f } ?: 0f)
+            val heights = data.rows.mapIndexed { index, row -> metrics.rowDp(row.medicineName, rowTime(row), if (index == 0) take else null) }
+            WidgetRows(data.rows.take(metrics.rowsThatFit(above, heights))) { index, row ->
+                NextReminderRowItem(row, metrics, showTakeAction = index == 0)
             }
         }
     }
 }
 
+private fun rowTime(row: NextReminderRow) = LocaleFormats.time(row.epochMillis).let { if (row.estimated) "≈ $it" else it }
+
 @Composable
-private fun NextReminderRowItem(row: NextReminderRow, showTakeAction: Boolean) {
-    val time = LocaleFormats.time(row.epochMillis).let { if (row.estimated) "≈ $it" else it }
+private fun NextReminderRowItem(row: NextReminderRow, metrics: WidgetMetrics, showTakeAction: Boolean) {
+    val take = LocalContext.current.getString(R.string.common_take)
+    val time = rowTime(row)
+    val width = metrics.rowTextWidth(if (showTakeAction) take else null)
     Row(
         modifier = GlanceModifier.fillMaxWidth().padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = GlanceModifier.defaultWeight()) {
-            Text(row.medicineName, style = TextStyle(fontSize = 13.sp, color = GlanceTheme.colors.onSurface))
-            Text(time, style = TextStyle(fontSize = 11.sp, color = GlanceTheme.colors.onSurfaceVariant))
+            Text(row.medicineName, style = TextStyle(fontSize = 13.sp, color = GlanceTheme.colors.onSurface), maxLines = metrics.lines(row.medicineName, 13f, width))
+            Text(time, style = TextStyle(fontSize = 11.sp, color = GlanceTheme.colors.onSurfaceVariant), maxLines = metrics.lines(time, 11f, width))
         }
         if (showTakeAction) {
-            Text(
-                LocalContext.current.getString(R.string.common_take),
-                modifier = GlanceModifier
-                    .background(GlanceTheme.colors.primary)
-                    .cornerRadius(8.dp)
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
-                    .clickable(
-                        actionRunCallback<TakeNextDoseAction>(
-                            actionParametersOf(
-                                ReminderIdKey to row.reminderId,
-                                MedicineIdKey to row.medicineId,
-                                EpochMillisKey to row.epochMillis,
-                                DoseAmountKey to row.doseAmount,
-                            )
-                        )
-                    ),
-                style = TextStyle(fontSize = 12.sp, color = GlanceTheme.colors.onPrimary, fontWeight = FontWeight.Medium),
+            WidgetActionPill(
+                take,
+                actionRunCallback<TakeNextDoseAction>(
+                    actionParametersOf(
+                        ReminderIdKey to row.reminderId,
+                        MedicineIdKey to row.medicineId,
+                        EpochMillisKey to row.epochMillis,
+                        DoseAmountKey to row.doseAmount,
+                    )
+                ),
             )
         }
     }

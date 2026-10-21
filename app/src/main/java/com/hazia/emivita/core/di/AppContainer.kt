@@ -24,6 +24,8 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.channels.Channel
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.drop
 import com.hazia.emivita.feature.widget.StockLevelsWidget
 import com.hazia.emivita.feature.widget.NextRemindersWidget
 import androidx.glance.appwidget.updateAll
@@ -42,6 +44,12 @@ class AppContainer(
     // reach the real repositories, coordinator and scheduler on the JVM, where
     // SQLCipher's native library cannot load. Production passes nothing.
     injectedDatabase: EmivitaDatabase? = null,
+    // What a widget refresh does: re-render every placed widget. A test, with
+    // no launcher and so no placed widget, counts the calls instead.
+    private val refreshWidgets: suspend (Context) -> Unit = {
+        NextRemindersWidget().updateAll(it)
+        StockLevelsWidget().updateAll(it)
+    },
 ) {
     private val appContext = context.applicationContext
 
@@ -144,12 +152,17 @@ class AppContainer(
         Channel<Unit>(capacity = Channel.CONFLATED).also { channel ->
             applicationScope.launch {
                 for (unused in channel) {
-                    runCatching {
-                        NextRemindersWidget().updateAll(appContext)
-                        StockLevelsWidget().updateAll(appContext)
-                    }.onFailure { android.util.Log.w("AppContainer", "widget refresh failed", it) }
+                    runCatching { refreshWidgets(appContext) }.onFailure { android.util.Log.w("AppContainer", "widget refresh failed", it) }
                 }
             }
+        }
+    }
+
+    /** A hide-names flip re-renders the placed widgets (§7 R108, census E-36),
+     *  through the same conflated channel as a projection pass. */
+    fun observeWidgetSettings() {
+        applicationScope.launch {
+            settingsRepository.hideMedicineNames.distinctUntilChanged().drop(1).collect { widgetRefresh.trySend(Unit) }
         }
     }
 

@@ -7,15 +7,16 @@ import androidx.compose.ui.unit.sp
 import androidx.glance.GlanceId
 import androidx.glance.GlanceModifier
 import androidx.glance.GlanceTheme
+import androidx.glance.LocalSize
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
 import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.GlanceAppWidgetReceiver
+import androidx.glance.appwidget.SizeMode
 import androidx.glance.appwidget.action.ActionCallback
 import androidx.glance.appwidget.action.actionRunCallback
-import androidx.glance.appwidget.cornerRadius
 import androidx.glance.appwidget.provideContent
 import androidx.glance.background
 import androidx.glance.layout.Alignment
@@ -36,10 +37,11 @@ import androidx.glance.LocalContext
 import com.hazia.emivita.R
 import com.hazia.emivita.core.format.LocaleFormats
 import com.hazia.emivita.core.format.formatDecimalLocalized
+import com.hazia.emivita.core.format.maskedMedicineName
+import com.hazia.emivita.core.di.AppContainer
+import kotlinx.coroutines.flow.first
 
-private const val MAX_ROWS = 4
-
-private data class StockRow(
+internal data class StockRow(
     val medicineId: Long,
     val medicineName: String,
     val quantity: Double,
@@ -53,34 +55,15 @@ private data class StockRow(
  * "reads the cache, doesn't simulate" discipline as [NextRemindersWidget].
  * [com.hazia.emivita.core.scheduling.ProjectionState.stockRunOutDates] is
  * already computed as a side effect of the cache's own recompute pass, so
- * this widget only needs to sort and label it.
+ * this widget only needs to sort and label it. Like Next doses it fills the
+ * size the owner picks and follows hide-names (§7 R108, census E-38, E-36).
  */
 class StockLevelsWidget : GlanceAppWidget() {
+    override val sizeMode: SizeMode = SizeMode.Exact
+
     override suspend fun provideGlance(context: Context, id: GlanceId) {
         val container = (context.applicationContext as EmivitaApplication).container
-        val state = container.occurrenceProjectionCache.state.value
-
-        val tracked = container.medicineRepository.getAllTracked()
-        val rows = tracked
-            .asSequence()
-            // getAllTracked()'s query is `WHERE unit IS NOT NULL`, so this
-            // never drops a row in practice -- but the invariant lives in
-            // MedicineDao's SQL, not in the type, so don't assert it here.
-            .mapNotNull { medicine ->
-                StockRow(
-                    medicineId = medicine.id,
-                    medicineName = medicine.name,
-                    quantity = medicine.stockInfo.quantity,
-                    unit = medicine.stockInfo.unit ?: return@mapNotNull null,
-                    runOutDate = state.stockRunOutDates[medicine.id],
-                    refillQuantity = medicine.stockInfo.refillQuantity,
-                )
-            }
-            // Soonest run-out first; untracked-for-run-out (null) sorts last.
-            .sortedWith(compareBy(nullsLast()) { it.runOutDate })
-            .take(MAX_ROWS)
-            .toList()
-
+        val rows = loadStockRows(container)
         val palette = container.settingsRepository.widgetPalette()
         provideContent {
             WidgetTheme(palette) {
@@ -90,8 +73,37 @@ class StockLevelsWidget : GlanceAppWidget() {
     }
 }
 
+internal suspend fun loadStockRows(container: AppContainer): List<StockRow> {
+    val state = container.occurrenceProjectionCache.state.value
+    val hide = container.settingsRepository.hideMedicineNames.first()
+    return container.medicineRepository.getAllTracked()
+        .asSequence()
+        // getAllTracked()'s query is `WHERE unit IS NOT NULL`, so this
+        // never drops a row in practice -- but the invariant lives in
+        // MedicineDao's SQL, not in the type, so don't assert it here.
+        .mapNotNull { medicine ->
+            StockRow(
+                medicineId = medicine.id,
+                medicineName = maskedMedicineName(medicine.name, hide),
+                quantity = medicine.stockInfo.quantity,
+                unit = medicine.stockInfo.unit ?: return@mapNotNull null,
+                runOutDate = state.stockRunOutDates[medicine.id],
+                refillQuantity = medicine.stockInfo.refillQuantity,
+            )
+        }
+        // Soonest run-out first; untracked-for-run-out (null) sorts last.
+        .sortedWith(compareBy(nullsLast()) { it.runOutDate })
+        .take(MAX_WIDGET_ROWS)
+        .toList()
+}
+
 @Composable
-private fun StockLevelsContent(rows: List<StockRow>) {
+internal fun StockLevelsContent(rows: List<StockRow>) {
+    val context = LocalContext.current
+    val size = LocalSize.current
+    val metrics = WidgetMetrics(context, size.width.value, size.height.value)
+    val header = context.getString(R.string.widget_stock_levels_header)
+    val refill = context.getString(R.string.action_refill)
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -100,7 +112,7 @@ private fun StockLevelsContent(rows: List<StockRow>) {
             .clickable(actionStartActivity<MainActivity>()),
     ) {
         Text(
-            LocalContext.current.getString(R.string.widget_stock_levels_header),
+            header,
             style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = GlanceTheme.colors.onBackground),
         )
         Spacer(modifier = GlanceModifier.height(4.dp))
@@ -110,49 +122,45 @@ private fun StockLevelsContent(rows: List<StockRow>) {
                 style = TextStyle(fontSize = 13.sp, color = GlanceTheme.colors.onSurfaceVariant),
             )
         } else {
-            rows.forEachIndexed { index, row ->
-                StockRowItem(row, showRefillAction = index == 0 && row.refillQuantity != null)
+            val heights = rows.mapIndexed { index, row ->
+                metrics.rowDp(row.medicineName, stockDetail(context, row), if (index == 0 && row.refillQuantity != null) refill else null)
+            }
+            WidgetRows(rows.take(metrics.rowsThatFit(metrics.headerDp(header), heights))) { index, row ->
+                StockRowItem(row, metrics, showRefillAction = index == 0 && row.refillQuantity != null)
             }
         }
     }
 }
 
-@Composable
-private fun StockRowItem(row: StockRow, showRefillAction: Boolean) {
-    val context = LocalContext.current
+private fun stockDetail(context: Context, row: StockRow): String {
     val subtitle = row.runOutDate?.let { context.getString(R.string.widget_runs_out, LocaleFormats.monthDay(it)) }
         ?: context.getString(R.string.widget_no_imminent_run_out)
+    return context.getString(R.string.widget_stock_row, "${formatDecimalLocalized(row.quantity)} ${row.unit}", subtitle)
+}
+
+@Composable
+private fun StockRowItem(row: StockRow, metrics: WidgetMetrics, showRefillAction: Boolean) {
+    val context = LocalContext.current
+    val refill = context.getString(R.string.action_refill)
+    val detail = stockDetail(context, row)
+    val width = metrics.rowTextWidth(if (showRefillAction) refill else null)
     Row(
         modifier = GlanceModifier.fillMaxWidth().padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(modifier = GlanceModifier.defaultWeight()) {
-            Text(row.medicineName, style = TextStyle(fontSize = 13.sp, color = GlanceTheme.colors.onSurface))
-            Text(
-                LocalContext.current.getString(
-                    R.string.widget_stock_row,
-                    "${formatDecimalLocalized(row.quantity)} ${row.unit}",
-                    subtitle,
-                ),
-                style = TextStyle(fontSize = 11.sp, color = GlanceTheme.colors.onSurfaceVariant),
-            )
+            Text(row.medicineName, style = TextStyle(fontSize = 13.sp, color = GlanceTheme.colors.onSurface), maxLines = metrics.lines(row.medicineName, 13f, width))
+            Text(detail, style = TextStyle(fontSize = 11.sp, color = GlanceTheme.colors.onSurfaceVariant), maxLines = metrics.lines(detail, 11f, width))
         }
         if (showRefillAction) {
-            Text(
-                LocalContext.current.getString(R.string.action_refill),
-                modifier = GlanceModifier
-                    .background(GlanceTheme.colors.primary)
-                    .cornerRadius(8.dp)
-                    .padding(horizontal = 10.dp, vertical = 4.dp)
-                    .clickable(
-                        actionRunCallback<RefillStockAction>(
-                            actionParametersOf(
-                                StockMedicineIdKey to row.medicineId,
-                                StockRefillAmountKey to (row.refillQuantity ?: 0.0),
-                            )
-                        )
-                    ),
-                style = TextStyle(fontSize = 12.sp, color = GlanceTheme.colors.onPrimary, fontWeight = FontWeight.Medium),
+            WidgetActionPill(
+                refill,
+                actionRunCallback<RefillStockAction>(
+                    actionParametersOf(
+                        StockMedicineIdKey to row.medicineId,
+                        StockRefillAmountKey to (row.refillQuantity ?: 0.0),
+                    )
+                ),
             )
         }
     }

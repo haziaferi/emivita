@@ -69,6 +69,7 @@ class AdherenceTickMeasureTest {
     private fun render(cases: List<Case>, each: (Case, TickProbe, Bitmap) -> Unit) {
         Locale.setDefault(Locale.ITALY)
         val case = mutableStateOf(cases.first())
+        val attempt = mutableStateOf(0)
         var probe: TickProbe? = null
         compose.setContent {
             val c = case.value
@@ -76,10 +77,10 @@ class AdherenceTickMeasureTest {
             CompositionLocalProvider(LocalDensity provides Density(base.density, c.fontScale)) {
                 EmivitaTheme(themeMode = ThemeMode.LIGHT) {
                     Box(Modifier.background(MaterialTheme.colorScheme.surface)) {
-                        // A fresh chart per case (§7 R104): reusing one left its first
-                        // draw of a new case to Vico's off-thread model swap, which on a
-                        // slow CI runner sometimes never repainted inside the 30 s wait.
-                        key(c) { AdherenceChart(days(c.max), c.ticks) { probe = it } }
+                        // A fresh chart per case and per attempt (§7 R104, R108): on a slow
+                        // CI runner Vico's off-thread model sometimes never reached a drawn
+                        // frame, even for a fresh chart; a new one is then started again.
+                        key(c, attempt.value) { AdherenceChart(days(c.max), c.ticks) { probe = it } }
                     }
                 }
             }
@@ -88,20 +89,23 @@ class AdherenceTickMeasureTest {
             probe = null
             case.value = c
             // Vico draws, and so reports its ticks, only when a frame is rendered,
-            // and applies its model off the main thread: capture until it has.
-            // Up to 30 s of real time: Vico builds the model on a background
-            // thread, and a CI runner is several times slower than a desk.
-            val deadline = System.nanoTime() + 30_000_000_000L
-            capture()
-            while (probe == null && System.nanoTime() < deadline) {
-                Thread.sleep(50)
-                compose.mainClock.advanceTimeBy(100)
+            // and applies its model off the main thread: capture until it has, for
+            // up to 20 s of real time, then start the chart again, three times at most.
+            for (tries in 0 until ATTEMPTS) {
+                if (tries > 0) attempt.value++
+                val deadline = System.nanoTime() + 20_000_000_000L
                 capture()
+                while (probe == null && System.nanoTime() < deadline) {
+                    Thread.sleep(50)
+                    compose.mainClock.advanceTimeBy(100)
+                    capture()
+                }
+                if (probe != null) break
             }
             // One more frame after the first report, so the bars have landed.
             Thread.sleep(100); compose.mainClock.advanceTimeBy(500)
             val image = capture()
-            each(c, checkNotNull(probe) { "no tick report for $c within 30 s" }, image)
+            each(c, checkNotNull(probe) { "no tick report for $c in $ATTEMPTS charts of 20 s each" }, image)
         }
     }
 
@@ -186,5 +190,9 @@ class AdherenceTickMeasureTest {
         val collisions = gaps.count { it < p.labelHeight }
         val minGapRatio = gaps.minOrNull()?.div(p.labelHeight) ?: 0f
         return """{"name":"$name","ticks":"$ticks","max":$max,"fontScale":$fs,"values":${v.joinToString(",", "[", "]")},"rangeMax":${p.maxY},"fractional":$fractional,"niceSteps":$nice,"numbers":${v.size},"labelMismatch":$labelMismatch,"collisions":$collisions,"minGapOverLabel":$minGapRatio,"axisHeightPx":${p.axisHeight},"labelHeightPx":${p.labelHeight},"clutter":$clutter,"voidDp":$void}"""
+    }
+
+    private companion object {
+        const val ATTEMPTS = 3
     }
 }

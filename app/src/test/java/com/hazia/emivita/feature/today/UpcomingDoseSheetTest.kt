@@ -1,5 +1,7 @@
 package com.hazia.emivita.feature.today
 
+import com.hazia.emivita.core.scheduling.receivers.closedAfterCompose
+import org.junit.rules.TestRule
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -49,10 +51,12 @@ import java.time.ZoneId
 @Config(application = TestEmivitaApplication::class)
 @SQLiteMode(SQLiteMode.Mode.NATIVE)
 class UpcomingDoseSheetTest {
-    @get:Rule
     val compose = createComposeRule()
 
     private val h = ReceiverHarness()
+
+    @get:Rule
+    val rules: TestRule = closedAfterCompose(h, compose)
     private val c = h.container
     private val zone = ZoneId.systemDefault()
     private val day = LocalDate.now(zone).plusDays(1)
@@ -79,7 +83,6 @@ class UpcomingDoseSheetTest {
     @After
     fun tearDown() {
         c.occurrenceProjectionCache.releaseWindow(CONSUMER)
-        h.close()
     }
 
     @Composable
