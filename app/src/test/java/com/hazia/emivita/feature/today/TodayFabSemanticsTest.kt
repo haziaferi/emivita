@@ -1,12 +1,13 @@
 package com.hazia.emivita.feature.today
 
+import com.hazia.emivita.core.scheduling.receivers.closedAfterCompose
+import org.junit.rules.TestRule
 import androidx.compose.ui.test.assertHasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.junit4.createComposeRule
 import com.hazia.emivita.core.scheduling.receivers.ReceiverHarness
 import com.hazia.emivita.core.scheduling.receivers.TestEmivitaApplication
 import com.hazia.emivita.ui.theme.EmivitaTheme
-import org.junit.After
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -25,13 +26,13 @@ import org.robolectric.annotation.SQLiteMode
 @Config(application = TestEmivitaApplication::class)
 @SQLiteMode(SQLiteMode.Mode.NATIVE)
 class TodayFabSemanticsTest {
-    @get:Rule
     val compose = createComposeRule()
 
     private val h = ReceiverHarness()
 
-    @After
-    fun tearDown() = h.close()
+    @get:Rule
+    val rules: TestRule = closedAfterCompose(h, compose)
+
 
     @Test
     fun `the Log dose FAB carries its label as a description on the clickable node`() {
