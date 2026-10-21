@@ -696,4 +696,15 @@
     <string name="backup_key_warning">Emivita locks your data with a key that Android keeps for it. If that key is lost (some phone resets, or moving to a new phone), the data cannot be opened again, and a backup is the only copy that survives.</string>
     <string name="recovery_key_lost_title">Your medicines cannot be opened</string>
     <string name="recovery_key_lost_body">This phone no longer holds the key that unlocks the app\'s data, so it cannot be read, now or later. The app has started with an empty list. If you have a backup, restore it now under Data &amp; Backup.</string>
+    <!-- Today: take a time's due doses together (census D-20) and an upcoming dose's sheet (census D-55), §7 R107 -->
+    <string name="today_take_all">Take all (%1$d)</string>
+    <string name="today_take_all_title">Take these doses?</string>
+    <plurals name="today_take_all_confirm">
+        <item quantity="one">Take %d dose</item>
+        <item quantity="other">Take %d doses</item>
+    </plurals>
+    <string name="a11y_show_dose_details">Show dose details</string>
+    <string name="today_dose_detail_when">At %1$s · %2$s</string>
+    <string name="today_dose_detail_instructions">Instructions</string>
+    <string name="today_dose_detail_notes">Medicine notes</string>
 </resources>

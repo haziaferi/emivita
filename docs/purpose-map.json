@@ -12,7 +12,7 @@
     {"id": "N2", "name": "Notices", "job": "said once, at first launch"}
   ],
   "screens": [
-    {"id": "today", "name": "Today", "purpose": "P1", "code": ["route:Today"], "spec": ["§9 #5", "§9 #37", "R77"], "status": "shipped", "overlaps": ["widget_next"]},
+    {"id": "today", "name": "Today", "purpose": "P1", "code": ["route:Today", "sheet:TakeGroupSheet", "sheet:DoseDetailSheet"], "spec": ["§9 #5", "§9 #37", "R77", "R107"], "status": "shipped", "overlaps": ["widget_next"]},
     {"id": "alarm", "name": "The alarm ringing (full screen)", "purpose": "P1", "code": ["activity:AlarmActivity"], "spec": ["R80"], "status": "shipped", "overlaps": ["notifications"]},
     {"id": "snooze_picker", "name": "Snooze for… (from a notification)", "purpose": "P1", "code": ["activity:SnoozePickerActivity"], "spec": ["§9 #25", "R64"], "status": "shipped", "overlaps": ["alarms_snooze"]},
     {"id": "notifications", "name": "Reminder notifications and their actions", "purpose": "P1", "code": ["channel:reminders_alarm_v2", "channel:reminders_high", "channel:reminders_standard"], "spec": ["§9 #25", "R64"], "status": "shipped", "overlaps": ["alarm", "notifications_alerts"]},

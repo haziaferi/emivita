@@ -688,4 +688,16 @@
     <string name="backup_key_warning">Emivita protegge i tuoi dati con una chiave custodita da Android. Se quella chiave va persa (alcuni ripristini del telefono, o il passaggio a un telefono nuovo), i dati non si possono più aprire e l’unica copia che resta è un backup.</string>
     <string name="recovery_key_lost_title">Impossibile aprire i tuoi farmaci</string>
     <string name="recovery_key_lost_body">Questo telefono non ha più la chiave che apre i dati dell’app, quindi non si possono leggere, né ora né in futuro. L’app è partita con un elenco vuoto. Se hai un backup, ripristinalo ora in Dati e backup.</string>
+    <!-- Oggi: prendere insieme le dosi dovute a un orario (censimento D-20) e il pannello di una dose in arrivo (censimento D-55), §7 R107 -->
+    <string name="today_take_all">Prendi tutte (%1$d)</string>
+    <string name="today_take_all_title">Prendere queste dosi?</string>
+    <plurals name="today_take_all_confirm">
+        <item quantity="one">Prendi %d dose</item>
+        <item quantity="many">Prendi %d dosi</item>
+        <item quantity="other">Prendi %d dosi</item>
+    </plurals>
+    <string name="a11y_show_dose_details">Mostra i dettagli della dose</string>
+    <string name="today_dose_detail_when">Alle %1$s · %2$s</string>
+    <string name="today_dose_detail_instructions">Istruzioni</string>
+    <string name="today_dose_detail_notes">Note sul farmaco</string>
 </resources>

@@ -357,10 +357,16 @@ class DoseEventRepository(
      * a resolved row and stays quiet (ReminderAlarmReceiver checks PENDING).
      */
     suspend fun takeProjectedNow(reminderId: Long, medicineId: Long, scheduledEpochMillis: Long, doseAmount: Double, nowEpochMillis: Long = System.currentTimeMillis()) {
+        answerProjected(reminderId, medicineId, scheduledEpochMillis, doseAmount, DoseStatus.TAKEN, nowEpochMillis)
+    }
+
+    /** [takeProjectedNow] with the answer chosen: the upcoming dose's sheet
+     *  on Today (§7 R107, census D-55) can also skip a slot ahead of time. */
+    suspend fun answerProjected(reminderId: Long, medicineId: Long, scheduledEpochMillis: Long, doseAmount: Double, status: DoseStatus, atEpochMillis: Long = System.currentTimeMillis()) {
         val id = materializeIfAbsent(reminderId, medicineId, scheduledEpochMillis, doseAmount)
             ?: doseEventDao.findByReminderAndTime(reminderId, scheduledEpochMillis)?.id
             ?: return
-        resolve(id, DoseStatus.TAKEN, nowEpochMillis)
+        resolve(id, status, atEpochMillis)
     }
 
     /** PRN / ad-hoc dose logging (spec §3, §9 #2) -- a manually-logged dose not
