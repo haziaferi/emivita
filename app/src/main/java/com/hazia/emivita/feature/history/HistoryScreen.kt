@@ -47,7 +47,6 @@ import com.hazia.emivita.core.data.dao.doseUnit
 import com.hazia.emivita.core.data.entity.DoseStatus
 import com.hazia.emivita.core.data.entity.isAlertSeen
 import com.hazia.emivita.core.data.entity.isRecordOnly
-import com.hazia.emivita.core.data.entity.isOneOff
 import com.hazia.emivita.core.data.export.HistoryExporter
 import com.hazia.emivita.core.data.repository.DoseEventRepository
 import com.hazia.emivita.ui.components.DoseEditDialog
@@ -424,10 +423,11 @@ private fun adherenceCounts(events: List<DoseEventWithMedicine>): AdherenceCount
     )
 }
 
-/** Adherence measures the list's medicines (§7 R111): a one-off dose of a
- *  medicine not on it shows in History and the exports but is not counted. */
+/** Adherence measures the plan: only doses a reminder scheduled count (§7 R111,
+ *  R112). A one-off or an as-needed dose was never planned, so it shows in
+ *  History and the exports but cannot be taken against the plan or missed. */
 private val DoseEventWithMedicine.countsTowardAdherence: Boolean
-    get() = !doseEvent.isOneOff && !doseEvent.status.isRecordOnly
+    get() = doseEvent.reminderId != null && !doseEvent.status.isRecordOnly
 
 /** [DayAdherenceCounts] for every day in the visible [HISTORY_LOOKBACK_DAYS]
  *  window, oldest first -- including days with zero entries, so the chart's
