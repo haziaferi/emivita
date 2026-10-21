@@ -27,7 +27,7 @@ _see what is due, be told when, and answer it: taken, skipped, snoozed, or an ex
 | Snooze for… (from a notification) | `activity:SnoozePickerActivity` | §9 #25, R64 | shipped | Alarms & Snooze (sheet) |
 | Reminder notifications and their actions | `channel:reminders_alarm_v2`, `channel:reminders_high`, `channel:reminders_standard` | §9 #25, R64 | shipped | The alarm ringing (full screen), Notifications & alerts |
 | Log a dose (as needed, or an extra one) | `dialog:LogDoseDialog` | §9 #2 | shipped | Edit a dose (status, time, note) |
-| Next reminders widget | `widget:NextRemindersWidgetReceiver` | §9 #7 | shipped | Today |
+| Next reminders widget | `widget:NextRemindersWidgetReceiver` | §9 #7, R108 | shipped | Today |
 | Weekend mode (sheet) | `setting:WeekendMode` | §9 #12, §9 #14, R88 | shipped | Add or edit a reminder (fixed times, interval, window, cycle, follow-up, taper) |
 
 ## P2 The cabinet, and me
@@ -41,7 +41,7 @@ _what I take, in what form, on which schedule, and how much is left before it ru
 | Add or edit a medicine | `route:AddMedicine`, `route:EditMedicine`, `dialog:ColorPickerDialog` | §9 #1, §9 #27 | shipped |  |
 | Add or edit a reminder (fixed times, interval, window, cycle, follow-up, taper) | `route:AddReminder`, `route:EditReminder` | §9 #1, §9 #14, §9 #24, §9 #31 | shipped | Weekend mode (sheet) |
 | Stock and expiration | `route:StockExpiration` | §9 #8, §9 #27, R85 | shipped | Stock levels widget |
-| Stock levels widget | `widget:StockLevelsWidgetReceiver` | §9 #7 | shipped | Stock and expiration |
+| Stock levels widget | `widget:StockLevelsWidgetReceiver` | §9 #7, R108 | shipped | Stock and expiration |
 | Medical ID | `route:MedicalIdSettings`, `setting:MedicalId` | §9 #18, R85 | shipped |  |
 
 ## P3 Looking back

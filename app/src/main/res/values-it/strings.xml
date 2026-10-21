@@ -252,6 +252,8 @@
     <string name="widget_all_caught_up">Tutto in ordine</string>
     <string name="widget_stock_levels_header">Scorte</string>
     <string name="widget_no_tracked_stock">Nessuna scorta monitorata</string>
+    <string name="widget_last_taken">Ultima: %1$s, presa alle %2$s</string>
+    <string name="widget_last_skipped">Ultima: %1$s, saltata alle %2$s</string>
     <string name="widget_stock_row">%1$s • %2$s</string>
 
     <!-- Format strings. -->
@@ -465,8 +467,8 @@
     <string name="settings_swipe_nothing">Niente: resta da prendere in Oggi</string>
     <string name="settings_swipe_snooze">Rinvialo</string>
     <string name="settings_swipe_skip">Registralo come saltato</string>
-    <string name="settings_hide_names">Nascondi i nomi dei farmaci nelle notifiche</string>
-    <string name="settings_hide_names_desc">Mostra solo l’iniziale, così un’occhiata al pannello dice che c’è una dose da prendere senza dire quale.</string>
+    <string name="settings_hide_names">Nascondi i nomi dei farmaci nelle notifiche e nei widget</string>
+    <string name="settings_hide_names_desc">Nelle notifiche e nei widget mostra solo l’iniziale.</string>
     <string name="settings_alarm_tier_title">Livello Sveglia</string>
     <string name="settings_alarm_tier_desc">Vale per i farmaci impostati sul livello Sveglia: la sveglia a schermo intero che suona finché non rispondi.</string>
     <string name="settings_alarm_tone">Suono della sveglia</string>
