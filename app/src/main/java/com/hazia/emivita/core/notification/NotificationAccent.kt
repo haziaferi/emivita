@@ -9,6 +9,7 @@ import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.graphics.vector.VectorGroup
 import androidx.compose.ui.graphics.vector.VectorPath
 import androidx.compose.ui.graphics.vector.toPath
+import androidx.core.graphics.createBitmap
 import com.hazia.emivita.core.data.entity.Medicine
 import com.hazia.emivita.core.data.settings.SettingsRepository
 import com.hazia.emivita.ui.icons.MedicineIcons
@@ -38,7 +39,7 @@ fun reminderNotificationColour(medicine: Medicine, hideNames: Boolean, paletteAc
  *  its accent's ink on a disc of its colour, 64 dp square. */
 fun medicineLargeIcon(context: Context, medicine: Medicine): Bitmap {
     val size = (64 * context.resources.displayMetrics.density).toInt()
-    val bitmap = Bitmap.createBitmap(size, size, Bitmap.Config.ARGB_8888)
+    val bitmap = createBitmap(size, size)
     val canvas = Canvas(bitmap)
     val accent = medicineAccent(medicine.color)
     canvas.drawCircle(size / 2f, size / 2f, size / 2f, Paint(Paint.ANTI_ALIAS_FLAG).apply { color = accent.toArgb() })
