@@ -69,6 +69,8 @@ import com.hazia.emivita.core.format.formatDoseWithUnit
 import com.hazia.emivita.ui.theme.doseCritical
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.NonCancellable
+import kotlinx.coroutines.withContext
 import java.time.Instant
 import java.time.ZoneId
 import androidx.compose.ui.res.stringResource
@@ -358,7 +360,7 @@ internal fun AsNeededRow(
  *  node. A projected occurrence already covered by a materialized event
  *  (same reminder, same slot) is dropped from the projected side so nothing
  *  shows twice once an alarm has actually fired. */
-private fun buildTimeline(
+internal fun buildTimeline(
     medicinesById: Map<Long, Medicine>?,
     materialized: List<DoseEventWithMedicine>?,
     projection: ProjectionState,
@@ -434,6 +436,7 @@ internal fun TimelineNodeItem(node: TimelineNode, deps: TodayDeps) {
         }
         Spacer(Modifier.width(12.dp))
         Column(Modifier.weight(1f)) {
+            TakeAllChip(node, time, deps)
             node.entries.forEach { entry ->
                 EntryHost(node, entry, deps) { canSkip, onResolve, onClick ->
                     TimelineEntryRow(entry = entry, canSkip = canSkip, onResolve = onResolve, onClick = onClick)
@@ -441,6 +444,35 @@ internal fun TimelineNodeItem(node: TimelineNode, deps: TodayDeps) {
                 Spacer(Modifier.height(8.dp))
             }
         }
+    }
+}
+
+/**
+ * "Take all (n)" on a time with two or more doses due (§7 R107, census D-20),
+ * confirmed in [TakeGroupSheet]. Each dose goes through [DoseEventRepository.resolve]
+ * one at a time, as its own Take chip would send it, and NonCancellable keeps the
+ * run whole when the first answers shrink the group and recompose this away.
+ */
+@Composable
+private fun TakeAllChip(node: TimelineNode, time: String, deps: TodayDeps) {
+    val scope = rememberCoroutineScope()
+    val due = node.entries.filter { it.status == TimelineStatus.PENDING && it.doseEventId != null }
+    if (due.size < 2) return
+    var confirmAll by remember(node.epochMillis) { mutableStateOf(false) }
+    Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.End) {
+        TonalActionChip(onClick = { confirmAll = true }, label = stringResource(R.string.today_take_all, due.size), icon = Icons.Filled.Check)
+    }
+    if (confirmAll) {
+        TakeGroupSheet(
+            time = time,
+            entries = due,
+            onConfirm = {
+                confirmAll = false
+                val ids = due.mapNotNull { it.doseEventId }
+                scope.launch { withContext(NonCancellable) { ids.forEach { deps.doseEventRepository.resolve(it, DoseStatus.TAKEN) } } }
+            },
+            onDismiss = { confirmAll = false },
+        )
     }
 }
 
@@ -470,26 +502,47 @@ internal fun EntryHost(
     val scope = rememberCoroutineScope()
     // Saveable, so the Dose Edit dialog survives a rotation (§7 R83 (a)).
     var editing by rememberSaveable { mutableStateOf(false) }
+    var detail by rememberSaveable { mutableStateOf(false) }
+    // Same resolution SettingsRepository.isLockedUntilTaken performs: the
+    // per-medicine override wins, the global default fills in when it is null.
+    val canSkip = !(entry.medicine.remindersLockedUntilTaken ?: deps.lockedByDefault)
+    val onResolve: (DoseStatus) -> Unit = { status ->
+        val id = entry.doseEventId
+        scope.launch {
+            if (id != null) {
+                deps.doseEventRepository.resolve(id, status)
+            } else if (entry.reminderId != null && status == DoseStatus.TAKEN) {
+                // "Take now" on a projected slot (§9 #26).
+                deps.doseEventRepository.takeProjectedNow(entry.reminderId, entry.medicine.id, node.epochMillis, entry.doseAmount)
+            } else if (entry.reminderId != null) {
+                // Skip ahead, from the upcoming dose's sheet only (§7 R107).
+                deps.doseEventRepository.answerProjected(entry.reminderId, entry.medicine.id, node.epochMillis, entry.doseAmount, status)
+            }
+        }
+    }
     row(
-        // Same resolution SettingsRepository.isLockedUntilTaken performs: the
-        // per-medicine override wins, the global default fills in when it is null.
-        !(entry.medicine.remindersLockedUntilTaken ?: deps.lockedByDefault),
-        { status ->
-            val id = entry.doseEventId
-            scope.launch {
-                if (id != null) {
-                    deps.doseEventRepository.resolve(id, status)
-                } else if (entry.reminderId != null && status == DoseStatus.TAKEN) {
-                    // "Take now" on a projected slot (§9 #26).
-                    deps.doseEventRepository.takeProjectedNow(entry.reminderId, entry.medicine.id, node.epochMillis, entry.doseAmount)
-                }
+        canSkip,
+        onResolve,
+        // Event editing (spec §3/§9 #3) -- only an already-resolved entry has
+        // anything to edit. A slot still to come opens its sheet (§7 R107).
+        {
+            if (entry.status == TimelineStatus.TAKEN || entry.status == TimelineStatus.SKIPPED) {
+                editing = true
+            } else if (entry.status == TimelineStatus.UPCOMING && entry.reminderId != null) {
+                detail = true
             }
         },
-        // Event editing (spec §3/§9 #3) -- only an already-resolved entry has
-        // anything to edit; PENDING/UPCOMING have no recorded time or
-        // confirmed dose to correct yet.
-        { if (entry.status == TimelineStatus.TAKEN || entry.status == TimelineStatus.SKIPPED) editing = true },
     )
+
+    if (detail) {
+        DoseDetailSheet(
+            entry = entry,
+            time = nodeTimeLabel(node),
+            canSkip = canSkip,
+            onResolve = { status -> detail = false; onResolve(status) },
+            onDismiss = { detail = false },
+        )
+    }
 
     val id = entry.doseEventId
     if (editing && id != null) {
@@ -537,13 +590,22 @@ internal fun TimelineEntryRow(
     // swallowed into the row.
     val statusLabel = stringResource(statusLabelRes(entry))
     val editLabel = stringResource(R.string.a11y_edit_dose)
+    // A slot still to come opens its details sheet (§7 R107, census D-55).
+    val opensDetail = entry.status == TimelineStatus.UPCOMING && entry.reminderId != null
+    val detailLabel = stringResource(R.string.a11y_show_dose_details)
     Surface(
         shape = RoundedCornerShape(14.dp),
         // Tonal, whatever the medicine's colour: the tile carries that (§7 R76).
         color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = Modifier
             .fillMaxWidth()
-            .let { if (editable) it.clickable(onClickLabel = editLabel, role = Role.Button, onClick = onClick) else it }
+            .let {
+                when {
+                    editable -> it.clickable(onClickLabel = editLabel, role = Role.Button, onClick = onClick)
+                    opensDetail -> it.clickable(onClickLabel = detailLabel, role = Role.Button, onClick = onClick)
+                    else -> it
+                }
+            }
             .semantics(mergeDescendants = true) { stateDescription = statusLabel },
     ) {
         // Two lines when the dose is due: name and status first, Take/Skip on

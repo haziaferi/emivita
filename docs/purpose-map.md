@@ -22,7 +22,7 @@ _see what is due, be told when, and answer it: taken, skipped, snoozed, or an ex
 
 | Screen | In the code | SPEC | Status | Overlaps |
 |---|---|---|---|---|
-| Today | `route:Today` | §9 #5, §9 #37, R77 | shipped | Next reminders widget |
+| Today | `route:Today`, `sheet:TakeGroupSheet`, `sheet:DoseDetailSheet` | §9 #5, §9 #37, R77, R107 | shipped | Next reminders widget |
 | The alarm ringing (full screen) | `activity:AlarmActivity` | R80 | shipped | Reminder notifications and their actions |
 | Snooze for… (from a notification) | `activity:SnoozePickerActivity` | §9 #25, R64 | shipped | Alarms & Snooze (sheet) |
 | Reminder notifications and their actions | `channel:reminders_alarm_v2`, `channel:reminders_high`, `channel:reminders_standard` | §9 #25, R64 | shipped | The alarm ringing (full screen), Notifications & alerts |

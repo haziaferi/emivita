@@ -1,6 +1,7 @@
 package com.hazia.emivita.feature.today
 
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.test.SemanticsMatcher
 import androidx.compose.ui.test.assert
@@ -80,10 +81,12 @@ class TimelineEntryRowSemanticsTest {
 
     @Test
     fun anUpcomingDoseWithAReminderOffersTakeNowAsItsOwnControl() {
-        // The row stays a non-button (it is not editable); the chip is its own
-        // node, the way Take/Skip are on a due row.
+        // The row is a button since §7 R107 (census D-55): it opens the dose's
+        // details sheet, and says so. The chip stays its own node, the way
+        // Take/Skip are on a due row.
         compose.setContent { TimelineEntryRow(entry(TimelineStatus.UPCOMING, reminderId = 3L), canSkip = true, onResolve = {}, onClick = {}) }
-        compose.onNode(anyState).assert(hasStateDescription("Upcoming")).assertHasNoClickAction()
+        compose.onNode(anyState).assert(hasStateDescription("Upcoming")).assertHasClickAction()
+            .assert(SemanticsMatcher("click label") { SemanticsActions.OnClick in it.config && it.config[SemanticsActions.OnClick].label == "Show dose details" })
         compose.onNodeWithText("Take now").assert(hasClickAction())
     }
 
