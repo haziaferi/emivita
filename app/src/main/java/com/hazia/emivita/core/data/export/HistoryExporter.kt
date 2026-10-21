@@ -3,6 +3,8 @@ package com.hazia.emivita.core.data.export
 import android.graphics.Paint
 import android.graphics.pdf.PdfDocument
 import com.hazia.emivita.core.data.dao.DoseEventWithMedicine
+import com.hazia.emivita.core.data.dao.displayName
+import com.hazia.emivita.core.data.dao.doseUnit
 import com.hazia.emivita.core.format.formatDecimal
 import com.hazia.emivita.core.format.formatDoseWithUnit
 import com.hazia.emivita.core.data.entity.isAlertSeen
@@ -44,10 +46,10 @@ object HistoryExporter {
             builder.append(scheduled.format(DATE_FORMAT)).append(',')
             builder.append(scheduled.format(TIME_FORMAT)).append(',')
             builder.append(recorded).append(',')
-            builder.append(csvEscape(row.medicine.name)).append(',')
+            builder.append(csvEscape(row.displayName)).append(',')
             builder.append(csvStatusLabel(row.doseEvent.status)).append(',')
             builder.append(formatDecimal(row.doseEvent.doseAmount)).append(',')
-            builder.append(csvEscape(row.medicine.doseUnit ?: "")).append(',')
+            builder.append(csvEscape(row.doseUnit ?: "")).append(',')
             builder.append(csvEscape(row.doseEvent.notes ?: "")).append('\n')
         }
         return builder.toString()
@@ -122,11 +124,11 @@ object HistoryExporter {
             val time = Instant.ofEpochMilli(resolvedEpoch).atZone(zone).format(TIME_FORMAT)
             canvas!!.drawText(scheduled.format(DATE_FORMAT), colDate, y, rowPaint)
             canvas.drawText(time, colTime, y, rowPaint)
-            canvas.drawText(row.medicine.name.take(28), colMedicine, y, rowPaint)
+            canvas.drawText(row.displayName.take(28), colMedicine, y, rowPaint)
             canvas.drawText(context.getString(doseStatusLabelRes(row.doseEvent.status)), colStatus, y, rowPaint)
             // A seen alert (§7 R105) has no amount; the CSV keeps its 0, as data.
             if (!row.doseEvent.status.isAlertSeen) {
-                canvas.drawText(formatDoseWithUnit(row.doseEvent.doseAmount, row.medicine.doseUnit, context.resources), colDose, y, rowPaint)
+                canvas.drawText(formatDoseWithUnit(row.doseEvent.doseAmount, row.doseUnit, context.resources), colDose, y, rowPaint)
             }
             y += rowHeight
         }

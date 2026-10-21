@@ -37,7 +37,7 @@ class UnansweredDoseReposter(
             val reminderId = event.reminderId ?: continue
             val reminder = reminderDao.getById(reminderId) ?: continue
             if (!reminder.enabled) continue
-            val medicine = medicineDao.getById(event.medicineId) ?: continue
+            val medicine = medicineDao.getById(event.medicineId ?: continue) ?: continue
             runCatching {
                 notificationBuilder.buildAndPost(event, reminder, medicine); posted++
                 DeliveryLedger.recordFirst(context, reminderId, event.id, nowEpochMillis)

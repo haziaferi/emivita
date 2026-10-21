@@ -2,6 +2,8 @@ package com.hazia.emivita.core.data.repository
 
 import com.hazia.emivita.core.data.entity.isRecordOnly
 import com.hazia.emivita.core.data.entity.isAlertSeen
+import com.hazia.emivita.core.data.entity.hasOneSubject
+import com.hazia.emivita.core.data.entity.isOneOff
 import androidx.room.withTransaction
 import com.hazia.emivita.core.data.backup.AutoSyncManager
 import com.hazia.emivita.core.data.dao.DoseEventDao
@@ -49,6 +51,14 @@ class DoseEventRepository(
      *  decides whether to schedule another one. */
     suspend fun incrementRepeatCount(doseEventId: Long) = doseEventDao.incrementRepeatCount(doseEventId)
 
+    /** Every insert passes here (§7 R111): a dose names exactly one subject,
+     *  a medicine or a one-off name with its profile, never both and never
+     *  neither. Room cannot express that rule, so the one writer holds it. */
+    private suspend fun insertChecked(event: DoseEvent): Long {
+        require(event.hasOneSubject) { "A dose needs a medicine or a one-off name with its profile, exactly one: $event" }
+        return doseEventDao.insert(event)
+    }
+
     /** Idempotent -- used by the scheduling engine's materialization pass.
      *  Null return means "already materialized," covering both the ordinary
      *  pre-check above AND a losing race on the unique index: `@Insert(onConflict
@@ -63,7 +73,7 @@ class DoseEventRepository(
     suspend fun materializeIfAbsent(reminderId: Long, medicineId: Long, scheduledEpochMillis: Long, doseAmount: Double): Long? {
         val existing = doseEventDao.findByReminderAndTime(reminderId, scheduledEpochMillis)
         if (existing != null) return null
-        val insertedId = doseEventDao.insert(
+        val insertedId = insertChecked(
             DoseEvent(
                 reminderId = reminderId,
                 medicineId = medicineId,
@@ -102,14 +112,15 @@ class DoseEventRepository(
             // Denormalized medicineId (spec §3) -- works for both scheduled
             // events (kept in sync with reminder.medicineId at materialization
             // time) and PRN events, which have no reminder to derive it from.
-            val sentinels = hypotheticalStockSentinels(event.medicineId, event.doseAmount)
-            if (sentinels != null) {
+            val medicineId = event.medicineId
+            val sentinels = medicineId?.let { hypotheticalStockSentinels(it, event.doseAmount) }
+            if (medicineId != null && sentinels != null) {
                 doseEventDao.updateStockSentinels(doseEventId, sentinels.first, sentinels.second)
                 // Only actually apply the quantity change for TAKEN -- SKIPPED
                 // still records "what it would have been" so a later
                 // switchStatus() (spec §9 #3) has a real value to reapply.
                 if (status == DoseStatus.TAKEN) {
-                    medicineDao.setStock(event.medicineId, sentinels.second)
+                    medicineDao.setStock(medicineId, sentinels.second)
                 }
             }
             event
@@ -139,7 +150,7 @@ class DoseEventRepository(
         // its alarm with nothing about the reminder row itself having
         // changed -- and the projection cache, which is what invalidate()
         // below drives, does not touch AlarmManager. Spec §7 R37.
-        schedulingCoordinator.onMedicineChanged(resolvedEvent.medicineId)
+        resolvedEvent.medicineId?.let { schedulingCoordinator.onMedicineChanged(it) }
 
         // Explicit invalidation channel (spec §9 #4) -- a dose resolution needs
         // the projection cache's stock run-out date recomputed regardless of
@@ -170,7 +181,7 @@ class DoseEventRepository(
         // second switchStatus()/resolve() call that commits in the gap
         // between an outside read and this write would apply a target
         // quantity computed from an already-stale stockBefore/stockAfter pair.
-        var switchedMedicineId = -1L
+        var switchedMedicineId: Long? = null
         val switched = database.withTransaction {
             val event = doseEventDao.getById(doseEventId) ?: error("No DoseEvent with id=$doseEventId")
             switchedMedicineId = event.medicineId
@@ -183,18 +194,19 @@ class DoseEventRepository(
             // doesn't change *when* it was acted on, and re-stamping it would
             // wrongly shift an ON_RESOLVED interval reminder's anchor.
             doseEventDao.updateStatus(doseEventId, newStatus, event.resolvedAtEpochMillis ?: System.currentTimeMillis())
-            if (event.stockBefore != event.stockAfter) {
+            val medicineId = event.medicineId
+            if (medicineId != null && event.stockBefore != event.stockAfter) {
                 if (newStatus == DoseStatus.TAKEN) {
                     // A skipped dose consumed nothing, so taking it consumes from
                     // the stock there is now, and the pair records that (§7 R103):
                     // the pair kept from the skip was floored against the stock of
                     // that moment, and a refill since made it short by the floor.
-                    hypotheticalStockSentinels(event.medicineId, event.doseAmount)?.let { (before, after) ->
+                    hypotheticalStockSentinels(medicineId, event.doseAmount)?.let { (before, after) ->
                         doseEventDao.updateStockSentinels(doseEventId, before, after)
-                        medicineDao.decrementStock(event.medicineId, before - after)
+                        medicineDao.decrementStock(medicineId, before - after)
                     }
                 } else {
-                    medicineDao.incrementStock(event.medicineId, event.stockBefore - event.stockAfter)
+                    medicineDao.incrementStock(medicineId, event.stockBefore - event.stockAfter)
                 }
             }
             true
@@ -206,7 +218,7 @@ class DoseEventRepository(
         // its alarm with nothing about the reminder row itself having
         // changed -- and the projection cache, which is what invalidate()
         // below drives, does not touch AlarmManager. Spec §7 R37.
-        schedulingCoordinator.onMedicineChanged(switchedMedicineId)
+        switchedMedicineId?.let { schedulingCoordinator.onMedicineChanged(it) }
         occurrenceProjectionCache.invalidate()
         autoSyncManager.notifyChanged()
     }
@@ -228,11 +240,12 @@ class DoseEventRepository(
      *  only re-writes its hypothetical pair; a Pending or untracked one
      *  changes the number alone. */
     suspend fun editDoseAmount(doseEventId: Long, newDoseAmount: Double) {
-        var medicineId = -1L
+        var medicineId: Long? = null
         database.withTransaction {
             val event = doseEventDao.getById(doseEventId) ?: error("No DoseEvent with id=$doseEventId")
             medicineId = event.medicineId
             doseEventDao.updateDoseAmount(doseEventId, newDoseAmount)
+            val eventMedicineId = event.medicineId ?: return@withTransaction
             val tracked = event.stockBefore != event.stockAfter || (event.stockBefore >= 0.0 && event.stockAfter >= 0.0)
             if (!tracked || event.stockBefore < 0.0) return@withTransaction
             val oldConsumed = event.stockBefore - event.stockAfter
@@ -241,11 +254,11 @@ class DoseEventRepository(
             doseEventDao.updateStockSentinels(doseEventId, event.stockBefore, newAfter)
             if (event.status == DoseStatus.TAKEN) {
                 val delta = newConsumed - oldConsumed
-                if (delta > 0) medicineDao.decrementStock(event.medicineId, delta)
-                if (delta < 0) medicineDao.incrementStock(event.medicineId, -delta)
+                if (delta > 0) medicineDao.decrementStock(eventMedicineId, delta)
+                if (delta < 0) medicineDao.incrementStock(eventMedicineId, -delta)
             }
         }
-        if (medicineId >= 0) schedulingCoordinator.onMedicineChanged(medicineId)
+        medicineId?.let { schedulingCoordinator.onMedicineChanged(it) }
         occurrenceProjectionCache.invalidate()
         autoSyncManager.notifyChanged()
     }
@@ -263,14 +276,18 @@ class DoseEventRepository(
         val reopened = database.withTransaction {
             val event = doseEventDao.getById(doseEventId) ?: return@withTransaction null
             if (event.status != DoseStatus.TAKEN && event.status != DoseStatus.SKIPPED) return@withTransaction null
-            if (event.status == DoseStatus.TAKEN && event.stockBefore != event.stockAfter) {
-                medicineDao.incrementStock(event.medicineId, event.stockBefore - event.stockAfter)
+            // A one-off dose has no slot to be due at (§7 R111): reopened, it
+            // would read as missed, which it never was.
+            if (event.isOneOff) return@withTransaction null
+            val medicineId = event.medicineId
+            if (medicineId != null && event.status == DoseStatus.TAKEN && event.stockBefore != event.stockAfter) {
+                medicineDao.incrementStock(medicineId, event.stockBefore - event.stockAfter)
             }
             doseEventDao.reopen(doseEventId)
             doseEventDao.getById(doseEventId)
         } ?: return null
         reopened.reminderId?.let { schedulingCoordinator.onReminderChanged(it, System.currentTimeMillis()) }
-        schedulingCoordinator.onMedicineChanged(reopened.medicineId)
+        reopened.medicineId?.let { schedulingCoordinator.onMedicineChanged(it) }
         occurrenceProjectionCache.invalidate()
         autoSyncManager.notifyChanged()
         return reopened
@@ -281,7 +298,7 @@ class DoseEventRepository(
      *  reminder, whose deletion would cascade the record away; no stock effect. */
     suspend fun recordAlertSeen(medicineId: Long, status: DoseStatus, atEpochMillis: Long): Long {
         require(status.isAlertSeen) { "recordAlertSeen is for the seen-alert statuses, was $status" }
-        val id = doseEventDao.insert(
+        val id = insertChecked(
             DoseEvent(
                 reminderId = null,
                 medicineId = medicineId,
@@ -301,19 +318,20 @@ class DoseEventRepository(
      *  stock back. Not for refills -- a refill's stock is undone by its own
      *  removal path when one exists; until then it is not deletable. */
     suspend fun softDelete(doseEventId: Long) {
-        var medicineId = -1L
+        var medicineId: Long? = null
         val done = database.withTransaction {
             val event = doseEventDao.getById(doseEventId) ?: return@withTransaction false
             if (event.status.isRecordOnly || event.status == DoseStatus.DELETED) return@withTransaction false
             medicineId = event.medicineId
-            if (event.status == DoseStatus.TAKEN && event.stockBefore != event.stockAfter) {
-                medicineDao.incrementStock(event.medicineId, event.stockBefore - event.stockAfter)
+            val eventMedicineId = event.medicineId
+            if (eventMedicineId != null && event.status == DoseStatus.TAKEN && event.stockBefore != event.stockAfter) {
+                medicineDao.incrementStock(eventMedicineId, event.stockBefore - event.stockAfter)
             }
             doseEventDao.updateStatus(doseEventId, DoseStatus.DELETED, event.resolvedAtEpochMillis ?: System.currentTimeMillis())
             true
         }
         if (!done) return
-        schedulingCoordinator.onMedicineChanged(medicineId)
+        medicineId?.let { schedulingCoordinator.onMedicineChanged(it) }
         occurrenceProjectionCache.invalidate()
         autoSyncManager.notifyChanged()
     }
@@ -384,7 +402,7 @@ class DoseEventRepository(
      *  so it goes straight to TAKEN rather than through PENDING. */
     suspend fun logAdhocDose(medicineId: Long, doseAmount: Double, atEpochMillis: Long): Long {
         val id = database.withTransaction {
-            doseEventDao.insert(
+            insertChecked(
                 DoseEvent(
                     reminderId = null,
                     medicineId = medicineId,
@@ -407,6 +425,30 @@ class DoseEventRepository(
         return id
     }
 
+    /** A dose of a medicine that is not on the list, kept as a one-off (§7 R111,
+     *  Appendix E C-15 V1, the owner's pick): Taken under [name], with no
+     *  medicine created, so nothing is scheduled, counted against stock or added
+     *  to Medicines. History, the exports and Today show it by its name. */
+    suspend fun logOneOffDose(profileId: Long, name: String, doseAmount: Double, atEpochMillis: Long): Long {
+        val trimmed = name.trim()
+        require(trimmed.isNotEmpty()) { "A one-off dose needs a name" }
+        val id = insertChecked(
+            DoseEvent(
+                reminderId = null,
+                medicineId = null,
+                customName = trimmed,
+                customProfileId = profileId,
+                scheduledEpochMillis = atEpochMillis,
+                doseAmount = doseAmount,
+                status = DoseStatus.TAKEN,
+                resolvedAtEpochMillis = atEpochMillis,
+                createdAtEpochMillis = System.currentTimeMillis(),
+            ),
+        )
+        autoSyncManager.notifyChanged()
+        return id
+    }
+
     /** One-tap restock (spec §3, §9 #2 -- medTimer's RefillProcessor, ported).
      *  Same stockBefore/stockAfter sentinel mechanism as [logAdhocDose], just
      *  the other direction (After > Before instead of <) -- one mechanism for
@@ -423,7 +465,7 @@ class DoseEventRepository(
         val medicine = medicineDao.getById(medicineId) ?: return null
         if (medicine.stockInfo.unit == null) return null
         val id = database.withTransaction {
-            doseEventDao.insert(
+            insertChecked(
                 DoseEvent(
                     reminderId = null,
                     medicineId = medicineId,

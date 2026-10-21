@@ -103,7 +103,7 @@ class ReminderActionReceiver : BroadcastReceiver() {
                 // already omits this button when locked, but a notification
                 // posted before a setting change can still have a stale one.
                 val doseEvent = container.doseEventRepository.getById(doseEventId)
-                val medicine = doseEvent?.let { container.medicineRepository.getById(it.medicineId) }
+                val medicine = doseEvent?.medicineId?.let { container.medicineRepository.getById(it) }
                 if (medicine != null && container.settingsRepository.isLockedUntilTaken(medicine)) {
                     Log.w(TAG, "Skip rejected for dose event $doseEventId -- reminders are locked until taken for ${medicine.name}.")
                     return
@@ -122,7 +122,7 @@ class ReminderActionReceiver : BroadcastReceiver() {
                     SwipeAction.SNOOZE -> handleAction(context, ACTION_SNOOZE, doseEventId, container)
                     SwipeAction.SKIP -> {
                         val doseEvent = container.doseEventRepository.getById(doseEventId)
-                        val medicine = doseEvent?.let { container.medicineRepository.getById(it.medicineId) }
+                        val medicine = doseEvent?.medicineId?.let { container.medicineRepository.getById(it) }
                         if (medicine != null && container.settingsRepository.isLockedUntilTaken(medicine)) {
                             Log.i(TAG, "Swipe-to-skip ignored for dose event $doseEventId -- ${medicine.name} is locked until taken.")
                         } else if (doseEvent?.status == DoseStatus.PENDING) {

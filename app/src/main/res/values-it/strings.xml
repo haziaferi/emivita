@@ -174,8 +174,9 @@
     <string name="stock_expiration_unit_e_g_tablet_ml">Unità (es. compressa, ml)</string>
     <string name="today_log">Registra</string>
     <string name="today_log_dose">Registra dose</string>
+    <string name="today_log_medicine_or_name">Farmaco o nome</string>
+    <string name="today_log_one_off_hint">«%1$s» non è nell’elenco: si registra solo questa dose.</string>
     <string name="today_logged_as_taken_just_now">Registrata come presa adesso.</string>
-    <string name="today_medicine">Farmaco</string>
     <string name="today_no_medicines_yet_add_one_first">Ancora nessun farmaco: aggiungine uno prima.</string>
     <string name="today_nothing_scheduled_yet_add_a_medicine_and_a">Niente in programma. Aggiungi un farmaco e un promemoria per vederli qui.</string>
     <string name="today_today">Oggi</string>

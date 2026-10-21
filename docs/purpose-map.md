@@ -27,7 +27,7 @@ _see what is due, be told when, and answer it: taken, skipped, snoozed, or an ex
 | Snooze for… (from a notification) | `activity:SnoozePickerActivity` | §9 #25, R64 | shipped | Alarms & Snooze (sheet) |
 | Amount taken (from a notification) | `activity:TakeAmountActivity`, `dialog:TakeAmountDialog` | R109 | shipped | Reminder notifications and their actions, Edit a dose (status, time, note) |
 | Reminder notifications and their actions | `channel:reminders_alarm_v2`, `channel:reminders_high`, `channel:reminders_standard` | §9 #25, R64 | shipped | The alarm ringing (full screen), Notifications & alerts |
-| Log a dose (as needed, or an extra one) | `dialog:LogDoseDialog` | §9 #2 | shipped | Edit a dose (status, time, note) |
+| Log a dose (as needed, an extra one, or a one-off of a medicine not on the list) | `dialog:LogDoseDialog` | §9 #2, R111 | shipped | Edit a dose (status, time, note) |
 | Next reminders widget | `widget:NextRemindersWidgetReceiver` | §9 #7, R108 | shipped | Today |
 | Weekend mode (sheet) | `setting:WeekendMode` | §9 #12, §9 #14, R88 | shipped | Add or edit a reminder (fixed times, interval, window, cycle, follow-up, taper) |
 
@@ -51,7 +51,7 @@ _the record of what was taken and missed, corrected when it is wrong, and handed
 
 | Screen | In the code | SPEC | Status | Overlaps |
 |---|---|---|---|---|
-| Edit a dose (status, time, note) | `dialog:DoseEditDialog` | §9 #3, §9 #26 | shipped | Log a dose (as needed, or an extra one), History (calendar and list) |
+| Edit a dose (status, time, note) | `dialog:DoseEditDialog` | §9 #3, §9 #26 | shipped | Log a dose (as needed, an extra one, or a one-off of a medicine not on the list), History (calendar and list) |
 | History (calendar and list) | `route:History` | §9 #6, §9 #26 | shipped | A medicine's page (reminders, stock, chart), Edit a dose (status, time, note) |
 | Export history (CSV, PDF): range and medicines | `dialog:ExportScopeDialog` | §9 #10, §9 #26 | shipped | Data & Backup (backup, restore, auto-sync, purge) |
 
@@ -101,7 +101,7 @@ Parts of a screen, not screens: `HeroCard`, `OptionCard`, `LayoutCard`, `Palette
 | | Strength | Screens | Why |
 |---|---|---|---|
 | O1 | strong | Notifications & alerts, Permission setup (first launch) and the missing-permissions card, 'A reminder did not fire' card | three ways to the same grants: the Settings screen, the first-launch sheet with its Today card, and the card after a reminder was held back; the owner (2026-10-20): Notifications & alerts is the one place that grants, and the first-launch sheet and both cards say what is missing and open it |
-| O2 | medium | Log a dose (as needed, or an extra one), Edit a dose (status, time, note) | both write a dose event; one creates it, the other corrects it |
+| O2 | medium | Log a dose (as needed, an extra one, or a one-off of a medicine not on the list), Edit a dose (status, time, note) | both write a dose event; one creates it, the other corrects it |
 | O3 | medium | Data & Backup (backup, restore, auto-sync, purge), Export history (CSV, PDF): range and medicines | both take data off the phone: the backup to restore it, the export to read it |
 
 ## The owner's answers

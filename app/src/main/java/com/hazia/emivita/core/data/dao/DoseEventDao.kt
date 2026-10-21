@@ -17,8 +17,18 @@ import kotlinx.coroutines.flow.Flow
  *  prefix, hence the AS aliases in the query rather than `medicines.*`. */
 data class DoseEventWithMedicine(
     @Embedded val doseEvent: DoseEvent,
-    @Embedded(prefix = "medicine_") val medicine: Medicine,
+    /** Null for a one-off dose (§7 R111, C-15): the LEFT JOIN finds no medicine. */
+    @Embedded(prefix = "medicine_") val medicine: Medicine?,
 )
+
+/** The name a row shows, in History, the exports and Today: its medicine's,
+ *  or a one-off dose's own (§7 R111). */
+val DoseEventWithMedicine.displayName: String
+    get() = medicine?.name ?: doseEvent.customName.orEmpty()
+
+/** The unit its amount is shown in; a one-off dose has none. */
+val DoseEventWithMedicine.doseUnit: String?
+    get() = medicine?.doseUnit
 
 private const val JOINED_SELECT = """
     SELECT
@@ -50,8 +60,13 @@ private const val JOINED_SELECT = """
       medicines.rxNumber AS medicine_rxNumber,
       medicines.createdAtEpochMillis AS medicine_createdAtEpochMillis
     FROM dose_events
-    INNER JOIN medicines ON dose_events.medicineId = medicines.id
+    LEFT JOIN medicines ON dose_events.medicineId = medicines.id
 """
+
+/** A row of the profile: through its medicine, or a one-off dose's own profile
+ *  (§7 R111). A row whose medicine is gone matches neither, as under the old
+ *  INNER JOIN. */
+private const val OF_PROFILE = "(medicines.profileId = :profileId OR dose_events.customProfileId = :profileId)"
 
 data class AnsweredSlot(val reminderId: Long, val scheduledEpochMillis: Long)
 
@@ -59,7 +74,7 @@ data class AnsweredSlot(val reminderId: Long, val scheduledEpochMillis: Long)
 interface DoseEventDao {
 
     @Query(
-        "$JOINED_SELECT WHERE medicines.profileId = :profileId AND dose_events.status != 'DELETED' " +
+        "$JOINED_SELECT WHERE $OF_PROFILE AND dose_events.status != 'DELETED' " +
             "AND dose_events.scheduledEpochMillis BETWEEN :startEpochMillis AND :endEpochMillis " +
             "ORDER BY dose_events.scheduledEpochMillis ASC"
     )
@@ -159,7 +174,7 @@ interface DoseEventDao {
     /** A ranged read for the export (§9 #26; Appendix F MK-03), independent
      *  of History's display window; DELETED excluded like every read. */
     @Query(
-        "$JOINED_SELECT WHERE medicines.profileId = :profileId AND dose_events.status != 'DELETED' " +
+        "$JOINED_SELECT WHERE $OF_PROFILE AND dose_events.status != 'DELETED' " +
             "AND dose_events.scheduledEpochMillis BETWEEN :startEpochMillis AND :endEpochMillis " +
             "AND (:medicineId IS NULL OR dose_events.medicineId = :medicineId) " +
             "ORDER BY dose_events.scheduledEpochMillis DESC"

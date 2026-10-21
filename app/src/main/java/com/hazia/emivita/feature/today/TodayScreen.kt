@@ -54,6 +54,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.hazia.emivita.core.data.dao.DoseEventWithMedicine
+import com.hazia.emivita.core.data.dao.displayName
 import com.hazia.emivita.core.data.dao.MedicineWithTags
 import com.hazia.emivita.core.data.entity.DoseStatus
 import com.hazia.emivita.core.data.entity.Medicine
@@ -107,7 +108,8 @@ import com.hazia.emivita.core.data.settings.TodayLayout
 internal enum class TimelineStatus { PENDING, TAKEN, SKIPPED, UPCOMING }
 
 internal data class TimelineEntry(
-    val medicine: Medicine,
+    /** Null for a one-off dose (§7 R111, C-15), which is only ever a past row. */
+    val medicine: Medicine?,
     val doseAmount: Double,
     val status: TimelineStatus,
     // Non-null only for an already-materialized event -- the only ones
@@ -131,6 +133,8 @@ internal data class TimelineEntry(
     /** The reminder asks the amount when taken (§7 R109, B-45): "Take all"
      *  leaves it out (§7 R110), since the amount is the person's to type. */
     val asksAmount: Boolean = false,
+    /** The medicine's name, or a one-off dose's own (§7 R111). */
+    val name: String = medicine?.name.orEmpty(),
 )
 
 internal data class TimelineNode(
@@ -388,6 +392,7 @@ internal fun buildTimeline(
         }
         entries += row.doseEvent.scheduledEpochMillis to TimelineEntry(
             medicine = row.medicine,
+            name = row.displayName,
             doseAmount = row.doseEvent.doseAmount,
             status = status,
             doseEventId = row.doseEvent.id,
@@ -421,7 +426,7 @@ internal fun buildTimeline(
 
     return entries
         .groupBy({ it.first }, { it.second })
-        .map { (epochMillis, nodeEntries) -> TimelineNode(epochMillis, nodeEntries.sortedBy { it.medicine.name }) }
+        .map { (epochMillis, nodeEntries) -> TimelineNode(epochMillis, nodeEntries.sortedBy { it.name }) }
         .sortedBy { it.epochMillis }
 }
 
@@ -513,18 +518,19 @@ internal fun EntryHost(
     var detail by rememberSaveable { mutableStateOf(false) }
     // Same resolution SettingsRepository.isLockedUntilTaken performs: the
     // per-medicine override wins, the global default fills in when it is null.
-    val canSkip = !(entry.medicine.remindersLockedUntilTaken ?: deps.lockedByDefault)
+    val canSkip = !(entry.medicine?.remindersLockedUntilTaken ?: deps.lockedByDefault)
     val onResolve: (DoseStatus) -> Unit = { status ->
         val id = entry.doseEventId
+        val medicineId = entry.medicine?.id
         scope.launch {
             if (id != null) {
                 deps.doseEventRepository.resolve(id, status)
-            } else if (entry.reminderId != null && status == DoseStatus.TAKEN) {
+            } else if (entry.reminderId != null && medicineId != null && status == DoseStatus.TAKEN) {
                 // "Take now" on a projected slot (§9 #26).
-                deps.doseEventRepository.takeProjectedNow(entry.reminderId, entry.medicine.id, node.epochMillis, entry.doseAmount)
-            } else if (entry.reminderId != null) {
+                deps.doseEventRepository.takeProjectedNow(entry.reminderId, medicineId, node.epochMillis, entry.doseAmount)
+            } else if (entry.reminderId != null && medicineId != null) {
                 // Skip ahead, from the upcoming dose's sheet only (§7 R107).
-                deps.doseEventRepository.answerProjected(entry.reminderId, entry.medicine.id, node.epochMillis, entry.doseAmount, status)
+                deps.doseEventRepository.answerProjected(entry.reminderId, medicineId, node.epochMillis, entry.doseAmount, status)
             }
         }
     }
@@ -555,7 +561,7 @@ internal fun EntryHost(
     val id = entry.doseEventId
     if (editing && id != null) {
         DoseEditDialog(
-            medicineName = entry.medicine.name,
+            medicineName = entry.name,
             doseEventId = id,
             originalStatus = if (entry.status == TimelineStatus.TAKEN) DoseStatus.TAKEN else DoseStatus.SKIPPED,
             originalDoseAmount = entry.doseAmount,
@@ -566,14 +572,18 @@ internal fun EntryHost(
             scheduledEpochMillis = node.epochMillis,
             doseEventRepository = deps.doseEventRepository,
             onDismiss = { editing = false },
-            doseUnit = entry.medicine.doseUnit,
+            doseUnit = entry.medicine?.doseUnit,
             originalNotes = entry.notes,
-            onReopened = { reopened ->
-                val reminder = reopened.reminderId?.let { deps.reminderRepository.getById(it) }
-                if (reminder != null) deps.notificationBuilder.buildAndPost(reopened, reminder, entry.medicine)
-            },
+            // A one-off dose has nothing to be due again at (§7 R111).
+            onReopened = entry.medicine?.let { medicine -> repostReopened(medicine, deps) },
         )
     }
+}
+
+/** "Return to due" re-posts the reopened dose's reminder (§9 #26). */
+private fun repostReopened(medicine: Medicine, deps: TodayDeps): suspend (com.hazia.emivita.core.data.entity.DoseEvent) -> Unit = { reopened ->
+    val reminder = reopened.reminderId?.let { deps.reminderRepository.getById(it) }
+    if (reminder != null) deps.notificationBuilder.buildAndPost(reopened, reminder, medicine)
 }
 
 @Composable
@@ -633,7 +643,7 @@ internal fun TimelineEntryRow(
                     Text(timeLabel, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
                 Text(
-                    entry.medicine.name,
+                    entry.name,
                     style = MaterialTheme.typography.titleMedium,
                     color = if (muted) MaterialTheme.colorScheme.onSurfaceVariant else MaterialTheme.colorScheme.onSurface,
                 )
@@ -641,7 +651,7 @@ internal fun TimelineEntryRow(
                     stringResource(
                         R.string.today_entry_summary,
                         stringResource(statusLabelRes(entry)),
-                        formatDoseWithUnit(entry.doseAmount, entry.medicine.doseUnit, LocalResources.current),
+                        formatDoseWithUnit(entry.doseAmount, entry.medicine?.doseUnit, LocalResources.current),
                     ),
                     // Typography.doseCritical, not labelMedium written out: this
                     // is a dose amount, the text the floor exists for (§7 R47).
@@ -767,22 +777,30 @@ private fun LogDoseDialog(
         }
     }
     var confirmOverCeiling by remember { mutableStateOf(false) }
+    // C-15 V1 (§7 R111): the medicine field takes a typed name too. A name on
+    // the list selects that medicine; any other is logged once under itself.
+    var typed by remember { mutableStateOf<String?>(null) }
+    val oneOffName = typed?.trim()?.takeIf { it.isNotEmpty() && selected == null }
 
     LaunchedEffect(profileId) {
         medicineRepository.observeForProfile(profileId).collect { list ->
             medicines = list
-            if (selected == null) selected = list.firstOrNull()?.medicine
+            if (selected == null && typed == null) selected = list.firstOrNull()?.medicine
         }
     }
 
     fun log() {
-        val medicine = selected ?: return
+        val medicine = selected
+        val name = oneOffName
+        if (medicine == null && name == null) return
         val amount = parseDecimal(doseAmount) ?: return
         saving = true
         saveError = null
         scope.launch {
             try {
-                doseEventRepository.logAdhocDose(medicine.id, amount, atEpochMillis ?: System.currentTimeMillis())
+                val at = atEpochMillis ?: System.currentTimeMillis()
+                if (medicine != null) doseEventRepository.logAdhocDose(medicine.id, amount, at)
+                else doseEventRepository.logOneOffDose(profileId, checkNotNull(name), amount, at)
                 onLogged()
             } catch (e: Exception) {
                 saving = false
@@ -831,27 +849,42 @@ private fun LogDoseDialog(
                             expanded = menuExpanded,
                             onExpandedChange = { menuExpanded = it },
                         ) {
+                            val query = typed?.trim().orEmpty()
+                            val shown = medicines!!.filter { query.isEmpty() || it.medicine.name.contains(query, ignoreCase = true) }
                             OutlinedTextField(
-                                value = selected?.name ?: "",
-                                onValueChange = {},
-                                readOnly = true,
-                                label = { Text(stringResource(R.string.today_medicine)) },
+                                value = typed ?: selected?.name ?: "",
+                                onValueChange = { text ->
+                                    typed = text
+                                    selected = medicines!!.firstOrNull { it.medicine.name.equals(text.trim(), ignoreCase = true) }?.medicine
+                                    menuExpanded = true
+                                },
+                                singleLine = true,
+                                label = { Text(stringResource(R.string.today_log_medicine_or_name)) },
                                 trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = menuExpanded) },
                                 modifier = Modifier
                                     .fillMaxWidth()
-                                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true),
+                                    .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryEditable, enabled = true),
                             )
-                            ExposedDropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
-                                medicines!!.forEach { entry ->
+                            ExposedDropdownMenu(expanded = menuExpanded && shown.isNotEmpty(), onDismissRequest = { menuExpanded = false }) {
+                                shown.forEach { entry ->
                                     DropdownMenuItem(
                                         text = { Text(entry.medicine.name) },
                                         onClick = {
                                             selected = entry.medicine
+                                            typed = null
                                             menuExpanded = false
                                         },
                                     )
                                 }
                             }
+                        }
+                        oneOffName?.let { name ->
+                            Spacer(Modifier.height(4.dp))
+                            Text(
+                                stringResource(R.string.today_log_one_off_hint, name),
+                                style = MaterialTheme.typography.labelMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            )
                         }
                         Spacer(Modifier.height(8.dp))
                         OutlinedTextField(
@@ -900,7 +933,7 @@ private fun LogDoseDialog(
         },
         confirmButton = {
             TextButton(
-                enabled = selected != null && parseDecimal(doseAmount) != null && !saving && (!backdate || atDay != null),
+                enabled = (selected != null || oneOffName != null) && parseDecimal(doseAmount) != null && !saving && (!backdate || atDay != null),
                 onClick = { if (headroom?.atCeiling == true) confirmOverCeiling = true else log() },
             ) { Text(stringResource(R.string.today_log)) }
         },

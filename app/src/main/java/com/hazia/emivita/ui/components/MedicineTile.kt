@@ -31,11 +31,12 @@ import com.hazia.emivita.ui.theme.onAccent
  * Today, Medicines, the detail header and History, so it is learnt once.
  */
 @Composable
-fun MedicineTile(medicine: Medicine, modifier: Modifier = Modifier, size: Dp = 40.dp) {
-    val accent = medicineAccent(medicine)
+fun MedicineTile(medicine: Medicine?, modifier: Modifier = Modifier, size: Dp = 40.dp) {
+    // A one-off dose (§7 R111) has no medicine: the neutral accent and the default icon.
+    val accent = medicineAccent(medicine?.color)
     Surface(shape = RoundedCornerShape(size / 4), color = accent, modifier = modifier.size(size)) {
         Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-            Icon(MedicineIcons.iconFor(medicine.iconKey), contentDescription = null, tint = onAccent(accent), modifier = Modifier.size(size * 0.55f))
+            Icon(MedicineIcons.iconFor(medicine?.iconKey.orEmpty()), contentDescription = null, tint = onAccent(accent), modifier = Modifier.size(size * 0.55f))
         }
     }
 }

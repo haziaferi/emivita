@@ -146,7 +146,7 @@ internal fun groupByBand(nodes: List<TimelineNode>, zone: ZoneId): Map<DayBand, 
 internal fun nextDose(pairs: List<Pair<TimelineNode, TimelineEntry>>): Pair<TimelineNode, TimelineEntry>? =
     pairs.firstOrNull { it.second.status == TimelineStatus.PENDING } ?: pairs.firstOrNull { it.second.status == TimelineStatus.UPCOMING }
 
-private fun entryKey(node: TimelineNode, entry: TimelineEntry) = "${node.epochMillis}-${entry.medicine.id}-${entry.reminderId}-${entry.doseEventId}"
+private fun entryKey(node: TimelineNode, entry: TimelineEntry) = "${node.epochMillis}-${entry.medicine?.id}-${entry.reminderId}-${entry.doseEventId}"
 
 @Composable
 private fun BandHeader(band: DayBand) {
@@ -160,7 +160,7 @@ private fun BandHeader(band: DayBand) {
 @Composable
 private fun EntrySummary(entry: TimelineEntry) {
     Text(
-        stringResource(R.string.today_entry_summary, stringResource(statusLabelRes(entry)), formatDoseWithUnit(entry.doseAmount, entry.medicine.doseUnit, LocalResources.current)),
+        stringResource(R.string.today_entry_summary, stringResource(statusLabelRes(entry)), formatDoseWithUnit(entry.doseAmount, entry.medicine?.doseUnit, LocalResources.current)),
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
         maxLines = 1, overflow = TextOverflow.Ellipsis,
@@ -207,7 +207,7 @@ internal fun CompactRow(node: TimelineNode, entry: TimelineEntry, canSkip: Boole
             Spacer(Modifier.width(10.dp))
             Text(nodeTimeLabel(node), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(48.dp))
             Column(Modifier.weight(1f)) {
-                Text(entry.medicine.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(entry.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 EntrySummary(entry)
             }
             Spacer(Modifier.width(10.dp))
@@ -233,9 +233,9 @@ internal fun HeroCard(node: TimelineNode?, entry: TimelineEntry?, canSkip: Boole
             Spacer(Modifier.height(4.dp))
             Row(verticalAlignment = Alignment.CenterVertically) {
                 Column(Modifier.weight(1f)) {
-                    Text(entry.medicine.name, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimaryContainer, maxLines = 2, overflow = TextOverflow.Ellipsis)
+                    Text(entry.name, style = MaterialTheme.typography.titleLarge, color = MaterialTheme.colorScheme.onPrimaryContainer, maxLines = 2, overflow = TextOverflow.Ellipsis)
                     Text(
-                        nodeTimeLabel(node) + " · " + formatDoseWithUnit(entry.doseAmount, entry.medicine.doseUnit, LocalResources.current),
+                        nodeTimeLabel(node) + " · " + formatDoseWithUnit(entry.doseAmount, entry.medicine?.doseUnit, LocalResources.current),
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onPrimaryContainer,
                     )
                     entry.instructions?.takeIf { it.isNotBlank() }?.let {

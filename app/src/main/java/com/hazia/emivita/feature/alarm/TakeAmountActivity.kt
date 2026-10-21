@@ -49,7 +49,7 @@ class TakeAmountActivity : ComponentActivity() {
         val container = (application as EmivitaApplication).container
         lifecycleScope.launch {
             val event = container.doseEventRepository.getById(doseEventId)
-            val medicine = event?.let { container.medicineRepository.getById(it.medicineId) }
+            val medicine = event?.medicineId?.let { container.medicineRepository.getById(it) }
             if (event == null || medicine == null || event.status != DoseStatus.PENDING) {
                 // Answered elsewhere meanwhile: nothing to ask, and nothing left to show.
                 if (event != null) ReminderNotifications.dismiss(this@TakeAmountActivity, doseEventId)

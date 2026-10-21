@@ -42,9 +42,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.hazia.emivita.core.data.dao.DoseEventWithMedicine
+import com.hazia.emivita.core.data.dao.displayName
+import com.hazia.emivita.core.data.dao.doseUnit
 import com.hazia.emivita.core.data.entity.DoseStatus
 import com.hazia.emivita.core.data.entity.isAlertSeen
 import com.hazia.emivita.core.data.entity.isRecordOnly
+import com.hazia.emivita.core.data.entity.isOneOff
 import com.hazia.emivita.core.data.export.HistoryExporter
 import com.hazia.emivita.core.data.repository.DoseEventRepository
 import com.hazia.emivita.ui.components.DoseEditDialog
@@ -158,7 +161,7 @@ fun HistoryScreen(
     var exportRange by remember { mutableStateOf(ExportRange.LAST_30_DAYS) }
     var exportMedicineId by remember { mutableStateOf<Long?>(null) }
     val exportRows = events ?: emptyList()
-    val medicinesForFilter = remember(events) { events.orEmpty().map { it.medicine }.distinctBy { it.id }.sortedBy { it.name } }
+    val medicinesForFilter = remember(events) { events.orEmpty().mapNotNull { it.medicine }.distinctBy { it.id }.sortedBy { it.name } }
     suspend fun rowsForExport(): List<DoseEventWithMedicine> {
         val start = when (exportRange) {
             ExportRange.LAST_30_DAYS -> today.minusDays(30).atStartOfDay(zone).toInstant().toEpochMilli()
@@ -344,7 +347,7 @@ fun HistoryScreen(
 
     editing?.let { row ->
         DoseEditDialog(
-            medicineName = row.medicine.name,
+            medicineName = row.displayName,
             doseEventId = row.doseEvent.id,
             originalStatus = row.doseEvent.status,
             originalDoseAmount = row.doseEvent.doseAmount,
@@ -352,14 +355,23 @@ fun HistoryScreen(
             scheduledEpochMillis = row.doseEvent.scheduledEpochMillis,
             doseEventRepository = doseEventRepository,
             onDismiss = { editingId = null },
-            doseUnit = row.medicine.doseUnit,
+            doseUnit = row.doseUnit,
             originalNotes = row.doseEvent.notes,
-            onReopened = { reopened ->
-                val reminder = reopened.reminderId?.let { reminderRepository.getById(it) }
-                if (reminder != null) notificationBuilder.buildAndPost(reopened, reminder, row.medicine)
-            },
+            // A one-off dose has nothing to be due again at (§7 R111).
+            onReopened = row.medicine?.let { medicine -> repostReopened(medicine, reminderRepository, notificationBuilder) },
         )
     }
+}
+
+/** "Return to due" re-posts the reopened dose's reminder; a one-off dose (§7 R111)
+ *  has no medicine and nothing to be due at, so its dialog gets no handler. */
+private fun repostReopened(
+    medicine: Medicine,
+    reminderRepository: ReminderRepository,
+    notificationBuilder: ReminderNotificationBuilder,
+): suspend (com.hazia.emivita.core.data.entity.DoseEvent) -> Unit = { reopened ->
+    val reminder = reopened.reminderId?.let { reminderRepository.getById(it) }
+    if (reminder != null) notificationBuilder.buildAndPost(reopened, reminder, medicine)
 }
 
 private fun defaultExportFileName(extension: String): String {
@@ -401,13 +413,21 @@ private data class AdherenceCounts(val taken: Int, val skipped: Int, val missed:
 
 /** PENDING means "fired, never resolved" -- the same reading
  *  [historyStatusLabel] gives it as "Missed" and [dailyAdherenceCounts] uses
- *  for the chart's third series. REFILLED is a restock, not a dose, and is
- *  excluded from all three counts. */
-private fun adherenceCounts(events: List<DoseEventWithMedicine>) = AdherenceCounts(
-    taken = events.count { it.doseEvent.status == DoseStatus.TAKEN },
-    skipped = events.count { it.doseEvent.status == DoseStatus.SKIPPED },
-    missed = events.count { it.doseEvent.status == DoseStatus.PENDING },
-)
+ *  for the chart's third series. A refill is not a dose and a one-off dose is
+ *  not on the list (§7 R111), so neither is in any of the three counts. */
+private fun adherenceCounts(events: List<DoseEventWithMedicine>): AdherenceCounts {
+    val counted = events.filter { it.countsTowardAdherence }
+    return AdherenceCounts(
+        taken = counted.count { it.doseEvent.status == DoseStatus.TAKEN },
+        skipped = counted.count { it.doseEvent.status == DoseStatus.SKIPPED },
+        missed = counted.count { it.doseEvent.status == DoseStatus.PENDING },
+    )
+}
+
+/** Adherence measures the list's medicines (§7 R111): a one-off dose of a
+ *  medicine not on it shows in History and the exports but is not counted. */
+private val DoseEventWithMedicine.countsTowardAdherence: Boolean
+    get() = !doseEvent.isOneOff && !doseEvent.status.isRecordOnly
 
 /** [DayAdherenceCounts] for every day in the visible [HISTORY_LOOKBACK_DAYS]
  *  window, oldest first -- including days with zero entries, so the chart's
@@ -418,7 +438,7 @@ private fun adherenceCounts(events: List<DoseEventWithMedicine>) = AdherenceCoun
 private fun dailyAdherenceCounts(events: List<DoseEventWithMedicine>, zone: ZoneId, today: LocalDate): List<DayAdherenceCounts> {
     val windowStart = today.minusDays(HISTORY_LOOKBACK_DAYS - 1)
     val byDay = events
-        .filter { !it.doseEvent.status.isRecordOnly }
+        .filter { it.countsTowardAdherence }
         .groupBy { Instant.ofEpochMilli(it.doseEvent.scheduledEpochMillis).atZone(zone).toLocalDate() }
     return (0 until HISTORY_LOOKBACK_DAYS).map { offset ->
         val date = windowStart.plusDays(offset)
@@ -532,7 +552,7 @@ internal fun HistoryEntryRow(row: DoseEventWithMedicine, onClick: () -> Unit) {
             MedicineTile(medicine)
             Spacer(Modifier.width(12.dp))
             Column(Modifier.weight(1f)) {
-                Text(medicine.name, style = MaterialTheme.typography.titleMedium)
+                Text(row.displayName, style = MaterialTheme.typography.titleMedium)
                 Text(
                     // A seen alert (§7 R105) has no amount to show.
                     if (status.isAlertSeen) {
@@ -542,7 +562,7 @@ internal fun HistoryEntryRow(row: DoseEventWithMedicine, onClick: () -> Unit) {
                             R.string.history_entry_summary,
                             statusLabel,
                             time,
-                            formatDoseWithUnit(row.doseEvent.doseAmount, medicine.doseUnit, LocalResources.current),
+                            formatDoseWithUnit(row.doseEvent.doseAmount, row.doseUnit, LocalResources.current),
                         )
                     },
                     // A time and a dose amount together -- squarely what

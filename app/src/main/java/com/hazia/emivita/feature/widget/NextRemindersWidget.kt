@@ -33,6 +33,7 @@ import androidx.glance.text.TextStyle
 import com.hazia.emivita.EmivitaApplication
 import com.hazia.emivita.MainActivity
 import com.hazia.emivita.core.data.entity.DoseStatus
+import com.hazia.emivita.core.data.dao.displayName
 import androidx.glance.LocalContext
 import com.hazia.emivita.R
 import com.hazia.emivita.core.di.AppContainer
@@ -124,10 +125,10 @@ internal suspend fun loadNextDoses(container: AppContainer, now: Long): NextDose
 private suspend fun lastAnsweredDose(container: AppContainer, now: Long, hide: Boolean): AnsweredDose? =
     container.profileRepository.observeAll().first()
         .flatMap { container.doseEventRepository.getInRangeOnce(it.id, now - LAST_DOSE_WINDOW_MILLIS, now + LAST_DOSE_WINDOW_MILLIS, null) }
-        .map { it.doseEvent to it.medicine }
+        .map { it.doseEvent to it.displayName }
         .filter { (e, _) -> (e.status == DoseStatus.TAKEN || e.status == DoseStatus.SKIPPED) && (e.resolvedAtEpochMillis ?: Long.MAX_VALUE) <= now }
         .maxByOrNull { (e, _) -> e.resolvedAtEpochMillis!! }
-        ?.let { (e, m) -> AnsweredDose(maskedMedicineName(m.name, hide), e.status, e.resolvedAtEpochMillis!!) }
+        ?.let { (e, m) -> AnsweredDose(maskedMedicineName(m, hide), e.status, e.resolvedAtEpochMillis!!) }
 
 @Composable
 internal fun NextRemindersContent(data: NextDosesData) {

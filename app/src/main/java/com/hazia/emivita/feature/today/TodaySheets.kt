@@ -52,8 +52,8 @@ internal fun TakeGroupSheet(time: String, entries: List<TimelineEntry>, onConfir
                     MedicineTile(e.medicine, size = 28.dp)
                     Spacer(Modifier.width(10.dp))
                     Column(Modifier.weight(1f)) {
-                        Text(e.medicine.name, style = MaterialTheme.typography.titleSmall)
-                        Text(formatDoseWithUnit(e.doseAmount, e.medicine.doseUnit, LocalResources.current), style = MaterialTheme.typography.doseCritical, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(e.name, style = MaterialTheme.typography.titleSmall)
+                        Text(formatDoseWithUnit(e.doseAmount, e.medicine?.doseUnit, LocalResources.current), style = MaterialTheme.typography.doseCritical, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
             }
@@ -61,7 +61,7 @@ internal fun TakeGroupSheet(time: String, entries: List<TimelineEntry>, onConfir
                 // Which doses stay due and why, in one line (§7 R110).
                 Spacer(Modifier.height(8.dp))
                 Text(
-                    pluralStringResource(R.plurals.today_take_all_left_out, leftOut.size, leftOut.joinToString(", ") { it.medicine.name }),
+                    pluralStringResource(R.plurals.today_take_all_left_out, leftOut.size, leftOut.joinToString(", ") { it.name }),
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
@@ -91,9 +91,9 @@ internal fun DoseDetailSheet(entry: TimelineEntry, time: String, canSkip: Boolea
                 MedicineTile(entry.medicine, size = 44.dp)
                 Spacer(Modifier.width(12.dp))
                 Column(Modifier.weight(1f)) {
-                    Text(entry.medicine.name, style = MaterialTheme.typography.titleLarge)
+                    Text(entry.name, style = MaterialTheme.typography.titleLarge)
                     Text(
-                        stringResource(R.string.today_dose_detail_when, time, formatDoseWithUnit(entry.doseAmount, entry.medicine.doseUnit, LocalResources.current)),
+                        stringResource(R.string.today_dose_detail_when, time, formatDoseWithUnit(entry.doseAmount, entry.medicine?.doseUnit, LocalResources.current)),
                         style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -103,7 +103,7 @@ internal fun DoseDetailSheet(entry: TimelineEntry, time: String, canSkip: Boolea
                 Text(stringResource(R.string.today_dose_detail_instructions), style = MaterialTheme.typography.labelLarge)
                 Text(it, style = MaterialTheme.typography.bodyMedium)
             }
-            listOfNotNull(entry.medicine.indication, entry.medicine.notes).filter { it.isNotBlank() }.takeIf { it.isNotEmpty() }?.let { lines ->
+            listOfNotNull(entry.medicine?.indication, entry.medicine?.notes).filter { it.isNotBlank() }.takeIf { it.isNotEmpty() }?.let { lines ->
                 Spacer(Modifier.height(12.dp))
                 Text(stringResource(R.string.today_dose_detail_notes), style = MaterialTheme.typography.labelLarge)
                 lines.forEach { Text(it, style = MaterialTheme.typography.bodyMedium) }
