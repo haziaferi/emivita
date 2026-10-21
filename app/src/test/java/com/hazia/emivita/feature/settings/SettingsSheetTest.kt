@@ -1,5 +1,7 @@
 package com.hazia.emivita.feature.settings
 
+import com.hazia.emivita.core.scheduling.receivers.closedAfterCompose
+import org.junit.rules.TestRule
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -11,7 +13,6 @@ import com.hazia.emivita.core.di.LocalAppContainer
 import com.hazia.emivita.core.scheduling.receivers.ReceiverHarness
 import com.hazia.emivita.core.scheduling.receivers.TestEmivitaApplication
 import androidx.compose.ui.unit.dp
-import org.junit.After
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
@@ -32,13 +33,13 @@ import org.robolectric.annotation.SQLiteMode
 @SQLiteMode(SQLiteMode.Mode.NATIVE)
 class SettingsSheetTest {
 
-    @get:Rule
     val compose = createComposeRule()
 
     private val h = ReceiverHarness()
 
-    @After
-    fun tearDown() = h.close()
+    @get:Rule
+    val rules: TestRule = closedAfterCompose(h, compose)
+
 
     @Test
     fun `the Weekend sheet opens with Save on screen`() {
