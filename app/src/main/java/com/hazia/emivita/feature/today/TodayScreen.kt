@@ -128,6 +128,9 @@ internal data class TimelineEntry(
     val estimated: Boolean = false,
     val afterEpochMillis: Long? = null,
     val afterMinutes: Int? = null,
+    /** The reminder asks the amount when taken (§7 R109, B-45): "Take all"
+     *  leaves it out (§7 R110), since the amount is the person's to type. */
+    val asksAmount: Boolean = false,
 )
 
 internal data class TimelineNode(
@@ -392,6 +395,7 @@ internal fun buildTimeline(
             reminderId = row.doseEvent.reminderId,
             instructions = row.doseEvent.reminderId?.let { remindersById[it]?.instructions },
             notes = row.doseEvent.notes,
+            asksAmount = row.doseEvent.reminderId?.let { remindersById[it]?.variableAmount } == true,
         )
     }
 
@@ -456,7 +460,10 @@ internal fun TimelineNodeItem(node: TimelineNode, deps: TodayDeps) {
 @Composable
 private fun TakeAllChip(node: TimelineNode, time: String, deps: TodayDeps) {
     val scope = rememberCoroutineScope()
-    val due = node.entries.filter { it.status == TimelineStatus.PENDING && it.doseEventId != null }
+    val pending = node.entries.filter { it.status == TimelineStatus.PENDING && it.doseEventId != null }
+    // A dose whose reminder asks the amount stays due (§7 R110): it is the
+    // person's to answer with a number, which "Take all" cannot ask for.
+    val (leftOut, due) = pending.partition { it.asksAmount }
     if (due.size < 2) return
     var confirmAll by remember(node.epochMillis) { mutableStateOf(false) }
     Row(Modifier.fillMaxWidth().padding(bottom = 8.dp), horizontalArrangement = Arrangement.End) {
@@ -466,6 +473,7 @@ private fun TakeAllChip(node: TimelineNode, time: String, deps: TodayDeps) {
         TakeGroupSheet(
             time = time,
             entries = due,
+            leftOut = leftOut,
             onConfirm = {
                 confirmAll = false
                 val ids = due.mapNotNull { it.doseEventId }

@@ -42,8 +42,10 @@ class ReminderActionReceiver : BroadcastReceiver() {
             CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
                 try {
                     // Each dose independently: one already answered does not stop the rest.
+                    // A reminder that asks the amount stays due (§7 R110), even on a
+                    // summary posted before its flag was turned on.
                     for (id in ids) {
-                        runCatching { handleAction(context, ACTION_TAKE, id, container) }
+                        runCatching { if (!asksAmount(id, container)) handleAction(context, ACTION_TAKE, id, container) }
                             .onFailure { Log.w(TAG, "Take-all: dose $id failed", it) }
                     }
                 } finally {
@@ -77,6 +79,11 @@ class ReminderActionReceiver : BroadcastReceiver() {
                 pendingResult.finish()
             }
         }
+    }
+
+    private suspend fun asksAmount(doseEventId: Long, container: AppContainer): Boolean {
+        val reminderId = container.doseEventRepository.getById(doseEventId)?.reminderId ?: return false
+        return container.reminderRepository.getById(reminderId)?.variableAmount == true
     }
 
     private suspend fun handleAction(

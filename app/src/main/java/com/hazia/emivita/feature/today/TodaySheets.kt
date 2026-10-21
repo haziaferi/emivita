@@ -36,12 +36,12 @@ import com.hazia.emivita.ui.theme.doseCritical
 
 /**
  * "Take all" on a time group asks here first (§7 R107, census D-20), listing
- * exactly the doses the confirm records, in a sheet that grows up from the
- * bottom. The caller records them one at a time through the row's own path.
+ * exactly the doses the confirm records and naming those left out (§7 R110).
+ * The caller records them one at a time through the row's own path.
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-internal fun TakeGroupSheet(time: String, entries: List<TimelineEntry>, onConfirm: () -> Unit, onDismiss: () -> Unit) {
+internal fun TakeGroupSheet(time: String, entries: List<TimelineEntry>, onConfirm: () -> Unit, onDismiss: () -> Unit, leftOut: List<TimelineEntry> = emptyList()) {
     ModalBottomSheet(onDismissRequest = onDismiss, sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)) {
         Column(Modifier.padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
             Text(stringResource(R.string.today_take_all_title), style = MaterialTheme.typography.titleLarge)
@@ -56,6 +56,15 @@ internal fun TakeGroupSheet(time: String, entries: List<TimelineEntry>, onConfir
                         Text(formatDoseWithUnit(e.doseAmount, e.medicine.doseUnit, LocalResources.current), style = MaterialTheme.typography.doseCritical, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
+            }
+            if (leftOut.isNotEmpty()) {
+                // Which doses stay due and why, in one line (§7 R110).
+                Spacer(Modifier.height(8.dp))
+                Text(
+                    pluralStringResource(R.plurals.today_take_all_left_out, leftOut.size, leftOut.joinToString(", ") { it.medicine.name }),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
             }
             Spacer(Modifier.height(16.dp))
             Button(onClick = onConfirm, modifier = Modifier.fillMaxWidth()) {

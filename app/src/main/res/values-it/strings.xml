@@ -698,6 +698,11 @@
         <item quantity="many">Prendi %d dosi</item>
         <item quantity="other">Prendi %d dosi</item>
     </plurals>
+    <plurals name="today_take_all_left_out">
+        <item quantity="one">%1$s resta da prendere: il suo promemoria chiede la quantità.</item>
+        <item quantity="many">%1$s restano da prendere: i loro promemoria chiedono la quantità.</item>
+        <item quantity="other">%1$s restano da prendere: i loro promemoria chiedono la quantità.</item>
+    </plurals>
     <string name="a11y_show_dose_details">Mostra i dettagli della dose</string>
     <string name="today_dose_detail_when">Alle %1$s · %2$s</string>
     <string name="today_dose_detail_instructions">Istruzioni</string>
