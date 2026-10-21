@@ -34,6 +34,7 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.hazia.emivita.core.data.dao.DoseEventWithMedicine
 import com.hazia.emivita.core.data.entity.DoseStatus
+import com.hazia.emivita.core.data.entity.isRecordOnly
 import com.hazia.emivita.core.data.repository.DoseEventRepository
 import com.hazia.emivita.ui.components.rememberCurrentDate
 import com.hazia.emivita.ui.theme.EmivitaTheme
@@ -113,7 +114,7 @@ fun HistoryCalendarView(
     // outcome to surface here.
     val byDay = remember(monthEvents) {
         (monthEvents ?: emptyList())
-            .filter { it.doseEvent.status != DoseStatus.REFILLED }
+            .filter { !it.doseEvent.status.isRecordOnly }
             .groupBy { Instant.ofEpochMilli(it.doseEvent.scheduledEpochMillis).atZone(zone).toLocalDate() }
     }
 

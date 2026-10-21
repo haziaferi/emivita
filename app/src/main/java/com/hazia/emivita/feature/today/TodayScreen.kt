@@ -379,6 +379,7 @@ private fun buildTimeline(
             DoseStatus.SKIPPED -> TimelineStatus.SKIPPED
             DoseStatus.REFILLED -> return@forEach // a restock, not a dose -- doesn't belong on the dose timeline
             DoseStatus.DELETED -> return@forEach // soft-deleted (§9 #26): the slot stays claimed, the row stays out of sight
+            DoseStatus.STOCK_ALERT_SEEN, DoseStatus.EXPIRY_ALERT_SEEN -> return@forEach // a seen alert (§7 R105), not a dose
         }
         entries += row.doseEvent.scheduledEpochMillis to TimelineEntry(
             medicine = row.medicine,

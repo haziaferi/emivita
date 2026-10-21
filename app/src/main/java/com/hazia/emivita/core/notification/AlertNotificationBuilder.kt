@@ -1,5 +1,6 @@
 package com.hazia.emivita.core.notification
 
+import com.hazia.emivita.core.data.entity.DoseStatus
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -20,6 +21,8 @@ const val EXTRA_REFILL_AMOUNT = "com.hazia.emivita.extra.REFILL_AMOUNT"
 const val EXTRA_NOTIFICATION_ID = "com.hazia.emivita.extra.NOTIFICATION_ID"
 /** A stock alert was swiped away: the summary's count must follow (§9 #27). */
 const val ACTION_ALERT_DISMISSED = "com.hazia.emivita.action.ALERT_DISMISSED"
+/** Which alert was swiped, as the DoseStatus name History records (§7 R105). */
+const val EXTRA_SEEN_STATUS = "com.hazia.emivita.extra.SEEN_STATUS"
 const val STOCK_GROUP_KEY = "com.hazia.emivita.group.STOCK"
 const val STOCK_GROUP_SUMMARY_ID = -4_000_000
 
@@ -62,7 +65,7 @@ class AlertNotificationBuilder(
             .setAutoCancel(true)
             .setContentIntent(openAppPendingIntent(context, notificationId))
             .setGroup(STOCK_GROUP_KEY)
-            .setDeleteIntent(dismissedPendingIntent(notificationId))
+            .setDeleteIntent(dismissedPendingIntent(notificationId, medicine.id, DoseStatus.STOCK_ALERT_SEEN))
 
         // One-tap restock (spec §3/§9 #2/#8) -- only offered when a refill
         // amount is actually configured; otherwise there's nothing to log
@@ -91,7 +94,7 @@ class AlertNotificationBuilder(
             .setAutoCancel(true)
             .setContentIntent(openAppPendingIntent(context, notificationId))
             .setGroup(STOCK_GROUP_KEY)
-            .setDeleteIntent(dismissedPendingIntent(notificationId))
+            .setDeleteIntent(dismissedPendingIntent(notificationId, medicine.id, DoseStatus.EXPIRY_ALERT_SEEN))
 
         postIfPermitted(context, TAG, notificationId, builder.build())
         updateStockSummary()
@@ -131,8 +134,12 @@ class AlertNotificationBuilder(
         postIfPermitted(context, TAG, STOCK_GROUP_SUMMARY_ID, summary)
     }
 
-    private fun dismissedPendingIntent(notificationId: Int): PendingIntent {
-        val intent = Intent(context, AlertActionReceiver::class.java).apply { action = ACTION_ALERT_DISMISSED }
+    private fun dismissedPendingIntent(notificationId: Int, medicineId: Long, seen: DoseStatus): PendingIntent {
+        val intent = Intent(context, AlertActionReceiver::class.java).apply {
+            action = ACTION_ALERT_DISMISSED
+            putExtra(EXTRA_MEDICINE_ID, medicineId)
+            putExtra(EXTRA_SEEN_STATUS, seen.name)
+        }
         // Its own request code space: the refill intent uses notificationId itself.
         return PendingIntent.getBroadcast(context, notificationId * 10 + 7, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
     }

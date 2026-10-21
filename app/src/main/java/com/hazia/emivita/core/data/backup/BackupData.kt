@@ -17,9 +17,10 @@ import com.hazia.emivita.core.data.entity.MedicineNote
 /** Current backup schema version -- bump when a field is added/removed in a
  *  way [BackupRepository.restoreSnapshot] can't already tolerate (kotlinx
  *  serialization defaults handle additive changes for free; this is for the
- *  rare breaking case). Not yet consulted by restore -- one version exists
- *  so far, nothing to migrate between. */
-const val BACKUP_SCHEMA_VERSION = 1
+ *  rare breaking case). Version 2 (§7 R105): DoseStatus gained the two
+ *  seen-alert values, which an older app cannot decode, so it refuses a v2
+ *  file as newer than itself instead of failing on it. */
+const val BACKUP_SCHEMA_VERSION = 2
 
 /** The one Json every backup path uses (§7 R60 E F1). `ignoreUnknownKeys`
  *  lets an older app restore a newer file's known half, where the default

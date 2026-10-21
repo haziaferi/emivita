@@ -10,7 +10,17 @@ import kotlinx.serialization.Serializable
 /** DELETED (§9 #26): a soft delete. The row stays -- its slot cannot be
  *  re-materialised, its stock effect was reversed -- but it is out of every
  *  list, count and export. medTimer's `DELETED` has the same shape. */
-enum class DoseStatus { PENDING, TAKEN, SKIPPED, REFILLED, DELETED }
+enum class DoseStatus { PENDING, TAKEN, SKIPPED, REFILLED, DELETED, STOCK_ALERT_SEEN, EXPIRY_ALERT_SEEN }
+
+/** A History row that is not a dose: a refill, or a stock or expiry alert swiped
+ *  away (§7 R105, census B-44, as medTimer records it). Out of adherence counts,
+ *  the calendar, Today and dose editing, the way REFILLED always was. */
+val DoseStatus.isRecordOnly: Boolean
+    get() = this == DoseStatus.REFILLED || isAlertSeen
+
+/** The two seen alerts: no amount to show. */
+val DoseStatus.isAlertSeen: Boolean
+    get() = this == DoseStatus.STOCK_ALERT_SEEN || this == DoseStatus.EXPIRY_ALERT_SEEN
 
 @Serializable
 @Entity(

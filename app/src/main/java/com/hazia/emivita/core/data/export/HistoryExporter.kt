@@ -5,6 +5,7 @@ import android.graphics.pdf.PdfDocument
 import com.hazia.emivita.core.data.dao.DoseEventWithMedicine
 import com.hazia.emivita.core.format.formatDecimal
 import com.hazia.emivita.core.format.formatDoseWithUnit
+import com.hazia.emivita.core.data.entity.isAlertSeen
 import java.io.OutputStream
 import java.time.Instant
 import java.time.ZoneId
@@ -123,7 +124,10 @@ object HistoryExporter {
             canvas.drawText(time, colTime, y, rowPaint)
             canvas.drawText(row.medicine.name.take(28), colMedicine, y, rowPaint)
             canvas.drawText(context.getString(doseStatusLabelRes(row.doseEvent.status)), colStatus, y, rowPaint)
-            canvas.drawText(formatDoseWithUnit(row.doseEvent.doseAmount, row.medicine.doseUnit, context.resources), colDose, y, rowPaint)
+            // A seen alert (§7 R105) has no amount; the CSV keeps its 0, as data.
+            if (!row.doseEvent.status.isAlertSeen) {
+                canvas.drawText(formatDoseWithUnit(row.doseEvent.doseAmount, row.medicine.doseUnit, context.resources), colDose, y, rowPaint)
+            }
             y += rowHeight
         }
         page?.let { document.finishPage(it) }

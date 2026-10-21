@@ -115,7 +115,8 @@ interface DoseEventDao {
      *  for that medicine, so without this filter the first Log dose after
      *  any refill suggested the pack size (30) instead of the dose (1). */
     @Query(
-        "SELECT * FROM dose_events WHERE medicineId = :medicineId AND status NOT IN ('REFILLED', 'DELETED') " +
+        "SELECT * FROM dose_events WHERE medicineId = :medicineId " +
+            "AND status NOT IN ('REFILLED', 'DELETED', 'STOCK_ALERT_SEEN', 'EXPIRY_ALERT_SEEN') " +
             "ORDER BY createdAtEpochMillis DESC LIMIT 1"
     )
     suspend fun getMostRecentForMedicine(medicineId: Long): DoseEvent?

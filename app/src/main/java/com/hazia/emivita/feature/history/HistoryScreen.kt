@@ -43,6 +43,8 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.hazia.emivita.core.data.dao.DoseEventWithMedicine
 import com.hazia.emivita.core.data.entity.DoseStatus
+import com.hazia.emivita.core.data.entity.isAlertSeen
+import com.hazia.emivita.core.data.entity.isRecordOnly
 import com.hazia.emivita.core.data.export.HistoryExporter
 import com.hazia.emivita.core.data.repository.DoseEventRepository
 import com.hazia.emivita.ui.components.DoseEditDialog
@@ -416,7 +418,7 @@ private fun adherenceCounts(events: List<DoseEventWithMedicine>) = AdherenceCoun
 private fun dailyAdherenceCounts(events: List<DoseEventWithMedicine>, zone: ZoneId, today: LocalDate): List<DayAdherenceCounts> {
     val windowStart = today.minusDays(HISTORY_LOOKBACK_DAYS - 1)
     val byDay = events
-        .filter { it.doseEvent.status != DoseStatus.REFILLED }
+        .filter { !it.doseEvent.status.isRecordOnly }
         .groupBy { Instant.ofEpochMilli(it.doseEvent.scheduledEpochMillis).atZone(zone).toLocalDate() }
     return (0 until HISTORY_LOOKBACK_DAYS).map { offset ->
         val date = windowStart.plusDays(offset)
@@ -508,7 +510,7 @@ internal fun HistoryEntryRow(row: DoseEventWithMedicine, onClick: () -> Unit) {
     // uncorrectable on this row after R46 shipped (§7 R47). A REFILLED row is
     // a restock with nothing to resolve, so it stays inert -- matching
     // HistoryTableView and HistoryCalendarView, which this row is shared with.
-    val editable = status != DoseStatus.REFILLED
+    val editable = !status.isRecordOnly
     val time = remember(row.doseEvent.resolvedAtEpochMillis, row.doseEvent.scheduledEpochMillis) {
         val epochMillis = row.doseEvent.resolvedAtEpochMillis ?: row.doseEvent.scheduledEpochMillis
         LocaleFormats.time(epochMillis)
@@ -532,12 +534,17 @@ internal fun HistoryEntryRow(row: DoseEventWithMedicine, onClick: () -> Unit) {
             Column(Modifier.weight(1f)) {
                 Text(medicine.name, style = MaterialTheme.typography.titleMedium)
                 Text(
-                    stringResource(
-                        R.string.history_entry_summary,
-                        stringResource(doseStatusLabelRes(status)),
-                        time,
-                        formatDoseWithUnit(row.doseEvent.doseAmount, medicine.doseUnit, LocalResources.current),
-                    ),
+                    // A seen alert (§7 R105) has no amount to show.
+                    if (status.isAlertSeen) {
+                        stringResource(R.string.history_entry_summary_no_amount, statusLabel, time)
+                    } else {
+                        stringResource(
+                            R.string.history_entry_summary,
+                            statusLabel,
+                            time,
+                            formatDoseWithUnit(row.doseEvent.doseAmount, medicine.doseUnit, LocalResources.current),
+                        )
+                    },
                     // A time and a dose amount together -- squarely what
                     // Typography.doseCritical names a floor for (§7 R47).
                     style = MaterialTheme.typography.doseCritical,

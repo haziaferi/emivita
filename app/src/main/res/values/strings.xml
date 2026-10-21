@@ -272,6 +272,7 @@
     <string name="history_no_doses_answered">No doses answered</string>
     <string name="history_percent_taken">%1$d%% of answered doses taken</string>
     <string name="history_entry_summary">%1$s – %2$s – %3$s</string>
+    <string name="history_entry_summary_no_amount">%1$s – %2$s</string>
     <string name="medicine_detail_storage">Storage: %1$s</string>
     <string name="medicine_detail_delete_title">Delete %1$s?</string>
     <string name="medicine_detail_this_medicine">this medicine</string>
@@ -320,6 +321,8 @@
     <string name="status_taken">Taken</string>
     <string name="status_skipped">Skipped</string>
     <string name="status_refilled">Refilled</string>
+    <string name="status_stock_alert_seen">Low stock — seen</string>
+    <string name="status_expiry_alert_seen">Expiring — seen</string>
     <string name="status_due">Due</string>
     <string name="status_upcoming">Upcoming</string>
     <string name="today_entry_summary">%1$s – %2$s</string>

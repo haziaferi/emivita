@@ -1,5 +1,8 @@
 package com.hazia.emivita.core.scheduling
 
+import com.hazia.emivita.core.notification.EXTRA_SEEN_STATUS
+import com.hazia.emivita.core.data.entity.isAlertSeen
+import com.hazia.emivita.core.data.entity.DoseStatus
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
@@ -28,8 +31,23 @@ private const val TAG = "AlertActionReceiver"
 class AlertActionReceiver : BroadcastReceiver() {
     override fun onReceive(context: Context, intent: Intent) {
         if (intent.action == ACTION_ALERT_DISMISSED) {
-            // A swiped stock alert (§9 #27): the summary's count follows it.
-            (context.applicationContext as? EmivitaApplication)?.container?.alertNotificationBuilder?.updateStockSummary()
+            // A swiped stock alert (§9 #27): the summary's count follows it, and
+            // History records it as seen, as medTimer does (§7 R105, census B-44).
+            val container = (context.applicationContext as? EmivitaApplication)?.container ?: return
+            container.alertNotificationBuilder.updateStockSummary()
+            val medicineId = intent.getLongExtra(EXTRA_MEDICINE_ID, -1L)
+            val seen = intent.getStringExtra(EXTRA_SEEN_STATUS)?.let { name -> DoseStatus.entries.firstOrNull { it.name == name } }
+            if (medicineId < 0 || seen == null || !seen.isAlertSeen) return
+            val pending = goAsync()
+            CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
+                try {
+                    container.doseEventRepository.recordAlertSeen(medicineId, seen, System.currentTimeMillis())
+                } catch (t: Throwable) {
+                    Log.e(TAG, "Failed recording a seen alert for medicine $medicineId", t)
+                } finally {
+                    pending.finish()
+                }
+            }
             return
         }
         if (intent.action != ACTION_REFILL) {
