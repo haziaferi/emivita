@@ -50,9 +50,9 @@ class TodayTakeAllTest {
     private data class Due(val medicineId: Long, val eventId: Long)
 
     /** A medicine with 10 in stock and one dose due today at [hour]. */
-    private fun due(name: String, hour: Int): Due {
+    private fun due(name: String, hour: Int, asksAmount: Boolean = false): Due {
         val m = h.medicine(name, stock = 10.0)
-        val r = h.reminder(m, ReminderConfig.FixedTime(hour, 0, 1.0))
+        val r = h.reminder(m, ReminderConfig.FixedTime(hour, 0, 1.0), variableAmount = asksAmount)
         return Due(m, runBlocking { checkNotNull(h.container.doseEventRepository.materializeIfAbsent(r, m, at(hour), 1.0)) })
     }
 
@@ -142,6 +142,31 @@ class TodayTakeAllTest {
     fun `with one dose due at each time there is no button`() {
         due("Levothyroxine", 8)
         due("Atorvastatin", 11)
+        showToday()
+        compose.onAllNodes(hasText("Take all", substring = true)).assertCountEquals(0)
+    }
+
+    // ---- §7 R110: a dose whose reminder asks the amount is left out ----------
+
+    @Test
+    fun `a dose that asks the amount is left out of Take all, named in the sheet, and stays due`() {
+        due("Levothyroxine", 8)
+        val taken = listOf(due("Atorvastatin", 11), due("Ramipril", 11))
+        val asks = due("Metformin", 11, asksAmount = true)
+        showToday()
+        compose.onNodeWithText("Take all (2)").performScrollTo().performClick()
+        compose.onNodeWithText("Metformin stays due: its reminder asks for the amount.").assertExists()
+        compose.onNode(hasText("Take 2 doses") and hasClickAction()).performClick()
+        eventually { assertEquals(List(2) { DoseStatus.TAKEN }, taken.map(::status)) }
+        assertEquals(DoseStatus.PENDING, status(asks))
+        assertEquals(10.0, stock(asks), 0.0)
+    }
+
+    @Test
+    fun `with one dose left to take once the asking one is out there is no button`() {
+        due("Levothyroxine", 8)
+        due("Atorvastatin", 11)
+        due("Metformin", 11, asksAmount = true)
         showToday()
         compose.onAllNodes(hasText("Take all", substring = true)).assertCountEquals(0)
     }

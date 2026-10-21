@@ -19,8 +19,10 @@ import com.hazia.emivita.core.data.entity.MedicineNote
  *  serialization defaults handle additive changes for free; this is for the
  *  rare breaking case). Version 2 (§7 R105): DoseStatus gained the two
  *  seen-alert values, which an older app cannot decode, so it refuses a v2
- *  file as newer than itself instead of failing on it. */
-const val BACKUP_SCHEMA_VERSION = 2
+ *  file as newer than itself instead of failing on it. Version 3 (§7 R111):
+ *  a one-off dose's `medicineId` is null, which an older app's non-null field
+ *  cannot decode, so the same refusal applies. */
+const val BACKUP_SCHEMA_VERSION = 3
 
 /** The one Json every backup path uses (§7 R60 E F1). `ignoreUnknownKeys`
  *  lets an older app restore a newer file's known half, where the default

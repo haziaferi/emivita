@@ -32,6 +32,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.hazia.emivita.core.data.dao.DoseEventWithMedicine
+import com.hazia.emivita.core.data.dao.displayName
+import com.hazia.emivita.core.data.dao.doseUnit
 import com.hazia.emivita.core.data.entity.isAlertSeen
 import com.hazia.emivita.core.data.entity.isRecordOnly
 import com.hazia.emivita.core.format.formatDoseWithUnit
@@ -81,7 +83,7 @@ fun HistoryTableView(
             // sorted by its scheduled slot appeared out of order beside its
             // displayed time.
             HistoryTableColumn.DATE -> compareBy<DoseEventWithMedicine> { it.doseEvent.resolvedAtEpochMillis ?: it.doseEvent.scheduledEpochMillis }
-            HistoryTableColumn.MEDICINE -> compareBy { it.medicine.name.lowercase() }
+            HistoryTableColumn.MEDICINE -> compareBy { it.displayName.lowercase() }
             HistoryTableColumn.STATUS -> compareBy { it.doseEvent.status.ordinal }
             HistoryTableColumn.DOSE -> compareBy { it.doseEvent.doseAmount }
         }
@@ -142,7 +144,7 @@ private fun HistoryTableHeader(sortColumn: HistoryTableColumn, descending: Boole
 @Composable
 private fun HistoryTableRow(row: DoseEventWithMedicine, zone: ZoneId, onClick: () -> Unit) {
     val medicine = row.medicine
-    val accent = medicine.color?.let { parseHexColor(it) } ?: NeutralMedicineAccent
+    val accent = medicine?.color?.let { parseHexColor(it) } ?: NeutralMedicineAccent
     val editable = !row.doseEvent.status.isRecordOnly
     val time = remember(row.doseEvent.resolvedAtEpochMillis, row.doseEvent.scheduledEpochMillis) {
         val epochMillis = row.doseEvent.resolvedAtEpochMillis ?: row.doseEvent.scheduledEpochMillis
@@ -170,7 +172,7 @@ private fun HistoryTableRow(row: DoseEventWithMedicine, zone: ZoneId, onClick: (
                 Spacer(Modifier.size(8.dp).background(accent, CircleShape))
                 Spacer(Modifier.width(4.dp))
                 Text(
-                    medicine.name,
+                    row.displayName,
                     style = MaterialTheme.typography.bodySmall,
                     maxLines = 1,
                     overflow = TextOverflow.Ellipsis,
@@ -187,7 +189,7 @@ private fun HistoryTableRow(row: DoseEventWithMedicine, zone: ZoneId, onClick: (
             Text(
                 // A seen alert (§7 R105) has no amount.
                 if (row.doseEvent.status.isAlertSeen) ""
-                else formatDoseWithUnit(row.doseEvent.doseAmount, row.medicine.doseUnit, LocalResources.current),
+                else formatDoseWithUnit(row.doseEvent.doseAmount, row.doseUnit, LocalResources.current),
                 style = MaterialTheme.typography.bodySmall,
                 modifier = Modifier.weight(HistoryTableColumn.DOSE.weight),
                 maxLines = 1,

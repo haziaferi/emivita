@@ -182,8 +182,9 @@
     <string name="stock_expiration_unit_e_g_tablet_ml">Unit (e.g. tablet, mL)</string>
     <string name="today_log">Log</string>
     <string name="today_log_dose">Log dose</string>
+    <string name="today_log_medicine_or_name">Medicine or name</string>
+    <string name="today_log_one_off_hint">“%1$s” is not on your list: only this dose is recorded.</string>
     <string name="today_logged_as_taken_just_now">Logged as taken just now.</string>
-    <string name="today_medicine">Medicine</string>
     <string name="today_no_medicines_yet_add_one_first">No medicines yet — add one first.</string>
     <string name="today_nothing_scheduled_yet_add_a_medicine_and_a">Nothing scheduled yet. Add a medicine and a reminder to see it here.</string>
     <string name="today_today">Today</string>
@@ -704,6 +705,10 @@
     <plurals name="today_take_all_confirm">
         <item quantity="one">Take %d dose</item>
         <item quantity="other">Take %d doses</item>
+    </plurals>
+    <plurals name="today_take_all_left_out">
+        <item quantity="one">%1$s stays due: its reminder asks for the amount.</item>
+        <item quantity="other">%1$s stay due: their reminders ask for the amount.</item>
     </plurals>
     <string name="a11y_show_dose_details">Show dose details</string>
     <string name="today_dose_detail_when">At %1$s · %2$s</string>

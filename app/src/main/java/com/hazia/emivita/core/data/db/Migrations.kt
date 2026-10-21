@@ -225,6 +225,41 @@ object Migrations {
         }
     }
 
+    /** v10 -> v11 (§7 R111, Appendix E C-15): a one-off dose of a medicine not
+     *  on the list makes `dose_events.medicineId` nullable and adds `customName`
+     *  and `customProfileId` (with its FK to `profiles` and index). SQLite cannot
+     *  drop NOT NULL in place, so the table is rebuilt with every row, id, index
+     *  and the reminders FK's CASCADE as Room's own v11 DDL declares them. */
+    val MIGRATION_10_11 = object : Migration(10, 11) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `dose_events_new` (" +
+                    "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `reminderId` INTEGER, `medicineId` INTEGER, " +
+                    "`scheduledEpochMillis` INTEGER NOT NULL, `doseAmount` REAL NOT NULL, `status` TEXT NOT NULL, " +
+                    "`resolvedAtEpochMillis` INTEGER, `stockBefore` REAL NOT NULL, `stockAfter` REAL NOT NULL, " +
+                    "`repeatCount` INTEGER NOT NULL, `notes` TEXT, `createdAtEpochMillis` INTEGER NOT NULL, " +
+                    "`customName` TEXT, `customProfileId` INTEGER, " +
+                    "FOREIGN KEY(`reminderId`) REFERENCES `reminders`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE , " +
+                    "FOREIGN KEY(`customProfileId`) REFERENCES `profiles`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+            )
+            val columns = "id, reminderId, medicineId, scheduledEpochMillis, doseAmount, status, resolvedAtEpochMillis, " +
+                "stockBefore, stockAfter, repeatCount, notes, createdAtEpochMillis"
+            db.execSQL("INSERT INTO dose_events_new ($columns) SELECT $columns FROM dose_events")
+            db.execSQL("DROP TABLE dose_events")
+            db.execSQL("ALTER TABLE dose_events_new RENAME TO dose_events")
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_dose_events_reminderId_scheduledEpochMillis` ON `dose_events` (`reminderId`, `scheduledEpochMillis`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_dose_events_scheduledEpochMillis` ON `dose_events` (`scheduledEpochMillis`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_dose_events_medicineId` ON `dose_events` (`medicineId`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_dose_events_customProfileId` ON `dose_events` (`customProfileId`)")
+        }
+    }
+
+    /** Every migration, oldest first: the database and its migration tests open
+     *  through the same list. */
+    val ALL: Array<Migration> by lazy {
+        arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+    }
+
     /** v9 -> v10 (§7 R109, Appendix E B-42 and B-45): two per-reminder flags,
      *  off for every existing reminder. `NOT NULL DEFAULT 0` matches the
      *  entity's `@ColumnInfo(defaultValue = "0")`, as MIGRATION_4_5 does. */

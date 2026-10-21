@@ -37,6 +37,8 @@ const val EXTRA_DOSE_EVENT_IDS = "com.hazia.emivita.extra.DOSE_EVENT_IDS"
 const val REMINDER_GROUP_KEY = "com.hazia.emivita.group.REMINDERS"
 const val REMINDER_GROUP_SUMMARY_ID = -3_000_000
 const val EXTRA_DOSE_EVENT_ID = "com.hazia.emivita.extra.DOSE_EVENT_ID"
+/** On a reminder whose Take asks the amount (§7 R109): "Take all" leaves it out (§7 R110). */
+const val EXTRA_ASKS_AMOUNT = "com.hazia.emivita.extra.ASKS_AMOUNT"
 
 private const val TAG = "ReminderNotification"
 
@@ -110,6 +112,7 @@ class ReminderNotificationBuilder(
             // "Take all" once two or more are showing (§9 #25; medTimer's
             // combine, HomeMedkit's "Intake all"). Each keeps its own actions.
             .setGroup(REMINDER_GROUP_KEY)
+            .addExtras(android.os.Bundle().apply { putBoolean(EXTRA_ASKS_AMOUNT, reminder.variableAmount) })
             // Back-to-back reminders alert once (§9 #25, E B-06); the ALARM tier
             // is exempt -- an alarm that does not sound is not an alarm.
             .setSilent(priority != NotificationPriority.ALARM && NotificationRateLimit.shouldBeSilent())
@@ -161,28 +164,23 @@ class ReminderNotificationBuilder(
 
     /** Post, refresh or remove the group summary from what is actually
      *  showing: the dose-event notifications (positive ids) in the group.
-     *  Two or more -> a summary with "Take all" over exactly those ids; fewer
-     *  -> no summary, so a lone reminder is a lone card. Called after every
-     *  post and every dismissal, which is what keeps the id list honest. */
+     *  Two or more -> a summary, with "Take all" over exactly those ids whose
+     *  reminder does not ask the amount, when two or more remain (§7 R110);
+     *  fewer showing -> no summary. Called after every post and dismissal. */
     fun updateGroupSummary() {
         val nm = androidx.core.app.NotificationManagerCompat.from(context)
-        val showing = nm.activeNotifications
+        val showingNotifications = nm.activeNotifications
             .filter { it.id > 0 && it.notification.group == REMINDER_GROUP_KEY }
-            .map { it.id.toLong() }
-            .sorted()
+            .sortedBy { it.id }
+        val showing = showingNotifications.map { it.id.toLong() }
         if (showing.size < 2) {
             nm.cancel(REMINDER_GROUP_SUMMARY_ID)
             return
         }
-        val takeAllIntent = Intent(context, ReminderActionReceiver::class.java).apply {
-            action = ACTION_TAKE_ALL
-            putExtra(EXTRA_DOSE_EVENT_IDS, showing.toLongArray())
-        }
-        val takeAll = PendingIntent.getBroadcast(
-            context, REMINDER_GROUP_SUMMARY_ID, takeAllIntent,
-            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
-        )
-        val summary = NotificationCompat.Builder(context, ReminderNotificationChannels.CHANNEL_STANDARD)
+        val takeable = showingNotifications
+            .filterNot { it.notification.extras.getBoolean(EXTRA_ASKS_AMOUNT, false) }
+            .map { it.id.toLong() }
+        val summaryBuilder = NotificationCompat.Builder(context, ReminderNotificationChannels.CHANNEL_STANDARD)
             .setSmallIcon(R.drawable.ic_notification_reminder)
             .setColor(accentArgb)
             .setContentTitle(context.resources.getQuantityString(R.plurals.notif_group_summary, showing.size, showing.size))
@@ -192,9 +190,18 @@ class ReminderNotificationBuilder(
             .setSilent(true)
             .setAutoCancel(false)
             .setContentIntent(openAppPendingIntent(context, REMINDER_GROUP_SUMMARY_ID))
-            .addAction(0, context.getString(R.string.notif_take_all), takeAll)
-            .build()
-        postIfPermitted(context, TAG, REMINDER_GROUP_SUMMARY_ID, summary)
+        if (takeable.size >= 2) {
+            val takeAllIntent = Intent(context, ReminderActionReceiver::class.java).apply {
+                action = ACTION_TAKE_ALL
+                putExtra(EXTRA_DOSE_EVENT_IDS, takeable.toLongArray())
+            }
+            val takeAll = PendingIntent.getBroadcast(
+                context, REMINDER_GROUP_SUMMARY_ID, takeAllIntent,
+                PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+            )
+            summaryBuilder.addAction(0, context.getString(R.string.notif_take_all), takeAll)
+        }
+        postIfPermitted(context, TAG, REMINDER_GROUP_SUMMARY_ID, summaryBuilder.build())
     }
 
     private fun takeAmountPendingIntent(doseEventId: Long): PendingIntent = PendingIntent.getActivity(

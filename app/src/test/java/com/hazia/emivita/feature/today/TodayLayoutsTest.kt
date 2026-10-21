@@ -70,16 +70,16 @@ class TodayLayoutsTest {
         )
         val grouped = groupByBand(nodes, zone)
         assertEquals(listOf(DayBand.MORNING, DayBand.EVENING), grouped.keys.toList())
-        assertEquals(listOf(1L, 2L, 3L), grouped.getValue(DayBand.MORNING).map { it.second.medicine.id })
-        assertEquals(listOf(4L), grouped.getValue(DayBand.EVENING).map { it.second.medicine.id })
+        assertEquals(listOf(1L, 2L, 3L), grouped.getValue(DayBand.MORNING).map { it.second.medicine?.id })
+        assertEquals(listOf(4L), grouped.getValue(DayBand.EVENING).map { it.second.medicine?.id })
     }
 
     @Test
     fun `the hero is the first due dose, else the first still to come, else none`() {
         val due = flatten(listOf(node(at(7), entry(TimelineStatus.TAKEN, id = 1)), node(at(9), entry(TimelineStatus.PENDING, id = 2)), node(at(10), entry(TimelineStatus.PENDING, id = 3))))
-        assertEquals(2L, nextDose(due)!!.second.medicine.id)
+        assertEquals(2L, nextDose(due)!!.second.medicine?.id)
         val upcoming = flatten(listOf(node(at(7), entry(TimelineStatus.SKIPPED, id = 1)), node(at(20), entry(TimelineStatus.UPCOMING, id = 4))))
-        assertEquals(4L, nextDose(upcoming)!!.second.medicine.id)
+        assertEquals(4L, nextDose(upcoming)!!.second.medicine?.id)
         assertNull(nextDose(flatten(listOf(node(at(7), entry(TimelineStatus.TAKEN, id = 1))))))
     }
 

@@ -201,7 +201,7 @@ private suspend fun resolveAndDismiss(
         // trusting the composition's snapshot in case the setting changed
         // while this screen was on screen.
         val event = container.doseEventRepository.getById(doseEventId)
-        val medicine = event?.let { container.medicineRepository.getById(it.medicineId) }
+        val medicine = event?.medicineId?.let { container.medicineRepository.getById(it) }
         if (medicine != null && container.settingsRepository.isLockedUntilTaken(medicine)) {
             return
         }

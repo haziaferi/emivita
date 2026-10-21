@@ -31,6 +31,9 @@ val DoseStatus.isAlertSeen: Boolean
         // ad-hoc-logged event (reminderId = null) needs -- it isn't tied to any
         // reminder's lifecycle at all.
         ForeignKey(entity = Reminder::class, parentColumns = ["id"], childColumns = ["reminderId"], onDelete = ForeignKey.CASCADE),
+        // A one-off dose (§7 R111, C-15) has no medicine to take a profile from,
+        // so it names its own, and goes with the profile as its medicines do.
+        ForeignKey(entity = Profile::class, parentColumns = ["id"], childColumns = ["customProfileId"], onDelete = ForeignKey.CASCADE),
     ],
     // The compound unique index is what actually makes materializeIfAbsent()/
     // insert()'s OnConflictStrategy.IGNORE idempotent -- without it, two
@@ -44,6 +47,7 @@ val DoseStatus.isAlertSeen: Boolean
         Index(value = ["reminderId", "scheduledEpochMillis"], unique = true),
         Index("scheduledEpochMillis"), // supports observeInRange()'s range scan
         Index("medicineId"),
+        Index("customProfileId"),
     ],
 )
 data class DoseEvent(
@@ -51,10 +55,11 @@ data class DoseEvent(
     // Nullable -- null marks a manually-logged (PRN) dose not tied to any scheduled
     // occurrence. See DoseEventRepository.logAdhocDose (spec §3/§9 #2).
     val reminderId: Long? = null,
-    // Denormalized. Scheduled events keep this in sync with reminder.medicineId at
-    // materialization time; PRN events have no reminder to derive it from, so it's
-    // stored directly here instead.
-    val medicineId: Long,
+    // Denormalized, copied from the reminder at materialization time and stored
+    // directly on a PRN event, which has no reminder to derive it from. Null only
+    // on a one-off dose (§7 R111, C-15), which carries [customName] and
+    // [customProfileId] instead: one subject per dose, checked on every insert.
+    val medicineId: Long?,
     val scheduledEpochMillis: Long,
     // Snapshotted at materialization time so editing a reminder's dose later
     // doesn't retroactively change historical records -- mirrors the reference
@@ -81,4 +86,18 @@ data class DoseEvent(
      *  "took it late, was travelling". Exported in the CSV. */
     val notes: String? = null,
     val createdAtEpochMillis: Long,
+    /** A dose of a medicine not on the list, logged once (§7 R111, C-15): its
+     *  name and its profile, with no medicine row behind it. */
+    val customName: String? = null,
+    val customProfileId: Long? = null,
 )
+
+/** A one-off dose (§7 R111): not scheduled, so it never counts as missed, and
+ *  out of adherence counts, which measure the list's medicines. */
+val DoseEvent.isOneOff: Boolean
+    get() = customName != null
+
+/** Exactly one subject (§7 R111): a medicine, or a one-off name with its profile. */
+val DoseEvent.hasOneSubject: Boolean
+    get() = if (medicineId != null) customName == null && customProfileId == null
+    else !customName.isNullOrBlank() && customProfileId != null
