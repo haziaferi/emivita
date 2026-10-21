@@ -29,6 +29,7 @@ import org.junit.Assert.assertNull
 import org.junit.Assert.assertTrue
 import org.junit.Rule
 import org.junit.Test
+import org.junit.rules.TestRule
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
@@ -45,9 +46,12 @@ import org.robolectric.annotation.SQLiteMode
 @SQLiteMode(SQLiteMode.Mode.NATIVE)
 class ReminderNotificationFlagsTest {
 
-    @get:Rule val compose = createEmptyComposeRule()
-
     private val h = ReceiverHarness()
+    private val compose = createEmptyComposeRule()
+
+    /** The database closes after the amount screen's composition has torn down (§7 R108). */
+    @get:Rule
+    val rules: TestRule = closedAfterCompose(h, compose)
     private val take = h.context.getString(R.string.common_take)
     private val snooze = h.context.getString(R.string.common_snooze)
     private val skip = h.context.getString(R.string.common_skip)
@@ -59,7 +63,6 @@ class ReminderNotificationFlagsTest {
             h.container.settingsRepository.setSwipeAction(SwipeAction.SNOOZE)
             h.container.settingsRepository.setHideMedicineNames(false)
         }
-        h.close()
     }
 
     private fun daily() = ReminderConfig.FixedTime(hour = 9, minute = 0, dose = 1.0)
