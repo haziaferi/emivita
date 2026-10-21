@@ -39,7 +39,7 @@ class HistoryOneOffDoseTest {
     private fun at(hour: Int): Long = LocalDate.now().atTime(hour, 0).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
 
     @Test
-    fun `the one-off shows by its name and adherence counts only the scheduled doses`() {
+    fun `one-off and as-needed doses show in History but adherence counts only the scheduled doses`() {
         val doses = h.container.doseEventRepository
         val metformin = h.medicine("Metformin")
         val reminder = h.reminder(metformin, ReminderConfig.FixedTime(8, 0, 1.0))
@@ -49,6 +49,8 @@ class HistoryOneOffDoseTest {
             val r2 = h.reminder(ramipril, ReminderConfig.FixedTime(9, 0, 1.0))
             doses.resolve(checkNotNull(doses.materializeIfAbsent(r2, ramipril, at(9), 1.0)), DoseStatus.SKIPPED, at(9))
             doses.logOneOffDose(h.profileId, "Paracetamol", 1.0, at(10))
+            // As needed: no reminder, never planned, so out of adherence too (§7 R112).
+            doses.logAdhocDose(h.medicine("Ibuprofen"), 1.0, at(11))
         }
         val c = h.container
         compose.setContent {
@@ -63,6 +65,7 @@ class HistoryOneOffDoseTest {
             }
         }
         compose.waitUntil(10_000) { compose.onAllNodes(hasText("Paracetamol")).fetchSemanticsNodes().isNotEmpty() }
+        compose.waitUntil(10_000) { compose.onAllNodes(hasText("Ibuprofen")).fetchSemanticsNodes().isNotEmpty() }
         compose.onNodeWithText("50% of answered doses taken").assertExists()
         compose.onNodeWithText("1 taken, 1 skipped, 0 missed, last 30 days").assertExists()
     }
