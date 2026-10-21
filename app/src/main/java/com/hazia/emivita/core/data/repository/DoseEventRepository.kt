@@ -360,6 +360,16 @@ class DoseEventRepository(
         answerProjected(reminderId, medicineId, scheduledEpochMillis, doseAmount, DoseStatus.TAKEN, nowEpochMillis)
     }
 
+    /** Taken with the amount actually taken (§7 R109, Appendix E B-45): the
+     *  amount first, so the stock change uses it, as medTimer's
+     *  `VariableAmountHandler` does. A dose already answered is left alone. */
+    suspend fun takeWithAmount(doseEventId: Long, amount: Double, atEpochMillis: Long = System.currentTimeMillis()) {
+        val event = doseEventDao.getById(doseEventId) ?: return
+        if (event.status != DoseStatus.PENDING) return
+        if (event.doseAmount != amount) editDoseAmount(doseEventId, amount)
+        resolve(doseEventId, DoseStatus.TAKEN, atEpochMillis)
+    }
+
     /** [takeProjectedNow] with the answer chosen: the upcoming dose's sheet
      *  on Today (§7 R107, census D-55) can also skip a slot ahead of time. */
     suspend fun answerProjected(reminderId: Long, medicineId: Long, scheduledEpochMillis: Long, doseAmount: Double, status: DoseStatus, atEpochMillis: Long = System.currentTimeMillis()) {

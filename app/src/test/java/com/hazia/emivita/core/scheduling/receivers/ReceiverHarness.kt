@@ -59,10 +59,10 @@ class ReceiverHarness {
      *  (native SQLite on a torn-down connection is a JVM crash). */
     fun close() = container.shutdown()
 
-    fun medicine(name: String = "Ibuprofen", stock: Double = 10.0, unit: String? = "tablet", locked: Boolean? = null): Long = runBlocking {
+    fun medicine(name: String = "Ibuprofen", stock: Double = 10.0, unit: String? = "tablet", locked: Boolean? = null, color: String? = null): Long = runBlocking {
         container.medicineRepository.create(
             Medicine(
-                profileId = profileId, name = name, iconKey = "pill", sortOrder = 0.0,
+                profileId = profileId, name = name, iconKey = "pill", sortOrder = 0.0, color = color,
                 stockInfo = StockInfo(quantity = stock, unit = unit),
                 remindersLockedUntilTaken = locked,
                 createdAtEpochMillis = 0L,
@@ -75,10 +75,13 @@ class ReceiverHarness {
         config: ReminderConfig,
         repeat: RepeatConfig? = null,
         preAlarmMinutes: Int? = null,
+        sticky: Boolean = false,
+        variableAmount: Boolean = false,
     ): Long = runBlocking {
         container.reminderRepository.create(
             medicineId = medicineId, groupId = null, type = typeOf(config), config = config,
             repeatOnUnanswered = repeat, preAlarmMinutes = preAlarmMinutes,
+            stickyUntilAnswered = sticky, variableAmount = variableAmount,
         )
     }
 

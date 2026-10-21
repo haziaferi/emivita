@@ -5,6 +5,8 @@ import androidx.room.Room
 import androidx.test.core.app.ApplicationProvider
 import com.hazia.emivita.core.data.db.EmivitaDatabase
 import com.hazia.emivita.core.di.AppContainer
+import com.hazia.emivita.ui.theme.MedPalette
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -15,7 +17,7 @@ import org.robolectric.annotation.SQLiteMode
 import java.util.concurrent.atomic.AtomicInteger
 
 /**
- * A hide-names flip re-renders the placed widgets (§7 R108, census E-36), as a
+ * A hide-names flip or a palette change (§7 R109) re-renders the placed widgets (§7 R108, census E-36), as a
  * finished projection pass does (R104): the container's refresh runs once per
  * flip, and not for the setting's first value. No launcher means no placed
  * widget on the JVM, so the container is handed a refresh that counts.
@@ -48,6 +50,18 @@ class WidgetHideNamesRefreshTest {
         runBlocking { container.settingsRepository.setHideMedicineNames(true) }
         eventually(1)
         runBlocking { container.settingsRepository.setHideMedicineNames(false) }
+        eventually(2)
+    }
+
+    @Test
+    fun `changing the palette re-renders the widgets, once per change`() {
+        val start = runBlocking { container.settingsRepository.palette.first() }
+        val other = MedPalette.entries.first { it != start }
+        container.observeWidgetSettings()
+        eventually(0)
+        runBlocking { container.settingsRepository.setPalette(other) }
+        eventually(1)
+        runBlocking { container.settingsRepository.setPalette(start) }
         eventually(2)
     }
 }

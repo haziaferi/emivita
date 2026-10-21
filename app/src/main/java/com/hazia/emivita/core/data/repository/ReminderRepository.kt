@@ -69,6 +69,8 @@ class ReminderRepository(
         preAlarmMinutes: Int? = null,
         instructions: String? = null,
         dosesRemaining: Int? = null,
+        stickyUntilAnswered: Boolean = false,
+        variableAmount: Boolean = false,
     ): Long {
         val id = reminderDao.insert(
             Reminder(
@@ -85,6 +87,8 @@ class ReminderRepository(
                 preAlarmMinutes = preAlarmMinutes,
                 instructions = instructions,
                 dosesRemaining = dosesRemaining,
+                stickyUntilAnswered = stickyUntilAnswered,
+                variableAmount = variableAmount,
                 createdAtEpochMillis = System.currentTimeMillis(),
             )
         )
@@ -113,6 +117,8 @@ class ReminderRepository(
         preAlarmMinutes: Int? = reminder.preAlarmMinutes,
         instructions: String? = reminder.instructions,
         dosesRemaining: Int? = reminder.dosesRemaining,
+        stickyUntilAnswered: Boolean = reminder.stickyUntilAnswered,
+        variableAmount: Boolean = reminder.variableAmount,
     ) {
         reminderDao.update(
             reminder.copy(
@@ -126,6 +132,8 @@ class ReminderRepository(
                 preAlarmMinutes = preAlarmMinutes,
                 instructions = instructions,
                 dosesRemaining = dosesRemaining,
+                stickyUntilAnswered = stickyUntilAnswered,
+                variableAmount = variableAmount,
             )
         )
         schedulingCoordinator.onReminderChanged(reminder.id, System.currentTimeMillis())
@@ -150,6 +158,8 @@ class ReminderRepository(
         preAlarmMinutes: Int? = reminder.preAlarmMinutes,
         instructions: String? = reminder.instructions,
         dosesRemaining: Int? = reminder.dosesRemaining,
+        stickyUntilAnswered: Boolean = reminder.stickyUntilAnswered,
+        variableAmount: Boolean = reminder.variableAmount,
     ) {
         reminderDao.update(
             reminder.copy(
@@ -161,6 +171,8 @@ class ReminderRepository(
                 preAlarmMinutes = preAlarmMinutes,
                 instructions = instructions,
                 dosesRemaining = dosesRemaining,
+                stickyUntilAnswered = stickyUntilAnswered,
+                variableAmount = variableAmount,
             )
         )
         schedulingCoordinator.onReminderChanged(reminder.id, System.currentTimeMillis())

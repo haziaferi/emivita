@@ -8,7 +8,7 @@ Generated from `purpose-map.json` by `tools/purpose_map.py`; edit the JSON, not 
 
 | | Purpose | Its job | Screens |
 |---|---|---|---|
-| P1 | **Taking today's doses** | see what is due, be told when, and answer it: taken, skipped, snoozed, or an extra dose; and when not to be told (weekend mode) | 7 |
+| P1 | **Taking today's doses** | see what is due, be told when, and answer it: taken, skipped, snoozed, or an extra dose; and when not to be told (weekend mode) | 8 |
 | P2 | **The cabinet, and me** | what I take, in what form, on which schedule, and how much is left before it runs out or expires; and what a stranger or a doctor needs to know about me, reachable at once | 7 |
 | P3 | **Looking back** | the record of what was taken and missed, corrected when it is wrong, and handed to a doctor | 3 |
 | P4 | **Relying on it** | reminders that ring on time and a record that survives: the grants and channels without which a reminder is late or silent, the signs when one was held back, backups, recovery, the lock | 8 |
@@ -25,6 +25,7 @@ _see what is due, be told when, and answer it: taken, skipped, snoozed, or an ex
 | Today | `route:Today`, `sheet:TakeGroupSheet`, `sheet:DoseDetailSheet` | §9 #5, §9 #37, R77, R107 | shipped | Next reminders widget |
 | The alarm ringing (full screen) | `activity:AlarmActivity` | R80 | shipped | Reminder notifications and their actions |
 | Snooze for… (from a notification) | `activity:SnoozePickerActivity` | §9 #25, R64 | shipped | Alarms & Snooze (sheet) |
+| Amount taken (from a notification) | `activity:TakeAmountActivity`, `dialog:TakeAmountDialog` | R109 | shipped | Reminder notifications and their actions, Edit a dose (status, time, note) |
 | Reminder notifications and their actions | `channel:reminders_alarm_v2`, `channel:reminders_high`, `channel:reminders_standard` | §9 #25, R64 | shipped | The alarm ringing (full screen), Notifications & alerts |
 | Log a dose (as needed, or an extra one) | `dialog:LogDoseDialog` | §9 #2 | shipped | Edit a dose (status, time, note) |
 | Next reminders widget | `widget:NextRemindersWidgetReceiver` | §9 #7, R108 | shipped | Today |
@@ -108,4 +109,4 @@ Parts of a screen, not screens: `HeroCard`, `OptionCard`, `LayoutCard`, `Palette
 - 2026-10-13: add the purpose map as a reference for the SPEC (this draft; the purposes are the owner's to settle).
 - 2026-10-20: five purposes, not seven: Medical ID joins the cabinet (P2, 'The cabinet, and me'), and making it ring joins keeping the data safe (P4, 'Relying on it'); Weekend mode belongs to taking doses (P1); grants have one home, Notifications & alerts, which the sheet and the cards open; Settings is navigation, not a purpose, but its screen is still built for density and the fewest taps, where medTimer's is not. The purpose names and the disclaimer's place as a one-time notice are proposals the owner has not yet confirmed.
 
-_28 screens in 5 purposes; 3 with an open item._
+_29 screens in 5 purposes; 3 with an open item._

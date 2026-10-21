@@ -77,6 +77,15 @@ data class Reminder(
      *  stop", null = unlimited. Decremented on TAKEN, and at 0 the engine arms
      *  nothing more, next to the activeUntil clamp (MT finding 3). */
     val dosesRemaining: Int? = null,
+    /** Keep the notification on screen until answered (§7 R109, Appendix E
+     *  B-42): posted `setOngoing`, so neither the shade nor the lock screen
+     *  can swipe it away, and it keeps every button (B-10's guard). The
+     *  default must match MIGRATION_9_10's `NOT NULL DEFAULT 0`. */
+    @ColumnInfo(defaultValue = "0") val stickyUntilAnswered: Boolean = false,
+    /** Ask the amount on Take (§7 R109, Appendix E B-45, medTimer's
+     *  `variableAmount`): the notification's Take opens TakeAmountActivity
+     *  instead of recording the planned dose. Same default rule as above. */
+    @ColumnInfo(defaultValue = "0") val variableAmount: Boolean = false,
     // LOW_STOCK_ALERT / EXPIRATION_ALERT only (spec §9 #8) -- the epoch day this
     // alert last posted a notification, so Once/Daily trigger modes don't
     // re-notify on every cache recompute. Null = never notified (or, for

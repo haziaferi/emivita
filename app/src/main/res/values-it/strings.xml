@@ -702,4 +702,9 @@
     <string name="today_dose_detail_when">Alle %1$s · %2$s</string>
     <string name="today_dose_detail_instructions">Istruzioni</string>
     <string name="today_dose_detail_notes">Note sul farmaco</string>
+    <string name="add_reminder_sticky">Resta finché non rispondi</string>
+    <string name="add_reminder_sticky_desc">La notifica non si può scorrere via, né nella tendina né sulla schermata di blocco.</string>
+    <string name="add_reminder_variable_amount">Chiedi la quantità quando prendi</string>
+    <string name="add_reminder_variable_amount_desc">Prendi sulla notifica apre un campo per la quantità, già compilato con la dose di questo promemoria.</string>
+    <string name="notif_amount_taken">Quantità presa</string>
 </resources>

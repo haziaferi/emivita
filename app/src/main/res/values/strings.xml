@@ -709,4 +709,9 @@
     <string name="today_dose_detail_when">At %1$s · %2$s</string>
     <string name="today_dose_detail_instructions">Instructions</string>
     <string name="today_dose_detail_notes">Medicine notes</string>
+    <string name="add_reminder_sticky">Stay until answered</string>
+    <string name="add_reminder_sticky_desc">The notification cannot be swiped away, in the shade or on the lock screen.</string>
+    <string name="add_reminder_variable_amount">Ask the amount when taking</string>
+    <string name="add_reminder_variable_amount_desc">Take on the notification opens a field for the amount, filled with this reminder’s dose.</string>
+    <string name="notif_amount_taken">Amount taken</string>
 </resources>

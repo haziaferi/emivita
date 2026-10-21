@@ -165,6 +165,16 @@
             android:excludeFromRecents="true"
             android:launchMode="singleTask" />
 
+        <!-- "How much did you take?", opened by Take on a reminder whose
+             variable-amount flag is on (SPEC.md section 7 R109, Appendix E
+             B-45). Dialog-themed and not exported, as the snooze picker. -->
+        <activity
+            android:name=".feature.alarm.TakeAmountActivity"
+            android:exported="false"
+            android:theme="@style/Theme.Emivita.Dialog"
+            android:excludeFromRecents="true"
+            android:launchMode="singleTask" />
+
         <!-- Fired by AlarmManager (see core/scheduling/AlarmScheduler.kt). -->
         <!-- The Alarm tier's ringing (SPEC.md section 7 R80): a foreground
              service whose notification is the reminder's own. -->
