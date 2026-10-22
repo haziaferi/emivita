@@ -20,6 +20,7 @@ import com.hazia.emivita.core.data.config.decodeReminderConfig
 import com.hazia.emivita.core.data.dao.MedicineWithReminders
 import com.hazia.emivita.core.data.entity.MedicineNote
 import com.hazia.emivita.core.data.dao.MedicineNoteDao
+import com.hazia.emivita.core.notification.DoseNotificationDismisser
 
 class MedicineRepository(
     private val database: EmivitaDatabase,
@@ -31,6 +32,7 @@ class MedicineRepository(
     private val schedulingCoordinator: SchedulingCoordinator,
     private val occurrenceProjectionCache: OccurrenceProjectionCache,
     private val autoSyncManager: AutoSyncManager,
+    private val notifications: DoseNotificationDismisser = DoseNotificationDismisser.NONE,
 ) {
     fun observeForProfile(profileId: Long): Flow<List<MedicineWithTags>> =
         medicineDao.observeForProfile(profileId)
@@ -186,6 +188,8 @@ class MedicineRepository(
      *  [SchedulingCoordinator.onReminderRemoved]. */
     suspend fun delete(medicine: Medicine) {
         val reminderIds = reminderDao.observeForMedicine(medicine.id).first().map { it.id }
+        // The due doses' notifications go with them (§7 R113).
+        val showing = doseEventDao.pendingIds(null, medicine.id)
 
         database.withTransaction {
             doseEventDao.deleteAllForMedicine(medicine.id)
@@ -197,6 +201,7 @@ class MedicineRepository(
         for (reminderId in reminderIds) {
             schedulingCoordinator.onReminderRemoved(reminderId)
         }
+        notifications.dismiss(showing)
         occurrenceProjectionCache.invalidate()
         autoSyncManager.notifyChanged()
     }

@@ -21,6 +21,7 @@ import com.hazia.emivita.core.data.settings.SwipeAction
 import com.hazia.emivita.core.notification.ACTION_TAKE_ALL
 import com.hazia.emivita.core.notification.EXTRA_DOSE_EVENT_IDS
 import com.hazia.emivita.core.notification.ReminderNotifications
+import com.hazia.emivita.feature.alarm.TakeAmountActivity
 
 private const val TAG = "ReminderActionReceiver"
 
@@ -92,8 +93,22 @@ class ReminderActionReceiver : BroadcastReceiver() {
         doseEventId: Long,
         container: AppContainer,
     ) {
+        // A dose deleted under its notification (its reminder or medicine
+        // gone) left a sticky one that no button could remove (§7 R113).
+        if (container.doseEventRepository.getById(doseEventId) == null) {
+            Log.w(TAG, "Action $action for missing dose event $doseEventId -- dismissing its notification.")
+            dismissNotification(context, doseEventId)
+            return
+        }
         when (action) {
             ACTION_TAKE -> {
+                // A notification posted before "asks the amount" was turned on
+                // still broadcasts Take; the flag is read now (§7 R113).
+                if (asksAmount(doseEventId, container)) {
+                    runCatching { context.startActivity(TakeAmountActivity.intent(context, doseEventId)) }
+                        .onFailure { Log.w(TAG, "Could not open the amount screen for dose event $doseEventId", it) }
+                    return
+                }
                 container.doseEventRepository.resolve(doseEventId, DoseStatus.TAKEN)
                 dismissNotification(context, doseEventId)
             }

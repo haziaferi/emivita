@@ -30,6 +30,7 @@ import com.hazia.emivita.core.locale.AppLocale
 import com.hazia.emivita.core.notification.EXTRA_DOSE_EVENT_ID
 import com.hazia.emivita.core.notification.ReminderNotifications
 import com.hazia.emivita.ui.theme.SavedEmivitaTheme
+import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 
@@ -42,12 +43,27 @@ import kotlinx.coroutines.launch
  */
 class TakeAmountActivity : ComponentActivity() {
     override fun attachBaseContext(newBase: Context) = super.attachBaseContext(AppLocale.wrap(newBase))
+    private var loading: Job? = null
+
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        load(intent)
+    }
+
+    // singleTask: a second Take while this is open arrives here, and used to
+    // be dropped (§7 R113). The first dose's notification is still up.
+    override fun onNewIntent(intent: Intent) {
+        super.onNewIntent(intent)
+        setIntent(intent)
+        load(intent)
+    }
+
+    private fun load(intent: Intent) {
         val doseEventId = intent.getLongExtra(EXTRA_DOSE_EVENT_ID, -1L)
         if (doseEventId < 0) { finish(); return }
         val container = (application as EmivitaApplication).container
-        lifecycleScope.launch {
+        loading?.cancel()
+        loading = lifecycleScope.launch {
             val event = container.doseEventRepository.getById(doseEventId)
             val medicine = event?.medicineId?.let { container.medicineRepository.getById(it) }
             if (event == null || medicine == null || event.status != DoseStatus.PENDING) {
@@ -59,7 +75,7 @@ class TakeAmountActivity : ComponentActivity() {
             val hide = container.settingsRepository.hideMedicineNames.first()
             setContent {
                 SavedEmivitaTheme(container.settingsRepository) {
-                    TakeAmountDialog(maskedMedicineName(medicine.name, hide), event.doseAmount, medicine.stockInfo.unit, onTake = { amount ->
+                    TakeAmountDialog(maskedMedicineName(medicine.name, hide), event.doseAmount, medicine.doseUnit, onTake = { amount ->
                         lifecycleScope.launch {
                             container.doseEventRepository.takeWithAmount(doseEventId, amount)
                             ReminderNotifications.dismiss(this@TakeAmountActivity, doseEventId)

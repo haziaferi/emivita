@@ -14,3 +14,15 @@ object ReminderNotifications {
         NotificationManagerCompat.from(context).cancel(doseEventId.toInt())
     }
 }
+
+/** How the data layer takes doses' notifications away without knowing about
+ *  the shade (§7 R113): after an answer from any surface, and before a
+ *  reminder or medicine is deleted with doses still showing. AppContainer
+ *  passes [ReminderNotifications.dismiss] and the group summary's refresh. */
+fun interface DoseNotificationDismisser {
+    fun dismiss(doseEventIds: List<Long>)
+
+    companion object {
+        val NONE = DoseNotificationDismisser { }
+    }
+}

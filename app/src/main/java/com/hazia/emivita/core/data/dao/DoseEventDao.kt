@@ -205,6 +205,10 @@ interface DoseEventDao {
     @Query("DELETE FROM dose_events WHERE medicineId = :medicineId")
     suspend fun deleteAllForMedicine(medicineId: Long)
 
+    /** The doses whose notifications a delete must take with it (§7 R113). */
+    @Query("SELECT id FROM dose_events WHERE status = 'PENDING' AND (reminderId = :reminderId OR (:medicineId IS NOT NULL AND medicineId = :medicineId))")
+    suspend fun pendingIds(reminderId: Long?, medicineId: Long?): List<Long>
+
     // Backup/restore (spec §9 #9) -- restoreAll is REPLACE (preserves original
     // ids, unlike insert()'s IGNORE above, which exists for a different
     // purpose: idempotent materialization, not import).

@@ -16,6 +16,7 @@ import com.hazia.emivita.core.scheduling.OccurrenceProjectionCache
 import com.hazia.emivita.core.scheduling.SchedulingCoordinator
 import kotlinx.coroutines.flow.Flow
 import com.hazia.emivita.core.data.dao.ReminderDao
+import com.hazia.emivita.core.notification.DoseNotificationDismisser
 
 /**
  * The ONLY place a DoseEvent's status should ever be written from -- the
@@ -33,6 +34,8 @@ class DoseEventRepository(
     private val occurrenceProjectionCache: OccurrenceProjectionCache,
     private val autoSyncManager: AutoSyncManager,
     private val reminderDao: ReminderDao,
+    // An answered dose's notification goes, whichever surface answered (§7 R113).
+    private val notifications: DoseNotificationDismisser = DoseNotificationDismisser.NONE,
 ) {
     fun observeInRange(profileId: Long, startEpochMillis: Long, endEpochMillis: Long): Flow<List<DoseEventWithMedicine>> =
         doseEventDao.observeInRange(profileId, startEpochMillis, endEpochMillis)
@@ -124,7 +127,12 @@ class DoseEventRepository(
                 }
             }
             event
-        } ?: return
+        }
+        // Answered here or already answered elsewhere, the dose is no longer
+        // due, so its notification goes (§7 R113): Today, the widget and the
+        // group sheet used to leave a sticky one up after recording the answer.
+        notifications.dismiss(listOf(doseEventId))
+        if (resolvedEvent == null) return
 
         // Outside the DB transaction on purpose -- scheduling the next alarm is
         // an OS-level side effect, not a database write, and shouldn't roll back
@@ -391,11 +399,15 @@ class DoseEventRepository(
     /** [takeProjectedNow] with the answer chosen: the upcoming dose's sheet
      *  on Today (§7 R107, census D-55) can also skip a slot ahead of time. */
     suspend fun answerProjected(reminderId: Long, medicineId: Long, scheduledEpochMillis: Long, doseAmount: Double, status: DoseStatus, atEpochMillis: Long = System.currentTimeMillis()) {
-        val id = materializeIfAbsent(reminderId, medicineId, scheduledEpochMillis, doseAmount)
-            ?: doseEventDao.findByReminderAndTime(reminderId, scheduledEpochMillis)?.id
-            ?: return
+        val id = materializedId(reminderId, medicineId, scheduledEpochMillis, doseAmount) ?: return
         resolve(id, status, atEpochMillis)
     }
+
+    /** The slot's dose row, materialised first if it is still only projected:
+     *  what a Take that asks the amount opens the amount screen on (§7 R113). */
+    suspend fun materializedId(reminderId: Long, medicineId: Long, scheduledEpochMillis: Long, doseAmount: Double): Long? =
+        materializeIfAbsent(reminderId, medicineId, scheduledEpochMillis, doseAmount)
+            ?: doseEventDao.findByReminderAndTime(reminderId, scheduledEpochMillis)?.id
 
     /** PRN / ad-hoc dose logging (spec §3, §9 #2) -- a manually-logged dose not
      *  tied to any scheduled occurrence: reminderId = null, logged retrospectively
@@ -445,6 +457,8 @@ class DoseEventRepository(
                 createdAtEpochMillis = System.currentTimeMillis(),
             ),
         )
+        // The widgets follow the projection's passes (§7 R104), as logAdhocDose's do (§7 R113).
+        occurrenceProjectionCache.invalidate()
         autoSyncManager.notifyChanged()
         return id
     }

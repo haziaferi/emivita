@@ -37,6 +37,7 @@ import com.hazia.emivita.core.data.dao.displayName
 import androidx.glance.LocalContext
 import com.hazia.emivita.R
 import com.hazia.emivita.core.di.AppContainer
+import com.hazia.emivita.feature.alarm.TakeAmountActivity
 import com.hazia.emivita.core.format.LocaleFormats
 import com.hazia.emivita.core.format.maskedMedicineName
 import kotlinx.coroutines.flow.first
@@ -226,12 +227,20 @@ class TakeNextDoseAction : ActionCallback {
         val doseAmount = parameters[DoseAmountKey] ?: return
 
         val container = (context.applicationContext as EmivitaApplication).container
-        val doseEventId = container.doseEventRepository.materializeIfAbsent(reminderId, medicineId, epochMillis, doseAmount)
-            ?: container.doseEventRepository.findByReminderAndTime(reminderId, epochMillis)?.id
-        if (doseEventId != null) {
-            container.doseEventRepository.resolve(doseEventId, DoseStatus.TAKEN)
-        }
+        takeFromWidget(context, container, reminderId, medicineId, epochMillis, doseAmount)
         NextRemindersWidget().update(context, glanceId)
+    }
+}
+
+/** The widget's Take (§7 R113): a reminder that asks the amount (§7 R109)
+ *  opens the amount screen on the materialised slot instead of recording the
+ *  planned dose. The notification goes with the answer, in the repository. */
+internal suspend fun takeFromWidget(context: Context, container: AppContainer, reminderId: Long, medicineId: Long, epochMillis: Long, doseAmount: Double) {
+    val doseEventId = container.doseEventRepository.materializedId(reminderId, medicineId, epochMillis, doseAmount) ?: return
+    if (container.reminderRepository.getById(reminderId)?.variableAmount == true) {
+        context.startActivity(TakeAmountActivity.intent(context, doseEventId))
+    } else {
+        container.doseEventRepository.resolve(doseEventId, DoseStatus.TAKEN)
     }
 }
 
