@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <!-- Referenced by AndroidManifest.xml (android:label). Only string
          resource the manifest or any Kotlin source currently pulls from
          R.string; every other user-facing string in this codebase is a
@@ -332,6 +332,9 @@
     <string name="history_sorted_ascending">Sorted ascending</string>
     <string name="history_sorted_descending">Sorted descending</string>
     <string name="history_subtitle_join">%1$s — %2$s</string>
+    <!-- The counts of history_counts_summary without its day window, for a PDF
+         range named by its label (§7 R113); same agreed wording, so not a plural. -->
+    <string name="history_counts_plain" tools:ignore="PluralsCandidate">%1$d taken, %2$d skipped, %3$d missed</string>
     <plurals name="history_last_days">
         <item quantity="one">Last %d day</item>
         <item quantity="other">Last %d days</item>

@@ -11,6 +11,8 @@ import com.hazia.emivita.core.data.repository.ReminderRepository
 import com.hazia.emivita.core.data.settings.SettingsRepository
 import com.hazia.emivita.core.notification.AlertNotificationBuilder
 import com.hazia.emivita.core.notification.ReminderNotificationBuilder
+import com.hazia.emivita.core.notification.DoseNotificationDismisser
+import com.hazia.emivita.core.notification.ReminderNotifications
 import com.hazia.emivita.core.scheduling.AlarmScheduler
 import com.hazia.emivita.core.scheduling.DeliveryLedger
 import com.hazia.emivita.core.scheduling.LowStockExpirationAlertEvaluator
@@ -99,6 +101,7 @@ class AppContainer(
             schedulingCoordinator = schedulingCoordinator,
             occurrenceProjectionCache = occurrenceProjectionCache,
             autoSyncManager = autoSyncManager,
+            notifications = doseNotificationDismisser,
         )
     }
 
@@ -243,6 +246,14 @@ class AppContainer(
         ReminderNotificationBuilder(appContext, database.doseGroupDao(), settingsRepository)
     }
 
+    // The same two steps AlarmActivity and the action receiver take after an
+    // answer, handed to the repositories so every surface gets them (§7 R113).
+    private val doseNotificationDismisser = DoseNotificationDismisser { ids ->
+        if (ids.isEmpty()) return@DoseNotificationDismisser
+        ids.forEach { ReminderNotifications.dismiss(appContext, it) }
+        notificationBuilder.updateGroupSummary()
+    }
+
     // ---- Backup/restore + auto-sync (spec §9 #9) -----------------------------
 
     val backupRepository: BackupRepository by lazy {
@@ -270,7 +281,7 @@ class AppContainer(
     // ---- Repositories ---------------------------------------------------------
 
     val reminderRepository: ReminderRepository by lazy {
-        ReminderRepository(database, database.reminderDao(), schedulingCoordinator, autoSyncManager)
+        ReminderRepository(database, database.reminderDao(), schedulingCoordinator, autoSyncManager, doseNotificationDismisser)
     }
 
     val doseEventRepository: DoseEventRepository by lazy {
@@ -282,6 +293,7 @@ class AppContainer(
             occurrenceProjectionCache = occurrenceProjectionCache,
             autoSyncManager = autoSyncManager,
             reminderDao = database.reminderDao(),
+            notifications = doseNotificationDismisser,
         )
     }
 }

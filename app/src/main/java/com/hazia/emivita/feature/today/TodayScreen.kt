@@ -104,6 +104,7 @@ import com.hazia.emivita.ui.components.StateDisc
 import com.hazia.emivita.ui.components.TonalActionChip
 import com.hazia.emivita.ui.components.DiscState
 import com.hazia.emivita.core.data.settings.TodayLayout
+import com.hazia.emivita.feature.alarm.TakeAmountActivity
 
 internal enum class TimelineStatus { PENDING, TAKEN, SKIPPED, UPCOMING }
 
@@ -418,6 +419,7 @@ internal fun buildTimeline(
                 resolvedAtEpochMillis = null,
                 reminderId = occurrence.reminderId,
                 instructions = remindersById[occurrence.reminderId]?.instructions,
+                asksAmount = remindersById[occurrence.reminderId]?.variableAmount == true,
                 estimated = occurrence.estimated,
                 afterEpochMillis = occurrence.afterEpochMillis,
                 afterMinutes = occurrence.afterEpochMillis?.let { ((occurrence.epochMillis - it) / 60_000L).toInt() },
@@ -519,11 +521,19 @@ internal fun EntryHost(
     // Same resolution SettingsRepository.isLockedUntilTaken performs: the
     // per-medicine override wins, the global default fills in when it is null.
     val canSkip = !(entry.medicine?.remindersLockedUntilTaken ?: deps.lockedByDefault)
+    val context = LocalContext.current
     val onResolve: (DoseStatus) -> Unit = { status ->
         val id = entry.doseEventId
         val medicineId = entry.medicine?.id
         scope.launch {
-            if (id != null) {
+            if (status == DoseStatus.TAKEN && entry.asksAmount) {
+                // The amount screen the notification and the alarm open (§7 R113):
+                // Take here recorded the planned amount, whatever the flag said.
+                val slotId = id ?: if (entry.reminderId != null && medicineId != null) {
+                    deps.doseEventRepository.materializedId(entry.reminderId, medicineId, node.epochMillis, entry.doseAmount)
+                } else null
+                slotId?.let { context.startActivity(TakeAmountActivity.intent(context, it)) }
+            } else if (id != null) {
                 deps.doseEventRepository.resolve(id, status)
             } else if (entry.reminderId != null && medicineId != null && status == DoseStatus.TAKEN) {
                 // "Take now" on a projected slot (§9 #26).

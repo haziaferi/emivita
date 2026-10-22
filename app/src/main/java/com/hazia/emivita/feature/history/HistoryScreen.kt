@@ -201,7 +201,7 @@ fun HistoryScreen(
             exportStatus = try {
                 withContext(Dispatchers.IO) {
                     val rows = rowsForExport()
-                    val document = HistoryExporter.buildPdf(context, rows, adherenceSubtitle(context, rows), zone)
+                    val document = HistoryExporter.buildPdf(context, rows, adherenceSubtitle(context, rows, exportRange), zone)
                     val out = context.contentResolver.openOutputStream(uri)
                         ?: error(resources.getString(R.string.history_export_no_stream))
                     out.use { HistoryExporter.writePdf(document, it) }
@@ -379,22 +379,33 @@ private fun defaultExportFileName(extension: String): String {
 }
 
 /** Same calculation [AdherenceSummary] renders, as a plain string for the PDF
- *  report's subtitle line -- kept in sync by both reading from the same
- *  [HISTORY_LOOKBACK_DAYS] window and the same [adherenceCounts], not by
- *  sharing layout. */
+ *  report's subtitle line, over the exported [range]'s rows and named by it
+ *  (§7 R113): it said "last 30 days" whatever the range. A range without a day
+ *  count is named by the Export dialog's own label for it. */
 // Takes a Context: this builds the PDF subtitle from a coroutine, not a
 // composable, so stringResource() is out of reach (§9 #19).
-private fun adherenceSubtitle(context: Context, events: List<DoseEventWithMedicine>): String {
+internal fun adherenceSubtitle(context: Context, events: List<DoseEventWithMedicine>, range: ExportRange): String {
     val counts = adherenceCounts(events)
-    val days = HISTORY_LOOKBACK_DAYS.toInt()
+    val days = when (range) {
+        ExportRange.LAST_30_DAYS -> 30
+        ExportRange.LAST_90_DAYS -> 90
+        ExportRange.THIS_YEAR, ExportRange.ALL -> null
+    }
+    val rangeLabel = context.getString(range.labelRes)
     if (counts.answered == 0 && counts.missed == 0) {
-        return context.resources.getQuantityString(R.plurals.history_last_days, days, days)
+        return days?.let { context.resources.getQuantityString(R.plurals.history_last_days, it, it) } ?: rangeLabel
     }
     val lead = if (counts.answered == 0) context.getString(R.string.history_no_doses_answered)
     else context.getString(R.string.history_percent_taken, counts.percent)
-    val tail = context.resources.getQuantityString(
-        R.plurals.history_counts_summary, days, counts.taken, counts.skipped, counts.missed, days,
-    )
+    val tail = if (days != null) {
+        context.resources.getQuantityString(R.plurals.history_counts_summary, days, counts.taken, counts.skipped, counts.missed, days)
+    } else {
+        context.getString(
+            R.string.history_subtitle_join,
+            context.getString(R.string.history_counts_plain, counts.taken, counts.skipped, counts.missed),
+            rangeLabel,
+        )
+    }
     return context.getString(R.string.history_subtitle_join, lead, tail)
 }
 

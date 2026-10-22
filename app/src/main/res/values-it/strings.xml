@@ -310,6 +310,7 @@
     <string name="history_sorted_ascending">Ordine crescente</string>
     <string name="history_sorted_descending">Ordine decrescente</string>
     <string name="history_subtitle_join">%1$s – %2$s</string>
+    <string name="history_counts_plain">%1$d prese, %2$d saltate, %3$d mancate</string>
 
     <!-- Form titles and save labels. -->
     <string name="common_save_changes">Salva le modifiche</string>

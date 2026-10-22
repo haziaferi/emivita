@@ -11,6 +11,7 @@ import com.hazia.emivita.core.data.db.EmivitaDatabase
 import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.entity.RepeatConfig
 import com.hazia.emivita.core.scheduling.SchedulingCoordinator
+import com.hazia.emivita.core.notification.DoseNotificationDismisser
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 
@@ -27,6 +28,7 @@ class ReminderRepository(
     private val reminderDao: ReminderDao,
     private val schedulingCoordinator: SchedulingCoordinator,
     private val autoSyncManager: AutoSyncManager,
+    private val notifications: DoseNotificationDismisser = DoseNotificationDismisser.NONE,
 ) {
     fun observeForMedicine(medicineId: Long): Flow<List<Reminder>> =
         reminderDao.observeForMedicine(medicineId)
@@ -234,6 +236,9 @@ class ReminderRepository(
      *  following a parent that no longer fires. */
     suspend fun delete(reminder: Reminder) {
         val children = reminderDao.getChildrenOf(reminder.id)
+        // Its doses go with it by the FK cascade, so their notifications go
+        // first: a sticky one had nothing left to answer it (§7 R113).
+        val showing = database.doseEventDao().pendingIds(reminder.id, null)
 
         database.withTransaction {
             for (child in children) {
@@ -248,6 +253,7 @@ class ReminderRepository(
         // onReminderRemoved: its row still exists, and scheduleOrCancel's
         // "no next occurrence" branch is what cancels the alarm.
         schedulingCoordinator.onReminderRemoved(reminder.id)
+        notifications.dismiss(showing)
         val now = System.currentTimeMillis()
         for (child in children) {
             schedulingCoordinator.onReminderChanged(child.id, now)
