@@ -24,16 +24,14 @@
     <string name="add_medicine_tags">Tags</string>
     <string name="add_medicine_use_global_default">Use global default</string>
     <string name="add_medicine_what_it_s_for_optional">What it\'s for (optional)</string>
-    <string name="add_reminder_active_date_range">Active date range</string>
     <string name="add_reminder_active_days">Active days</string>
     <string name="add_reminder_active_pause_cycle">Active/pause cycle</string>
     <string name="add_reminder_advanced">Advanced</string>
     <string name="add_reminder_alert_at">Alert at</string>
     <string name="add_reminder_alert_when_stock_is_at_or_below">Alert when stock is at or below</string>
     <string name="add_reminder_auto_resolve">Auto-resolve</string>
-    <string name="add_reminder_cycle_starts_today_the_anchor_date_isn_t">Cycle starts today; the anchor date isn\'t editable yet.</string>
     <string name="add_reminder_days_before_expiration_to_start_alerting">Days before expiration to start alerting</string>
-    <string name="add_reminder_every_hours">Every ___ hours</string>
+    <string name="add_reminder_every_hours">Every (hours)</string>
     <string name="add_reminder_every_min">Every (min)</string>
     <string name="add_reminder_every_n_days">Every N days</string>
     <string name="add_reminder_every_relevant_change_while_low">Every relevant change, while low</string>
@@ -41,16 +39,14 @@
     <string name="add_reminder_follows">Follows</string>
     <string name="add_reminder_from">From</string>
     <string name="add_reminder_interval_starts">Interval starts</string>
-    <string name="add_reminder_leave_unset_for_no_bound_a_taper_is_just">Leave unset for no bound — a taper is just several reminders with adjacent ranges.</string>
     <string name="add_reminder_max_repeats">Max repeats</string>
-    <string name="add_reminder_minutes_after_parent_1_1440">Minutes after parent (1–1440)</string>
     <string name="add_reminder_once_a_day">Once a day</string>
     <string name="add_reminder_once_a_day_while_low">Once a day, while low</string>
     <string name="add_reminder_once_until_restocked">Once, until restocked</string>
     <string name="add_reminder_pause_days">Pause days</string>
     <string name="add_reminder_repeat_until_answered">Repeat until answered</string>
     <string name="add_reminder_repeats">Repeats</string>
-    <string name="add_reminder_silently_mark_taken_no_notification_for">Silently mark taken, no notification — for tracking a reminder set up for someone else.</string>
+    <string name="add_reminder_silently_mark_taken_no_notification_for">Marked taken, no notification (for others)</string>
     <string name="add_reminder_specific_days">Specific days</string>
     <string name="add_reminder_this_medicine_needs_another_reminder_first_a">This medicine needs another reminder first — a following dose has to follow something.</string>
     <string name="add_reminder_time">Time</string>
@@ -189,7 +185,7 @@
     <string name="today_nothing_scheduled_yet_add_a_medicine_and_a">Nothing scheduled yet. Add a medicine and a reminder to see it here.</string>
     <string name="today_today">Today</string>
 
-    <string name="add_reminder_push_this_reminder_to_the_end_of_the_weekend">Push this reminder to the end of the weekend window on weekend days. Set the days and window in Settings.</string>
+    <string name="add_reminder_push_this_reminder_to_the_end_of_the_weekend">Weekends: moved to the window’s end (Settings)</string>
     <string name="dose_edit_this_dose_was_never_answered_recording_it">This dose was never answered. Recording it now keeps the history and the exported report accurate.</string>
     <string name="medical_id_printed_onto_an_emergency_card_you_can_hand">Printed onto an emergency card you can hand to a doctor or keep in a wallet. Emivita never checks any of it against your medicines – it writes down what you type.</string>
     <string name="settings_detail_battery_optimisation_lets_the_system_hold">Battery optimisation lets the system hold this app\'s alarms back, so a dose can be announced minutes after it was due — measured at about five on one phone, and the system reserves the right to defer a daily reminder by up to an hour. Excluding Emivita from optimisation is the only remaining way to stop that.</string>
@@ -539,7 +535,7 @@
     <string name="notif_test_title">Test reminder</string>
     <string name="notif_test_text">This is how a reminder arrives. Nothing to take.</string>
     <string name="add_reminder_pre_alarm">Heads-up before the dose</string>
-    <string name="add_reminder_pre_alarm_desc">A silent notification some minutes ahead, so the dose is not a surprise.</string>
+    <string name="add_reminder_pre_alarm_desc">A silent notice a few minutes ahead</string>
     <string name="add_reminder_pre_alarm_minutes">Minutes before</string>
     <string name="notif_pre_alarm_title">%1$s coming up</string>
     <string name="notif_take_all">Take all</string>
@@ -562,10 +558,10 @@
     <string name="dose_edit_delete">Delete this record</string>
     <string name="dose_edit_delete_confirm_text">It leaves History and the exports; a taken dose goes back into the bottle.</string>
     <string name="dose_edit_delete_confirm">Delete</string>
-    <string name="add_reminder_instructions">Instructions (optional)</string>
+    <string name="add_reminder_instructions">Instructions</string>
     <string name="add_reminder_instructions_hint">With food · Not with the iron · Before bed</string>
     <string name="add_reminder_course">A set number of doses</string>
-    <string name="add_reminder_course_desc">Stops on its own after this many are taken.</string>
+    <string name="add_reminder_course_desc">Stops on its own after the last dose</string>
     <string name="add_reminder_doses_remaining">Doses remaining</string>
     <string name="add_medicine_as_needed">As needed</string>
     <string name="add_medicine_as_needed_desc">Taken when needed: stays on Today with its Log button</string>
@@ -731,9 +727,9 @@
     <string name="today_dose_detail_instructions">Instructions</string>
     <string name="today_dose_detail_notes">Medicine notes</string>
     <string name="add_reminder_sticky">Stay until answered</string>
-    <string name="add_reminder_sticky_desc">The notification cannot be swiped away, in the shade or on the lock screen.</string>
+    <string name="add_reminder_sticky_desc">Can’t be swiped away, even when locked</string>
     <string name="add_reminder_variable_amount">Ask the amount when taking</string>
-    <string name="add_reminder_variable_amount_desc">Take on the notification opens a field for the amount, filled with this reminder’s dose.</string>
+    <string name="add_reminder_variable_amount_desc">Take opens a field with the dose to change</string>
     <string name="notif_amount_taken">Amount taken</string>
     <!-- D-07 one-sheet add, name checks, the as-needed limit pair, Today's no-reminder section (§7 R114) -->
     <string name="quick_add_dose_invalid">Enter an amount above zero</string>
@@ -743,4 +739,33 @@
     <string name="add_medicine_prn_both">Fill in both, or leave both empty</string>
     <string name="add_medicine_prn_whole">Enter a whole number above zero</string>
     <string name="today_no_reminder">No reminder</string>
+    <!-- The form parts and the reminder form's grouped Avanzate (SPEC §7 R124) -->
+    <string name="form_time_invalid">Write it as hh:mm</string>
+    <string name="form_date_invalid">Not a valid date</string>
+    <string name="form_pick_time">%1$s: open the clock</string>
+    <string name="form_pick_date">%1$s: open the calendar</string>
+    <string name="form_min_one">At least 1</string>
+    <string name="form_min_one_minute">At least 1 minute</string>
+    <string name="form_min_zero">0 or more</string>
+    <string name="form_until_before_from">Before “From”</string>
+    <string name="reminder_group_taking">When I take it</string>
+    <string name="reminder_group_notification">Notification</string>
+    <string name="reminder_group_unanswered">If I don’t answer</string>
+    <string name="reminder_group_duration">Duration</string>
+    <string name="reminder_sum_repeat">Every %1$d min, max %2$d</string>
+    <string name="reminder_sum_sticky">Stays</string>
+    <string name="reminder_sum_prealarm">Heads-up %1$d min</string>
+    <string name="reminder_sum_nothing">Nothing set</string>
+    <string name="reminder_sum_ask_amount">Ask the amount</string>
+    <string name="reminder_sum_no_instructions">No instructions</string>
+    <string name="reminder_sum_until">Until %1$s</string>
+    <string name="reminder_sum_from">From %1$s</string>
+    <string name="reminder_sum_doses">Doses: %1$d</string>
+    <string name="reminder_sum_no_limit">No limit</string>
+    <string name="reminder_sum_as_medicine">As the medicine</string>
+    <string name="reminder_sum_weekend">Weekend mode</string>
+    <string name="reminder_range_help">Empty: no limit</string>
+    <string name="add_reminder_minutes_after">Minutes after</string>
+    <string name="add_reminder_minutes_after_range">1 to 1440</string>
+    <string name="add_reminder_cycle_help">The cycle starts today</string>
 </resources>

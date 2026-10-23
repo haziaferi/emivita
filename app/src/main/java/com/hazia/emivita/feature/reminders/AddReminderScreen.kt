@@ -5,7 +5,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -22,8 +21,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import com.hazia.emivita.core.format.LocaleFormats
@@ -31,6 +28,7 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
@@ -50,19 +48,19 @@ import com.hazia.emivita.core.data.config.RepeatPattern
 import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.repository.MedicineRepository
 import com.hazia.emivita.core.data.repository.ReminderRepository
-import com.hazia.emivita.ui.components.TimeOfDayField
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
 import androidx.annotation.StringRes
 import com.hazia.emivita.core.format.labelRes
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.semantics
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
 import com.hazia.emivita.ui.components.rememberDirty
+import com.hazia.emivita.ui.form.FieldHelpLine
+import com.hazia.emivita.ui.form.FormTextField
+import com.hazia.emivita.ui.form.FormTimeField
 
 // @StringRes: reminderTypeOptions is a top-level val (§9 #19).
 private data class ReminderTypeOption(
@@ -401,19 +399,13 @@ private fun ReminderTypePicker(onSelect: (ReminderType) -> Unit, onCancel: () ->
 
 /** The one line that makes an overnight window legible (§9 #31, A-20): an end
  *  before the start is accepted and read as "the next day", so the form says
- *  so rather than leaving the person to wonder whether 22:00-06:00 will fire.
- *  Absent for a same-day window. */
+ *  so. Absent for a same-day window; under the two fields, at their text inset (§7 R124). */
 @Composable
 internal fun WindowEndsNextDayNote(startHour: Int, startMinute: Int, endHour: Int, endMinute: Int) {
     val overnight = endHour * 60 + endMinute < startHour * 60 + startMinute
     if (!overnight) return
     val endMillis = java.time.LocalDate.now().atTime(endHour, endMinute).atZone(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
-    Spacer(Modifier.height(4.dp))
-    Text(
-        stringResource(R.string.reminder_window_ends_next_day, LocaleFormats.time(endMillis)),
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
+    FieldHelpLine(stringResource(R.string.reminder_window_ends_next_day, LocaleFormats.time(endMillis)))
 }
 
 /** Same "no dose field" reasoning as [LowStockAlertFormBody] -- an expiration
@@ -429,10 +421,12 @@ private fun ExpirationAlertFormBody(
 ) {
     var leadDays by rememberSaveable { mutableStateOf(initial.leadDays.toString()) }
     var frequency by rememberSaveable { mutableStateOf(initial.frequency) }
-    var hour by rememberSaveable { mutableStateOf(initial.hour) }
-    var minute by rememberSaveable { mutableStateOf(initial.minute) }
+    var hour by rememberSaveable { mutableIntStateOf(initial.hour) }
+    var minute by rememberSaveable { mutableIntStateOf(initial.minute) }
+    var timeBad by remember { mutableStateOf(false) }
     val scope = rememberCoroutineScope()
     val leadDaysValue = leadDays.toIntOrNull()
+    val leadDaysOk = leadDaysValue != null && leadDaysValue >= 0
 
     val dirty = rememberDirty(Unit, leadDays, frequency, hour, minute)
     ReminderFormScaffold(
@@ -440,7 +434,7 @@ private fun ExpirationAlertFormBody(
         title = title,
         onDelete = onDelete,
         saveLabel = saveLabel,
-        saveEnabled = leadDaysValue != null && leadDaysValue >= 0,
+        saveEnabled = leadDaysOk && !timeBad,
         onSave = {
             scope.launch {
                 onSave(ReminderConfig.ExpirationAlert(leadDaysValue ?: 0, frequency, hour, minute))
@@ -448,41 +442,19 @@ private fun ExpirationAlertFormBody(
         },
         onCancel = onCancel,
     ) {
-        OutlinedTextField(
-            value = leadDays,
-            onValueChange = { leadDays = it },
-            label = { Text(stringResource(R.string.add_reminder_days_before_expiration_to_start_alerting)) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+        FormTextField(
+            leadDays, { leadDays = it }, stringResource(R.string.add_reminder_days_before_expiration_to_start_alerting),
+            keyboardType = KeyboardType.Number, error = if (leadDaysOk) null else stringResource(R.string.form_min_zero), reserve = true,
         )
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(8.dp))
         Text(stringResource(R.string.common_notify), style = MaterialTheme.typography.labelLarge)
         Column {
-            Row(
-                // One selectable node per option (§9 #19 Stage B): the row carries
-                // the role and the state, the RadioButton is display-only, and the
-                // label is read as the option's name rather than as a second control.
-                Modifier.selectable(selected = frequency == ExpirationTriggerFrequency.ONCE, role = Role.RadioButton) { frequency = ExpirationTriggerFrequency.ONCE },
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                RadioButton(selected = frequency == ExpirationTriggerFrequency.ONCE, onClick = null)
-                Text(stringResource(R.string.common_once))
-            }
-            Row(
-                // One selectable node per option (§9 #19 Stage B): the row carries
-                // the role and the state, the RadioButton is display-only, and the
-                // label is read as the option's name rather than as a second control.
-                Modifier.selectable(selected = frequency == ExpirationTriggerFrequency.DAILY, role = Role.RadioButton) { frequency = ExpirationTriggerFrequency.DAILY },
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                RadioButton(selected = frequency == ExpirationTriggerFrequency.DAILY, onClick = null)
-                Text(stringResource(R.string.add_reminder_once_a_day))
-            }
+            RadioRow(stringResource(R.string.common_once), frequency == ExpirationTriggerFrequency.ONCE) { frequency = ExpirationTriggerFrequency.ONCE }
+            RadioRow(stringResource(R.string.add_reminder_once_a_day), frequency == ExpirationTriggerFrequency.DAILY) { frequency = ExpirationTriggerFrequency.DAILY }
         }
-
         // See LowStockAlertFormBody's note: alert reminders own a real
         // alarm since spec §7 R37, so they need a time to ring at.
-        TimeOfDayField(stringResource(R.string.add_reminder_alert_at), hour, minute) { h, m -> hour = h; minute = m }
+        Spacer(Modifier.height(8.dp))
+        FormTimeField(stringResource(R.string.add_reminder_alert_at), hour, minute, onError = { timeBad = it }) { h, m -> hour = h; minute = m }
     }
 }
