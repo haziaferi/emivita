@@ -1,5 +1,6 @@
 package com.hazia.emivita.feature.alarm
 
+import com.hazia.emivita.ui.form.FormTextField
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -7,14 +8,11 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
+import com.hazia.emivita.ui.form.DialogActionPair
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -50,7 +48,6 @@ class SnoozePickerActivity : ComponentActivity() {
         val container = (application as EmivitaApplication).container
         setContent {
             SavedEmivitaTheme(container.settingsRepository) {
-                var custom by remember { mutableStateOf("") }
                 val choices = listOf(5, 15, 30, 60)
                 fun snooze(minutes: Int) {
                     lifecycleScope.launch {
@@ -68,36 +65,34 @@ class SnoozePickerActivity : ComponentActivity() {
                         finish()
                     }
                 }
-                AlertDialog(
-                    onDismissRequest = { finish() },
-                    title = { Text(stringResource(R.string.snooze_picker_title)) },
-                    text = {
-                        Column {
-                            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                choices.forEach { m ->
-                                    AssistChip(onClick = { snooze(m) }, label = { Text(stringResource(R.string.snooze_picker_minutes, m)) })
-                                }
-                            }
-                            Spacer(Modifier.height(12.dp))
-                            OutlinedTextField(
-                                value = custom,
-                                onValueChange = { custom = it },
-                                label = { Text(stringResource(R.string.snooze_picker_custom)) },
-                                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                                singleLine = true,
-                                modifier = Modifier.fillMaxWidth(),
-                            )
-                        }
-                    },
-                    confirmButton = {
-                        val minutes = custom.toIntOrNull()?.takeIf { it > 0 }
-                        TextButton(enabled = minutes != null, onClick = { minutes?.let { snooze(it) } }) {
-                            Text(stringResource(R.string.common_snooze))
-                        }
-                    },
-                    dismissButton = { TextButton(onClick = { finish() }) { Text(stringResource(R.string.common_cancel)) } },
-                )
+                SnoozePickerDialog(choices, onSnooze = ::snooze, onDismiss = { finish() })
             }
         }
     }
+}
+
+/** The picker itself (§7 R125: its own composable, so the dialog pair check can show it): quick
+ *  choices, a free field, and the Snooze/Annulla pair. */
+@androidx.compose.runtime.Composable
+internal fun SnoozePickerDialog(choices: List<Int>, onSnooze: (Int) -> Unit, onDismiss: () -> Unit) {
+    var custom by remember { mutableStateOf("") }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.snooze_picker_title)) },
+        text = {
+            Column {
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    choices.forEach { m ->
+                        AssistChip(onClick = { onSnooze(m) }, label = { Text(stringResource(R.string.snooze_picker_minutes, m)) })
+                    }
+                }
+                Spacer(Modifier.height(12.dp))
+                FormTextField(custom, { custom = it }, stringResource(R.string.snooze_picker_custom), keyboardType = KeyboardType.Number)
+            }
+        },
+        confirmButton = {
+            val minutes = custom.toIntOrNull()?.takeIf { it > 0 }
+            DialogActionPair(stringResource(R.string.common_snooze), onConfirm = { minutes?.let(onSnooze) }, onDismiss = onDismiss, confirmEnabled = minutes != null)
+        },
+    )
 }

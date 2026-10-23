@@ -1,5 +1,7 @@
 package com.hazia.emivita.ui.components
 
+import com.hazia.emivita.ui.form.FormTextField
+import com.hazia.emivita.ui.form.DialogActionPair
 import com.hazia.emivita.ui.theme.NearBlack
 import com.hazia.emivita.ui.theme.NearWhite
 import android.graphics.Color as AndroidColor
@@ -20,9 +22,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
@@ -197,7 +197,7 @@ fun ColorPickerDialog(
                             .clip(RoundedCornerShape(10.dp))
                             .background(currentColor()),
                     )
-                    OutlinedTextField(
+                    FormTextField(
                         value = hexText,
                         onValueChange = { typed ->
                             hexText = typed
@@ -214,9 +214,8 @@ fun ColorPickerDialog(
                                 hexError = true
                             }
                         },
-                        label = { Text(stringResource(R.string.color_picker_hex)) },
-                        isError = hexError,
-                        singleLine = true,
+                        label = stringResource(R.string.color_picker_hex),
+                        flagError = hexError,
                         modifier = Modifier.weight(1f),
                     )
                 }
@@ -244,9 +243,8 @@ fun ColorPickerDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { onConfirm(currentColor()) }, enabled = !hexError) { Text(stringResource(R.string.color_picker_use_color)) }
+            DialogActionPair(stringResource(R.string.color_picker_use_color), onConfirm = { onConfirm(currentColor()) }, onDismiss = onDismiss, confirmEnabled = !hexError)
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } },
     )
 }
 

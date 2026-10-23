@@ -13,17 +13,16 @@
          Extracted from Compose literals. `isPseudoLocalesEnabled` on the
          debug build renders everything here accented, so anything still
          hardcoded shows up plain on the screen. -->
-    <string name="add_medicine_add">Add</string>
     <string name="add_medicine_add_a_tag">Add a tag</string>
     <string name="add_medicine_always_lock">Always lock</string>
-    <string name="add_medicine_e_g_capsules_drops_tablet">e.g. capsules, drops, tablet</string>
-    <string name="add_medicine_lock_reminders_until_taken">Lock reminders until taken</string>
-    <string name="add_medicine_measurement_optional">Measurement (optional)</string>
+    <string name="add_medicine_e_g_capsules_drops_tablet">e.g. tablets, drops</string>
+    <string name="add_medicine_lock_reminders_until_taken">Lock until taken</string>
+    <string name="add_medicine_measurement_optional">Unit</string>
     <string name="add_medicine_never_lock">Never lock</string>
-    <string name="add_medicine_storage_note_optional">Storage note (optional)</string>
+    <string name="add_medicine_storage_note_optional">Storage</string>
     <string name="add_medicine_tags">Tags</string>
     <string name="add_medicine_use_global_default">Use global default</string>
-    <string name="add_medicine_what_it_s_for_optional">What it\'s for (optional)</string>
+    <string name="add_medicine_what_it_s_for_optional">What it’s for</string>
     <string name="add_reminder_active_days">Active days</string>
     <string name="add_reminder_active_pause_cycle">Active/pause cycle</string>
     <string name="add_reminder_advanced">Advanced</string>
@@ -147,13 +146,13 @@
     <string name="settings_detail_delay_reminders_on_chosen_days">Delay reminders on chosen days</string>
     <string name="settings_detail_every_reminder_posts_to_one_of_three">Every reminder posts to one of three channels, by the medicine\'s notification priority.</string>
     <string name="settings_detail_find_emivita_in_the_list_and_set_it_to_not">Find Emivita in the list and set it to not optimised.</string>
-    <string name="settings_detail_how_long_a_snoozed_reminder_waits_before">How long a snoozed reminder waits before firing again.</string>
+    <string name="settings_detail_how_long_a_snoozed_reminder_waits_before">How long a snoozed reminder waits</string>
     <string name="settings_detail_notifications_alerts">Notifications &amp; Alerts</string>
     <string name="settings_detail_open_battery_settings">Open battery settings</string>
     <string name="settings_detail_open_notification_settings">Open notification settings</string>
     <string name="settings_detail_open_system_notification_settings">Open system notification settings</string>
     <string name="settings_detail_palette">Palette</string>
-    <string name="settings_detail_pushes_reminders_that_fall_inside_the_window">Pushes reminders that fall inside the window below to its end time.</string>
+    <string name="settings_detail_pushes_reminders_that_fall_inside_the_window">Moves reminders in the window to its end</string>
     <string name="settings_detail_reminders_can_arrive_late">Reminders can arrive late</string>
     <string name="settings_detail_selected">Selected</string>
     <string name="settings_detail_snooze_duration_minutes">Snooze duration (minutes)</string>
@@ -343,8 +342,6 @@
     <string name="medicine_not_found">Medicine not found.</string>
     <string name="reminder_not_found">Reminder not found.</string>
     <string name="add_medicine_scan_barcode">Scan barcode</string>
-    <string name="add_medicine_scanned">Scanned: %1$s</string>
-    <string name="add_medicine_change_color">Change color</string>
     <string name="add_medicine_pick_color">Pick a color</string>
     <string name="reminder_fixed_time">Fixed Time</string>
     <string name="reminder_repeating_interval">Repeating Interval</string>
@@ -427,14 +424,13 @@
     <string name="a11y_no_doses">no doses</string>
     <string name="a11y_adherence_chart">Adherence chart. %1$s</string>
     <string name="a11y_sort_by">Sort by %1$s</string>
-    <string name="a11y_remove_tag">Remove tag %1$s</string>
     <string name="a11y_expanded">Expanded</string>
     <string name="a11y_collapsed">Collapsed</string>
     <!-- Found on the device under en-XA, not by the gate (§9 #19 Stage A part 3). -->
     <string name="theme_mode_light">Light</string>
     <string name="theme_mode_dark">Dark</string>
     <string name="theme_mode_system">System</string>
-    <string name="medical_id_allergies_helper">Free text. Listed on the card exactly as written here</string>
+    <string name="medical_id_allergies_helper">Printed on the card as written</string>
     <!-- The notifications-blocked card (§7 R58). Found plain under en-XA on the
          device with POST_NOTIFICATIONS revoked; no scanner could see it. -->
     <string name="notif_card_all_blocked_title">Reminders can\'t reach you</string>
@@ -474,7 +470,7 @@
     <string name="settings_lock_until_taken_default">Lock reminders until taken by default</string>
     <string name="settings_lock_until_taken_default_desc">New medicines inherit this; each medicine can override it in its own form.</string>
     <string name="stock_production_date">Production date</string>
-    <string name="add_medicine_notes_optional">Notes (optional)</string>
+    <string name="add_medicine_notes_optional">Notes</string>
     <string name="reminder_delete">Delete reminder</string>
     <string name="reminder_delete_title">Delete this reminder?</string>
     <string name="reminder_delete_body">Its past doses stay in History. A reminder that follows this one is switched off.</string>
@@ -525,11 +521,11 @@
     <string name="settings_alarm_tone_default">System default alarm</string>
     <string name="settings_alarm_tone_pick">Choose an alarm sound</string>
     <string name="settings_alarm_no_sound_when_silent">No sound when the phone is silent</string>
-    <string name="settings_alarm_no_sound_when_silent_desc">Alarms normally ring through silent mode. Turn this on to respect the switch.</string>
+    <string name="settings_alarm_no_sound_when_silent_desc">Otherwise alarms ring through silent mode</string>
     <string name="settings_alarm_no_vibration_when_silent">No vibration when the phone is silent</string>
     <string name="settings_alarm_no_vibration_when_silent_desc">Same, for the vibration.</string>
     <string name="settings_use_alarm_clock">Show the next reminder as an alarm</string>
-    <string name="settings_use_alarm_clock_desc">The status bar shows the alarm icon and the lock screen the next reminder time. Android also defers such alarms less.</string>
+    <string name="settings_use_alarm_clock_desc">Alarm icon, time on lock screen, fewer delays</string>
     <string name="settings_test_reminder">Send a test reminder</string>
     <string name="settings_test_reminder_desc">Posts a real notification so you can see and hear how a reminder arrives on this phone.</string>
     <string name="notif_test_title">Test reminder</string>
@@ -547,7 +543,7 @@
     <string name="snooze_picker_minutes">%1$d min</string>
     <string name="snooze_picker_custom">Other (minutes)</string>
     <string name="settings_snooze_ask_each_time">Ask how long each time</string>
-    <string name="settings_snooze_ask_each_time_desc">The Snooze button opens a quick picker instead of using the duration above.</string>
+    <string name="settings_snooze_ask_each_time_desc">Snooze opens a quick choice of length</string>
     <string name="status_deleted">Deleted</string>
     <string name="dose_edit_notes">Note (optional)</string>
     <string name="dose_edit_move_title">Move this dose</string>
@@ -564,9 +560,9 @@
     <string name="add_reminder_course_desc">Stops on its own after the last dose</string>
     <string name="add_reminder_doses_remaining">Doses remaining</string>
     <string name="add_medicine_as_needed">As needed</string>
-    <string name="add_medicine_as_needed_desc">Taken when needed: stays on Today with its Log button</string>
-    <string name="add_medicine_prn_ceiling">As-needed limit (optional)</string>
-    <string name="add_medicine_prn_ceiling_desc">At most this many doses in any window of this many hours. Shown as headroom when you log a dose; it asks once at the limit and never refuses.</string>
+    <string name="add_medicine_as_needed_desc">Stays on Today with its Log button</string>
+    <string name="add_medicine_prn_ceiling">Dose limit</string>
+    <string name="add_medicine_prn_ceiling_desc">At the limit it asks once, never refuses</string>
     <string name="add_medicine_prn_max">Max doses</string>
     <string name="add_medicine_prn_hours">Per hours</string>
     <string name="medicine_detail_journal">Notes journal</string>
@@ -613,9 +609,9 @@
     <string name="unit_drop">drop</string>
     <string name="unit_puff">puff</string>
     <string name="unit_application">application</string>
-    <string name="add_medicine_strength_optional">Strength (optional)</string>
-    <string name="add_medicine_strength_hint">50 mg</string>
-    <string name="add_medicine_rx_number_optional">Prescription number (optional)</string>
+    <string name="add_medicine_strength_optional">Strength</string>
+    <string name="add_medicine_strength_hint">e.g. 50 mg</string>
+    <string name="add_medicine_rx_number_optional">Prescription number</string>
     <string name="medicine_detail_rx">Rx %1$s</string>
     <string name="stock_expiry_exact_day">Exact day</string>
     <string name="stock_opened_on">Opened on</string>
@@ -650,7 +646,7 @@
     <string name="unsaved_title">Discard changes?</string>
     <string name="unsaved_text">What you typed here has not been saved.</string>
     <string name="unsaved_discard">Discard</string>
-    <string name="unsaved_keep">Keep editing</string>
+    <string name="unsaved_keep">Edit</string>
     <string name="disclaimer_title">Before you start</string>
     <string name="disclaimer_body">Emivita is a reminder and record-keeping app, not a medical device. It does not replace your doctor or pharmacist, and it does not check doses, interactions or anything else you enter. Reminders depend on the phone: a phone that is off, silenced, or saving battery can miss one. Keep taking your medicines as prescribed, whatever the app says or does not say.</string>
     <string name="disclaimer_understood">I understand</string>
@@ -684,8 +680,8 @@
     <!-- Database recovery (§9 #32): an unopenable file set aside, the app started empty -->
     <string name="recovery_title">Your medicines could not be opened</string>
     <string name="recovery_body">The app\'s database could not be read when it started. The file was set aside, not deleted, and the app has started with an empty list. If you have a backup, restore it now under Data &amp; Backup. The set-aside file is listed there too.</string>
-    <string name="recovery_restore">Restore from backup</string>
-    <string name="recovery_continue_empty">Continue empty</string>
+    <string name="recovery_restore">Restore</string>
+    <string name="recovery_continue_empty">Without data</string>
     <string name="recovery_set_aside_title">Set-aside database files</string>
     <plurals name="recovery_set_aside_count">
         <item quantity="one">%1$d file, %2$s, set aside on %3$s. Kept until you delete it.</item>
@@ -732,7 +728,7 @@
     <string name="add_reminder_variable_amount_desc">Take opens a field with the dose to change</string>
     <string name="notif_amount_taken">Amount taken</string>
     <!-- D-07 one-sheet add, name checks, the as-needed limit pair, Today's no-reminder section (§7 R114) -->
-    <string name="quick_add_dose_invalid">Enter an amount above zero</string>
+    <string name="quick_add_dose_invalid">Above zero</string>
     <string name="quick_add_more_details">Save and add details</string>
     <string name="medicine_name_blank">Write the medicine\'s name</string>
     <string name="medicine_name_duplicate">You already have a medicine with this name</string>
@@ -768,4 +764,14 @@
     <string name="add_reminder_minutes_after">Minutes after</string>
     <string name="add_reminder_minutes_after_range">1 to 1440</string>
     <string name="add_reminder_cycle_help">The cycle starts today</string>
+    <string name="medicine_group_details">Details</string>
+    <string name="medicine_details_none">Nothing added</string>
+    <string name="medicine_details_code">Code %1$s</string>
+    <string name="medicine_details_rx">Rx %1$s</string>
+    <string name="medicine_sum_lock_default">Lock: default</string>
+    <string name="medicine_sum_lock_on">Lock: always</string>
+    <string name="medicine_sum_lock_off">Lock: never</string>
+    <string name="medicine_barcode">Barcode</string>
+    <string name="medicine_scan_unavailable">No scanner app installed</string>
+    <string name="medicine_add_tag">Add the tag</string>
 </resources>

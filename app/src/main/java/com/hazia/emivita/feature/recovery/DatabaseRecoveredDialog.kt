@@ -1,12 +1,12 @@
 package com.hazia.emivita.feature.recovery
 
+import com.hazia.emivita.ui.form.DialogActionPair
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.window.DialogProperties
@@ -31,7 +31,8 @@ fun DatabaseRecoveredDialog(keyLost: Boolean, onRestore: () -> Unit, onContinueE
                 Text(stringResource(if (keyLost) R.string.recovery_key_lost_body else R.string.recovery_body), style = MaterialTheme.typography.bodyMedium)
             }
         },
-        confirmButton = { TextButton(onClick = onRestore) { Text(stringResource(R.string.recovery_restore)) } },
-        dismissButton = { TextButton(onClick = onContinueEmpty) { Text(stringResource(R.string.recovery_continue_empty)) } },
+        confirmButton = {
+            DialogActionPair(stringResource(R.string.recovery_restore), onConfirm = onRestore, onDismiss = onContinueEmpty, dismissLabel = stringResource(R.string.recovery_continue_empty))
+        },
     )
 }

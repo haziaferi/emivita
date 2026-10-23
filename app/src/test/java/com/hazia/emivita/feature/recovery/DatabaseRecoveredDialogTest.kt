@@ -18,13 +18,13 @@ class DatabaseRecoveredDialogTest {
     val compose = createComposeRule()
 
     @Test
-    fun `Restore and Continue empty each answer the notice once`() {
+    fun `Restore and Without data each answer the notice once`() {
         var restored = 0
         var continued = 0
         compose.setContent { DatabaseRecoveredDialog(keyLost = false, onRestore = { restored++ }, onContinueEmpty = { continued++ }) }
         compose.onNodeWithText("Your medicines could not be opened").assertExists()
-        compose.onNodeWithText("Restore from backup").performClick()
-        compose.onNodeWithText("Continue empty").performClick()
+        compose.onNodeWithText("Restore").performClick()
+        compose.onNodeWithText("Without data").performClick()
         assertEquals(1, restored)
         assertEquals(1, continued)
     }

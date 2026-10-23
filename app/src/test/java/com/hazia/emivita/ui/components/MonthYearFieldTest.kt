@@ -3,6 +3,7 @@ package com.hazia.emivita.ui.components
 import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.isSelectable
 import androidx.compose.ui.test.junit4.createComposeRule
+import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import org.junit.Assert.assertEquals
@@ -41,7 +42,8 @@ class MonthYearFieldTest {
     fun `the dialog is one selectable node per month and per year, and OK writes the month end`() {
         var chosen: Long? = null
         compose.setContent { MonthYearField(label = "Expiry", epochDay = LocalDate.of(2027, 3, 31).toEpochDay(), yearsAhead = 3, onChange = { chosen = it }) }
-        compose.onNodeWithText("Expiry: 03/2027").performClick()
+        compose.onNodeWithText("03/2027").assertExists()
+        compose.onNodeWithContentDescription("Expiry: open the calendar").performClick()
         // 12 months + (this year - 1 .. this year + 3) = 5 years
         compose.onAllNodes(isSelectable()).assertCountEquals(17)
         compose.onNodeWithText("Jun").performClick()

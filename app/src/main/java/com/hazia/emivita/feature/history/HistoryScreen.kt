@@ -1,5 +1,6 @@
 package com.hazia.emivita.feature.history
 
+import com.hazia.emivita.ui.form.DialogActionPair
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -82,7 +83,6 @@ import com.hazia.emivita.core.data.repository.ReminderRepository
 import com.hazia.emivita.core.notification.ReminderNotificationBuilder
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.RadioButton
-import androidx.compose.material3.TextButton
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
@@ -631,7 +631,6 @@ internal fun ExportScopeDialog(
                 }
             }
         },
-        confirmButton = { TextButton(onClick = onConfirm) { Text(stringResource(R.string.history_export)) } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } },
+        confirmButton = { DialogActionPair(stringResource(R.string.history_export), onConfirm = onConfirm, onDismiss = onDismiss) },
     )
 }

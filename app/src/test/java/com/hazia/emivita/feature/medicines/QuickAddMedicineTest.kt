@@ -11,7 +11,9 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.StateRestorationTester
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.test.performClick
+import androidx.compose.ui.test.performSemanticsAction
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import com.hazia.emivita.core.data.config.ReminderConfig
@@ -42,8 +44,8 @@ import org.robolectric.shadows.ShadowDialog
  * one sheet whose Save writes the medicine and its first daily reminder and
  * arms its alarm; "Save and add details" saves the same and hands the new id
  * to the full edit form. The sheet keeps its input across a restore, asks
- * before Back drops it, says a bad dose on the field, and warns about a name
- * the profile already has.
+ * before Back or its Annulla drops it (§7 R125), says a bad dose on the field
+ * only while it is wrong, and warns about a name the profile already has.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(application = TestEmivitaApplication::class, qualifiers = "w412dp-h869dp")
@@ -123,7 +125,7 @@ class QuickAddMedicineTest {
         showMedicines()
         openSheet()
         field("Name").performTextInput("Metformin")
-        field("Measurement (optional)").performTextInput("tablet")
+        field("Unit").performTextInput("tablet")
         settle()
         compose.onNode(saveButton).performClick()
         settle()
@@ -163,13 +165,15 @@ class QuickAddMedicineTest {
         field("Name").performTextInput("Metformin")
         settle()
         compose.onNode(saveButton).assertIsEnabled()
+        // §7 R125: a rule, so not said at rest (the line stays reserved).
+        compose.onNode(hasText("Above zero")).assertDoesNotExist()
         field("Dose amount").performTextReplacement("0")
         settle()
-        compose.onNodeWithText("Enter an amount above zero").assertExists()
+        compose.onNodeWithText("Above zero").assertExists()
         compose.onNode(saveButton).assertIsNotEnabled()
         field("Dose amount").performTextReplacement("2")
         settle()
-        compose.onNode(hasText("Enter an amount above zero")).assertDoesNotExist()
+        compose.onNode(hasText("Above zero")).assertDoesNotExist()
         compose.onNode(saveButton).assertIsEnabled()
     }
 
@@ -180,7 +184,7 @@ class QuickAddMedicineTest {
         val restore = StateRestorationTester(compose)
         showSheet(restore = restore)
         field("Name").performTextReplacement("Levothyroxine")
-        field("Measurement (optional)").performTextReplacement("drops")
+        field("Unit").performTextReplacement("drops")
         compose.waitForIdle()
         restore.emulateSavedInstanceStateRestore()
         compose.waitForIdle()
@@ -200,6 +204,36 @@ class QuickAddMedicineTest {
         compose.onNode(hasText("Discard") and hasClickAction()).performClick()
         settle()
         assertEquals(1, dismissed)
+    }
+
+    /** §7 R125: the sheet's foot has Annulla, which asks as Back does. */
+    @Test
+    fun `Annulla with typed input asks before dropping it, and keeping the edits keeps them`() {
+        var dismissed = 0
+        showSheet(onDismiss = { dismissed++ })
+        field("Name").performTextInput("Metformin")
+        settle()
+        compose.onNode(hasText("Cancel") and hasClickAction()).performSemanticsAction(SemanticsActions.OnClick)
+        eventually { compose.onNodeWithText("Discard changes?").assertExists() }
+        assertEquals("nothing dropped yet", 0, dismissed)
+        compose.onNode(hasText("Edit") and hasClickAction()).performClick()
+        settle()
+        assertEquals("kept", 0, dismissed)
+        compose.onNodeWithText("Metformin").assertExists()
+        compose.onNode(hasText("Cancel") and hasClickAction()).performSemanticsAction(SemanticsActions.OnClick)
+        eventually { compose.onNodeWithText("Discard changes?").assertExists() }
+        compose.onNode(hasText("Discard") and hasClickAction()).performClick()
+        settle()
+        assertEquals(1, dismissed)
+    }
+
+    @Test
+    fun `untouched, Annulla leaves at once`() {
+        var dismissed = 0
+        showSheet(onDismiss = { dismissed++ })
+        compose.onNode(hasText("Cancel") and hasClickAction()).performSemanticsAction(SemanticsActions.OnClick)
+        eventually { assertEquals(1, dismissed) }
+        compose.onNode(hasText("Discard changes?")).assertDoesNotExist()
     }
 
     @Test
@@ -245,7 +279,7 @@ class QuickAddMedicineTest {
         compose.onNode(hasText("Write the medicine's name")).assertDoesNotExist()
         field("Name").performClick()
         settle()
-        field("Measurement (optional)").performClick()
+        field("Unit").performClick()
         settle()
         compose.onNodeWithText("Write the medicine's name").assertExists()
         compose.onNode(saveButton).assertIsNotEnabled()

@@ -1,9 +1,9 @@
 package com.hazia.emivita.ui.components
 
+import com.hazia.emivita.ui.form.DialogActionPair
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -27,16 +27,24 @@ import com.hazia.emivita.R
 fun unsavedChangesGuard(dirty: Boolean, onDiscard: () -> Unit): () -> Unit {
     var asking by remember { mutableStateOf(false) }
     BackHandler(enabled = dirty) { asking = true }
-    if (asking) {
-        AlertDialog(
-            onDismissRequest = { asking = false },
-            title = { Text(stringResource(R.string.unsaved_title)) },
-            text = { Text(stringResource(R.string.unsaved_text)) },
-            confirmButton = { TextButton(onClick = { asking = false; onDiscard() }) { Text(stringResource(R.string.unsaved_discard)) } },
-            dismissButton = { TextButton(onClick = { asking = false }) { Text(stringResource(R.string.unsaved_keep)) } },
-        )
-    }
+    if (asking) UnsavedQuestion(onDiscard = { asking = false; onDiscard() }, onKeep = { asking = false })
     return if (dirty) { { asking = true } } else onDiscard
+}
+
+/**
+ * The one question before edits are dropped, asked by a form, a form sheet and a Settings sheet
+ * alike: "Scarta" / "Modifica" side by side (§7 R126). Dismissing it keeps the edits.
+ */
+@Composable
+fun UnsavedQuestion(onDiscard: () -> Unit, onKeep: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onKeep,
+        title = { Text(stringResource(R.string.unsaved_title)) },
+        text = { Text(stringResource(R.string.unsaved_text)) },
+        confirmButton = {
+            DialogActionPair(stringResource(R.string.unsaved_discard), onConfirm = onDiscard, onDismiss = onKeep, dismissLabel = stringResource(R.string.unsaved_keep))
+        },
+    )
 }
 
 /** True once any of [current] differs from its value at first composition

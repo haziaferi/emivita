@@ -1,5 +1,7 @@
 package com.hazia.emivita.feature.settings
 
+import com.hazia.emivita.ui.form.DialogActionPair
+import com.hazia.emivita.ui.form.FormSecureTextField
 import android.content.Intent
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -12,7 +14,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -34,7 +35,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
 import androidx.compose.ui.unit.dp
 import androidx.core.net.toUri
@@ -376,13 +376,10 @@ fun BackupSyncScreen(
             title = { Text(stringResource(R.string.backup_restore_confirm_title)) },
             text = { Text(stringResource(R.string.backup_sync_replaces_everything_currently_on_this_device)) },
             confirmButton = {
-                TextButton(onClick = {
+                DialogActionPair(stringResource(R.string.backup_restore_confirm_action), onDismiss = { confirmRestoreUri = null }, onConfirm = {
                     confirmRestoreUri = null
                     scope.launch { attemptRestore(uri, null) }
-                }) { Text(stringResource(R.string.backup_restore_confirm_action)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { confirmRestoreUri = null }) { Text(stringResource(R.string.common_cancel)) }
+                })
             },
         )
     }
@@ -393,57 +390,30 @@ fun BackupSyncScreen(
             title = { Text(stringResource(R.string.backup_sync_export_without_a_password)) },
             text = { Text(stringResource(R.string.backup_sync_this_file_will_contain_readable_medication)) },
             confirmButton = {
-                TextButton(onClick = {
+                DialogActionPair(stringResource(R.string.backup_sync_export_anyway), onDismiss = { showUnencryptedConfirm = false }, onConfirm = {
                     showUnencryptedConfirm = false
                     launchExport(null)
-                }) { Text(stringResource(R.string.backup_sync_export_anyway)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showUnencryptedConfirm = false }) { Text(stringResource(R.string.common_cancel)) }
+                })
             },
         )
     }
 
     if (showRestorePasswordDialog) {
-        AlertDialog(
-            onDismissRequest = { showRestorePasswordDialog = false },
-            title = { Text(stringResource(R.string.backup_sync_password_required)) },
-            text = {
-                Column {
-                    Text(stringResource(R.string.backup_sync_this_backup_is_password_protected))
-                    restorePasswordError?.let {
-                        Spacer(Modifier.height(4.dp))
-                        Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
+        BackupPasswordDialog(
+            password = restorePasswordInput,
+            onPassword = { restorePasswordInput = it },
+            error = restorePasswordError,
+            onDismiss = { showRestorePasswordDialog = false; restorePasswordInput = "" },
+            onUnlock = onUnlock@{
+                val uri = pendingRestoreUri ?: return@onUnlock
+                val password = restorePasswordInput.toCharArray()
+                scope.launch {
+                    try {
+                        attemptRestore(uri, password)
+                    } finally {
+                        Arrays.fill(password, '\u0000')
                     }
-                    Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = restorePasswordInput,
-                        onValueChange = { restorePasswordInput = it },
-                        label = { Text(stringResource(R.string.backup_sync_password)) },
-                        visualTransformation = PasswordVisualTransformation(),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    )
                 }
-            },
-            confirmButton = {
-                TextButton(
-                    enabled = restorePasswordInput.isNotBlank(),
-                    onClick = {
-                        val uri = pendingRestoreUri ?: return@TextButton
-                        val password = restorePasswordInput.toCharArray()
-                        scope.launch {
-                            try {
-                                attemptRestore(uri, password)
-                            } finally {
-                                Arrays.fill(password, '\u0000')
-                            }
-                        }
-                    },
-                ) { Text(stringResource(R.string.common_unlock)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showRestorePasswordDialog = false; restorePasswordInput = "" }) { Text(stringResource(R.string.common_cancel)) }
             },
         )
     }
@@ -459,21 +429,16 @@ fun BackupSyncScreen(
                         style = MaterialTheme.typography.labelMedium,
                     )
                     Spacer(Modifier.height(8.dp))
-                    OutlinedTextField(
-                        value = syncPassphraseInput,
-                        onValueChange = { syncPassphraseInput = it },
-                        label = { Text(stringResource(R.string.backup_sync_password)) },
-                        visualTransformation = PasswordVisualTransformation(),
-                        singleLine = true,
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Password),
-                    )
+                    FormSecureTextField(syncPassphraseInput, { syncPassphraseInput = it }, stringResource(R.string.backup_sync_password))
                 }
             },
             confirmButton = {
-                TextButton(
-                    enabled = syncPassphraseInput.isNotBlank(),
-                    onClick = {
-                        val folderUri = pendingSyncFolderUri ?: return@TextButton
+                DialogActionPair(
+                    stringResource(R.string.common_save),
+                    onDismiss = null,
+                    confirmEnabled = syncPassphraseInput.isNotBlank(),
+                    onConfirm = onConfirm@{
+                        val folderUri = pendingSyncFolderUri ?: return@onConfirm
                         val passphrase = syncPassphraseInput.toCharArray()
                         try {
                             AutoSyncPassphraseStore.save(context, passphrase)
@@ -488,7 +453,7 @@ fun BackupSyncScreen(
                             autoSyncManager.notifyChanged()
                         }
                     },
-                ) { Text(stringResource(R.string.common_save)) }
+                )
             },
         )
     }
@@ -531,11 +496,11 @@ private fun ArchivedMedicinesSection(profileId: Long, medicineRepository: Medici
             title = { Text(stringResource(R.string.data_archived_delete_title, medicine.name)) },
             text = { Text(stringResource(R.string.data_archived_delete_text)) },
             confirmButton = {
-                TextButton(onClick = { scope.launch { medicineRepository.deletePermanently(medicine); confirmDelete = null } }) {
-                    Text(stringResource(R.string.data_archived_delete), color = MaterialTheme.colorScheme.error)
-                }
+                DialogActionPair(
+                    stringResource(R.string.data_archived_delete), destructive = true, onDismiss = { confirmDelete = null },
+                    onConfirm = { scope.launch { medicineRepository.deletePermanently(medicine); confirmDelete = null } },
+                )
             },
-            dismissButton = { TextButton(onClick = { confirmDelete = null }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
 }
@@ -622,7 +587,7 @@ internal fun SetAsideFilesSection(
             title = { Text(stringResource(R.string.recovery_set_aside_confirm_title)) },
             text = { Text(stringResource(R.string.recovery_set_aside_confirm_text)) },
             confirmButton = {
-                TextButton(onClick = {
+                DialogActionPair(stringResource(R.string.recovery_set_aside_delete), destructive = true, onDismiss = { asking = false }, onConfirm = {
                     asking = false
                     scope.launch {
                         val locked = settingsRepository.biometricLockEnabled.first()
@@ -633,11 +598,35 @@ internal fun SetAsideFilesSection(
                         files = emptyList()
                         status = resources.getString(R.string.recovery_set_aside_deleted)
                     }
-                }) { Text(stringResource(R.string.recovery_set_aside_delete), color = MaterialTheme.colorScheme.error) }
+                })
             },
-            dismissButton = { TextButton(onClick = { asking = false }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
+}
+
+/** The password a protected backup asks for before it is restored (§7 R125: its own composable,
+ *  so the dialog pair check can show it). */
+@Composable
+internal fun BackupPasswordDialog(password: String, onPassword: (String) -> Unit, error: String?, onDismiss: () -> Unit, onUnlock: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(R.string.backup_sync_password_required)) },
+        text = {
+            Column {
+                Text(stringResource(R.string.backup_sync_this_backup_is_password_protected))
+                error?.let {
+                    Spacer(Modifier.height(4.dp))
+                    Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
+                }
+                Spacer(Modifier.height(8.dp))
+                // The one field pattern (§7 R125), masked.
+                FormSecureTextField(password, onPassword, stringResource(R.string.backup_sync_password))
+            }
+        },
+        confirmButton = {
+            DialogActionPair(stringResource(R.string.common_unlock), onConfirm = onUnlock, onDismiss = onDismiss, confirmEnabled = password.isNotBlank())
+        },
+    )
 }
 
 /** One checkbox node naming what goes, Delete enabled only by it (§9 #29, MT-22). */
@@ -661,8 +650,7 @@ internal fun PurgeConfirmDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
             }
         },
         confirmButton = {
-            TextButton(enabled = understood, onClick = onConfirm) { Text(stringResource(R.string.purge_button), color = MaterialTheme.colorScheme.error) }
+            DialogActionPair(stringResource(R.string.purge_button), onConfirm = onConfirm, onDismiss = onDismiss, confirmEnabled = understood, destructive = true)
         },
-        dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) } },
     )
 }

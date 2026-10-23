@@ -1,10 +1,10 @@
 package com.hazia.emivita.ui.components
 
+import com.hazia.emivita.ui.form.DialogActionPair
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberTimePickerState
 import androidx.compose.runtime.Composable
@@ -46,12 +46,11 @@ fun TimeOfDayField(
             title = { Text(label) },
             text = { TimePicker(state = state) },
             confirmButton = {
-                TextButton(onClick = {
+                DialogActionPair(stringResource(R.string.common_ok), onConfirm = {
                     onChange(state.hour, state.minute)
                     showDialog = false
-                }) { Text(stringResource(R.string.common_ok)) }
+                }, onDismiss = { showDialog = false })
             },
-            dismissButton = { TextButton(onClick = { showDialog = false }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
 }

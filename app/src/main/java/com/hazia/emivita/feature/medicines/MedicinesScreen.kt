@@ -1,5 +1,6 @@
 package com.hazia.emivita.feature.medicines
 
+import com.hazia.emivita.ui.form.DialogActionPair
 import android.app.Activity.RESULT_OK
 import android.content.ActivityNotFoundException
 import android.content.Intent
@@ -42,7 +43,6 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -344,9 +344,8 @@ fun MedicinesScreen(
             title = { Text(stringResource(R.string.medicines_not_found)) },
             text = { Text(stringResource(R.string.medicines_no_medicine_matches_that_code_yet_add_it_as)) },
             confirmButton = {
-                TextButton(onClick = { notFoundCode = null; onAddMedicineWithBarcode(pendingCode) }) { Text(stringResource(R.string.medicines_add_new)) }
+                DialogActionPair(stringResource(R.string.medicines_add_new), onConfirm = { notFoundCode = null; onAddMedicineWithBarcode(pendingCode) }, onDismiss = { notFoundCode = null })
             },
-            dismissButton = { TextButton(onClick = { notFoundCode = null }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
 }

@@ -1,24 +1,12 @@
 package com.hazia.emivita.feature.medicines
 
-import androidx.compose.foundation.layout.Arrangement
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
-import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.ModalBottomSheet
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
-import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -32,6 +20,7 @@ import androidx.compose.ui.focus.onFocusChanged
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.hazia.emivita.R
 import com.hazia.emivita.core.data.config.ReminderConfig
@@ -44,8 +33,12 @@ import com.hazia.emivita.core.data.repository.MedicineRepository
 import com.hazia.emivita.core.format.formatDecimalLocalized
 import com.hazia.emivita.core.format.parseDecimal
 import com.hazia.emivita.feature.reminders.AdvancedReminderFieldsState
-import com.hazia.emivita.ui.components.TimeOfDayField
 import com.hazia.emivita.ui.components.rememberDirty
+import com.hazia.emivita.ui.form.FieldPair
+import com.hazia.emivita.ui.form.FormSheetScaffold
+import com.hazia.emivita.ui.form.FormTextField
+import com.hazia.emivita.ui.form.FormTimeField
+import com.hazia.emivita.ui.form.TertiaryControlHeight
 import com.hazia.emivita.ui.icons.MedicineIcons
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.launch
@@ -54,8 +47,8 @@ import kotlinx.coroutines.withContext
 /*
  * D-07, adding a medicine (§7 R114, the owner's pick V3 of R106's scoring):
  * the Medicines tab's add button opens this one sheet. Built from the app's
- * own parts (ModalBottomSheet as Today's sheets, TimeOfDayField, the
- * unsaved-changes strings); the full form stays as "add details".
+ * own parts (the shared form sheet, its time field, the unsaved-changes
+ * strings); the full form stays as "add details".
  */
 
 /** Two names are the same medicine's when they differ only in case and
@@ -77,18 +70,12 @@ internal fun MedicineNameField(name: String, onNameChange: (String) -> Unit, oth
     var left by rememberSaveable { mutableStateOf(false) }
     val blank = left && name.isBlank()
     val duplicate = !blank && otherNames.any { sameMedicineName(it, name) }
-    OutlinedTextField(
-        value = name,
-        onValueChange = onNameChange,
-        label = { Text(stringResource(R.string.common_name)) },
-        isError = blank,
-        supportingText = when {
-            blank -> { { Text(stringResource(R.string.medicine_name_blank)) } }
-            duplicate -> { { Text(stringResource(R.string.medicine_name_duplicate)) } }
-            else -> null
-        },
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth().onFocusChanged { if (it.isFocused) visited = true else if (visited) left = true },
+    FormTextField(
+        name, onNameChange, stringResource(R.string.common_name),
+        Modifier.onFocusChanged { if (it.isFocused) visited = true else if (visited) left = true },
+        help = if (duplicate) stringResource(R.string.medicine_name_duplicate) else null,
+        error = if (blank) stringResource(R.string.medicine_name_blank) else null,
+        reserve = true,
     )
 }
 
@@ -99,8 +86,9 @@ internal data class QuickAddInput(val name: String, val dose: Double, val unit: 
  * The one sheet: name, dose amount and unit, and the first reminder's time,
  * every day as Add reminder's own default. Save creates both; "Save and add
  * details" saves the same and hands the new id on for the full edit form.
+ * On the shared form parts (§7 R125): the foot's Annulla asks when anything
+ * was typed, as Back and the scrim do.
  */
-@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 internal fun QuickAddMedicineSheet(
     otherNames: List<String>,
@@ -114,16 +102,15 @@ internal fun QuickAddMedicineSheet(
     var unit by rememberSaveable { mutableStateOf("") }
     var hour by rememberSaveable { mutableIntStateOf(8) }
     var minute by rememberSaveable { mutableIntStateOf(0) }
-    var asking by rememberSaveable { mutableStateOf(false) }
+    var timeBad by remember { mutableStateOf(false) }
     var saving by remember { mutableStateOf(false) } // transient: a save in flight does not survive the activity
     var saveError by remember { mutableStateOf<String?>(null) }
     val resources = LocalResources.current
     val doseValue = parseDecimal(dose)
     // Said on the field as it is typed, as the colour picker's hex field does.
     val doseInvalid = doseValue == null || doseValue <= 0
-    val canSave = name.isNotBlank() && !doseInvalid && !saving
+    val canSave = name.isNotBlank() && !doseInvalid && !saving && !timeBad
     val dirty = rememberDirty(Unit, name, dose, unit, hour, minute)
-    val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
     val scope = rememberCoroutineScope()
 
     fun submit(addDetails: Boolean) {
@@ -140,64 +127,31 @@ internal fun QuickAddMedicineSheet(
         }
     }
 
-    ModalBottomSheet(
-        // Back, a swipe down or a tap outside: once touched, ask first (§9 #29, HM-40).
-        onDismissRequest = { if (dirty) asking = true else onDismiss() },
-        sheetState = sheetState,
-    ) {
-        // Scrolls, as Settings' sheets do, so Save stays reachable at a large font.
-        Column(Modifier.verticalScroll(rememberScrollState()).padding(horizontal = 16.dp).padding(bottom = 24.dp)) {
-            Text(stringResource(R.string.add_medicine_title), style = MaterialTheme.typography.titleLarge)
-            Spacer(Modifier.height(12.dp))
-            MedicineNameField(name, { name = it }, otherNames)
-            Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                OutlinedTextField(
-                    value = dose,
-                    onValueChange = { dose = it },
-                    label = { Text(stringResource(R.string.common_dose_amount)) },
-                    isError = doseInvalid,
-                    supportingText = if (doseInvalid) { { Text(stringResource(R.string.quick_add_dose_invalid)) } } else null,
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    singleLine = true,
-                    modifier = Modifier.weight(1f),
-                )
-                OutlinedTextField(
-                    value = unit,
-                    onValueChange = { unit = it },
-                    label = { Text(stringResource(R.string.add_medicine_measurement_optional)) },
-                    placeholder = { Text(stringResource(R.string.add_medicine_e_g_capsules_drops_tablet)) },
-                    singleLine = true,
-                    modifier = Modifier.weight(1f),
-                )
-            }
-            Spacer(Modifier.height(8.dp))
-            TimeOfDayField(stringResource(R.string.add_reminder_time), hour, minute) { h, m -> hour = h; minute = m }
-            Text(
-                stringResource(R.string.field_label_value, stringResource(R.string.add_reminder_repeats), stringResource(R.string.common_daily)),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-            Spacer(Modifier.height(16.dp))
-            Button(enabled = canSave, onClick = { submit(addDetails = false) }, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.common_save))
-            }
-            TextButton(enabled = canSave, onClick = { submit(addDetails = true) }, modifier = Modifier.fillMaxWidth()) {
-                Text(stringResource(R.string.quick_add_more_details))
-            }
-            saveError?.let {
-                Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
-            }
-        }
-    }
-    if (asking) {
-        AlertDialog(
-            onDismissRequest = { asking = false; scope.launch { sheetState.show() } },
-            title = { Text(stringResource(R.string.unsaved_title)) },
-            text = { Text(stringResource(R.string.unsaved_text)) },
-            confirmButton = { TextButton(onClick = { asking = false; onDismiss() }) { Text(stringResource(R.string.unsaved_discard)) } },
-            dismissButton = { TextButton(onClick = { asking = false; scope.launch { sheetState.show() } }) { Text(stringResource(R.string.unsaved_keep)) } },
+    FormSheetScaffold(stringResource(R.string.add_medicine_title), dirty, canSave, onSave = { submit(addDetails = false) }, close = onDismiss) {
+        MedicineNameField(name, { name = it }, otherNames)
+        Spacer(Modifier.height(8.dp))
+        val doseLabel = stringResource(R.string.common_dose_amount)
+        val doseError = stringResource(R.string.quick_add_dose_invalid)
+        val unitLabel = stringResource(R.string.add_medicine_measurement_optional)
+        val unitHelp = stringResource(R.string.add_medicine_e_g_capsules_drops_tablet)
+        FieldPair(
+            listOf(doseLabel, unitLabel, unitHelp),
+            first = { m -> FormTextField(dose, { dose = it }, doseLabel, m, keyboardType = KeyboardType.Decimal, error = if (doseInvalid) doseError else null, reserve = true) },
+            second = { m -> FormTextField(unit, { unit = it }, unitLabel, m, help = unitHelp) },
         )
+        Spacer(Modifier.height(8.dp))
+        FormTimeField(
+            stringResource(R.string.add_reminder_time), hour, minute,
+            help = stringResource(R.string.field_label_value, stringResource(R.string.add_reminder_repeats), stringResource(R.string.common_daily)),
+            onError = { timeBad = it },
+        ) { h, m -> hour = h; minute = m }
+        Spacer(Modifier.height(8.dp))
+        // The third action, a tertiary text action on the grid's left edge above the foot.
+        TextButton(
+            enabled = canSave, onClick = { submit(addDetails = true) },
+            modifier = Modifier.fillMaxWidth().height(TertiaryControlHeight), contentPadding = PaddingValues(horizontal = 0.dp),
+        ) { Text(stringResource(R.string.quick_add_more_details), modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        saveError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium) }
     }
 }
 

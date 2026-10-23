@@ -50,7 +50,12 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import com.hazia.emivita.core.di.LocalAppContainer
 import com.hazia.emivita.core.data.settings.SettingsRepository
-import com.hazia.emivita.ui.components.TimeOfDayField
+import com.hazia.emivita.ui.form.FieldPair
+import com.hazia.emivita.ui.form.FormScaffold
+import com.hazia.emivita.ui.components.rememberDirty
+import androidx.compose.runtime.SideEffect
+import com.hazia.emivita.ui.form.FormTimeField
+import com.hazia.emivita.ui.form.WeekdayGrid
 import com.hazia.emivita.ui.theme.MedPalette
 import com.hazia.emivita.ui.theme.ThemeMode
 import com.hazia.emivita.ui.theme.displayName
@@ -59,8 +64,6 @@ import kotlinx.coroutines.launch
 import java.time.LocalTime
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
-import java.time.DayOfWeek
-import java.time.format.TextStyle
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
@@ -101,7 +104,7 @@ import androidx.annotation.StringRes
  *  via Reminder.weekendModeOptIn. Third copy of that stale sentence found
  *  and corrected (§7 R58 fixed the first two). */
 @Composable
-fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit) {
+fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit, onSaved: () -> Unit = onBack, onDirty: (Boolean) -> Unit = {}) {
     val schedulingCoordinator = LocalAppContainer.current.schedulingCoordinator
     var loaded by remember { mutableStateOf(false) }
     // Saveable and filled once (§7 R83 (a)), so a rotation keeps the edits.
@@ -128,12 +131,40 @@ fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit
         loaded = true
     }
 
-    Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
-        DetailHeader(stringResource(R.string.settings_detail_weekend_mode), onBack)
-
+    var badTimes by remember { mutableStateOf(setOf<Int>()) }
+    // Every field here is saved by Salva, as before; the baseline is the stored settings once read,
+    // and Annulla and Back ask when anything differs from them (§7 R125, §7 R126).
+    val dirty = rememberDirty(filled, enabled, days, startHour, startMinute, endHour, endMinute)
+    SideEffect { onDirty(dirty) }
+    FormScaffold(
+        title = stringResource(R.string.settings_detail_weekend_mode),
+        saveLabel = stringResource(R.string.common_save),
+        saveEnabled = loaded && badTimes.isEmpty(),
+        onSave = {
+            scope.launch {
+                settingsRepository.setWeekendModeEnabled(enabled)
+                settingsRepository.setWeekendDays(days)
+                settingsRepository.setWeekendStartTime(LocalTime.of(startHour, startMinute))
+                settingsRepository.setWeekendEndTime(LocalTime.of(endHour, endMinute))
+                // Weekend mode is read by SchedulingEngine at compute time, but
+                // nothing observes these DataStore keys: without this, already
+                // armed alarms keep their old times and the projection cache
+                // (which watches the medicines/reminders tables, not DataStore)
+                // never recomputes, so a saved change did nothing until the next
+                // reboot. Before onSaved(), not after -- dismissing the sheet
+                // leaves the composition and cancels this scope mid-flight.
+                // See docs/SPEC.md §7 R23.
+                schedulingCoordinator.rescheduleAll()
+                onSaved()
+            }
+        },
+        onCancel = onBack,
+        onBack = onBack,
+        inSheet = true,
+    ) {
         if (!loaded) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-            return@Column
+            return@FormScaffold
         }
 
         Row(
@@ -156,43 +187,17 @@ fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit
         Spacer(Modifier.height(20.dp))
         Text(stringResource(R.string.settings_detail_days), style = MaterialTheme.typography.labelLarge)
         Spacer(Modifier.height(8.dp))
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(6.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-            // Day names from java.time, which already localises them (§9 #19).
-            (1..7).forEach { dayNum ->
-                val label = DayOfWeek.of(dayNum).getDisplayName(TextStyle.SHORT, Locale.current.platformLocale)
-                FilterChip(
-                    selected = dayNum in days,
-                    onClick = { days = if (dayNum in days) days - dayNum else days + dayNum },
-                    label = { Text(label) },
-                )
-            }
-        }
+        // The weekdays on the form's 7-column grid (§7 R124 C6), named by java.time in the locale.
+        WeekdayGrid(days) { days = it }
 
         Spacer(Modifier.height(20.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            TimeOfDayField(stringResource(R.string.common_window_start), startHour, startMinute) { h, m -> startHour = h; startMinute = m }
-            TimeOfDayField(stringResource(R.string.common_window_end), endHour, endMinute) { h, m -> endHour = h; endMinute = m }
-        }
-
-        Spacer(Modifier.height(24.dp))
-        Button(onClick = {
-            scope.launch {
-                settingsRepository.setWeekendModeEnabled(enabled)
-                settingsRepository.setWeekendDays(days)
-                settingsRepository.setWeekendStartTime(LocalTime.of(startHour, startMinute))
-                settingsRepository.setWeekendEndTime(LocalTime.of(endHour, endMinute))
-                // Weekend mode is read by SchedulingEngine at compute time, but
-                // nothing observes these DataStore keys: without this, already
-                // armed alarms keep their old times and the projection cache
-                // (which watches the medicines/reminders tables, not DataStore)
-                // never recomputes, so a saved change did nothing until the next
-                // reboot. Before onBack(), not after -- dismissing the sheet
-                // leaves the composition and cancels this scope mid-flight.
-                // See docs/SPEC.md §7 R23.
-                schedulingCoordinator.rescheduleAll()
-                onBack()
-            }
-        }) { Text(stringResource(R.string.common_save)) }
+        val startLabel = stringResource(R.string.common_window_start)
+        val endLabel = stringResource(R.string.common_window_end)
+        FieldPair(
+            listOf(startLabel, endLabel), iconDp = 48.dp,
+            first = { m -> FormTimeField(startLabel, startHour, startMinute, m, onError = { bad -> badTimes = if (bad) badTimes + 0 else badTimes - 0 }) { h, mi -> startHour = h; startMinute = mi } },
+            second = { m -> FormTimeField(endLabel, endHour, endMinute, m, onError = { bad -> badTimes = if (bad) badTimes + 1 else badTimes - 1 }) { h, mi -> endHour = h; endMinute = mi } },
+        )
     }
 }
 

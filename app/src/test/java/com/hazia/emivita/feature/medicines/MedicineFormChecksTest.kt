@@ -8,7 +8,6 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
-import androidx.compose.ui.test.performScrollTo
 import androidx.compose.ui.test.performTextInput
 import androidx.compose.ui.test.performTextReplacement
 import com.hazia.emivita.R
@@ -65,7 +64,7 @@ class MedicineFormChecksTest {
         add(medicines)
         field("Name").performTextInput("vitamina d")
         compose.onNodeWithText(duplicate).assertExists()
-        compose.onNode(hasText("Save") and hasClickAction()).performScrollTo().assertIsEnabled().performClick()
+        compose.onNode(hasText("Save") and hasClickAction()).assertIsEnabled().performClick()
         compose.waitForIdle()
         coVerify { medicines.create(match { it.name == "vitamina d" }) }
     }
@@ -86,7 +85,7 @@ class MedicineFormChecksTest {
         add(repository())
         compose.onNode(hasText("Write the medicine's name")).assertDoesNotExist()
         field("Name").performClick()
-        field("Measurement (optional)").performClick()
+        field("Unit").performClick()
         compose.onNodeWithText("Write the medicine's name").assertExists()
         compose.onNode(hasText("Save") and hasClickAction()).assertIsNotEnabled()
     }
@@ -103,7 +102,7 @@ class MedicineFormChecksTest {
         compose.onNode(hasText("Fill in both, or leave both empty")).assertDoesNotExist()
         val saved = slot<Medicine>()
         coEvery { medicines.create(capture(saved)) } returns 9L
-        compose.onNode(hasText("Save") and hasClickAction()).performScrollTo().assertIsEnabled().performClick()
+        compose.onNode(hasText("Save") and hasClickAction()).assertIsEnabled().performClick()
         compose.waitForIdle()
         assertEquals(3, saved.captured.prnMaxDoses)
         assertEquals(24, saved.captured.prnWindowHours)

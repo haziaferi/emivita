@@ -49,7 +49,7 @@ import com.hazia.emivita.core.data.settings.StartPage
 @Composable
 fun EmivitaNavHost(startPage: StartPage = StartPage.TODAY, openDataAndBackupOnStart: Boolean = false) {
     val navController: NavHostController = rememberNavController()
-    // The recovery dialog's "Restore from backup" (§9 #32): the graph keeps its
+    // The recovery dialog's "Restore" (§9 #32): the graph keeps its
     // root and Data & Backup is pushed on top once, so Back lands on the start page.
     androidx.compose.runtime.LaunchedEffect(openDataAndBackupOnStart) {
         if (openDataAndBackupOnStart) navController.navigate(EmivitaRoute.DataBackupSettings)
@@ -260,6 +260,7 @@ fun EmivitaNavHost(startPage: StartPage = StartPage.TODAY, openDataAndBackupOnSt
                     medicineRepository = container.medicineRepository,
                     onSaved = { navController.popBackStack() },
                     onCancel = { navController.popBackStack() },
+                    onDeleted = { navController.popBackStack(EmivitaRoute.Medicines, inclusive = false) },
                 )
             }
             composable<EmivitaRoute.EditReminder> { entry ->

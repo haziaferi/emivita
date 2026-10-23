@@ -26,8 +26,19 @@ class FormNames(
     val rules: Set<String>,
 )
 
-/** What the code says about a surface (C10): field label prefixes ignored in this state, or independent of the switch above. */
-class FormDecl(val ignored: Set<String> = emptySet(), val independent: Map<String, String> = emptyMap())
+/**
+ * What the code says about a surface (C10): field label prefixes ignored in this state, or independent of the switch above;
+ * (C8) chip flows, grids whose first cell is in [flows], which wrap ragged right by the owner's rule (§7 R125, the tags);
+ * and (C2, C3, C4) [freeText], the label prefixes of the fields the code makes `FormTextField(freeText = true)`, whose
+ * value may grow to several lines as it is typed (§7 R126, "Grow as you type"). Only the typed value may: such a field's
+ * title, placeholder and help still fail on a second line, and empty or on one line it is held to the shared height.
+ */
+class FormDecl(
+    val ignored: Set<String> = emptySet(),
+    val independent: Map<String, String> = emptyMap(),
+    val flows: Set<String> = emptySet(),
+    val freeText: Set<String> = emptySet(),
+)
 
 /** One check's verdict: its violations (empty = pass) and what it measured, for the failure message. */
 class Check(val name: String, val violations: List<String>, val detail: String = "") {
@@ -42,6 +53,9 @@ class Ctl(
     val drawn: Rect?, val borderTop: Float?, val borderBottom: Float?, val frame: Int, val dy: Float,
 ) {
     val label get() = node.label
+
+    /** A declared free-text field whose typed value runs to several lines (§7 R126): exempt from the shared height. */
+    var grown = false
 }
 
 /**
@@ -51,7 +65,10 @@ class Ctl(
  */
 class FormRules(private val dp: Float, private val names: FormNames, private val onIdle: (() -> Unit) -> Unit, private val settle: () -> Unit) {
 
-    class Leaf(val id: Int, val text: String, val lines: Int, val editable: Boolean, val c: Rect, val frame: Int, val inScroll: Boolean)
+    class Leaf(
+        val id: Int, val text: String, val lines: Int, val editable: Boolean, val c: Rect, val frame: Int, val inScroll: Boolean,
+        val ancestors: Set<Int> = emptySet(), val cut: Boolean = false,
+    )
     class Kept(val n: ProbeNode, val frame: Int, val inScroll: Boolean, val dy: Float) {
         val c: Rect get() = n.unclipped.translate(0f, dy)
     }
@@ -112,7 +129,7 @@ class FormRules(private val dp: Float, private val names: FormNames, private val
                 if (navTop != null && !sheet && l.unclipped.top >= navTop - 0.5f) continue
                 val inScroll = sc != null && l.unclipped.center.y in sc.vp.top..sc.vp.bottom && l.unclipped.center.x in sc.vp.left..sc.vp.right
                 lseen += l.id
-                leaves += Leaf(l.id, t, l.lines, l.editable, l.unclipped.translate(0f, if (inScroll) v else 0f), fi, inScroll)
+                leaves += Leaf(l.id, t, l.lines, l.editable, l.unclipped.translate(0f, if (inScroll) v else 0f), fi, inScroll, l.ancestors, l.cut)
             }
         }
         val top = frames.first().top
@@ -223,10 +240,13 @@ class FormRules(private val dp: Float, private val names: FormNames, private val
         override fun toString() = checks.joinToString("\n")
     }
 
-    fun audit(sw: Swept, placeholders: Map<Int, List<String>> = emptyMap(), decl: FormDecl = FormDecl()): Audit {
+    fun audit(sw: Swept, placeholders: Map<Int, List<String>> = emptyMap(), decl: FormDecl = FormDecl(), oneLineSwitchHelp: Boolean = true): Audit {
         val wDp = sw.frames.first().px.width / dp
         val ctls = controls(sw)
         val fields = ctls.filter { it.kind == "field" }
+        fun leavesOf(f: Ctl) = sw.leaves.filter { it.inScroll == f.inScroll && it.c.center.x in f.c.left..f.c.right && it.c.center.y in (f.c.top - 1f)..(f.c.bottom + 1f) }
+        fun freeText(f: Ctl) = decl.freeText.any { f.label.startsWith(it) }
+        for (f in fields) f.grown = freeText(f) && leavesOf(f).any { it.editable && it.lines > 1 }
         val elements = sw.nodes.filter { k ->
             (k.n.isText || k.n.isControl) && k.n.role != Role.Tab && !(sw.navTop != null && !sw.sheet && k.n.unclipped.top >= sw.navTop - 0.5f)
         }.let { all -> val ids = all.map { it.n.id }.toSet(); all.filter { e -> e.n.ancestors.none { it in ids } } }
@@ -260,25 +280,36 @@ class FormRules(private val dp: Float, private val names: FormNames, private val
         // C2 height by function; fields share one height.
         val c2 = mutableListOf<String>()
         ctls.filter { it.tier != null && abs(it.hDp - it.tier) > 1.0 }.forEach { c2 += "${it.kind} '${it.label}' is ${it.hDp} dp, its tier ${it.tier}" }
-        ctls.groupBy { it.kind }.filter { (k, l) -> k !in setOf("switch row", "radio row", "group row", "icon button") && l.map { it.hDp.roundToInt() }.distinct().size > 1 }
+        ctls.filter { !it.grown }.groupBy { it.kind }.filter { (k, l) -> k !in setOf("switch row", "radio row", "group row", "icon button") && l.map { it.hDp.roundToInt() }.distinct().size > 1 }
             .forEach { (k, l) -> c2 += "${k}s have several heights: ${l.map { "${it.label}=${it.hDp}" }}" }
         // No control taller than the field beside it.
         for (f in fields) ctls.filter { it.kind != "field" && it.tier != null && abs(it.c.center.y - f.c.center.y) < 8 * dp && it.hDp > f.hDp + 1.0 }
             .forEach { c2 += "'${it.label}' (${it.hDp} dp) is taller than the field '${f.label}' (${f.hDp} dp) beside it" }
 
         // C3 one field pattern: a label, small inside the frame; nothing inside or under the box on two lines; no placeholder.
+        // A declared free-text field's typed value alone may grow (§7 R126); its label is then read in the frame's first line.
         val c3 = mutableListOf<String>()
         for (f in fields) {
             val bt = f.borderTop ?: f.c.top; val bb = f.borderBottom ?: f.c.bottom
-            val inside = sw.leaves.filter { it.inScroll == f.inScroll && it.c.center.x in f.c.left..f.c.right && it.c.center.y in (f.c.top - 1f)..(f.c.bottom + 1f) }
+            val inside = leavesOf(f)
             val inBox = inside.filter { !it.editable && it.c.center.y <= bb }
             val label = inBox.minByOrNull { it.c.top }
+            val firstLine = if (f.grown) minOf(bb - bt, 56 * dp) else bb - bt
             if (label == null) c3 += "'${f.label}' has no label"
-            else if (label.c.center.y >= bt + 0.25f * (bb - bt)) c3 += "'${label.text}' shown full size inside the box (reads as a placeholder)"
+            else if (label.c.center.y >= bt + 0.25f * firstLine) c3 += "'${label.text}' shown full size inside the box (reads as a placeholder)"
             inBox.filter { it.lines > 1 }.forEach { c3 += "'${it.text}' wraps to ${it.lines} lines inside the box" }
-            inside.filter { it.editable && it.lines > 1 }.forEach { c3 += "the value of '${f.label}' wraps to ${it.lines} lines" }
+            if (!freeText(f)) inside.filter { it.editable && it.lines > 1 }.forEach { c3 += "the value of '${f.label}' wraps to ${it.lines} lines" }
             inside.filter { !it.editable && it.c.center.y > bb && it.lines > 1 }.forEach { c3 += "help '${it.text}' runs ${it.lines} lines" }
             placeholders[f.node.id]?.forEach { c3 += "placeholder '$it' in '${f.label}' (help inside the box)" }
+        }
+        // A switch row's help is one line too (§7 R124 C3; §7 R126, found on the 6T in Weekend mode): every
+        // text under the row's title, wrapped or cut short. Held at font 1.0, where the owner's rule is set.
+        if (oneLineSwitchHelp) {
+            for (sr in sw.nodes.filter { it.n.role == Role.Switch && !(sw.navTop != null && !sw.sheet && it.n.unclipped.top >= sw.navTop - 0.5f) }) {
+                val texts = sw.leaves.filter { !it.editable && sr.n.id in it.ancestors }.sortedBy { it.c.top }
+                texts.drop(1).filter { it.lines > 1 || it.cut }
+                    .forEach { c3 += "switch help '${it.text}' under '${texts.first().text}' " + (if (it.lines > 1) "runs ${it.lines} lines" else "is cut short") }
+            }
         }
 
         // C5 Salva / Annulla.
@@ -342,6 +373,7 @@ class FormRules(private val dp: Float, private val names: FormNames, private val
         }
         val c8 = mutableListOf<String>()
         for (g in grids) {
+            if (g.any { it.label in decl.flows }) continue
             val gl = g.minOf { (it.drawn ?: it.c).left } / dp; val gr = g.maxOf { (it.drawn ?: it.c).right } / dp
             if (abs(gl - left) > 1.0 || abs(right - gr) > 1.0) c8 += "the grid of '${g.first().label}' spans ${r1(gl)}..${r1(gr)} dp, not ${r1(left)}..${r1(right)}"
         }
@@ -379,10 +411,43 @@ class FormRules(private val dp: Float, private val names: FormNames, private val
         )
     }
 
+    /**
+     * The dialog pair (§7 R125, the owner: "Yes, same order and look"): in the top window, the button
+     * [confirm] and the button [dismiss] on its line are drawn the same width, the confirm rightmost
+     * and the dismiss to its left at least 14 dp apart, 48 and 42 dp high, two colours with the
+     * dismiss the more desaturated, and neither label cut short. A dialog keeps its own place, so no
+     * edge or foot is checked. Every dialog is side by side (§7 R126, "Shorter labels, side by side").
+     */
+    fun dialogPair(confirm: String, dismiss: String): Check {
+        val f = FormProbe.frame()
+        val v = mutableListOf<String>()
+        val c = f.merged.firstOrNull { it.clickable && it.text == confirm && it.fullyVisible() }
+        val d = c?.let { cc -> f.merged.filter { it.clickable && it.text == dismiss && it.fullyVisible() }.minByOrNull { abs(it.touch.center.y - cc.touch.center.y) } }
+        if (c == null || d == null) return Check("dialog pair '$confirm'/'$dismiss'", listOf("not both on screen: confirm ${c != null}, dismiss ${d != null}"))
+        val cd = drawnBox(f.px, c.touch); val dd = drawnBox(f.px, d.touch)
+        if (cd == null || dd == null) return Check("dialog pair '$confirm'/'$dismiss'", listOf("not drawn"))
+        val ch = cd.height / dp; val dh = dd.height / dp
+        if (abs(ch - 48) > 1) v += "'$confirm' is ${r1(ch)} dp high, not 48"
+        if (abs(dh - 42) > 1) v += "'$dismiss' is ${r1(dh)} dp high, not 42"
+        if (abs(cd.width - dd.width) / dp > 1f) v += "widths differ: '$confirm' ${r1(cd.width / dp)} dp, '$dismiss' ${r1(dd.width / dp)} dp"
+        val sameLine = abs((cd.top + cd.bottom) / 2f - (dd.top + dd.bottom) / 2f) < 30 * dp
+        for (label in listOf(confirm, dismiss)) {
+            if (f.leaves.any { it.text == label && it.cut && (c.id in it.ancestors || d.id in it.ancestors) }) v += "'$label' is cut short"
+        }
+        if (!(sameLine && dd.right <= cd.left)) v += "'$dismiss' is not to the left of '$confirm' on its line"
+        else if ((cd.left - dd.right) / dp < 14f) v += "'$confirm' and '$dismiss' are ${r1((cd.left - dd.right) / dp)} dp apart, under 14"
+        val cf = modal(f.px, cd); val df = modal(f.px, dd)
+        if (FormProbe.deltaE2000(FormProbe.lab(cf), FormProbe.lab(df)) <= 2.0) v += "'$confirm' and '$dismiss' are not two colours"
+        else if (FormProbe.chroma(df) >= FormProbe.chroma(cf)) v += "'$dismiss' is not more desaturated than '$confirm'"
+        val detail = "'$confirm' ${r1(cd.width / dp)}x${r1(ch)} dp, '$dismiss' ${r1(dd.width / dp)}x${r1(dh)} dp, gap ${r1((cd.left - dd.right) / dp)} dp, " +
+            "chroma ${"%.3f".format(FormProbe.chroma(cf))} / ${"%.3f".format(FormProbe.chroma(df))}"
+        return Check("dialog pair '$confirm'/'$dismiss'", v, detail)
+    }
+
     /** C4 across surfaces: one look per kind (height, fill) for every control the surfaces share. */
     fun consistency(surfaces: Map<String, Audit>): Check {
         val v = mutableListOf<String>()
-        val all = surfaces.flatMap { (s, a) -> a.controls.map { s to it } }
+        val all = surfaces.flatMap { (s, a) -> a.controls.filter { !it.grown }.map { s to it } }
         for ((kind, list) in all.groupBy { it.second.kind }) {
             if (kind in setOf("switch row", "radio row", "icon button")) continue
             val heights = list.groupBy { it.second.hDp.roundToInt() }

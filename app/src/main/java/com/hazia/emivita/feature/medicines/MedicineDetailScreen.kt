@@ -1,5 +1,6 @@
 package com.hazia.emivita.feature.medicines
 
+import com.hazia.emivita.ui.form.DialogActionPair
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -256,17 +257,14 @@ fun MedicineDetailScreen(
             },
             text = { Text(stringResource(R.string.medicine_detail_this_removes_every_reminder_and_all_dose)) },
             confirmButton = {
-                TextButton(onClick = {
+                DialogActionPair(stringResource(R.string.medicine_detail_delete), destructive = true, onDismiss = { showDeleteConfirm = false }, onConfirm = onConfirm@{
                     showDeleteConfirm = false
-                    val toDelete = currentMedicine ?: return@TextButton
+                    val toDelete = currentMedicine ?: return@onConfirm
                     scope.launch {
                         medicineRepository.archive(toDelete)
                         onDeleted()
                     }
-                }) { Text(stringResource(R.string.medicine_detail_delete)) }
-            },
-            dismissButton = {
-                TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.common_cancel)) }
+                })
             },
         )
     }
@@ -355,7 +353,7 @@ internal fun NotesJournal(medicineId: Long, medicineRepository: MedicineReposito
                 value = draft,
                 onValueChange = { draft = it },
                 placeholder = { Text(stringResource(R.string.medicine_detail_journal_hint)) },
-                maxLines = 3,
+                maxLines = com.hazia.emivita.ui.form.FreeTextMaxLines,
                 modifier = Modifier.weight(1f),
             )
             TextButton(
@@ -394,20 +392,16 @@ internal fun NotesJournal(medicineId: Long, medicineRepository: MedicineReposito
             onDismissRequest = { editing = null },
             title = { Text(stringResource(R.string.medicine_detail_journal_edit)) },
             text = {
-                androidx.compose.material3.OutlinedTextField(value = text, onValueChange = { text = it }, maxLines = 6, modifier = Modifier.fillMaxWidth())
+                com.hazia.emivita.ui.form.FormTextField(text, { text = it }, "", freeText = true)
             },
             confirmButton = {
-                TextButton(enabled = text.isNotBlank(), onClick = { scope.launch { medicineRepository.editNote(note, text); editing = null } }) {
-                    Text(stringResource(R.string.common_save))
-                }
-            },
-            dismissButton = {
-                Row {
-                    TextButton(onClick = { scope.launch { medicineRepository.deleteNote(note.id); editing = null } }) {
-                        Text(stringResource(R.string.medicine_detail_delete), color = MaterialTheme.colorScheme.error)
-                    }
-                    TextButton(onClick = { editing = null }) { Text(stringResource(R.string.common_cancel)) }
-                }
+                DialogActionPair(
+                    stringResource(R.string.common_save), confirmEnabled = text.isNotBlank(),
+                    onConfirm = { scope.launch { medicineRepository.editNote(note, text); editing = null } },
+                    onDismiss = { editing = null },
+                    tertiary = stringResource(R.string.medicine_detail_delete),
+                    onTertiary = { scope.launch { medicineRepository.deleteNote(note.id); editing = null } },
+                )
             },
         )
     }

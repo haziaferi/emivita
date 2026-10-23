@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
@@ -29,7 +28,6 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -70,7 +68,7 @@ import androidx.compose.material3.RadioButton
 import android.media.RingtoneManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.FilledTonalButton
 import com.hazia.emivita.core.notification.postTestReminder
 import androidx.core.net.toUri
 import android.app.Activity
@@ -85,6 +83,11 @@ import com.hazia.emivita.core.scheduling.AlarmWatchdog
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.ui.semantics.contentDescription
+import com.hazia.emivita.ui.form.FormScaffold
+import com.hazia.emivita.ui.components.rememberDirty
+import androidx.compose.runtime.SideEffect
+import com.hazia.emivita.ui.form.FormTextField
+import com.hazia.emivita.ui.form.SecondaryControlHeight
 
 /** Shared by every Settings detail screen in this package, including
  *  BackupSyncScreen's -- `internal`, not `private`, because a file-private
@@ -110,7 +113,7 @@ internal fun DetailHeader(title: String, onBack: () -> Unit, actions: (@Composab
  *  built yet (no audio-picker work has landed anywhere in this app) -- this
  *  screen is scoped to what's actually wired end-to-end: snooze length. */
 @Composable
-fun AlarmsSnoozeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit) {
+fun AlarmsSnoozeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit, onSaved: () -> Unit = onBack, onDirty: (Boolean) -> Unit = {}) {
     var minutesText by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -118,41 +121,40 @@ fun AlarmsSnoozeScreen(settingsRepository: SettingsRepository, onBack: () -> Uni
         minutesText = settingsRepository.snoozeDurationMinutes.first().toString()
     }
 
-    Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
-        DetailHeader(stringResource(R.string.settings_detail_alarms_snooze), onBack)
-
+    val minutesValue = minutesText?.toIntOrNull()
+    // The snooze length is the one edit Salva saves; its baseline is the stored value once read.
+    val dirty = rememberDirty(minutesText == null, minutesText)
+    SideEffect { onDirty(dirty) }
+    // On the shared form parts (§7 R125). Salva saves the snooze length and leaves, as before;
+    // every switch and choice below still saves the moment it is tapped. Annulla and Back ask
+    // when the length was edited, the host's question (§7 R126).
+    FormScaffold(
+        title = stringResource(R.string.settings_detail_alarms_snooze),
+        saveLabel = stringResource(R.string.common_save),
+        saveEnabled = minutesValue != null && minutesValue > 0,
+        onSave = {
+            val value = minutesValue
+            if (value != null) scope.launch {
+                settingsRepository.setSnoozeDurationMinutes(value)
+                onSaved()
+            }
+        },
+        onCancel = onBack,
+        onBack = onBack,
+        inSheet = true,
+    ) {
         val current = minutesText
         if (current == null) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
-            return@Column
+            return@FormScaffold
         }
 
-        val minutesValue = current.toIntOrNull()
-        OutlinedTextField(
-            value = current,
-            onValueChange = { minutesText = it },
-            label = { Text(stringResource(R.string.settings_detail_snooze_duration_minutes)) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
+        FormTextField(
+            current, { minutesText = it }, stringResource(R.string.settings_detail_snooze_duration_minutes),
+            keyboardType = KeyboardType.Number,
+            help = stringResource(R.string.settings_detail_how_long_a_snoozed_reminder_waits_before),
+            error = if (minutesValue == null || minutesValue <= 0) stringResource(R.string.form_min_one) else null,
         )
-        Spacer(Modifier.height(4.dp))
-        Text(
-            stringResource(R.string.settings_detail_how_long_a_snoozed_reminder_waits_before),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-        Spacer(Modifier.height(20.dp))
-        Button(
-            enabled = minutesValue != null && minutesValue > 0,
-            onClick = {
-                val value = minutesValue ?: return@Button
-                scope.launch {
-                    settingsRepository.setSnoozeDurationMinutes(value)
-                    onBack()
-                }
-            },
-        ) { Text(stringResource(R.string.common_save)) }
 
         Spacer(Modifier.height(8.dp))
         val askEachTime by settingsRepository.snoozeAskEachTime.collectAsState(initial = false)
@@ -282,7 +284,7 @@ private fun AlarmSettingsSection(settingsRepository: SettingsRepository) {
     ) { scope.launch { settingsRepository.setUseAlarmClock(it) } }
 
     Spacer(Modifier.height(16.dp))
-    OutlinedButton(onClick = { postTestReminder(context) }) { Text(stringResource(R.string.settings_test_reminder)) }
+    FilledTonalButton(onClick = { postTestReminder(context) }, modifier = Modifier.fillMaxWidth().height(SecondaryControlHeight)) { Text(stringResource(R.string.settings_test_reminder)) }
     Text(
         stringResource(R.string.settings_test_reminder_desc),
         style = MaterialTheme.typography.labelMedium,

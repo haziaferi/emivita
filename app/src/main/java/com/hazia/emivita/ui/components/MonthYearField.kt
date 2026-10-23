@@ -8,10 +8,12 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.OutlinedButton
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.DateRange
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -24,6 +26,8 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.hazia.emivita.R
+import com.hazia.emivita.ui.form.DialogActionPair
+import com.hazia.emivita.ui.form.FormTextField
 import com.hazia.emivita.core.format.LocaleFormats
 import java.time.LocalDate
 import java.time.YearMonth
@@ -37,14 +41,22 @@ import java.util.Locale
  * after, which is what the print means. The schema keeps day granularity
  * ([com.hazia.emivita.core.data.entity.StockInfo.expirationDateEpochDay]),
  * and a stored day that is not a month end displays as a full date, so
- * switching modes never silently rounds a date the person chose on purpose.
+ * switching modes never silently rounds a date the person chose on purpose;
+ * drawn in the one field pattern (§7 R125), its calendar icon opens the lists.
  */
 @Composable
-fun MonthYearField(label: String, epochDay: Long?, yearsAhead: Int = 10, onChange: (Long?) -> Unit) {
+fun MonthYearField(label: String, epochDay: Long?, modifier: Modifier = Modifier, yearsAhead: Int = 10, onChange: (Long?) -> Unit) {
     var showDialog by remember { mutableStateOf(false) }
-    OutlinedButton(onClick = { showDialog = true }) {
-        Text(stringResource(R.string.field_label_value, label, epochDay?.let { formatMonthYearOrDate(it) } ?: stringResource(R.string.common_not_set)))
-    }
+    FormTextField(
+        value = epochDay?.let { formatMonthYearOrDate(it) } ?: "",
+        onValueChange = {},
+        label = label,
+        modifier = modifier,
+        readOnly = true,
+        trailingIcon = {
+            IconButton(onClick = { showDialog = true }) { Icon(Icons.Filled.DateRange, contentDescription = stringResource(R.string.form_pick_date, label)) }
+        },
+    )
     if (showDialog) {
         val initial = epochDay?.let { YearMonth.from(LocalDate.ofEpochDay(it)) } ?: YearMonth.now()
         var month by remember { mutableIntStateOf(initial.monthValue) }
@@ -81,13 +93,11 @@ fun MonthYearField(label: String, epochDay: Long?, yearsAhead: Int = 10, onChang
                 }
             },
             confirmButton = {
-                TextButton(onClick = { onChange(endOfMonthEpochDay(year, month)); showDialog = false }) { Text(stringResource(R.string.common_ok)) }
-            },
-            dismissButton = {
-                Row {
-                    TextButton(onClick = { onChange(null); showDialog = false }) { Text(stringResource(R.string.common_clear)) }
-                    TextButton(onClick = { showDialog = false }) { Text(stringResource(R.string.common_cancel)) }
-                }
+                DialogActionPair(
+                    stringResource(R.string.common_ok), onConfirm = { onChange(endOfMonthEpochDay(year, month)); showDialog = false },
+                    onDismiss = { showDialog = false },
+                    tertiary = stringResource(R.string.common_clear), tertiaryDestructive = false, onTertiary = { onChange(null); showDialog = false },
+                )
             },
         )
     }
