@@ -6,6 +6,7 @@ import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.hazia.emivita.core.data.config.ExpirationTriggerFrequency
 import com.hazia.emivita.core.data.config.LowStockTriggerMode
 import com.hazia.emivita.core.data.config.ReminderConfig
 import com.hazia.emivita.core.data.config.ReminderType
@@ -32,9 +33,8 @@ import org.robolectric.annotation.SQLiteMode
 /**
  * A medicine with no reminder has its own section on Today, "No reminder",
  * with Add reminder on its row (§7 R114, the owner's pick); "As needed" keeps
- * the medicines the app marks as-needed (an as-needed limit) and those whose
- * reminders are all paused. Before, every medicine without a dosing reminder
- * switched on was listed as as-needed, a half-made one included.
+ * the medicines with the *Al bisogno* switch on (§7 R116, not the limit, as
+ * R114 had it) and those whose reminders are all paused.
  */
 @RunWith(RobolectricTestRunner::class)
 @Config(application = TestEmivitaApplication::class, qualifiers = "w412dp-h869dp")
@@ -92,7 +92,7 @@ class TodayNoReminderTest {
     fun `a medicine with no reminder is under No reminder, and its button opens Add reminder for it`() {
         val metformin = h.medicine("Metformin")
         val paracetamol = h.medicine("Paracetamol")
-        runBlocking { h.container.medicineRepository.update(h.medicineRow(paracetamol).copy(prnMaxDoses = 4, prnWindowHours = 24)) }
+        runBlocking { h.container.medicineRepository.update(h.medicineRow(paracetamol).copy(asNeeded = true)) }
         showToday()
         eventually { compose.onNodeWithText("No reminder").assertExists() }
         compose.onNodeWithText("As needed").assertExists()
@@ -104,10 +104,26 @@ class TodayNoReminderTest {
         assertEquals(listOf(metformin), addReminderFor)
     }
 
+    @Test
+    fun `a medicine with the switch on keeps its Log button, one with only a limit does not`() {
+        val paracetamol = h.medicine("Paracetamol")
+        val ibuprofen = h.medicine("Ibuprofen")
+        runBlocking {
+            h.container.medicineRepository.update(h.medicineRow(paracetamol).copy(asNeeded = true))
+            h.container.medicineRepository.update(h.medicineRow(ibuprofen).copy(prnMaxDoses = 3, prnWindowHours = 24))
+        }
+        showToday()
+        eventually { compose.onNodeWithText("No reminder").assertExists() }
+        assertEquals(1, compose.onAllNodes(hasText("Log") and hasClickAction()).fetchSemanticsNodes().size)
+        assertTrue(top("As needed") < top("Paracetamol"))
+        assertTrue("Paracetamol, switch on, is under As needed", top("Paracetamol") < top("No reminder"))
+        assertTrue("Ibuprofen, a limit only, is under No reminder", top("No reminder") < top("Ibuprofen"))
+    }
+
     // ---- which section, by the rule alone ----
 
-    private fun med(id: Long, max: Int? = null, hours: Int? = null) =
-        Medicine(id = id, profileId = 1L, name = "m$id", iconKey = "pill", sortOrder = id.toDouble(), prnMaxDoses = max, prnWindowHours = hours, createdAtEpochMillis = 0L)
+    private fun med(id: Long, max: Int? = null, hours: Int? = null, asNeeded: Boolean = false) =
+        Medicine(id = id, profileId = 1L, name = "m$id", iconKey = "pill", sortOrder = id.toDouble(), prnMaxDoses = max, prnWindowHours = hours, asNeeded = asNeeded, createdAtEpochMillis = 0L)
 
     private fun rem(type: ReminderType, enabled: Boolean, config: ReminderConfig = ReminderConfig.FixedTime(8, 0, 1.0)) =
         Reminder(medicineId = 0, type = type, configJson = encodeReminderConfig(config), enabled = enabled, createdAtEpochMillis = 0L)
@@ -117,7 +133,7 @@ class TodayNoReminderTest {
         val sections = standingSections(
             listOf(
                 MedicineWithReminders(med(1), emptyList()), // nothing at all: no reminder
-                MedicineWithReminders(med(2, max = 4, hours = 24), emptyList()), // an as-needed limit: as needed
+                MedicineWithReminders(med(2, asNeeded = true), emptyList()), // the switch on: as needed
                 MedicineWithReminders(med(3), listOf(rem(ReminderType.FIXED_TIME, enabled = false))), // all paused: as needed
                 MedicineWithReminders(med(4), listOf(rem(ReminderType.FIXED_TIME, enabled = true))), // scheduled: the timeline
                 MedicineWithReminders(
@@ -125,9 +141,15 @@ class TodayNoReminderTest {
                     listOf(rem(ReminderType.LOW_STOCK_ALERT, enabled = true, ReminderConfig.LowStockAlert(5.0, LowStockTriggerMode.ONCE_WHEN_BELOW, 9, 0))),
                 ), // an alert schedules no dose: no reminder
                 MedicineWithReminders(med(6, max = 2, hours = 8), listOf(rem(ReminderType.FIXED_TIME, enabled = true))), // scheduled with a limit: the timeline
+                MedicineWithReminders(med(7, max = 4, hours = 24), emptyList()), // a limit, the switch off: no reminder
+                MedicineWithReminders(med(8, asNeeded = true), listOf(rem(ReminderType.FIXED_TIME, enabled = true))), // the switch on and scheduled: the timeline only
+                MedicineWithReminders(
+                    med(9, asNeeded = true),
+                    listOf(rem(ReminderType.EXPIRATION_ALERT, enabled = true, ReminderConfig.ExpirationAlert(7, ExpirationTriggerFrequency.ONCE))),
+                ), // the switch on, alert-only: as needed
             ),
         )
-        assertEquals(listOf(2L, 3L), sections.asNeeded.map { it.id })
-        assertEquals(listOf(1L, 5L), sections.noReminder.map { it.id })
+        assertEquals(listOf(2L, 3L, 9L), sections.asNeeded.map { it.id })
+        assertEquals(listOf(1L, 5L, 7L), sections.noReminder.map { it.id })
     }
 }

@@ -512,6 +512,8 @@
     <string name="add_reminder_course">Un numero fisso di dosi</string>
     <string name="add_reminder_course_desc">Si ferma da solo una volta prese tutte.</string>
     <string name="add_reminder_doses_remaining">Dosi rimanenti</string>
+    <string name="add_medicine_as_needed">Al bisogno</string>
+    <string name="add_medicine_as_needed_desc">Si prende quando serve: resta in Oggi con il pulsante Registra</string>
     <string name="add_medicine_prn_ceiling">Limite per le dosi al bisogno (facoltativo)</string>
     <string name="add_medicine_prn_ceiling_desc">Numero massimo di dosi in una finestra di ore a tua scelta. Quando registri una dose vedi il margine che resta; al limite chiede conferma una volta e non rifiuta mai.</string>
     <string name="add_medicine_prn_max">Dosi massime</string>

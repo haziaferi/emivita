@@ -58,6 +58,7 @@ private const val JOINED_SELECT = """
       medicines.prnWindowHours AS medicine_prnWindowHours,
       medicines.strength AS medicine_strength,
       medicines.rxNumber AS medicine_rxNumber,
+      medicines.asNeeded AS medicine_asNeeded,
       medicines.createdAtEpochMillis AS medicine_createdAtEpochMillis
     FROM dose_events
     LEFT JOIN medicines ON dose_events.medicineId = medicines.id

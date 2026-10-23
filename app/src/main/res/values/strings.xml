@@ -556,6 +556,8 @@
     <string name="add_reminder_course">A set number of doses</string>
     <string name="add_reminder_course_desc">Stops on its own after this many are taken.</string>
     <string name="add_reminder_doses_remaining">Doses remaining</string>
+    <string name="add_medicine_as_needed">As needed</string>
+    <string name="add_medicine_as_needed_desc">Taken when needed: stays on Today with its Log button</string>
     <string name="add_medicine_prn_ceiling">As-needed limit (optional)</string>
     <string name="add_medicine_prn_ceiling_desc">At most this many doses in any window of this many hours. Shown as headroom when you log a dose; it asks once at the limit and never refuses.</string>
     <string name="add_medicine_prn_max">Max doses</string>

@@ -34,6 +34,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -62,6 +63,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
 import com.hazia.emivita.core.data.entity.NotificationPriority
 import com.hazia.emivita.core.notification.ReminderNotificationChannels
@@ -104,7 +106,7 @@ fun AddMedicineScreen(
         initialPriority = NotificationPriority.STANDARD,
         colorsInUse = colorsInUse,
         otherNames = otherNames,
-        onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, notes, doseUnit, lockOverride, priority, prnMax, prnHours, strength, rxNumber ->
+        onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, notes, doseUnit, lockOverride, priority, prnMax, prnHours, strength, rxNumber, asNeeded ->
             val id = medicineRepository.create(
                 Medicine(
                     profileId = profileId,
@@ -123,6 +125,7 @@ fun AddMedicineScreen(
                     prnWindowHours = prnHours,
                     strength = strength,
                     rxNumber = rxNumber,
+                    asNeeded = asNeeded,
                     createdAtEpochMillis = System.currentTimeMillis(),
                 )
             )
@@ -187,6 +190,7 @@ fun EditMedicineScreen(
         initialNotes = current.notes ?: "",
         initialPrnMaxDoses = current.prnMaxDoses,
         initialPrnWindowHours = current.prnWindowHours,
+        initialAsNeeded = current.asNeeded,
         initialStrength = current.strength ?: "",
         initialRxNumber = current.rxNumber ?: "",
         initialDoseUnit = current.doseUnit ?: "",
@@ -194,7 +198,7 @@ fun EditMedicineScreen(
         initialPriority = current.notificationPriority,
         colorsInUse = colorsInUse,
         otherNames = otherNames,
-        onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, notes, doseUnit, lockOverride, priority, prnMax, prnHours, strength, rxNumber ->
+        onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, notes, doseUnit, lockOverride, priority, prnMax, prnHours, strength, rxNumber, asNeeded ->
             medicineRepository.update(
                 current.copy(
                     name = name,
@@ -211,6 +215,7 @@ fun EditMedicineScreen(
                     prnWindowHours = prnHours,
                     strength = strength,
                     rxNumber = rxNumber,
+                    asNeeded = asNeeded,
                 )
             )
             val previousNames = tagsSnapshot.associateBy { it.name }
@@ -279,6 +284,7 @@ private fun MedicineFormBody(
     initialNotes: String,
     initialPrnMaxDoses: Int? = null,
     initialPrnWindowHours: Int? = null,
+    initialAsNeeded: Boolean = false,
     initialStrength: String = "",
     initialRxNumber: String = "",
     initialDoseUnit: String,
@@ -305,6 +311,7 @@ private fun MedicineFormBody(
         prnWindowHours: Int?,
         strength: String?,
         rxNumber: String?,
+        asNeeded: Boolean,
     ) -> Unit,
     onCancel: () -> Unit,
 ) {
@@ -323,6 +330,7 @@ private fun MedicineFormBody(
     var notes by rememberSaveable { mutableStateOf(initialNotes) }
     var prnMax by rememberSaveable { mutableStateOf(initialPrnMaxDoses?.toString() ?: "") }
     var prnHours by rememberSaveable { mutableStateOf(initialPrnWindowHours?.toString() ?: "") }
+    var asNeeded by rememberSaveable { mutableStateOf(initialAsNeeded) }
     var strength by rememberSaveable { mutableStateOf(initialStrength) }
     var rxNumber by rememberSaveable { mutableStateOf(initialRxNumber) }
     val resources = LocalResources.current
@@ -330,7 +338,7 @@ private fun MedicineFormBody(
     // null = inherit global default, true/false = explicit override
     var lockOverride by rememberSaveable { mutableStateOf(initialLockOverride) }
     // §9 #29 (HM-40): every field a save would persist, against its first value.
-    val dirty = rememberDirty(Unit, name, priority, barcodeValue, iconKey, color, pendingTags, indication, storageNote, notes, prnMax, prnHours, strength, rxNumber, doseUnit, lockOverride)
+    val dirty = rememberDirty(Unit, name, priority, barcodeValue, iconKey, color, pendingTags, indication, storageNote, notes, prnMax, prnHours, asNeeded, strength, rxNumber, doseUnit, lockOverride)
     val cancel = unsavedChangesGuard(dirty, onCancel)
     var saving by remember { mutableStateOf(false) } // transient: a save in flight does not survive the activity
     var saveError by remember { mutableStateOf<String?>(null) }
@@ -538,10 +546,29 @@ private fun MedicineFormBody(
             modifier = Modifier.fillMaxWidth(),
         )
 
+        // Taken when needed (§7 R116, the owner's switch), beside the limit it
+        // goes with; the limit alone never sets it.
+        Spacer(Modifier.height(20.dp))
+        Row(
+            Modifier.fillMaxWidth().toggleable(value = asNeeded, role = Role.Switch) { asNeeded = it },
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.add_medicine_as_needed), style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    stringResource(R.string.add_medicine_as_needed_desc),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = asNeeded, onCheckedChange = null)
+        }
+
         // As-needed ceiling (§9 #26; Pill Time PT-01): "at most N in any H
         // hours". Shown as headroom on the Log dose dialog; at the ceiling
         // logging asks once and never refuses (the owner's choice).
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(12.dp))
         Text(stringResource(R.string.add_medicine_prn_ceiling), style = MaterialTheme.typography.labelLarge)
         Text(
             stringResource(R.string.add_medicine_prn_ceiling_desc),
@@ -612,6 +639,7 @@ private fun MedicineFormBody(
                                 prnHours.trim().toIntOrNull()?.takeIf { it > 0 },
                                 strength.trim().ifBlank { null },
                                 rxNumber.trim().ifBlank { null },
+                                asNeeded,
                             )
                         } catch (e: Exception) {
                             // Reset on failure, not just success -- otherwise a
