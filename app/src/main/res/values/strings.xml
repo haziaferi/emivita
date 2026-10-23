@@ -722,4 +722,12 @@
     <string name="add_reminder_variable_amount">Ask the amount when taking</string>
     <string name="add_reminder_variable_amount_desc">Take on the notification opens a field for the amount, filled with this reminder’s dose.</string>
     <string name="notif_amount_taken">Amount taken</string>
+    <!-- D-07 one-sheet add, name checks, the as-needed limit pair, Today's no-reminder section (§7 R114) -->
+    <string name="quick_add_dose_invalid">Enter an amount above zero</string>
+    <string name="quick_add_more_details">Save and add details</string>
+    <string name="medicine_name_blank">Write the medicine\'s name</string>
+    <string name="medicine_name_duplicate">You already have a medicine with this name</string>
+    <string name="add_medicine_prn_both">Fill in both, or leave both empty</string>
+    <string name="add_medicine_prn_whole">Enter a whole number above zero</string>
+    <string name="today_no_reminder">No reminder</string>
 </resources>

@@ -122,6 +122,7 @@ fun EmivitaNavHost(startPage: StartPage = StartPage.TODAY, openDataAndBackupOnSt
                     notificationBuilder = container.notificationBuilder,
                     onOpenNotificationSettings = { navController.navigate(EmivitaRoute.NotificationsAlertsSettings) },
                     onOpenDataAndBackup = { navController.navigate(EmivitaRoute.DataBackupSettings) },
+                    onAddReminder = { medicineId -> navController.navigate(EmivitaRoute.AddReminder(medicineId)) },
                 )
             }
             composable<EmivitaRoute.Medicines> {
@@ -131,9 +132,15 @@ fun EmivitaNavHost(startPage: StartPage = StartPage.TODAY, openDataAndBackupOnSt
                     doseEventRepository = container.doseEventRepository,
                     occurrenceProjectionCache = container.occurrenceProjectionCache,
                     settingsRepository = container.settingsRepository,
-                    onAddMedicine = { navController.navigate(EmivitaRoute.AddMedicine()) },
+                    // An unknown scanned code keeps the full form: the code is
+                    // one of its fields and the sheet has none (§7 R114).
                     onAddMedicineWithBarcode = { barcode -> navController.navigate(EmivitaRoute.AddMedicine(prefilledBarcode = barcode)) },
                     onOpenMedicine = { medicineId -> navController.navigate(EmivitaRoute.MedicineDetail(medicineId)) },
+                    // The edit form over the new medicine's page, so its Save lands there.
+                    onAddDetails = { medicineId ->
+                        navController.navigate(EmivitaRoute.MedicineDetail(medicineId))
+                        navController.navigate(EmivitaRoute.EditMedicine(medicineId))
+                    },
                 )
             }
             composable<EmivitaRoute.History> {

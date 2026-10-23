@@ -10,6 +10,7 @@ import com.hazia.emivita.core.data.dao.TagDao
 import com.hazia.emivita.core.data.db.EmivitaDatabase
 import com.hazia.emivita.core.data.entity.Medicine
 import com.hazia.emivita.core.data.entity.MedicineTagCrossRef
+import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.entity.Tag
 import com.hazia.emivita.core.scheduling.OccurrenceProjectionCache
 import com.hazia.emivita.core.scheduling.SchedulingCoordinator
@@ -54,6 +55,20 @@ class MedicineRepository(
 
     suspend fun create(medicine: Medicine): Long =
         medicineDao.insert(medicine).also { autoSyncManager.notifyChanged() }
+
+    /** The add sheet's Save (§7 R114, D-07 V3): the medicine and its first
+     *  reminder in ONE transaction, so a failure leaves neither, never a
+     *  medicine without the reminder it was saved with. The alarm and the
+     *  backup trigger follow the commit, as [ReminderRepository.create]'s do. */
+    suspend fun createWithFirstReminder(medicine: Medicine, firstReminder: Reminder): Long {
+        val (medicineId, reminderId) = database.withTransaction {
+            val id = medicineDao.insert(medicine)
+            id to reminderDao.insert(firstReminder.copy(medicineId = id))
+        }
+        schedulingCoordinator.onReminderChanged(reminderId, System.currentTimeMillis())
+        autoSyncManager.notifyChanged()
+        return medicineId
+    }
 
     /** Editing a medicine can change its stock quantity or expiry date, both
      *  of which are inputs to alert-reminder scheduling (spec §7 R37), so this
