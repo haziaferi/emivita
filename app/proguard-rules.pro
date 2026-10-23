@@ -33,4 +33,10 @@
 # updating one widget redraws every widget on the launcher (§7 R69, verified in
 # the DEX 2026-09-14). tools/r8_check.py fails the build if the names are gone.
 -keep class * extends androidx.glance.appwidget.GlanceAppWidget { *; }
+# Glance draws every widget through WorkManager's SessionWorker, and WorkManager
+# creates each run's InputMerger by reflection from its class name. R8 stripped
+# OverwritingInputMerger's no-argument constructor, every SessionWorker run failed
+# with InstantiationException, and placed widgets stayed blank on the phone (§7 R115).
+# tools/r8_check.py fails the build if a merger or worker constructor is gone.
+-keep class * extends androidx.work.InputMerger { public <init>(); }
 
