@@ -35,8 +35,10 @@ import com.hazia.emivita.navigation.EmivitaNavHost
 import com.hazia.emivita.ui.theme.EmivitaTheme
 import com.hazia.emivita.ui.theme.ThemeMode
 import kotlinx.coroutines.test.StandardTestDispatcher
-import org.junit.After
 import org.junit.Rule
+import org.junit.rules.TestRule
+import org.junit.rules.RuleChain
+import org.junit.rules.ExternalResource
 import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
@@ -60,20 +62,23 @@ abstract class FormScreenTestBase {
 
     // Effects on a standard dispatcher, run on the main thread as the clock advances: a form that
     // saves through Room and then navigates must resume where the NavController lives.
-    @get:Rule
     val compose = createAndroidComposeRule(ComponentActivity::class.java, effectContext = StandardTestDispatcher())
 
     private val harness = lazy { ReceiverHarness() }
     protected val h by harness
+
+    // The database closes only after Compose has torn down, as closedAfterCompose does (§7 R108):
+    // an @After ran first, and on CI a sheet still collecting Room flows met "connection is closed".
+    @get:Rule
+    val composeThenClose: TestRule = RuleChain.outerRule(object : ExternalResource() {
+        override fun after() {
+            if (harness.isInitialized()) h.close()
+        }
+    }).around(compose)
     protected val fontScale = mutableFloatStateOf(1f)
     protected var themeMode = ThemeMode.LIGHT
     protected val dp get() = compose.density.density
     protected val res get() = compose.activity.resources
-
-    @After
-    fun closeHarness() {
-        if (harness.isInitialized()) h.close()
-    }
 
     protected fun s(id: Int) = res.getString(id)
     protected fun s(id: Int, vararg args: Any) = res.getString(id, *args)

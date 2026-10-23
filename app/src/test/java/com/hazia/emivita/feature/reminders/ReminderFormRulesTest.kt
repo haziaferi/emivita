@@ -57,6 +57,8 @@ class ReminderFormRulesTest : ReminderFormTestBase() {
 
     private fun edit(fs: Float) {
         at(fs); seed(); h.reminder(metformina, ReminderConfig.FixedTime(8, 0, 1.0)); hostApp(); openMedicine()
+        // The medicine page loads its reminders from Room: wait for the row before revealing it (slow CI).
+        waitFor("the reminder row") { inTop(hasText("08:00", substring = true) and androidx.compose.ui.test.hasClickAction()) }
         tap(hasText("08:00", substring = true) and androidx.compose.ui.test.hasClickAction())
         waitFor("the edit form") { inTop(button(s(R.string.common_save_changes))) }
         gate("edit", fs, audit(sheet = false))
