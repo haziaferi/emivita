@@ -75,6 +75,26 @@ def descriptor(fqn):
     return "L%s;" % fqn.replace(".", "/")
 
 
+# Glance renders through WorkManager, which builds these by reflection (§7 R115): the release
+# APK of 2026-10-22 kept OverwritingInputMerger by name but not its constructor, and every
+# placed widget stayed blank on the phone. Its consumer rule keeps the class, not the
+# constructor, under R8 full mode.
+REFLECTED_CONSTRUCTORS = [
+    ("androidx.work.OverwritingInputMerger", "()V"),
+    ("androidx.glance.session.SessionWorker", "(Landroid/content/Context;Landroidx/work/WorkerParameters;)V"),
+]
+
+
+def constructors(dump, class_descriptor):
+    """The `<init>` signatures dexdump lists under one class's direct methods."""
+    start = dump.find("Class descriptor  : '%s'" % class_descriptor)
+    if start < 0:
+        return set()
+    end = dump.find("Class descriptor", start + 1)
+    block = dump[start:end if end >= 0 else len(dump)]
+    return set(re.findall(r"name\s*: '<init>'\s*\n\s*type\s*: '([^']+)'", block))
+
+
 def main():
     apk = sys.argv[1] if len(sys.argv) > 1 else DEFAULT_APK
     if not os.path.isfile(apk):
@@ -101,11 +121,17 @@ def main():
         else:
             failures.append("R8 dropped, renamed or merged widget %s" % fqn)
 
+    for fqn, signature in REFLECTED_CONSTRUCTORS:
+        if signature in constructors(dump, descriptor(fqn)):
+            print("  ok  %s.<init>%s" % (fqn, signature))
+        else:
+            failures.append("R8 stripped %s.<init>%s, which WorkManager calls by reflection" % (fqn, signature))
+
     if failures:
         print("\nFAIL")
         for f in failures:
             print("  " + f)
-        print("  the -keep for GlanceAppWidget in app/proguard-rules.pro is missing or no longer matches")
+        print("  a -keep for Glance or WorkManager in app/proguard-rules.pro is missing or no longer matches")
         return 1
     print("\nPASS  %d widgets survived R8 in %s" % (len(widgets), os.path.relpath(apk, ROOT)))
     return 0

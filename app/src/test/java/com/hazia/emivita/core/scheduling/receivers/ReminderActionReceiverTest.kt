@@ -78,7 +78,9 @@ class ReminderActionReceiverTest {
         assertEquals(DoseStatus.SKIPPED, h.doseEvent(second).status)
         assertEquals(DoseStatus.PENDING, h.doseEvent(first).status)
         assertEquals(listOf(first.toInt()), h.notificationIds.filter { it > 0 })
-        assertEquals("one dose showing needs no summary", emptyList<Int>(), h.notificationIds.filter { it < 0 })
+        // The summary stays while the group has a child: cancelling it would
+        // cancel the other dose's reminder too (§7 R115).
+        assertEquals("one dose left keeps the summary", 1, h.notificationIds.count { it < 0 })
     }
 
     @Test

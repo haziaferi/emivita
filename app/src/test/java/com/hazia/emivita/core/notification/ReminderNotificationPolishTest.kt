@@ -136,7 +136,10 @@ class ReminderNotificationPolishTest {
         assertEquals("Take all", summary.actions.single().title)
         val ids = shadowOf(summary.actions.single().actionIntent).savedIntent.getLongArrayExtra(EXTRA_DOSE_EVENT_IDS)!!.toList()
         assertEquals(listOf(11L, 12L), ids)
-        // one answered and dismissed: the summary goes with it
+        // One answered and dismissed: the summary stays, counting one, because
+        // cancelling it would cancel the other dose's reminder too (§7 R115:
+        // seen on the 6T; Robolectric's shadow does not cascade, so the test
+        // pins the summary). It goes once the group is empty.
         nm.cancel(11)
         val settings = mockk<SettingsRepository>().also {
             every { it.hideMedicineNames } returns flowOf(false)
@@ -144,7 +147,13 @@ class ReminderNotificationPolishTest {
             every { it.snoozeAskEachTime } returns flowOf(false)
             every { it.swipeAction } returns flowOf(SwipeAction.NOTHING) // every button shown, as before §7 R109
         }
-        ReminderNotificationBuilder(context, mockk(relaxed = true), settings).updateGroupSummary()
+        val builder = ReminderNotificationBuilder(context, mockk(relaxed = true), settings)
+        builder.updateGroupSummary()
+        val lone = shadowOf(nm).getNotification(REMINDER_GROUP_SUMMARY_ID)
+        assertEquals("1 dose due", lone?.extras?.getString(Notification.EXTRA_TITLE))
+        assertEquals("one dose left has nothing to take all of", 0, lone!!.actions?.size ?: 0)
+        nm.cancel(12)
+        builder.updateGroupSummary()
         assertEquals(null, shadowOf(nm).getNotification(REMINDER_GROUP_SUMMARY_ID))
     }
 

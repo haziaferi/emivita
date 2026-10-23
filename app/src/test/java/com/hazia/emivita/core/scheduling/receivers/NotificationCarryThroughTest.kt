@@ -58,7 +58,9 @@ class NotificationCarryThroughTest {
         val b = shown("Ramipril")
         runBlocking { h.container.doseEventRepository.resolve(a.doseId, DoseStatus.TAKEN) }
         assertEquals(listOf(b.doseId.toInt()), h.notificationIds.filter { it > 0 })
-        assertTrue("one dose left showing has no summary", h.notificationIds.none { it < 0 })
+        // The summary stays while the group has a child: cancelling it would
+        // cancel the other dose's reminder too (§7 R115).
+        assertEquals("one dose left keeps the summary", 1, h.notificationIds.count { it < 0 })
     }
 
     // ---- a sticky notification whose dose is gone ----------------------------
@@ -111,7 +113,7 @@ class NotificationCarryThroughTest {
         val gone = shown("Atorvastatin", sticky = true)
         val kept = shown("Ramipril", sticky = true)
         runBlocking { h.container.medicineRepository.deletePermanently(h.medicineRow(gone.medicineId)) }
-        assertEquals(listOf(kept.doseId.toInt()), h.notificationIds)
+        assertEquals(listOf(kept.doseId.toInt()), h.notificationIds.filter { it > 0 })
     }
 
     // ---- a stale Take on a reminder that now asks the amount ----------------

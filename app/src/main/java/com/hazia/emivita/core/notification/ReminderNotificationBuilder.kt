@@ -173,7 +173,13 @@ class ReminderNotificationBuilder(
             .filter { it.id > 0 && it.notification.group == REMINDER_GROUP_KEY }
             .sortedBy { it.id }
         val showing = showingNotifications.map { it.id.toLong() }
-        if (showing.size < 2) {
+        // Cancelling a group's summary cancels every child still in the group,
+        // ongoing ones included: answering one of two doses took the other's
+        // reminder off the phone with it (§7 R115). The summary goes only once
+        // the group is empty; a lone child keeps it, counting one. A lone
+        // reminder that never had company still gets no summary.
+        val summaryShowing = nm.activeNotifications.any { it.id == REMINDER_GROUP_SUMMARY_ID }
+        if (showing.isEmpty() || (showing.size < 2 && !summaryShowing)) {
             nm.cancel(REMINDER_GROUP_SUMMARY_ID)
             return
         }
