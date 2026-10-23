@@ -9,7 +9,14 @@ import com.hazia.emivita.core.data.entity.Medicine
 import com.hazia.emivita.core.data.entity.Profile
 import com.hazia.emivita.core.scheduling.OccurrenceProjectionCache
 import com.hazia.emivita.core.scheduling.SchedulingCoordinator
+import io.mockk.coVerify
 import io.mockk.mockk
+import com.hazia.emivita.core.data.config.ReminderConfig
+import com.hazia.emivita.core.data.config.ReminderType
+import com.hazia.emivita.core.data.config.encodeReminderConfig
+import com.hazia.emivita.core.data.entity.Reminder
+import org.junit.Assert.assertTrue
+import org.junit.Assert.fail
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.test.runTest
 import org.junit.After
@@ -32,6 +39,7 @@ import org.robolectric.RobolectricTestRunner
 class MedicineRepositoryTest {
     private lateinit var database: EmivitaDatabase
     private lateinit var repository: MedicineRepository
+    private val scheduling = mockk<SchedulingCoordinator>(relaxed = true)
 
     @Before
     fun setUp() {
@@ -46,7 +54,7 @@ class MedicineRepositoryTest {
             doseEventDao = database.doseEventDao(),
             reminderDao = database.reminderDao(),
             medicineNoteDao = database.medicineNoteDao(),
-            schedulingCoordinator = mockk<SchedulingCoordinator>(relaxed = true),
+            schedulingCoordinator = scheduling,
             occurrenceProjectionCache = mockk<OccurrenceProjectionCache>(relaxed = true),
             autoSyncManager = mockk<AutoSyncManager>(relaxed = true),
         )
@@ -143,5 +151,42 @@ class MedicineRepositoryTest {
         assertEquals(null, database.medicineDao().getById(medicineId))
         assertEquals(0, database.reminderDao().observeForMedicine(medicineId).first().size)
         assertEquals(0, database.doseEventDao().getAllOnce().count { it.medicineId == medicineId })
+    }
+
+    // ---- the add sheet's Save (§7 R114) ----
+
+    private fun firstReminder(groupId: Long? = null) = Reminder(
+        medicineId = 0, groupId = groupId, type = ReminderType.FIXED_TIME,
+        configJson = encodeReminderConfig(ReminderConfig.FixedTime(8, 0, 1.0)), createdAtEpochMillis = 0,
+    )
+
+    @Test
+    fun `createWithFirstReminder writes both, and arms the reminder after the commit`() = runTest {
+        val profileId = database.profileDao().insert(Profile(name = "Test Profile", createdAtEpochMillis = 0))
+        val id = repository.createWithFirstReminder(
+            Medicine(profileId = profileId, name = "Metformin", iconKey = "pill", sortOrder = 0.0, createdAtEpochMillis = 0),
+            firstReminder(),
+        )
+        val reminder = database.reminderDao().observeForMedicine(id).first().single()
+        assertEquals("Metformin", database.medicineDao().getById(id)?.name)
+        coVerify(exactly = 1) { scheduling.onReminderChanged(reminder.id, any()) }
+    }
+
+    @Test
+    fun `a reminder that cannot be written leaves no medicine behind`() = runTest {
+        val profileId = database.profileDao().insert(Profile(name = "Test Profile", createdAtEpochMillis = 0))
+        try {
+            // A dose group that does not exist: the reminder's foreign key refuses it.
+            repository.createWithFirstReminder(
+                Medicine(profileId = profileId, name = "Metformin", iconKey = "pill", sortOrder = 0.0, createdAtEpochMillis = 0),
+                firstReminder(groupId = 999L),
+            )
+            fail("the reminder insert should have thrown")
+        } catch (e: android.database.sqlite.SQLiteConstraintException) {
+            // expected
+        }
+        val left = database.medicineDao().observeForProfile(profileId).first().map { it.medicine.name }
+        assertTrue("a medicine without the reminder it was saved with: $left", left.isEmpty())
+        coVerify(exactly = 0) { scheduling.onReminderChanged(any(), any()) }
     }
 }

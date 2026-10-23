@@ -254,10 +254,27 @@ object Migrations {
         }
     }
 
+    /** v11 -> v12 (§7 R116, the owner's switch): `medicines.asNeeded`. A medicine
+     *  with no enabled dosing reminder (alert reminders schedule no dose) and a
+     *  dose already logged gets it on, so what Today listed as as-needed stays
+     *  there with its Log button. `NOT NULL DEFAULT 0` matches the entity's
+     *  `@ColumnInfo(defaultValue = "0")`, as MIGRATION_4_5 does. */
+    val MIGRATION_11_12 = object : Migration(11, 12) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE medicines ADD COLUMN asNeeded INTEGER NOT NULL DEFAULT 0")
+            db.execSQL(
+                "UPDATE medicines SET asNeeded = 1 WHERE " +
+                    "NOT EXISTS (SELECT 1 FROM reminders WHERE reminders.medicineId = medicines.id AND reminders.enabled = 1 " +
+                    "AND reminders.type NOT IN ('LOW_STOCK_ALERT', 'EXPIRATION_ALERT')) " +
+                    "AND EXISTS (SELECT 1 FROM dose_events WHERE dose_events.medicineId = medicines.id AND dose_events.status = 'TAKEN')",
+            )
+        }
+    }
+
     /** Every migration, oldest first: the database and its migration tests open
      *  through the same list. */
     val ALL: Array<Migration> by lazy {
-        arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+        arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
     }
 
     /** v9 -> v10 (§7 R109, Appendix E B-42 and B-45): two per-reminder flags,

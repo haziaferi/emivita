@@ -181,6 +181,7 @@ fun TodayScreen(
     notificationBuilder: ReminderNotificationBuilder,
     onOpenNotificationSettings: () -> Unit = {},
     onOpenDataAndBackup: () -> Unit = {},
+    onAddReminder: (medicineId: Long) -> Unit = {},
 ) {
     var showLogDose by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -200,14 +201,13 @@ fun TodayScreen(
     }.value
     // Reminders by id, for the instructions line and for "Take now" on a
     // projected slot; and the medicines with no dosing reminder switched on,
-    // which are the as-needed ones (§9 #26; Pill Time's whole model).
+    // split into as-needed and reminder-less (§9 #26, §7 R114).
     val withReminders = produceState<List<MedicineWithReminders>?>(initialValue = null, profileId) {
         medicineRepository.observeWithRemindersForProfile(profileId).collectLatest { value = it }
     }.value
     val remindersById = remember(withReminders) { withReminders.orEmpty().flatMap { it.reminders }.associateBy { it.id } }
-    val asNeeded = remember(withReminders) {
-        withReminders.orEmpty().filter { m -> m.reminders.none { it.enabled } }.map { it.medicine }.sortedBy { it.sortOrder }
-    }
+    val standing = remember(withReminders) { standingSections(withReminders.orEmpty()) }
+    val asNeeded = standing.asNeeded
 
     val zone = remember { ZoneId.systemDefault() }
     // rememberCurrentDate, not remember { LocalDate.now() } -- otherwise the
@@ -260,7 +260,7 @@ fun TodayScreen(
                 medicinesById == null || materializedToday == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
                 }
-                nodes.isEmpty() && asNeeded.isEmpty() -> Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
+                nodes.isEmpty() && asNeeded.isEmpty() && standing.noReminder.isEmpty() -> Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                     Text(
                         stringResource(R.string.today_nothing_scheduled_yet_add_a_medicine_and_a),
                         style = MaterialTheme.typography.bodyMedium,
@@ -286,6 +286,27 @@ fun TodayScreen(
                                 // Re-fetches "last taken" after a log today.
                                 refreshKey = materializedToday.size,
                                 onLog = { logDosePreselected = medicine; showLogDose = true },
+                            )
+                            Spacer(Modifier.height(8.dp))
+                        }
+                    }
+                    // A medicine with no reminder yet (§7 R114): its own
+                    // section, so a half-made one is not taken for as-needed.
+                    if (standing.noReminder.isNotEmpty()) {
+                        item(key = "no-reminder-header") {
+                            Text(
+                                stringResource(R.string.today_no_reminder),
+                                style = MaterialTheme.typography.labelLarge,
+                                modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
+                            )
+                        }
+                        items(standing.noReminder, key = { "no-reminder-" + it.id }) { medicine ->
+                            AsNeededRow(
+                                medicine = medicine,
+                                doseEventRepository = doseEventRepository,
+                                refreshKey = materializedToday.size,
+                                onLog = { onAddReminder(medicine.id) },
+                                action = R.string.common_add_reminder,
                             )
                             Spacer(Modifier.height(8.dp))
                         }
@@ -327,13 +348,15 @@ fun TodayScreen(
 }
 
 /** One as-needed medicine (§9 #26; Pill Time PT-02): name, how long since
- *  the last dose in the platform's own relative words, and Log. */
+ *  the last dose in the platform's own relative words, and Log. A medicine
+ *  with no reminder wears the same row with Add reminder as [action] (§7 R114). */
 @Composable
 internal fun AsNeededRow(
     medicine: Medicine,
     doseEventRepository: DoseEventRepository,
     refreshKey: Int,
     onLog: () -> Unit,
+    @StringRes action: Int = R.string.today_log,
 ) {
     val last by produceState<DoseEvent?>(initialValue = null, medicine.id, refreshKey) {
         value = doseEventRepository.lastDose(medicine.id)
@@ -356,7 +379,7 @@ internal fun AsNeededRow(
             }
             AssistChip(
                 onClick = onLog,
-                label = { Text(stringResource(R.string.today_log)) },
+                label = { Text(stringResource(action)) },
                 leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
             )
         }

@@ -34,6 +34,7 @@ import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Surface
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -62,6 +63,7 @@ import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
 import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
 import com.hazia.emivita.core.data.entity.NotificationPriority
 import com.hazia.emivita.core.notification.ReminderNotificationChannels
@@ -87,6 +89,7 @@ fun AddMedicineScreen(
     onCancel: () -> Unit,
 ) {
     val colorsInUse = rememberColorsInUse(medicineRepository, profileId)
+    val otherNames = rememberOtherNames(medicineRepository, profileId)
     MedicineFormBody(
         title = stringResource(R.string.add_medicine_title),
         saveLabel = stringResource(R.string.common_save),
@@ -102,7 +105,8 @@ fun AddMedicineScreen(
         initialLockOverride = null,
         initialPriority = NotificationPriority.STANDARD,
         colorsInUse = colorsInUse,
-        onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, notes, doseUnit, lockOverride, priority, prnMax, prnHours, strength, rxNumber ->
+        otherNames = otherNames,
+        onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, notes, doseUnit, lockOverride, priority, prnMax, prnHours, strength, rxNumber, asNeeded ->
             val id = medicineRepository.create(
                 Medicine(
                     profileId = profileId,
@@ -121,6 +125,7 @@ fun AddMedicineScreen(
                     prnWindowHours = prnHours,
                     strength = strength,
                     rxNumber = rxNumber,
+                    asNeeded = asNeeded,
                     createdAtEpochMillis = System.currentTimeMillis(),
                 )
             )
@@ -171,6 +176,7 @@ fun EditMedicineScreen(
 
     val tagsSnapshot = existingTags
     val colorsInUse = rememberColorsInUse(medicineRepository, current.profileId, excludeId = medicineId)
+    val otherNames = rememberOtherNames(medicineRepository, current.profileId, excludeId = medicineId)
     MedicineFormBody(
         title = stringResource(R.string.edit_medicine_title),
         saveLabel = stringResource(R.string.common_save_changes),
@@ -184,13 +190,15 @@ fun EditMedicineScreen(
         initialNotes = current.notes ?: "",
         initialPrnMaxDoses = current.prnMaxDoses,
         initialPrnWindowHours = current.prnWindowHours,
+        initialAsNeeded = current.asNeeded,
         initialStrength = current.strength ?: "",
         initialRxNumber = current.rxNumber ?: "",
         initialDoseUnit = current.doseUnit ?: "",
         initialLockOverride = current.remindersLockedUntilTaken,
         initialPriority = current.notificationPriority,
         colorsInUse = colorsInUse,
-        onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, notes, doseUnit, lockOverride, priority, prnMax, prnHours, strength, rxNumber ->
+        otherNames = otherNames,
+        onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, notes, doseUnit, lockOverride, priority, prnMax, prnHours, strength, rxNumber, asNeeded ->
             medicineRepository.update(
                 current.copy(
                     name = name,
@@ -207,6 +215,7 @@ fun EditMedicineScreen(
                     prnWindowHours = prnHours,
                     strength = strength,
                     rxNumber = rxNumber,
+                    asNeeded = asNeeded,
                 )
             )
             val previousNames = tagsSnapshot.associateBy { it.name }
@@ -250,6 +259,14 @@ private fun rememberColorsInUse(
     }
 }
 
+/** The profile's other medicines' names, for the duplicate-name warning
+ *  (§7 R114); an edit leaves its own medicine out. */
+@Composable
+private fun rememberOtherNames(medicineRepository: MedicineRepository, profileId: Long, excludeId: Long? = null): List<String> {
+    val medicines by medicineRepository.observeForProfile(profileId).collectAsState(initial = emptyList())
+    return remember(medicines, excludeId) { medicines.map { it.medicine }.filter { it.id != excludeId }.map { it.name } }
+}
+
 /** Shared body for both Add and Edit -- see AddMedicineScreen/EditMedicineScreen
  *  above for what differs (title/button text, initial values, and what the
  *  final onSave callback actually does with the field values). */
@@ -267,6 +284,7 @@ private fun MedicineFormBody(
     initialNotes: String,
     initialPrnMaxDoses: Int? = null,
     initialPrnWindowHours: Int? = null,
+    initialAsNeeded: Boolean = false,
     initialStrength: String = "",
     initialRxNumber: String = "",
     initialDoseUnit: String,
@@ -276,6 +294,7 @@ private fun MedicineFormBody(
      *  (spec §3, §7 R47). Excludes the medicine being edited -- a colour is
      *  not "too close to" itself. */
     colorsInUse: List<Pair<String, Color>>,
+    otherNames: List<String>,
     onSave: suspend (
         name: String,
         barcodeValue: String?,
@@ -292,6 +311,7 @@ private fun MedicineFormBody(
         prnWindowHours: Int?,
         strength: String?,
         rxNumber: String?,
+        asNeeded: Boolean,
     ) -> Unit,
     onCancel: () -> Unit,
 ) {
@@ -310,6 +330,7 @@ private fun MedicineFormBody(
     var notes by rememberSaveable { mutableStateOf(initialNotes) }
     var prnMax by rememberSaveable { mutableStateOf(initialPrnMaxDoses?.toString() ?: "") }
     var prnHours by rememberSaveable { mutableStateOf(initialPrnWindowHours?.toString() ?: "") }
+    var asNeeded by rememberSaveable { mutableStateOf(initialAsNeeded) }
     var strength by rememberSaveable { mutableStateOf(initialStrength) }
     var rxNumber by rememberSaveable { mutableStateOf(initialRxNumber) }
     val resources = LocalResources.current
@@ -317,11 +338,14 @@ private fun MedicineFormBody(
     // null = inherit global default, true/false = explicit override
     var lockOverride by rememberSaveable { mutableStateOf(initialLockOverride) }
     // §9 #29 (HM-40): every field a save would persist, against its first value.
-    val dirty = rememberDirty(Unit, name, priority, barcodeValue, iconKey, color, pendingTags, indication, storageNote, notes, prnMax, prnHours, strength, rxNumber, doseUnit, lockOverride)
+    val dirty = rememberDirty(Unit, name, priority, barcodeValue, iconKey, color, pendingTags, indication, storageNote, notes, prnMax, prnHours, asNeeded, strength, rxNumber, doseUnit, lockOverride)
     val cancel = unsavedChangesGuard(dirty, onCancel)
     var saving by remember { mutableStateOf(false) } // transient: a save in flight does not survive the activity
     var saveError by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
+    // A limit is both numbers or neither (§7 R114): one alone was saved and
+    // Today's Log dose then showed no ceiling.
+    val prnCheck = checkPrnCeiling(prnMax, prnHours)
 
     // zxing "Scan a barcode or QR code" intent -- delegates to an installed
     // scanner app (e.g. Binary Eye) rather than bundling camera/ML code here
@@ -343,13 +367,7 @@ private fun MedicineFormBody(
         Text(title, style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(20.dp))
 
-        OutlinedTextField(
-            value = name,
-            onValueChange = { name = it },
-            label = { Text(stringResource(R.string.common_name)) },
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        MedicineNameField(name, { name = it }, otherNames)
         Spacer(Modifier.height(8.dp))
 
         // What a dose is measured in ("capsules", "drops", "tablet") -- a
@@ -528,10 +546,29 @@ private fun MedicineFormBody(
             modifier = Modifier.fillMaxWidth(),
         )
 
+        // Taken when needed (§7 R116, the owner's switch), beside the limit it
+        // goes with; the limit alone never sets it.
+        Spacer(Modifier.height(20.dp))
+        Row(
+            Modifier.fillMaxWidth().toggleable(value = asNeeded, role = Role.Switch) { asNeeded = it },
+            horizontalArrangement = Arrangement.SpaceBetween,
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(R.string.add_medicine_as_needed), style = MaterialTheme.typography.bodyMedium)
+                Text(
+                    stringResource(R.string.add_medicine_as_needed_desc),
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+            Switch(checked = asNeeded, onCheckedChange = null)
+        }
+
         // As-needed ceiling (§9 #26; Pill Time PT-01): "at most N in any H
         // hours". Shown as headroom on the Log dose dialog; at the ceiling
         // logging asks once and never refuses (the owner's choice).
-        Spacer(Modifier.height(20.dp))
+        Spacer(Modifier.height(12.dp))
         Text(stringResource(R.string.add_medicine_prn_ceiling), style = MaterialTheme.typography.labelLarge)
         Text(
             stringResource(R.string.add_medicine_prn_ceiling_desc),
@@ -539,22 +576,8 @@ private fun MedicineFormBody(
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            OutlinedTextField(
-                value = prnMax,
-                onValueChange = { prnMax = it },
-                label = { Text(stringResource(R.string.add_medicine_prn_max)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-            )
-            OutlinedTextField(
-                value = prnHours,
-                onValueChange = { prnHours = it },
-                label = { Text(stringResource(R.string.add_medicine_prn_hours)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-            )
+            PrnField(prnMax, { prnMax = it }, R.string.add_medicine_prn_max, prnCheck.maxError, Modifier.weight(1f))
+            PrnField(prnHours, { prnHours = it }, R.string.add_medicine_prn_hours, prnCheck.hoursError, Modifier.weight(1f))
         }
 
         // Notification priority (spec §7 R59): the only place a medicine's
@@ -594,7 +617,7 @@ private fun MedicineFormBody(
         Spacer(Modifier.height(24.dp))
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
             Button(
-                enabled = name.isNotBlank() && !saving,
+                enabled = name.isNotBlank() && prnCheck.valid && !saving,
                 onClick = {
                     saving = true
                     saveError = null
@@ -612,10 +635,11 @@ private fun MedicineFormBody(
                                 doseUnit.trim().ifBlank { null },
                                 lockOverride,
                                 priority,
-                                prnMax.toIntOrNull()?.takeIf { it > 0 },
-                                prnHours.toIntOrNull()?.takeIf { it > 0 },
+                                prnMax.trim().toIntOrNull()?.takeIf { it > 0 },
+                                prnHours.trim().toIntOrNull()?.takeIf { it > 0 },
                                 strength.trim().ifBlank { null },
                                 rxNumber.trim().ifBlank { null },
+                                asNeeded,
                             )
                         } catch (e: Exception) {
                             // Reset on failure, not just success -- otherwise a
@@ -644,6 +668,38 @@ private fun MedicineFormBody(
             inUse = colorsInUse,
         )
     }
+}
+
+/** What is wrong with each half of the as-needed limit, as a string id, or null. */
+internal data class PrnCeilingCheck(@StringRes val maxError: Int?, @StringRes val hoursError: Int?) {
+    val valid get() = maxError == null && hoursError == null
+}
+
+/** Both a whole number above zero, or both empty (§7 R114). A half with text
+ *  that is not such a number says so; an empty half beside a filled one asks
+ *  for both. */
+internal fun checkPrnCeiling(max: String, hours: String): PrnCeilingCheck {
+    fun bad(s: String) = s.isNotBlank() && (s.trim().toIntOrNull() ?: 0) <= 0
+    fun half(own: String, other: String): Int? = when {
+        bad(own) -> R.string.add_medicine_prn_whole
+        own.isBlank() && other.isNotBlank() -> R.string.add_medicine_prn_both
+        else -> null
+    }
+    return PrnCeilingCheck(half(max, hours), half(hours, max))
+}
+
+@Composable
+private fun PrnField(value: String, onValueChange: (String) -> Unit, @StringRes label: Int, @StringRes error: Int?, modifier: Modifier) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onValueChange,
+        label = { Text(stringResource(label)) },
+        isError = error != null,
+        supportingText = error?.let { { Text(stringResource(it)) } },
+        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+        singleLine = true,
+        modifier = modifier,
+    )
 }
 
 /** The channel description for a tier, so the form's second line says exactly

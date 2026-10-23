@@ -52,6 +52,7 @@ import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -110,9 +111,10 @@ fun MedicinesScreen(
     doseEventRepository: DoseEventRepository,
     occurrenceProjectionCache: OccurrenceProjectionCache,
     settingsRepository: SettingsRepository,
-    onAddMedicine: () -> Unit,
     onAddMedicineWithBarcode: (barcode: String) -> Unit,
     onOpenMedicine: (medicineId: Long) -> Unit,
+    /** "Save and add details" in the add sheet: the new medicine's full edit form (§7 R114). */
+    onAddDetails: (medicineId: Long) -> Unit,
 ) {
     val zone = remember { ZoneId.systemDefault() }
     val today = rememberCurrentDate(zone)
@@ -153,6 +155,17 @@ fun MedicinesScreen(
         sortEntries(filterEntries(built, query, selectedTags), sort, locale)
     }
     val sections = remember(entries, sort, locale) { if (sort == MedicinesSort.GROUP_BY_TAG) groupByTag(entries, locale) else emptyList() }
+
+    // D-07 V3 (§7 R114): the add button opens one sheet, open across a rotation.
+    var adding by rememberSaveable { mutableStateOf(false) }
+    if (adding) {
+        QuickAddMedicineSheet(
+            otherNames = withReminders.map { it.medicine.name },
+            save = { input -> saveQuickAdd(medicineRepository, profileId, input) },
+            onSaved = { id, addDetails -> adding = false; if (addDetails) onAddDetails(id) },
+            onDismiss = { adding = false },
+        )
+    }
 
     var notFoundCode by remember { mutableStateOf<String?>(null) }
     val scanLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
@@ -319,7 +332,7 @@ fun MedicinesScreen(
                 }
             }
         }
-        FloatingActionButton(onClick = onAddMedicine, modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
+        FloatingActionButton(onClick = { adding = true }, modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
             Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.medicines_add_medicine))
         }
     }

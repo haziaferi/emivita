@@ -9,9 +9,13 @@ import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.entity.Tag
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
+import com.hazia.emivita.core.data.config.ReminderType
+import com.hazia.emivita.core.data.entity.DoseStatus
 import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
 import kotlinx.serialization.json.jsonObject
 import kotlinx.serialization.json.jsonPrimitive
+import kotlinx.serialization.json.longOrNull
 import com.hazia.emivita.core.data.entity.MedicineNote
 
 /** Current backup schema version -- bump when a field is added/removed in a
@@ -49,7 +53,27 @@ fun decodeBackup(json: String): BackupDecodeResult {
         BackupJson.parseToJsonElement(json).jsonObject["schemaVersion"]?.jsonPrimitive?.int
     }.getOrNull() ?: BACKUP_SCHEMA_VERSION
     if (version > BACKUP_SCHEMA_VERSION) return BackupDecodeResult.NewerThanApp(version)
-    return BackupDecodeResult.Ok(BackupJson.decodeFromString(BackupData.serializer(), json))
+    return BackupDecodeResult.Ok(deriveMissingAsNeeded(json, BackupJson.decodeFromString(BackupData.serializer(), json)))
+}
+
+/** A medicine written before `asNeeded` existed (§7 R116) has no such key and
+ *  decodes as false, which would move an as-needed one to *Senza promemoria*.
+ *  It gets the flag as MIGRATION_11_12 gives it: no enabled dosing reminder and
+ *  a dose logged. A file that carries the key keeps what it says. */
+private fun deriveMissingAsNeeded(json: String, data: BackupData): BackupData {
+    val missing = BackupJson.parseToJsonElement(json).jsonObject["medicines"]?.jsonArray.orEmpty()
+        .map { it.jsonObject }
+        .filter { "asNeeded" !in it }
+        .map { it["id"]?.jsonPrimitive?.longOrNull ?: 0L }
+        .toSet()
+    if (missing.isEmpty()) return data
+    val scheduled = data.reminders
+        .filter { it.enabled && it.type != ReminderType.LOW_STOCK_ALERT && it.type != ReminderType.EXPIRATION_ALERT }
+        .map { it.medicineId }.toSet()
+    val logged = data.doseEvents.filter { it.status == DoseStatus.TAKEN }.mapNotNull { it.medicineId }.toSet()
+    return data.copy(
+        medicines = data.medicines.map { m -> if (m.id in missing) m.copy(asNeeded = m.id !in scheduled && m.id in logged) else m },
+    )
 }
 
 /** The whole-database JSON snapshot for spec §9 #9's shared writer -- both

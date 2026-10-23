@@ -39,7 +39,7 @@ _what I take, in what form, on which schedule, and how much is left before it ru
 |---|---|---|---|---|
 | Medicines list | `route:Medicines` | §9 #1, §9 #27 | shipped |  |
 | A medicine's page (reminders, stock, chart) | `route:MedicineDetail` | §9 #24, §9 #27 | shipped | History (calendar and list) |
-| Add or edit a medicine | `route:AddMedicine`, `route:EditMedicine`, `dialog:ColorPickerDialog` | §9 #1, §9 #27 | shipped |  |
+| Add or edit a medicine | `route:AddMedicine`, `route:EditMedicine`, `dialog:ColorPickerDialog`, `sheet:QuickAddMedicineSheet` | §9 #1, §9 #27, R114 | shipped |  |
 | Add or edit a reminder (fixed times, interval, window, cycle, follow-up, taper) | `route:AddReminder`, `route:EditReminder` | §9 #1, §9 #14, §9 #24, §9 #31 | shipped | Weekend mode (sheet) |
 | Stock and expiration | `route:StockExpiration` | §9 #8, §9 #27, R85 | shipped | Stock levels widget |
 | Stock levels widget | `widget:StockLevelsWidgetReceiver` | §9 #7, R108 | shipped | Stock and expiration |

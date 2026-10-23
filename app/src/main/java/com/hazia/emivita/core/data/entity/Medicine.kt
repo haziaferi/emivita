@@ -81,5 +81,10 @@ data class Medicine(
     val strength: String? = null,
     /** The prescription number for the refill phone call (§9 #27; DT-10). */
     val rxNumber: String? = null,
+    /** Taken when needed (§7 R116, the owner's switch): with no dosing
+     *  reminder switched on it stays on Today under *Al bisogno* with its Log
+     *  button, where one without it is under *Senza promemoria*. Its own
+     *  switch on the full form; the as-needed limit does not set it. */
+    @ColumnInfo(defaultValue = "0") val asNeeded: Boolean = false,
     val createdAtEpochMillis: Long,
 )

@@ -23,7 +23,7 @@
 
     {"id": "medicines", "name": "Medicines list", "purpose": "P2", "code": ["route:Medicines"], "spec": ["§9 #1", "§9 #27"], "status": "shipped", "overlaps": []},
     {"id": "medicine_detail", "name": "A medicine's page (reminders, stock, chart)", "purpose": "P2", "code": ["route:MedicineDetail"], "spec": ["§9 #24", "§9 #27"], "status": "shipped", "overlaps": ["history"]},
-    {"id": "medicine_form", "name": "Add or edit a medicine", "purpose": "P2", "code": ["route:AddMedicine", "route:EditMedicine", "dialog:ColorPickerDialog"], "spec": ["§9 #1", "§9 #27"], "status": "shipped", "overlaps": []},
+    {"id": "medicine_form", "name": "Add or edit a medicine", "purpose": "P2", "code": ["route:AddMedicine", "route:EditMedicine", "dialog:ColorPickerDialog", "sheet:QuickAddMedicineSheet"], "spec": ["§9 #1", "§9 #27", "R114"], "status": "shipped", "overlaps": []},
     {"id": "reminder_form", "name": "Add or edit a reminder (fixed times, interval, window, cycle, follow-up, taper)", "purpose": "P2", "code": ["route:AddReminder", "route:EditReminder"], "spec": ["§9 #1", "§9 #14", "§9 #24", "§9 #31"], "status": "shipped", "overlaps": ["weekend_mode"]},
     {"id": "stock", "name": "Stock and expiration", "purpose": "P2", "code": ["route:StockExpiration"], "spec": ["§9 #8", "§9 #27", "R85"], "status": "shipped", "overlaps": ["widget_stock"]},
     {"id": "widget_stock", "name": "Stock levels widget", "purpose": "P2", "code": ["widget:StockLevelsWidgetReceiver"], "spec": ["§9 #7", "R108"], "status": "shipped", "overlaps": ["stock"]},

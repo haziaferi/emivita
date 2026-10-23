@@ -75,7 +75,10 @@ class ReminderAlarmReceiverTest {
         assertEquals(DoseStatus.PENDING, event.status)
         assertEquals(firedAt, event.scheduledEpochMillis)
         assertEquals(listOf(event.id.toInt()), h.notificationIds)
-        assertEquals(listOf(firedAt + 86_400_000L), h.regularAlarms(reminderId).map { it.triggerAtMs })
+        // The same wall-clock time tomorrow, not 24 hours on: across a clock
+        // change the next 08:00 is 23 or 25 hours away (§7 R117).
+        val tomorrow = Instant.ofEpochMilli(firedAt).atZone(ZoneId.systemDefault()).plusDays(1).toInstant().toEpochMilli()
+        assertEquals(listOf(tomorrow), h.regularAlarms(reminderId).map { it.triggerAtMs })
     }
 
     @Test
