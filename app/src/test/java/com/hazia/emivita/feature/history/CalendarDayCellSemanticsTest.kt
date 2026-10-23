@@ -49,19 +49,27 @@ class CalendarDayCellSemanticsTest {
         }
         compose.onNode(hasContentDescription("Tuesday 9 June", substring = true))
             .assert(hasContentDescription("2 Taken", substring = true))
-            // PENDING reads as Missed, the same relabel the list and the chart use.
-            .assert(hasContentDescription("1 Missed", substring = true))
+            // PENDING reads Due, as on the list and Today (§7 R121), never Missed.
+            .assert(hasContentDescription("2 Taken, 1 Due", substring = true))
             .assert(hasRole(Role.Button))
             .assertHasClickAction()
             .assertIsNotSelected()
     }
 
     @Test
-    fun aDoseStillDueIsCountedAsDueNotMissed() {
-        // §7 R119: the list passes a due dose as a count of its own, not a PENDING status.
-        compose.setContent { CalendarDayCell(day(), today = tuesday, statuses = listOf(DoseStatus.TAKEN), selected = false, onClick = {}, due = 1) }
+    fun anUnansweredDosePastItsMidnightIsSpokenAsMissed() {
+        // The calendar's missed dot (the owner, 2026-10-23; §7 R121) is spoken,
+        // not shown by colour alone: one of the two unanswered doses is past
+        // its midnight.
+        compose.setContent {
+            CalendarDayCell(
+                day(), today = tuesday,
+                statuses = listOf(DoseStatus.TAKEN, DoseStatus.PENDING, DoseStatus.PENDING),
+                selected = false, onClick = {}, missed = 1,
+            )
+        }
         compose.onNode(hasContentDescription("Tuesday 9 June", substring = true))
-            .assert(hasContentDescription("1 Taken, 1 Due", substring = true))
+            .assert(hasContentDescription("1 Taken, 1 Due, 1 Missed", substring = true))
     }
 
     @Test

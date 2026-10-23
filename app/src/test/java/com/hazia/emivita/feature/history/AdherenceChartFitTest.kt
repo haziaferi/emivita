@@ -47,7 +47,7 @@ class AdherenceChartFitTest {
     @Test
     fun `thirty days stay inside the card at both phone widths`() {
         val start = LocalDate.of(2026, 8, 1)
-        val counts = (0 until 30).map { DayAdherenceCounts(start.plusDays(it.toLong()), taken = 1 + it % 3, skipped = it % 2, missed = 0) }
+        val counts = (0 until 30).map { DayAdherenceCounts(start.plusDays(it.toLong()), taken = 1 + it % 3, missed = it % 2) }
         compose.setContentAtPhoneWidths { width ->
             Box(Modifier.semantics { testTag = tagAt("chart", width) }) { AdherenceChart(counts) }
         }

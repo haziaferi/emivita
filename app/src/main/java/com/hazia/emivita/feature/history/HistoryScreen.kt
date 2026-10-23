@@ -52,7 +52,7 @@ import com.hazia.emivita.core.data.repository.DoseEventRepository
 import com.hazia.emivita.ui.components.DoseEditDialog
 import com.hazia.emivita.ui.components.rememberCurrentDate
 import com.hazia.emivita.ui.components.rememberNowEpochMillis
-import com.hazia.emivita.core.data.entity.isMissedAt
+import com.hazia.emivita.core.data.entity.isMissedInFiguresAt
 import com.hazia.emivita.core.format.formatDoseWithUnit
 import com.hazia.emivita.ui.theme.doseCritical
 import kotlinx.coroutines.Dispatchers
@@ -131,7 +131,7 @@ fun HistoryScreen(
     // this rolling window silently stops rolling once the screen has been
     // open across midnight. See rememberCurrentDate.
     val today = rememberCurrentDate(zone)
-    // What Due and Missed are read at (§7 R119), re-read each minute.
+    // What the figures' midnight rule is read at (§7 R121), re-read each minute.
     val now = rememberNowEpochMillis()
     val rangeEnd = remember(today, zone) { today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() }
     val rangeStart = remember(today, zone) { today.minusDays(HISTORY_LOOKBACK_DAYS).atStartOfDay(zone).toInstant().toEpochMilli() }
@@ -188,7 +188,7 @@ fun HistoryScreen(
         scope.launch {
             exportStatus = try {
                 withContext(Dispatchers.IO) {
-                    val csv = HistoryExporter.buildCsv(rowsForExport(), zone, System.currentTimeMillis())
+                    val csv = HistoryExporter.buildCsv(rowsForExport(), zone)
                     val out = context.contentResolver.openOutputStream(uri)
                         ?: error(resources.getString(R.string.history_export_no_stream))
                     out.use { it.write(csv.toByteArray(Charsets.UTF_8)) }
@@ -206,7 +206,7 @@ fun HistoryScreen(
                 withContext(Dispatchers.IO) {
                     val rows = rowsForExport()
                     val at = System.currentTimeMillis()
-                    val document = HistoryExporter.buildPdf(context, rows, adherenceSubtitle(context, rows, exportRange, at), zone, at)
+                    val document = HistoryExporter.buildPdf(context, rows, adherenceSubtitle(context, rows, exportRange, at, zone), zone)
                     val out = context.contentResolver.openOutputStream(uri)
                         ?: error(resources.getString(R.string.history_export_no_stream))
                     out.use { HistoryExporter.writePdf(document, it) }
@@ -299,7 +299,7 @@ fun HistoryScreen(
                     )
                 }
                 else -> {
-                    AdherenceSummary(events, now)
+                    AdherenceSummary(events, now, zone)
                     val dailyCounts = remember(events, zone, today, now) { dailyAdherenceCounts(events, zone, today, now) }
                     if (dailyCounts.any { it.total > 0 }) {
                         AdherenceChart(dailyCounts)
@@ -312,7 +312,7 @@ fun HistoryScreen(
                                 // The row itself already refuses the click for a
                                 // REFILLED entry; re-testing it here is what let
                                 // this surface and the row disagree (§7 R47).
-                                HistoryEntryRow(row, now, onClick = { editingId = row.doseEvent.id })
+                                HistoryEntryRow(row, onClick = { editingId = row.doseEvent.id })
                                 Spacer(Modifier.height(8.dp))
                             }
                             Spacer(Modifier.height(8.dp))
@@ -343,7 +343,6 @@ fun HistoryScreen(
                 else -> HistoryTableView(
                     events = exportRows,
                     zone = zone,
-                    nowEpochMillis = now,
                     onRowClick = { editingId = it.doseEvent.id },
                 )
             }
@@ -390,53 +389,45 @@ private fun defaultExportFileName(extension: String): String {
  *  count is named by the Export dialog's own label for it. */
 // Takes a Context: this builds the PDF subtitle from a coroutine, not a
 // composable, so stringResource() is out of reach (§9 #19).
-internal fun adherenceSubtitle(context: Context, events: List<DoseEventWithMedicine>, range: ExportRange, nowEpochMillis: Long): String {
-    val counts = adherenceCounts(events, nowEpochMillis)
+internal fun adherenceSubtitle(context: Context, events: List<DoseEventWithMedicine>, range: ExportRange, nowEpochMillis: Long, zone: ZoneId): String {
+    val counts = adherenceCounts(events, nowEpochMillis, zone)
     val days = when (range) {
         ExportRange.LAST_30_DAYS -> 30
         ExportRange.LAST_90_DAYS -> 90
         ExportRange.THIS_YEAR, ExportRange.ALL -> null
     }
     val rangeLabel = context.getString(range.labelRes)
-    if (counts.answered == 0 && counts.missed == 0) {
+    if (counts.total == 0) {
         return days?.let { context.resources.getQuantityString(R.plurals.history_last_days, it, it) } ?: rangeLabel
     }
-    val lead = if (counts.answered == 0) context.getString(R.string.history_no_doses_answered)
-    else context.getString(R.string.history_percent_taken, counts.percent)
+    val lead = context.getString(R.string.history_percent_taken, counts.percent)
     val tail = if (days != null) {
-        context.resources.getQuantityString(R.plurals.history_counts_summary, days, counts.taken, counts.skipped, counts.missed, days)
+        context.resources.getQuantityString(R.plurals.history_counts_summary, days, counts.taken, counts.missed, days)
     } else {
         context.getString(
             R.string.history_subtitle_join,
-            context.getString(R.string.history_counts_plain, counts.taken, counts.skipped, counts.missed),
+            context.getString(R.string.history_counts_plain, counts.taken, counts.missed),
             rangeLabel,
         )
     }
     return context.getString(R.string.history_subtitle_join, lead, tail)
 }
 
-/** Taken / (Taken + Skipped) over the visible window -- "did you take what you
- *  meant to take", where a never-answered dose is a different kind of event --
- *  with the missed count carried alongside, so ten taken and twenty missed
- *  cannot read as "100% adherence" over an [AdherenceChart] that is two-thirds
- *  red. The label names the denominator ("of answered doses") for the same
- *  reason. Whether missed doses belong in that denominator is a product
- *  decision, deliberately not made here. */
-private data class AdherenceCounts(val taken: Int, val skipped: Int, val missed: Int) {
-    val answered: Int get() = taken + skipped
-    val percent: Int get() = if (answered == 0) 0 else (taken * 100) / answered
+/** Taken / (Taken + Missed) over the window (§7 R121, the owner's rule):
+ *  skipped is folded into missed, "For figures, skipped counts as missed". */
+private data class AdherenceCounts(val taken: Int, val missed: Int) {
+    val total: Int get() = taken + missed
+    val percent: Int get() = if (total == 0) 0 else (taken * 100) / total
 }
 
-/** Missed is [isMissedAt] (§7 R119): a pending dose whose last repeat has
- *  passed, the reading every History row, the chart and both exports share. A
- *  dose still due is in none of the three counts until then. A refill is not a
+/** Missed is [isMissedInFiguresAt]: skipped, or unanswered after its day's
+ *  midnight; an unanswered dose before then is in no count. A refill is not a
  *  dose and a one-off dose is not on the list (§7 R111), so neither counts. */
-private fun adherenceCounts(events: List<DoseEventWithMedicine>, nowEpochMillis: Long): AdherenceCounts {
+private fun adherenceCounts(events: List<DoseEventWithMedicine>, nowEpochMillis: Long, zone: ZoneId): AdherenceCounts {
     val counted = events.filter { it.countsTowardAdherence }
     return AdherenceCounts(
         taken = counted.count { it.doseEvent.status == DoseStatus.TAKEN },
-        skipped = counted.count { it.doseEvent.status == DoseStatus.SKIPPED },
-        missed = counted.count { it.doseEvent.isMissedAt(nowEpochMillis) },
+        missed = counted.count { it.doseEvent.isMissedInFiguresAt(nowEpochMillis, zone) },
     )
 }
 
@@ -451,8 +442,8 @@ private val DoseEventWithMedicine.countsTowardAdherence: Boolean
  *  window, oldest first -- including days with zero entries, so the chart's
  *  x-axis reads as a continuous 30-day span rather than only the days that
  *  happened to have a dose. Refills are excluded (see [DayAdherenceCounts]'s
- *  own doc comment); missed is [isMissedAt], as in [adherenceCounts]. */
-private fun dailyAdherenceCounts(events: List<DoseEventWithMedicine>, zone: ZoneId, today: LocalDate, nowEpochMillis: Long): List<DayAdherenceCounts> {
+ *  own doc comment); missed is [isMissedInFiguresAt], as in [adherenceCounts]. */
+internal fun dailyAdherenceCounts(events: List<DoseEventWithMedicine>, zone: ZoneId, today: LocalDate, nowEpochMillis: Long): List<DayAdherenceCounts> {
     val windowStart = today.minusDays(HISTORY_LOOKBACK_DAYS - 1)
     val byDay = events
         .filter { it.countsTowardAdherence }
@@ -463,8 +454,7 @@ private fun dailyAdherenceCounts(events: List<DoseEventWithMedicine>, zone: Zone
         DayAdherenceCounts(
             date = date,
             taken = rows.count { it.doseEvent.status == DoseStatus.TAKEN },
-            skipped = rows.count { it.doseEvent.status == DoseStatus.SKIPPED },
-            missed = rows.count { it.doseEvent.isMissedAt(nowEpochMillis) },
+            missed = rows.count { it.doseEvent.isMissedInFiguresAt(nowEpochMillis, zone) },
         )
     }
 }
@@ -480,12 +470,11 @@ private fun groupByDay(events: List<DoseEventWithMedicine>?, zone: ZoneId): List
 /** See [adherenceCounts] for what this shows and what it deliberately does
  *  not decide. */
 @Composable
-private fun AdherenceSummary(events: List<DoseEventWithMedicine>, nowEpochMillis: Long) {
-    val counts = adherenceCounts(events, nowEpochMillis)
-    // Was `if (taken + skipped == 0) return`, which hid the whole card for a
-    // window containing nothing but missed doses -- the one window whose
-    // summary matters most.
-    if (counts.answered == 0 && counts.missed == 0) return
+private fun AdherenceSummary(events: List<DoseEventWithMedicine>, nowEpochMillis: Long, zone: ZoneId) {
+    val counts = adherenceCounts(events, nowEpochMillis, zone)
+    // Shown whenever anything counts, a window of nothing but missed doses
+    // included: the one window whose summary matters most.
+    if (counts.total == 0) return
 
     Surface(
         shape = RoundedCornerShape(14.dp),
@@ -494,8 +483,7 @@ private fun AdherenceSummary(events: List<DoseEventWithMedicine>, nowEpochMillis
     ) {
         Column(Modifier.padding(14.dp)) {
             Text(
-                if (counts.answered == 0) stringResource(R.string.history_no_doses_answered)
-                else stringResource(R.string.history_percent_taken, counts.percent),
+                stringResource(R.string.history_percent_taken, counts.percent),
                 style = MaterialTheme.typography.titleMedium,
             )
             Text(
@@ -505,7 +493,6 @@ private fun AdherenceSummary(events: List<DoseEventWithMedicine>, nowEpochMillis
                     // format arg both want an Int.
                     HISTORY_LOOKBACK_DAYS.toInt(),
                     counts.taken,
-                    counts.skipped,
                     counts.missed,
                     HISTORY_LOOKBACK_DAYS.toInt(),
                 ),
@@ -539,10 +526,10 @@ private fun DayHeader(date: LocalDate, today: LocalDate) {
  *  [HistoryCalendarView]'s day-detail list (both file-scoped-private in
  *  Kotlin would otherwise block cross-file reuse within this package). */
 @Composable
-internal fun HistoryEntryRow(row: DoseEventWithMedicine, nowEpochMillis: Long, onClick: () -> Unit) {
+internal fun HistoryEntryRow(row: DoseEventWithMedicine, onClick: () -> Unit) {
     val medicine = row.medicine
     val status = row.doseEvent.status
-    // Not an allow-list: a PENDING (Due or Missed) dose is the case §7 R46 exists to
+    // Not an allow-list: a PENDING ("Due") dose is the case §7 R46 exists to
     // make correctable, and gating on the two resolved statuses is what kept it
     // uncorrectable on this row after R46 shipped (§7 R47). A REFILLED row is
     // a restock with nothing to resolve, so it stays inert -- matching
@@ -555,7 +542,7 @@ internal fun HistoryEntryRow(row: DoseEventWithMedicine, nowEpochMillis: Long, o
 
     // One merged node per entry, state as stateDescription (§9 #19 Stage B);
     // see TimelineEntryRow in TodayScreen for the reasoning.
-    val statusLabel = stringResource(doseStatusLabelRes(row.doseEvent, nowEpochMillis))
+    val statusLabel = stringResource(doseStatusLabelRes(status))
     val editLabel = stringResource(R.string.a11y_edit_dose)
     Surface(
         shape = RoundedCornerShape(14.dp),

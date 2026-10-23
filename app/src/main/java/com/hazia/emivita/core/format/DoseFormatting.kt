@@ -2,29 +2,21 @@ package com.hazia.emivita.core.format
 
 import androidx.annotation.StringRes
 import com.hazia.emivita.R
-import com.hazia.emivita.core.data.entity.DoseEvent
 import com.hazia.emivita.core.data.entity.DoseStatus
-import com.hazia.emivita.core.data.entity.isDueAt
 import com.hazia.emivita.core.data.config.ReminderType
 import android.content.res.Resources
 
 /**
- * The display label for a dose, as a resource id (spec §9 #19), for the
- * History list, the table and the PDF, while the CSV deliberately does not
- * use it (see [csvStatusLabel]).
+ * The display label for a dose status, as a resource id (spec §9 #19), for
+ * the History list, the table and the PDF, while the CSV deliberately does
+ * not use it (see [csvStatusLabel]).
  *
- * PENDING reads "Due" while its notification is up or will repeat and
- * "Missed" after (§7 R119, [isDueAt]), Today's own "Due" for the first. A
- * display-only relabel rather than a fifth DoseStatus, so the column stays
- * PENDING and a late resolve() still works.
+ * PENDING reads "Due", Today's own word, whatever its age (§7 R121, the
+ * owner's "Keep 'Due' for both"); "missed" lives only in the figures.
  */
 @StringRes
-fun doseStatusLabelRes(event: DoseEvent, nowEpochMillis: Long): Int =
-    if (event.isDueAt(nowEpochMillis)) R.string.status_due else statusLabelRes(event.status)
-
-@StringRes
-private fun statusLabelRes(status: DoseStatus): Int = when (status) {
-    DoseStatus.PENDING -> R.string.status_missed
+fun doseStatusLabelRes(status: DoseStatus): Int = when (status) {
+    DoseStatus.PENDING -> R.string.status_due
     DoseStatus.TAKEN -> R.string.status_taken
     DoseStatus.SKIPPED -> R.string.status_skipped
     DoseStatus.REFILLED -> R.string.status_refilled
@@ -38,13 +30,10 @@ private fun statusLabelRes(status: DoseStatus): Int = when (status) {
  * spreadsheet, and a column value that changes with the phone language
  * breaks whatever reads it. The PDF is a document for a person and uses
  * [doseStatusLabelRes]; this is the one place the two are allowed to differ.
- * A pending dose is "Due" or "Missed" by the same rule as the screen (§7 R119).
+ * A pending dose is "Due", as on screen (§7 R121).
  */
-fun csvStatusLabel(event: DoseEvent, nowEpochMillis: Long): String =
-    if (event.isDueAt(nowEpochMillis)) "Due" else csvStatusLabel(event.status)
-
-private fun csvStatusLabel(status: DoseStatus): String = when (status) {
-    DoseStatus.PENDING -> "Missed"
+fun csvStatusLabel(status: DoseStatus): String = when (status) {
+    DoseStatus.PENDING -> "Due"
     DoseStatus.TAKEN -> "Taken"
     DoseStatus.SKIPPED -> "Skipped"
     DoseStatus.REFILLED -> "Refilled"

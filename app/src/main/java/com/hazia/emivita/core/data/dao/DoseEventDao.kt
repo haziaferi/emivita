@@ -196,26 +196,10 @@ interface DoseEventDao {
     @Query("UPDATE dose_events SET repeatCount = repeatCount + 1 WHERE id = :id")
     suspend fun incrementRepeatCount(id: Long)
 
-    /** When this pending dose stops being due (§7 R119). */
-    @Query("UPDATE dose_events SET missedAfterEpochMillis = :missedAfterEpochMillis WHERE id = :id AND status = 'PENDING'")
-    suspend fun updateMissedAfter(id: Long, missedAfterEpochMillis: Long?)
-
-    /** [updateMissedAfter] that never moves the instant earlier: a repeat firing
-     *  while a snooze is running must not end the snooze's own due time. */
-    @Query(
-        "UPDATE dose_events SET missedAfterEpochMillis = MAX(COALESCE(missedAfterEpochMillis, :missedAfterEpochMillis), :missedAfterEpochMillis) " +
-            "WHERE id = :id AND status = 'PENDING'"
-    )
-    suspend fun extendMissedAfter(id: Long, missedAfterEpochMillis: Long)
-
-    /** A deleted reminder's doses (§7 R118): the pending ones still to come go,
-     *  since nothing will fire them, and the ones whose time has passed lose the
-     *  repeats they were owed, so they read Missed from their slot. */
+    /** A deleted reminder's pending doses still to come (§7 R118): they go,
+     *  since nothing will fire them; the ones whose time has passed stay. */
     @Query("DELETE FROM dose_events WHERE reminderId = :reminderId AND status = 'PENDING' AND scheduledEpochMillis > :nowEpochMillis")
     suspend fun deletePendingAfter(reminderId: Long, nowEpochMillis: Long)
-
-    @Query("UPDATE dose_events SET missedAfterEpochMillis = NULL WHERE reminderId = :reminderId AND status = 'PENDING'")
-    suspend fun clearMissedAfterOfPending(reminderId: Long)
 
     /** "Delete for good" on the archived list (spec §9 #1, §9 #26 / §7 R65;
      *  plain Delete only archives): every dose of the medicine, by the

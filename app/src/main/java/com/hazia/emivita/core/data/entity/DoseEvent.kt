@@ -5,6 +5,8 @@ import androidx.room.ForeignKey
 import androidx.room.Index
 import androidx.room.PrimaryKey
 import kotlinx.serialization.Serializable
+import java.time.Instant
+import java.time.ZoneId
 
 @Serializable
 /** DELETED (§9 #26): a soft delete. The row stays -- its slot cannot be
@@ -97,9 +99,9 @@ data class DoseEvent(
      *  for a row written without it, a backup older than the field included,
      *  the way MIGRATION_12_13 backfills it. */
     val planned: Boolean = reminderId != null,
-    /** When this dose, still PENDING, stops being due and reads Missed (§7 R119):
-     *  the last repeat of its notification, written when it fires, is snoozed
-     *  or is moved. Null reads as [scheduledEpochMillis]: missed at once. */
+    /** Inert since §7 R121: R119's "Missed after the last repeat" deadline,
+     *  which nothing writes or reads any more. The column stays (no migration)
+     *  and backups carry it, so files from schema-13 builds still decode. */
     val missedAfterEpochMillis: Long? = null,
 )
 
@@ -113,24 +115,12 @@ val DoseEvent.hasOneSubject: Boolean
     get() = if (medicineId != null) customName == null && customProfileId == null
     else !customName.isNullOrBlank() && customProfileId != null
 
-/** The instant a PENDING dose becomes Missed (§7 R119); see [DoseEvent.missedAfterEpochMillis]. */
-val DoseEvent.missedFromEpochMillis: Long
-    get() = missedAfterEpochMillis ?: scheduledEpochMillis
-
-/** The owner's rule (§7 R119, 2026-10-23): a PENDING dose is Due while its
- *  notification is up or will repeat, and Missed after the last repeat. The
- *  one test History, its chart and counts, the PDF and the CSV all read. */
-fun DoseEvent.isMissedAt(nowEpochMillis: Long): Boolean =
-    status == DoseStatus.PENDING && nowEpochMillis >= missedFromEpochMillis
-
-/** The other half of [isMissedAt]: counted neither taken nor missed. */
-fun DoseEvent.isDueAt(nowEpochMillis: Long): Boolean =
-    status == DoseStatus.PENDING && nowEpochMillis < missedFromEpochMillis
-
-/** The deadline a notification shown at [shownAtEpochMillis] sets (§7 R119):
- *  the repeats still owed under [repeat] after [repeatCount], [RepeatConfig.delayMinutes]
- *  apart; with none configured or none left, the moment it is shown. */
-fun missedAfterShowing(shownAtEpochMillis: Long, repeat: RepeatConfig?, repeatCount: Int): Long {
-    val left = repeat?.let { (it.maxRepeats - repeatCount).coerceAtLeast(0) } ?: 0
-    return shownAtEpochMillis + left * (repeat?.delayMinutes ?: 0) * 60_000L
+/** Missed, for the figures only (§7 R121, the owner's rule of 2026-10-23): a
+ *  skipped dose, or one still unanswered after the midnight that ends its
+ *  scheduled day in [zone]. On screen an unanswered dose always reads Due. */
+fun DoseEvent.isMissedInFiguresAt(nowEpochMillis: Long, zone: ZoneId): Boolean = when (status) {
+    DoseStatus.SKIPPED -> true
+    DoseStatus.PENDING -> nowEpochMillis >= Instant.ofEpochMilli(scheduledEpochMillis).atZone(zone)
+        .toLocalDate().plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+    else -> false
 }

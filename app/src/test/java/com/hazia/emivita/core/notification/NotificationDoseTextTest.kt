@@ -38,8 +38,8 @@ import org.robolectric.annotation.Config
  * The reminder's text (§7 R120, the owner's pick of 2026-10-23): the amount
  * with its unit, then the time, "1 gocce alle 08:00", as Today shows the dose;
  * "1 dose at 08:00" without a unit. It was "Dose of 1 at 08:00", the bare
- * amount. A repeat re-posts through the same builder; the lock-screen version
- * still names nothing.
+ * amount. A repeat and, since §7 R121, the heads-up before the dose (it read
+ * "Dose at 08:00") show the same text; the lock-screen version names nothing.
  */
 @RunWith(RobolectricTestRunner::class)
 class NotificationDoseTextTest {
@@ -59,7 +59,7 @@ class NotificationDoseTextTest {
     @After
     fun tearDown() = database.close()
 
-    private suspend fun post(dose: Double, doseUnit: String?, hideNames: Boolean = false): Notification {
+    private suspend fun post(dose: Double, doseUnit: String?, hideNames: Boolean = false, preAlarm: Boolean = false): Notification {
         val profileId = database.profileDao().insert(Profile(name = "P", createdAtEpochMillis = 0))
         val medicineId = database.medicineDao().insert(
             Medicine(profileId = profileId, name = "Sertraline", iconKey = "pill", doseUnit = doseUnit, sortOrder = 0.0, createdAtEpochMillis = 0),
@@ -84,8 +84,13 @@ class NotificationDoseTextTest {
             every { it.swipeAction } returns flowOf(SwipeAction.NOTHING)
         }
         val groups = mockk<DoseGroupDao>().also { coEvery { it.getById(any()) } returns null }
-        ReminderNotificationBuilder(context, groups, settings).buildAndPost(event, reminder, medicine)
+        val builder = ReminderNotificationBuilder(context, groups, settings)
         val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        if (preAlarm) {
+            builder.postPreAlarm(reminder, medicine, scheduled)
+            return shadowOf(nm).getNotification(preAlarmNotificationId(reminderId))
+        }
+        builder.buildAndPost(event, reminder, medicine)
         return shadowOf(nm).getNotification(id.toInt())
     }
 
@@ -112,6 +117,26 @@ class NotificationDoseTextTest {
     @Config(qualifiers = "it")
     fun `in Italian it is the owner's 1 gocce alle 08 00`() = runTest {
         assertEquals("1 gocce alle $time", post(1.0, "gocce").text())
+    }
+
+    @Test
+    fun `the heads-up reads the dose and its time under its own title`() = runTest {
+        val n = post(1.0, "drops", preAlarm = true)
+        assertEquals("1 drops at $time", n.text())
+        assertEquals("Sertraline coming up", n.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
+        assertEquals("2 doses at $time", post(2.0, null, preAlarm = true).text())
+    }
+
+    @Test
+    @Config(qualifiers = "it")
+    fun `in Italian the heads-up is the owner's 1 gocce alle 08 00`() = runTest {
+        assertEquals("1 gocce alle $time", post(1.0, "gocce", preAlarm = true).text())
+    }
+
+    @Test
+    fun `the heads-up still hides the name when names are hidden`() = runTest {
+        val n = post(1.0, "drops", hideNames = true, preAlarm = true)
+        assertEquals("S********* coming up", n.extras.getCharSequence(Notification.EXTRA_TITLE).toString())
     }
 
     @Test

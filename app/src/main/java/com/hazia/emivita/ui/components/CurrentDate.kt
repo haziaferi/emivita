@@ -32,9 +32,9 @@ fun rememberCurrentDate(zone: ZoneId): LocalDate =
         }
     }.value
 
-/** The clock, re-read each minute: what History's Due/Missed split (§7 R119)
- *  is evaluated at, so a dose whose last repeat passes while the screen is
- *  open turns Missed without leaving it. */
+/** The clock, re-read each minute: what History's figures read the midnight
+ *  rule at (§7 R121), so a dose left unanswered past its day's midnight counts
+ *  as missed without leaving the screen. */
 @Composable
 fun rememberNowEpochMillis(periodMillis: Long = 60_000L): Long =
     produceState(initialValue = System.currentTimeMillis(), periodMillis) {

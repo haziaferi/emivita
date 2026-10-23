@@ -50,7 +50,7 @@
     <string name="add_reminder_when_reminded">Alla notifica</string>
     <string name="add_reminder_when_taken_or_skipped">Quando presa o saltata</string>
     <string name="adherence_adherence_trend">Andamento dell’aderenza</string>
-    <string name="adherence_each_bar_stacks_taken_at_the_bottom_then">Ogni barra impila le dosi prese in basso, poi quelle saltate, poi quelle mancate.</string>
+    <string name="adherence_each_bar_stacks_taken_at_the_bottom_then">Ogni barra impila le dosi prese in basso, poi quelle mancate.</string>
     <string name="alarm_close">Chiudi</string>
     <string name="alarm_this_reminder_is_no_longer_available">Questo promemoria non è più disponibile.</string>
     <string name="app_lock_emivita_is_locked">Emivita è bloccata</string>
@@ -260,8 +260,7 @@
     <!-- Format strings. -->
     <string name="alarm_snooze_minutes">Rinvia di %1$d min</string>
     <string name="history_nothing_recorded_on">Nessuna registrazione il %1$s.</string>
-    <string name="history_no_doses_answered">Nessuna dose con risposta</string>
-    <string name="history_percent_taken">Dosi prese: %1$d%% di quelle con risposta</string>
+    <string name="history_percent_taken">%1$d%% delle dosi prese</string>
     <string name="history_entry_summary">%1$s – %2$s – %3$s</string>
     <string name="history_entry_summary_no_amount">%1$s – %2$s</string>
     <string name="medicine_detail_storage">Conservazione: %1$s</string>
@@ -310,7 +309,7 @@
     <string name="history_sorted_ascending">Ordine crescente</string>
     <string name="history_sorted_descending">Ordine decrescente</string>
     <string name="history_subtitle_join">%1$s – %2$s</string>
-    <string name="history_counts_plain">%1$d prese, %2$d saltate, %3$d mancate</string>
+    <string name="history_counts_plain">%1$d prese, %2$d mancate</string>
 
     <!-- Form titles and save labels. -->
     <string name="common_save_changes">Salva le modifiche</string>
@@ -381,6 +380,11 @@
     <!-- A reminder row on the medicine page (§7 R120): when, how often, how much. -->
     <string name="reminder_row_every_hours">Ogni %1$s h</string>
     <string name="reminder_row_after_parent">%1$s dopo %2$s</string>
+    <plurals name="reminder_row_cycle_days">
+        <item quantity="one">%1$d giorno sì, %2$d no</item>
+        <item quantity="many">%1$d giorni sì, %2$d no</item>
+        <item quantity="other">%1$d giorni sì, %2$d no</item>
+    </plurals>
     <plurals name="reminder_row_every_n_days">
         <item quantity="one">Ogni %1$d giorno</item>
         <item quantity="many">Ogni %1$d giorni</item>
@@ -498,7 +502,6 @@
     <string name="add_reminder_pre_alarm_desc">Una notifica silenziosa qualche minuto prima, così la dose non arriva a sorpresa.</string>
     <string name="add_reminder_pre_alarm_minutes">Minuti prima</string>
     <string name="notif_pre_alarm_title">%1$s tra poco</string>
-    <string name="notif_pre_alarm_text">Dose alle %1$s</string>
     <string name="notif_take_all">Prendi tutte</string>
     <string name="snooze_picker_title">Rinviare per quanto tempo?</string>
     <string name="snooze_picker_minutes">%1$d min</string>
@@ -592,9 +595,9 @@
     <string name="settings_time_format_12">12 ore</string>
     <string name="settings_time_format_24">24 ore</string>
     <plurals name="history_counts_summary">
-        <item quantity="one">%1$d prese, %2$d saltate, %3$d mancate, ultimo giorno</item>
-        <item quantity="many">%1$d prese, %2$d saltate, %3$d mancate, ultimi %4$d giorni</item>
-        <item quantity="other">%1$d prese, %2$d saltate, %3$d mancate, ultimi %4$d giorni</item>
+        <item quantity="one">%1$d prese, %2$d mancate, ultimo giorno</item>
+        <item quantity="many">%1$d prese, %2$d mancate, ultimi %3$d giorni</item>
+        <item quantity="other">%1$d prese, %2$d mancate, ultimi %3$d giorni</item>
     </plurals>
     <plurals name="history_last_days">
         <item quantity="one">Ultimo giorno</item>

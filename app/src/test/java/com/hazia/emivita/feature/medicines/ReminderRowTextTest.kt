@@ -60,7 +60,20 @@ class ReminderRowTextTest {
     fun `each repeat pattern reads in the form's own words`() {
         assertEquals("08:00 · Mon, Wed, Fri · 1 dose", reminderRowText(fixed(8, 0, pattern = RepeatPattern.SpecificDaysOfWeek(setOf(5, 1, 3))), null, null, resources))
         assertEquals("08:00 · Every 3 days · 1 dose", reminderRowText(fixed(8, 0, pattern = RepeatPattern.EveryNDays(3, 0)), null, null, resources))
-        assertEquals("08:00 · Active/pause cycle · 1 dose", reminderRowText(fixed(8, 0, pattern = RepeatPattern.CyclicActivePause(0, 21, 7)), null, null, resources))
+    }
+
+    @Test
+    fun `an active and pause cycle reads its day counts`() {
+        // §7 R121, the owner's "Add counts": it read "Active/pause cycle".
+        assertEquals("08:00 · 21 days on, 7 off · 1 dose", reminderRowText(fixed(8, 0, pattern = RepeatPattern.CyclicActivePause(0, 21, 7)), null, null, resources))
+        assertEquals("08:00 · 1 day on, 1 off · 1 dose", reminderRowText(fixed(8, 0, pattern = RepeatPattern.CyclicActivePause(0, 1, 1)), null, null, resources))
+    }
+
+    @Test
+    @Config(qualifiers = "it")
+    fun `in Italian a cycle reads 21 giorni si, 7 no`() {
+        assertEquals("08:00 · 21 giorni sì, 7 no · 1 compressa", reminderRowText(fixed(8, 0, pattern = RepeatPattern.CyclicActivePause(0, 21, 7)), "compressa", null, resources))
+        assertEquals("08:00 · 1 giorno sì, 6 no · 1 compressa", reminderRowText(fixed(8, 0, pattern = RepeatPattern.CyclicActivePause(0, 1, 6)), "compressa", null, resources))
     }
 
     @Test

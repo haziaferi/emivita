@@ -55,16 +55,15 @@ import androidx.compose.ui.semantics.contentDescription
 import androidx.compose.ui.res.pluralStringResource
 import com.hazia.emivita.core.format.LocaleFormats
 
-/** One calendar day's worth of resolved-dose counts, feeding [AdherenceChart].
- *  Refills are excluded entirely -- a restock isn't a dose outcome, same
- *  exclusion [AdherenceSummary]'s taken/skipped ratio already makes. */
+/** One calendar day's taken and missed counts, feeding [AdherenceChart];
+ *  skipped is counted as missed (§7 R121). Refills are excluded entirely, as
+ *  [AdherenceSummary] excludes them: a restock isn't a dose outcome. */
 data class DayAdherenceCounts(
     val date: LocalDate,
     val taken: Int,
-    val skipped: Int,
     val missed: Int,
 ) {
-    val total: Int get() = taken + skipped + missed
+    val total: Int get() = taken + missed
 }
 
 /** How the chart meets the width (§9 #34): every day of the window fitted to
@@ -77,14 +76,13 @@ internal object AdherenceChartFit {
 }
 
 /**
- * Stacked daily bar chart of taken/skipped/missed per day across the visible
- * History window, because the data is a trend over time, which a pie cannot
- * show (spec §9 #6/T5), and Vico (`compose-m3` 3.3.1, §7 R95) has no pie layer anyway.
+ * Stacked daily bar chart of taken/missed per day across the visible History
+ * window (two series since §7 R121, skipped folded into missed), because the
+ * data is a trend over time, which a pie cannot show (spec §9 #6/T5), and Vico
+ * (`compose-m3` 3.3.1, §7 R95) has no pie layer anyway.
  *
- * Missed uses `attention`, NOT `error`: louder than a deliberate Skip but a
- * fact about last Tuesday, not an emergency, while Skip is drawn with
- * near-achromatic `outline` (§7 R76), which also holds the series apart under
- * colour-vision deficiency (see Color.kt).
+ * Missed uses `attention`, NOT `error`: a fact about last Tuesday, not an
+ * emergency (see Color.kt).
  *
  * **Colour is not load-bearing here (spec §7 R54/R55)**: with colour-vision
  * deficiency simulated the taken/missed pair falls under the categorical floor
@@ -104,22 +102,19 @@ internal fun AdherenceChart(counts: List<DayAdherenceCounts>, yTicks: YTicks, ti
         modelProducer.runTransaction {
             columnModel {
                 series(counts.map { it.taken })
-                series(counts.map { it.skipped })
                 series(counts.map { it.missed })
             }
         }
     }
 
     val takenColor = MaterialTheme.colorScheme.primary
-    val skippedColor = MaterialTheme.colorScheme.outline
     val missedColor = EmivitaTheme.colors.attention
     val surfaceColor = MaterialTheme.colorScheme.surface
     val density = LocalDensity.current.density
     // Tiles are rebuilt only when a colour or the density actually changes --
-    // allocating three bitmaps per recomposition would be a real cost on a
+    // allocating a bitmap per series per recomposition would be a real cost on a
     // screen that also scrolls a list.
     val takenFill = rememberPatternFill(SeriesPattern.SOLID, takenColor, surfaceColor, density)
-    val skippedFill = rememberPatternFill(SeriesPattern.DIAGONAL, skippedColor, surfaceColor, density)
     val missedFill = rememberPatternFill(SeriesPattern.CROSS_HATCH, missedColor, surfaceColor, density)
     val axisLabelColor = MaterialTheme.colorScheme.onSurfaceVariant
     val axisLineColor = MaterialTheme.colorScheme.outlineVariant
@@ -146,7 +141,7 @@ internal fun AdherenceChart(counts: List<DayAdherenceCounts>, yTicks: YTicks, ti
                 R.string.a11y_adherence_chart,
                 pluralStringResource(
                     R.plurals.history_counts_summary, days,
-                    counts.sumOf { it.taken }, counts.sumOf { it.skipped }, counts.sumOf { it.missed }, days,
+                    counts.sumOf { it.taken }, counts.sumOf { it.missed }, days,
                 ),
             )
             CartesianChartHost(
@@ -155,7 +150,6 @@ internal fun AdherenceChart(counts: List<DayAdherenceCounts>, yTicks: YTicks, ti
                     rememberColumnCartesianLayer(
                         columnProvider = ColumnCartesianLayer.ColumnProvider.series(
                             rememberLineComponent(fill = takenFill, thickness = 6.dp),
-                            rememberLineComponent(fill = skippedFill, thickness = 6.dp),
                             rememberLineComponent(fill = missedFill, thickness = 6.dp),
                         ),
                         mergeMode = { ColumnCartesianLayer.MergeMode.Stacked },
@@ -186,7 +180,6 @@ internal fun AdherenceChart(counts: List<DayAdherenceCounts>, yTicks: YTicks, ti
             Spacer(Modifier.height(10.dp))
             Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
                 LegendSwatch(SeriesPattern.SOLID, takenColor, surfaceColor, density, stringResource(R.string.status_taken))
-                LegendSwatch(SeriesPattern.DIAGONAL, skippedColor, surfaceColor, density, stringResource(R.string.status_skipped))
                 LegendSwatch(SeriesPattern.CROSS_HATCH, missedColor, surfaceColor, density, stringResource(R.string.status_missed))
             }
             Spacer(Modifier.height(6.dp))

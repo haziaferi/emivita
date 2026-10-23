@@ -16,13 +16,15 @@ import org.junit.runner.RunWith
 import org.robolectric.RobolectricTestRunner
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.SQLiteMode
+import java.time.ZoneOffset
 
 /**
  * Deleting a reminder keeps its doses (§7 R118), as its dialog says: "Its past
  * doses stay in History." On the phone a fired dose vanished from History with
  * its reminder, because `dose_events.reminderId` cascaded. They were planned,
  * so they still count to adherence; a pending one whose time has passed stays
- * and reads Missed, one still to come goes. "Delete for good" on the medicine
+ * (Due on screen, missed in the figures after its day's midnight, §7 R121),
+ * one still to come goes. "Delete for good" on the medicine
  * still removes every dose, these included.
  */
 @RunWith(RobolectricTestRunner::class)
@@ -47,8 +49,8 @@ class ReminderDeleteKeepsDosesTest {
         suspend fun slot(at: Long) = checkNotNull(doses.materializeIfAbsent(reminderId, medicineId, at, 1.0))
         val taken = slot(now - 3 * hour).also { doses.resolve(it, DoseStatus.TAKEN, now - 3 * hour) }
         val skipped = slot(now - 2 * hour).also { doses.resolve(it, DoseStatus.SKIPPED, now - 2 * hour) }
-        // Fired five minutes ago and still repeating: due until its last repeat.
-        val pastPending = slot(now - 5 * 60_000L).also { doses.recordShown(it, now - 5 * 60_000L, RepeatConfig(10, 3), 0) }
+        // Fired five minutes ago, unanswered.
+        val pastPending = slot(now - 5 * 60_000L)
         // Moved to later, so it exists before its slot (§9 #26 reschedule).
         val futurePending = slot(now + hour)
         Seeded(medicineId, reminderId, taken, skipped, pastPending, futurePending)
@@ -71,21 +73,26 @@ class ReminderDeleteKeepsDosesTest {
     }
 
     @Test
-    fun `a pending dose whose time has passed stays and reads Missed, one still to come goes`() {
+    fun `a pending dose whose time has passed stays, one still to come goes`() {
         val s = seed()
         deleteReminder(s)
         val kept = rows().associateBy { it.doseEvent.id }
         assertEquals(setOf(s.taken, s.skipped, s.pastPending), kept.keys)
-        assertEquals("its repeats went with the reminder", null, kept.getValue(s.pastPending).doseEvent.missedAfterEpochMillis)
     }
 
     @Test
     fun `they still count to adherence`() {
         val s = seed()
         deleteReminder(s)
+        // [now] is 08:00 UTC: the skipped dose is missed, the pending one not
+        // until midnight (§7 R121), and then it is.
         assertEquals(
-            "50% of answered doses taken — 1 taken, 1 skipped, 1 missed, last 30 days",
-            adherenceSubtitle(h.context, rows(), ExportRange.LAST_30_DAYS, now),
+            "50% of doses taken — 1 taken, 1 missed, last 30 days",
+            adherenceSubtitle(h.context, rows(), ExportRange.LAST_30_DAYS, now, ZoneOffset.UTC),
+        )
+        assertEquals(
+            "33% of doses taken — 1 taken, 2 missed, last 30 days",
+            adherenceSubtitle(h.context, rows(), ExportRange.LAST_30_DAYS, now + 16 * hour, ZoneOffset.UTC),
         )
     }
 

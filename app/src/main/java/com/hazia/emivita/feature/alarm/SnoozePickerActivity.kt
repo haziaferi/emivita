@@ -57,13 +57,11 @@ class SnoozePickerActivity : ComponentActivity() {
                         val event = container.doseEventRepository.getById(doseEventId)
                         val reminderId = event?.reminderId
                         if (event != null && reminderId != null) {
-                            val fireAt = System.currentTimeMillis() + minutes * 60_000L
-                            container.doseEventRepository.recordSnoozed(doseEventId, fireAt)
                             container.alarmScheduler.scheduleSnooze(
                                 reminderId = reminderId,
                                 doseEventId = doseEventId,
                                 originalScheduledEpochMillis = event.scheduledEpochMillis,
-                                fireAtEpochMillis = fireAt,
+                                fireAtEpochMillis = System.currentTimeMillis() + minutes * 60_000L,
                             )
                         }
                         ReminderNotifications.dismiss(this@SnoozePickerActivity, doseEventId)

@@ -58,7 +58,7 @@
     <string name="add_reminder_when_reminded">When reminded</string>
     <string name="add_reminder_when_taken_or_skipped">When taken or skipped</string>
     <string name="adherence_adherence_trend">Adherence trend</string>
-    <string name="adherence_each_bar_stacks_taken_at_the_bottom_then">Each bar stacks taken at the bottom, then skipped, then missed.</string>
+    <string name="adherence_each_bar_stacks_taken_at_the_bottom_then">Each bar stacks taken at the bottom, then missed.</string>
     <string name="alarm_close">Close</string>
     <string name="alarm_this_reminder_is_no_longer_available">This reminder is no longer available.</string>
     <string name="app_lock_emivita_is_locked">Emivita is locked</string>
@@ -272,8 +272,7 @@
          the sentence; %% is a literal percent sign. -->
     <string name="alarm_snooze_minutes">Snooze %1$d min</string>
     <string name="history_nothing_recorded_on">Nothing recorded on %1$s.</string>
-    <string name="history_no_doses_answered">No doses answered</string>
-    <string name="history_percent_taken">%1$d%% of answered doses taken</string>
+    <string name="history_percent_taken">%1$d%% of doses taken</string>
     <string name="history_entry_summary">%1$s – %2$s – %3$s</string>
     <string name="history_entry_summary_no_amount">%1$s – %2$s</string>
     <string name="medicine_detail_storage">Storage: %1$s</string>
@@ -290,8 +289,8 @@
          ordinary args, since "3 taken" does not inflect in English but may
          in a language this is later translated into. -->
     <plurals name="history_counts_summary">
-        <item quantity="one">%1$d taken, %2$d skipped, %3$d missed, last %4$d day</item>
-        <item quantity="other">%1$d taken, %2$d skipped, %3$d missed, last %4$d days</item>
+        <item quantity="one">%1$d taken, %2$d missed, last %3$d day</item>
+        <item quantity="other">%1$d taken, %2$d missed, last %3$d days</item>
     </plurals>
     <string name="history_today">Today</string>
     <string name="history_yesterday">Yesterday</string>
@@ -334,7 +333,7 @@
     <string name="history_subtitle_join">%1$s — %2$s</string>
     <!-- The counts of history_counts_summary without its day window, for a PDF
          range named by its label (§7 R113); same agreed wording, so not a plural. -->
-    <string name="history_counts_plain" tools:ignore="PluralsCandidate">%1$d taken, %2$d skipped, %3$d missed</string>
+    <string name="history_counts_plain" tools:ignore="PluralsCandidate">%1$d taken, %2$d missed</string>
     <plurals name="history_last_days">
         <item quantity="one">Last %d day</item>
         <item quantity="other">Last %d days</item>
@@ -411,6 +410,12 @@
     <!-- A reminder row on the medicine page (§7 R120): when, how often, how much. -->
     <string name="reminder_row_every_hours">Every %1$s h</string>
     <string name="reminder_row_after_parent">%1$s after %2$s</string>
+    <!-- An active/pause cycle's reminder row (§7 R121): the count of days on
+         picks the form, the days off follow it with no noun. -->
+    <plurals name="reminder_row_cycle_days">
+        <item quantity="one">%1$d day on, %2$d off</item>
+        <item quantity="other">%1$d days on, %2$d off</item>
+    </plurals>
     <plurals name="reminder_row_every_n_days">
         <item quantity="one">Every %1$d day</item>
         <item quantity="other">Every %1$d days</item>
@@ -537,7 +542,6 @@
     <string name="add_reminder_pre_alarm_desc">A silent notification some minutes ahead, so the dose is not a surprise.</string>
     <string name="add_reminder_pre_alarm_minutes">Minutes before</string>
     <string name="notif_pre_alarm_title">%1$s coming up</string>
-    <string name="notif_pre_alarm_text">Dose at %1$s</string>
     <string name="notif_take_all">Take all</string>
     <plurals name="notif_group_summary">
         <item quantity="one">%1$d dose due</item>

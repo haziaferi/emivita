@@ -1,72 +1,62 @@
 package com.hazia.emivita.core.data.entity
 
-import org.junit.Assert.assertEquals
 import org.junit.Assert.assertFalse
 import org.junit.Assert.assertTrue
 import org.junit.Test
+import java.time.LocalDateTime
+import java.time.ZoneId
 
 /**
- * The owner's rule of 2026-10-23 (§7 R119): a pending dose is Due while its
- * notification is up or will repeat, and Missed after the last repeat (fire
- * time + delay x maxRepeats); with no repeat, Missed at once. Fixed clock.
+ * The owner's rule for the figures (§7 R121, 2026-10-23): "If midnight passes
+ * without the dose being taken and/or if the dose is skipped, count as
+ * missed". Midnight is the local one that ends the dose's scheduled day. A
+ * fixed zone and clock throughout.
  */
 class MissedRuleTest {
-    private val firedAt = 1_800_000_000_000L
-    private val minute = 60_000L
+    private val zone: ZoneId = ZoneId.of("Europe/Rome")
+    private fun at(iso: String): Long = LocalDateTime.parse(iso).atZone(zone).toInstant().toEpochMilli()
 
-    private fun pending(missedAfter: Long?, scheduled: Long = firedAt) = DoseEvent(
-        reminderId = 1, medicineId = 1, scheduledEpochMillis = scheduled, doseAmount = 1.0,
-        createdAtEpochMillis = 0, missedAfterEpochMillis = missedAfter,
+    private fun dose(status: DoseStatus, scheduled: String) = DoseEvent(
+        reminderId = 1, medicineId = 1, scheduledEpochMillis = at(scheduled), doseAmount = 1.0,
+        status = status, createdAtEpochMillis = 0,
     )
 
     @Test
-    fun `with no repeat it is missed at once`() {
-        val dose = pending(missedAfterShowing(firedAt, repeat = null, repeatCount = 0))
-        assertTrue(dose.isMissedAt(firedAt))
-        assertFalse(dose.isDueAt(firedAt))
-        assertTrue("before its fire it is still due", dose.isDueAt(firedAt - 1))
+    fun `an unanswered dose is not missed before its day's midnight`() {
+        val pending = dose(DoseStatus.PENDING, "2026-09-14T08:00")
+        assertFalse(pending.isMissedInFiguresAt(at("2026-09-14T08:00"), zone))
+        assertFalse(pending.isMissedInFiguresAt(at("2026-09-14T23:59:59.999"), zone))
     }
 
     @Test
-    fun `with repeats it is due until the last one and missed from it`() {
-        val dose = pending(missedAfterShowing(firedAt, RepeatConfig(delayMinutes = 10, maxRepeats = 3), repeatCount = 0))
-        assertEquals(firedAt + 30 * minute, dose.missedAfterEpochMillis)
-        assertTrue(dose.isDueAt(firedAt + 29 * minute))
-        assertFalse(dose.isMissedAt(firedAt + 29 * minute))
-        assertTrue(dose.isMissedAt(firedAt + 30 * minute))
+    fun `an unanswered dose is missed from midnight on`() {
+        val pending = dose(DoseStatus.PENDING, "2026-09-14T23:30")
+        assertTrue(pending.isMissedInFiguresAt(at("2026-09-15T00:00"), zone))
+        assertTrue(pending.isMissedInFiguresAt(at("2026-10-14T12:00"), zone))
     }
 
     @Test
-    fun `each repeat fired leaves the ones still owed, and the last one ends it`() {
-        val repeat = RepeatConfig(delayMinutes = 10, maxRepeats = 3)
-        assertEquals(firedAt + 10 * minute + 20 * minute, missedAfterShowing(firedAt + 10 * minute, repeat, repeatCount = 1))
-        assertEquals(firedAt + 30 * minute, missedAfterShowing(firedAt + 30 * minute, repeat, repeatCount = 3))
+    fun `on a clock-change day midnight is the local one`() {
+        // 25 October 2026 has 25 hours in Rome: 24 hours after its 00:00 is
+        // 23:00 the same day, still before the midnight that ends it.
+        val autumn = dose(DoseStatus.PENDING, "2026-10-25T22:30")
+        assertFalse(autumn.isMissedInFiguresAt(at("2026-10-25T23:30"), zone))
+        assertTrue(autumn.isMissedInFiguresAt(at("2026-10-26T00:00"), zone))
+        // 29 March 2026 has 23 hours: its midnight comes 23 hours after 00:00.
+        val spring = dose(DoseStatus.PENDING, "2026-03-29T08:00")
+        assertTrue(spring.isMissedInFiguresAt(at("2026-03-30T00:00"), zone))
+        assertFalse(spring.isMissedInFiguresAt(at("2026-03-30T00:00") - 1, zone))
     }
 
     @Test
-    fun `a snoozed dose is due until the snooze fires and that fire's repeats are over`() {
-        // Snoozed after one repeat, for 15 minutes: the snooze's fire re-shows it
-        // and arms the two repeats left (ReminderAlarmReceiver.scheduleFirstNagIfConfigured).
-        val snoozeFire = firedAt + 25 * minute
-        val dose = pending(missedAfterShowing(snoozeFire, RepeatConfig(delayMinutes = 10, maxRepeats = 3), repeatCount = 1))
-        assertTrue(dose.isDueAt(snoozeFire + 19 * minute))
-        assertTrue(dose.isMissedAt(snoozeFire + 20 * minute))
-        val noRepeat = pending(missedAfterShowing(snoozeFire, repeat = null, repeatCount = 0))
-        assertTrue("snoozed with no repeat: due until the snooze fires", noRepeat.isDueAt(snoozeFire - 1))
-        assertTrue(noRepeat.isMissedAt(snoozeFire))
+    fun `a skipped dose is missed at once`() {
+        val skipped = dose(DoseStatus.SKIPPED, "2026-09-14T08:00")
+        assertTrue(skipped.isMissedInFiguresAt(at("2026-09-14T08:05"), zone))
     }
 
     @Test
-    fun `a dose whose reminder was deleted has no deadline and is missed once its time has passed`() {
-        val dose = pending(missedAfter = null).copy(reminderId = null)
-        assertTrue(dose.isDueAt(firedAt - 1))
-        assertTrue(dose.isMissedAt(firedAt))
-    }
-
-    @Test
-    fun `an answered dose is neither due nor missed`() {
-        val taken = pending(firedAt + 30 * minute).copy(status = DoseStatus.TAKEN)
-        assertFalse(taken.isDueAt(firedAt))
-        assertFalse(taken.isMissedAt(firedAt + 60 * minute))
+    fun `a taken dose is never missed`() {
+        val taken = dose(DoseStatus.TAKEN, "2026-09-14T08:00")
+        assertFalse(taken.isMissedInFiguresAt(at("2026-09-20T08:00"), zone))
     }
 }

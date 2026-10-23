@@ -9,7 +9,7 @@ import androidx.core.graphics.createBitmap
 import androidx.core.graphics.get
 
 /**
- * The non-colour channel for [AdherenceChart]'s three series (spec §7 R54): with
+ * The non-colour channel for [AdherenceChart]'s series (spec §7 R54): with
  * a simulated colour-vision deficiency the taken/missed pair falls under the
  * ΔE 10 floor in 4 of 16 registers (Appendix D), and a second channel holds for
  * any palette, as WCAG 1.4.1 asks, where reserving a hue would not. Solid,
@@ -22,7 +22,7 @@ enum class SeriesPattern {
     /** Taken. No marks -- the expected outcome reads as the plain one. */
     SOLID,
 
-    /** Skipped. Single diagonal, the lighter texture of the two marked series. */
+    /** Skipped's texture until §7 R121 folded skipped into missed; no series uses it now. */
     DIAGONAL,
 
     /** Missed. Cross-hatch: the densest texture for the outcome that matters most. */
