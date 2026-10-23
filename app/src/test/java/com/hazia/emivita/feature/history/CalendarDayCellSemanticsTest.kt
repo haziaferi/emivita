@@ -57,6 +57,22 @@ class CalendarDayCellSemanticsTest {
     }
 
     @Test
+    fun anUnansweredDosePastItsMidnightIsSpokenAsMissed() {
+        // The calendar's missed dot (the owner, 2026-10-23; §7 R121) is spoken,
+        // not shown by colour alone: one of the two unanswered doses is past
+        // its midnight.
+        compose.setContent {
+            CalendarDayCell(
+                day(), today = tuesday,
+                statuses = listOf(DoseStatus.TAKEN, DoseStatus.PENDING, DoseStatus.PENDING),
+                selected = false, onClick = {}, missed = 1,
+            )
+        }
+        compose.onNode(hasContentDescription("Tuesday 9 June", substring = true))
+            .assert(hasContentDescription("1 Taken, 1 Due, 1 Missed", substring = true))
+    }
+
+    @Test
     fun aDayWithNothingRecordedSaysSo() {
         // "no doses" is information; silence would be ambiguous between "none"
         // and "the cell is empty for some other reason".
