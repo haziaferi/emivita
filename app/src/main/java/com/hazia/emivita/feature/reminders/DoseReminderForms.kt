@@ -1,23 +1,15 @@
 package com.hazia.emivita.feature.reminders
 
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.FlowRow
-import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.material3.Checkbox
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
 import androidx.compose.material3.ExposedDropdownMenuBox
 import androidx.compose.material3.ExposedDropdownMenuDefaults
 import androidx.compose.material3.DropdownMenuItem
-import androidx.compose.material3.FilterChip
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -25,11 +17,9 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -40,33 +30,27 @@ import com.hazia.emivita.core.data.config.RepeatPattern
 import com.hazia.emivita.core.data.config.decodeReminderConfig
 import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.repository.ReminderRepository
-import com.hazia.emivita.ui.components.TimeOfDayField
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
-import java.time.DayOfWeek
-import java.time.format.TextStyle
 import com.hazia.emivita.core.format.labelRes
-import androidx.compose.ui.text.intl.Locale
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.semantics.semantics
 import com.hazia.emivita.core.format.parseDecimal
 import com.hazia.emivita.core.format.formatDecimalLocalized
-import androidx.compose.foundation.selection.toggleable
 import com.hazia.emivita.ui.components.rememberDirty
+import com.hazia.emivita.ui.form.FieldPair
+import com.hazia.emivita.ui.form.FormTextField
+import com.hazia.emivita.ui.form.FormTimeField
+import com.hazia.emivita.ui.form.GridToggleCell
+import com.hazia.emivita.ui.form.SpanGrid
+import com.hazia.emivita.ui.form.WeekdayGrid
 
 @Composable
 private fun DoseField(dose: String, doseUnit: String? = null, onChange: (String) -> Unit) {
-    OutlinedTextField(
-        value = dose,
-        onValueChange = onChange,
-        label = { Text(stringResource(R.string.common_dose_amount)) },
-        suffix = doseUnit?.let { unit -> { Text(unit) } },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-        singleLine = true,
-        modifier = Modifier.fillMaxWidth(),
+    val value = parseDecimal(dose)
+    FormTextField(
+        dose, onChange, stringResource(R.string.common_dose_amount), suffix = doseUnit, keyboardType = KeyboardType.Decimal,
+        error = if (value == null || value <= 0) stringResource(R.string.quick_add_dose_invalid) else null, reserve = true,
     )
 }
 
@@ -78,27 +62,17 @@ private fun rememberAdvancedReminderFieldsState(initialReminder: Reminder?): Adv
 private fun StartBehaviorPicker(value: IntervalStartBehavior, onChange: (IntervalStartBehavior) -> Unit) {
     Column {
         Text(stringResource(R.string.add_reminder_interval_starts), style = MaterialTheme.typography.labelLarge)
-        Row(
-            // One selectable node per option (§9 #19 Stage B): the row carries
-            // the role and the state, the RadioButton is display-only, and the
-            // label is read as the option's name rather than as a second control.
-            Modifier.selectable(selected = value == IntervalStartBehavior.ON_REMINDED, role = Role.RadioButton) { onChange(IntervalStartBehavior.ON_REMINDED) },
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            RadioButton(selected = value == IntervalStartBehavior.ON_REMINDED, onClick = null)
-            Text(stringResource(R.string.add_reminder_when_reminded))
-        }
-        Row(
-            // One selectable node per option (§9 #19 Stage B): the row carries
-            // the role and the state, the RadioButton is display-only, and the
-            // label is read as the option's name rather than as a second control.
-            Modifier.selectable(selected = value == IntervalStartBehavior.ON_RESOLVED, role = Role.RadioButton) { onChange(IntervalStartBehavior.ON_RESOLVED) },
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            RadioButton(selected = value == IntervalStartBehavior.ON_RESOLVED, onClick = null)
-            Text(stringResource(R.string.add_reminder_when_taken_or_skipped))
-        }
+        RadioRow(stringResource(R.string.add_reminder_when_reminded), value == IntervalStartBehavior.ON_REMINDED) { onChange(IntervalStartBehavior.ON_REMINDED) }
+        RadioRow(stringResource(R.string.add_reminder_when_taken_or_skipped), value == IntervalStartBehavior.ON_RESOLVED) { onChange(IntervalStartBehavior.ON_RESOLVED) }
     }
+}
+
+/** The repeat kinds of a fixed-time reminder, in the order of their cells. */
+private enum class RepeatKind(val label: Int) {
+    DAILY(R.string.common_daily),
+    WEEKDAYS(R.string.add_reminder_specific_days),
+    EVERY_N_DAYS(R.string.add_reminder_every_n_days),
+    CYCLE(R.string.add_reminder_active_pause_cycle),
 }
 
 /** Shared by AddReminderScreen (create) and EditReminderScreen (update) --
@@ -118,15 +92,16 @@ internal fun FixedTimeFormBody(
     val advanced = rememberAdvancedReminderFieldsState(initialReminder)
     var hour by rememberSaveable { mutableIntStateOf(initial.hour) }
     var minute by rememberSaveable { mutableIntStateOf(initial.minute) }
+    var timeBad by remember { mutableStateOf(false) }
     var dose by rememberSaveable { mutableStateOf(formatDecimalLocalized(initial.dose)) }
     val initialPattern = initial.repeatPattern
-    var patternKind by rememberSaveable {
-        mutableIntStateOf(
+    var kind by rememberSaveable {
+        mutableStateOf(
             when (initialPattern) {
-                is RepeatPattern.SpecificDaysOfWeek -> 1
-                is RepeatPattern.EveryNDays -> 2
-                is RepeatPattern.CyclicActivePause -> 3
-                RepeatPattern.Daily -> 0
+                is RepeatPattern.SpecificDaysOfWeek -> RepeatKind.WEEKDAYS
+                is RepeatPattern.EveryNDays -> RepeatKind.EVERY_N_DAYS
+                is RepeatPattern.CyclicActivePause -> RepeatKind.CYCLE
+                RepeatPattern.Daily -> RepeatKind.DAILY
             }
         )
     }
@@ -135,39 +110,40 @@ internal fun FixedTimeFormBody(
     val everyNStartEpochDay = (initialPattern as? RepeatPattern.EveryNDays)?.startEpochDay ?: LocalDate.now().toEpochDay()
     var activeDays by rememberSaveable { mutableStateOf((initialPattern as? RepeatPattern.CyclicActivePause)?.activeDays?.toString() ?: "21") }
     var pauseDays by rememberSaveable { mutableStateOf((initialPattern as? RepeatPattern.CyclicActivePause)?.pauseDays?.toString() ?: "7") }
-    // First-cycle anchor isn't editable in this pass (spec doesn't call for a
-    // date-picker UI beyond the day-chip/stepper controls the other patterns
-    // already get) -- defaults to today for a new reminder, preserved as-is
-    // when editing an existing one, matching how EveryNDays' own startEpochDay
-    // is handled above.
+    // The first cycle's anchor is not editable: today for a new reminder, kept as it is when
+    // editing one, as EveryNDays' own startEpochDay is above.
     val firstCycleStartEpochDay = (initialPattern as? RepeatPattern.CyclicActivePause)?.firstCycleStartEpochDay ?: LocalDate.now().toEpochDay()
     val scope = rememberCoroutineScope()
     val doseValue = parseDecimal(dose)
     val activeDaysValue = activeDays.toIntOrNull()
     val pauseDaysValue = pauseDays.toIntOrNull()
-    // "0".toIntOrNull() is 0, not null, so the `?: 2` fallback below never
-    // catches it -- an unguarded Every-N-days field let n = 0 (or negative)
-    // reach a committed row, and matchingDateOnOrAfter's require(n >= 1) then
-    // threw on every projection recompute. Validated here like the other two
-    // patterns already are. See docs/SPEC.md §7 R23.
+    // "0".toIntOrNull() is 0, not null: an unguarded Every-N-days field let n = 0 reach a
+    // committed row, and matchingDateOnOrAfter's require(n >= 1) then threw on every projection
+    // recompute (docs/SPEC.md §7 R23).
     val everyNValue = everyN.toIntOrNull()
+    val everyNOk = everyNValue != null && everyNValue >= 1
+    val activeOk = activeDaysValue != null && activeDaysValue >= 1
+    // Zero pause days is a cycle with no pause, which the scheduler accepts (isActiveOn's require,
+    // matchingDateOnOrAfter's guard): the field refuses only a negative or missing number (§7 R124).
+    val pauseOk = pauseDaysValue != null && pauseDaysValue >= 0
 
-    val dirty = rememberDirty(Unit, hour, minute, dose, patternKind, selectedDays, everyN, activeDays, pauseDays, advanced.snapshot())
+    val dirty = rememberDirty(Unit, hour, minute, dose, kind, selectedDays, everyN, activeDays, pauseDays, advanced.snapshot())
     ReminderFormScaffold(
         dirty = dirty,
         title = title,
         onDelete = onDelete,
         saveLabel = saveLabel,
-        saveEnabled = doseValue != null && doseValue > 0 &&
-            (patternKind != 1 || selectedDays.isNotEmpty()) &&
-            (patternKind != 2 || (everyNValue != null && everyNValue >= 1)) &&
-            (patternKind != 3 || (activeDaysValue != null && activeDaysValue >= 1 && pauseDaysValue != null && pauseDaysValue >= 0)),
+        saveEnabled = !timeBad && doseValue != null && doseValue > 0 &&
+            (kind != RepeatKind.WEEKDAYS || selectedDays.isNotEmpty()) &&
+            (kind != RepeatKind.EVERY_N_DAYS || everyNOk) &&
+            (kind != RepeatKind.CYCLE || (activeOk && pauseOk)) &&
+            advanced.errors().isEmpty(),
         onSave = {
-            val pattern = when (patternKind) {
-                1 -> RepeatPattern.SpecificDaysOfWeek(selectedDays)
-                2 -> RepeatPattern.EveryNDays(everyNValue ?: 2, everyNStartEpochDay)
-                3 -> RepeatPattern.CyclicActivePause(firstCycleStartEpochDay, activeDaysValue ?: 21, pauseDaysValue ?: 7)
-                else -> RepeatPattern.Daily
+            val pattern = when (kind) {
+                RepeatKind.WEEKDAYS -> RepeatPattern.SpecificDaysOfWeek(selectedDays)
+                RepeatKind.EVERY_N_DAYS -> RepeatPattern.EveryNDays(everyNValue ?: 2, everyNStartEpochDay)
+                RepeatKind.CYCLE -> RepeatPattern.CyclicActivePause(firstCycleStartEpochDay, activeDaysValue ?: 21, pauseDaysValue ?: 7)
+                RepeatKind.DAILY -> RepeatPattern.Daily
             }
             scope.launch {
                 onSave(ReminderConfig.FixedTime(hour, minute, doseValue ?: 1.0, pattern), advanced.snapshot())
@@ -175,72 +151,56 @@ internal fun FixedTimeFormBody(
         },
         onCancel = onCancel,
     ) {
-        TimeOfDayField(stringResource(R.string.add_reminder_time), hour, minute) { h, m -> hour = h; minute = m }
-        Spacer(Modifier.height(12.dp))
+        FormTimeField(stringResource(R.string.add_reminder_time), hour, minute, onError = { timeBad = it }) { h, m -> hour = h; minute = m }
+        Spacer(Modifier.height(8.dp))
         DoseField(dose, doseUnit) { dose = it }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(8.dp))
         Text(stringResource(R.string.add_reminder_repeats), style = MaterialTheme.typography.labelLarge)
-        FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            FilterChip(selected = patternKind == 0, onClick = { patternKind = 0 }, label = { Text(stringResource(R.string.common_daily)) })
-            FilterChip(selected = patternKind == 1, onClick = { patternKind = 1 }, label = { Text(stringResource(R.string.add_reminder_specific_days)) })
-            FilterChip(selected = patternKind == 2, onClick = { patternKind = 2 }, label = { Text(stringResource(R.string.add_reminder_every_n_days)) })
-            FilterChip(selected = patternKind == 3, onClick = { patternKind = 3 }, label = { Text(stringResource(R.string.add_reminder_active_pause_cycle)) })
+        Spacer(Modifier.height(8.dp))
+        // The kinds on the day toggles' 7-column grid (§7 R124, C6): each takes the columns its
+        // one line needs and every row ends on the right edge.
+        SpanGrid {
+            RepeatKind.entries.forEach { k -> GridToggleCell(stringResource(k.label), kind == k) { kind = k } }
         }
-        if (patternKind == 1) {
-            Spacer(Modifier.height(8.dp))
-            FlowRow {
-                (1..7).forEach { dayNum ->
-                    val label = DayOfWeek.of(dayNum).getDisplayName(TextStyle.SHORT, Locale.current.platformLocale)
-                    // One toggleable node per day (Stage B pattern): TalkBack reads "lun, casella di controllo".
-                    Row(
-                        Modifier.toggleable(value = dayNum in selectedDays, role = Role.Checkbox) { checked ->
-                            selectedDays = if (checked) selectedDays + dayNum else selectedDays - dayNum
-                        },
-                        verticalAlignment = Alignment.CenterVertically,
-                    ) {
-                        Checkbox(checked = dayNum in selectedDays, onCheckedChange = null)
-                        Text(label, style = MaterialTheme.typography.labelSmall)
-                    }
-                }
-            }
+        if (kind == RepeatKind.WEEKDAYS) {
+            Spacer(Modifier.height(16.dp))
+            WeekdayGrid(selectedDays) { selectedDays = it }
         }
-        if (patternKind == 2) {
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = everyN,
-                onValueChange = { everyN = it },
-                label = { Text(stringResource(R.string.add_reminder_every_n_days)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
+        if (kind == RepeatKind.EVERY_N_DAYS) {
+            Spacer(Modifier.height(16.dp))
+            FormTextField(
+                everyN, { everyN = it }, stringResource(R.string.add_reminder_every_n_days), keyboardType = KeyboardType.Number,
+                error = if (everyNOk) null else stringResource(R.string.form_min_one), reserve = true,
             )
         }
-        if (patternKind == 3) {
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = activeDays,
-                onValueChange = { activeDays = it },
-                label = { Text(stringResource(R.string.add_reminder_active_days)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-            )
-            Spacer(Modifier.height(8.dp))
-            OutlinedTextField(
-                value = pauseDays,
-                onValueChange = { pauseDays = it },
-                label = { Text(stringResource(R.string.add_reminder_pause_days)) },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                singleLine = true,
-            )
-            Spacer(Modifier.height(4.dp))
-            Text(
-                stringResource(R.string.add_reminder_cycle_starts_today_the_anchor_date_isn_t),
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
+        if (kind == RepeatKind.CYCLE) {
+            Spacer(Modifier.height(16.dp))
+            val a = stringResource(R.string.add_reminder_active_days)
+            val p = stringResource(R.string.add_reminder_pause_days)
+            // Said only while it is true: an existing cycle keeps the anchor it started on.
+            val startsToday = firstCycleStartEpochDay == LocalDate.now().toEpochDay()
+            val cycleHelp = stringResource(R.string.add_reminder_cycle_help).takeIf { startsToday }
+            FieldPair(
+                listOfNotNull(a, p, cycleHelp),
+                first = { m ->
+                    FormTextField(activeDays, { activeDays = it }, a, m, help = cycleHelp, keyboardType = KeyboardType.Number,
+                        error = if (activeOk) null else stringResource(R.string.form_min_one), reserve = true)
+                },
+                second = { m ->
+                    FormTextField(pauseDays, { pauseDays = it }, p, m, keyboardType = KeyboardType.Number,
+                        error = if (pauseOk) null else stringResource(R.string.form_min_zero), reserve = true)
+                },
             )
         }
         AdvancedReminderFieldsSection(advanced)
     }
 }
+
+@Composable
+private fun IntervalHoursField(intervalHours: String, minutes: Int?, onChange: (String) -> Unit) = FormTextField(
+    intervalHours, onChange, stringResource(R.string.add_reminder_every_hours), keyboardType = KeyboardType.Decimal,
+    error = if ((minutes ?: 0) < 1) stringResource(R.string.form_min_one_minute) else null, reserve = true,
+)
 
 @Composable
 internal fun RepeatingIntervalFormBody(
@@ -260,11 +220,8 @@ internal fun RepeatingIntervalFormBody(
     val scope = rememberCoroutineScope()
     val doseValue = parseDecimal(dose)
     val hoursValue = parseDecimal(intervalHours)
-    // Guard the value actually stored, not the raw hours: 0.01 passes
-    // `hoursValue > 0` but truncates to 0 minutes (docs/SPEC.md §7 R23). A zero
-    // that reaches the database is a reminder that silently never fires, worse
-    // than a disabled save button, so this stays even though the calculator
-    // returns null (R33) for the BackupRepository.restoreSnapshot path.
+    // Guard the value actually stored, not the raw hours: 0.01 passes `hoursValue > 0` but
+    // truncates to 0 minutes, a reminder that silently never fires (docs/SPEC.md §7 R23, R33).
     val intervalMinutesValue = hoursValue?.let { (it * 60).toInt() }
 
     val dirty = rememberDirty(Unit, intervalHours, dose, startBehavior, advanced.snapshot())
@@ -274,7 +231,7 @@ internal fun RepeatingIntervalFormBody(
         onDelete = onDelete,
         saveLabel = saveLabel,
         saveEnabled = doseValue != null && doseValue > 0 &&
-            intervalMinutesValue != null && intervalMinutesValue >= 1,
+            intervalMinutesValue != null && intervalMinutesValue >= 1 && advanced.errors().isEmpty(),
         onSave = {
             scope.launch {
                 onSave(
@@ -293,17 +250,10 @@ internal fun RepeatingIntervalFormBody(
         },
         onCancel = onCancel,
     ) {
-        OutlinedTextField(
-            value = intervalHours,
-            onValueChange = { intervalHours = it },
-            label = { Text(stringResource(R.string.add_reminder_every_hours)) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(12.dp))
+        IntervalHoursField(intervalHours, intervalMinutesValue) { intervalHours = it }
+        Spacer(Modifier.height(8.dp))
         DoseField(dose, doseUnit) { dose = it }
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(8.dp))
         StartBehaviorPicker(startBehavior) { startBehavior = it }
         AdvancedReminderFieldsSection(advanced)
     }
@@ -327,15 +277,13 @@ internal fun DailyWindowFormBody(
     var startMinute by rememberSaveable { mutableIntStateOf(initial.windowStartMinute) }
     var endHour by rememberSaveable { mutableIntStateOf(initial.windowEndHour) }
     var endMinute by rememberSaveable { mutableIntStateOf(initial.windowEndMinute) }
+    var startBad by remember { mutableStateOf(false) }
+    var endBad by remember { mutableStateOf(false) }
     var startBehavior by rememberSaveable { mutableStateOf(initial.startBehavior) }
     val scope = rememberCoroutineScope()
     val doseValue = parseDecimal(dose)
     val hoursValue = parseDecimal(intervalHours)
-    // Guard the value actually stored, not the raw hours: 0.01 passes
-    // `hoursValue > 0` but truncates to 0 minutes (docs/SPEC.md §7 R23). A zero
-    // that reaches the database is a reminder that silently never fires, worse
-    // than a disabled save button, so this stays even though the calculator
-    // returns null (R33) for the BackupRepository.restoreSnapshot path.
+    // The stored minutes are guarded, not the raw hours, as in RepeatingIntervalFormBody (§7 R23).
     val intervalMinutesValue = hoursValue?.let { (it * 60).toInt() }
 
     val dirty = rememberDirty(Unit, intervalHours, dose, startHour, startMinute, endHour, endMinute, startBehavior, advanced.snapshot())
@@ -344,8 +292,8 @@ internal fun DailyWindowFormBody(
         title = title,
         onDelete = onDelete,
         saveLabel = saveLabel,
-        saveEnabled = doseValue != null && doseValue > 0 &&
-            intervalMinutesValue != null && intervalMinutesValue >= 1,
+        saveEnabled = doseValue != null && doseValue > 0 && !startBad && !endBad &&
+            intervalMinutesValue != null && intervalMinutesValue >= 1 && advanced.errors().isEmpty(),
         onSave = {
             scope.launch {
                 onSave(
@@ -364,23 +312,19 @@ internal fun DailyWindowFormBody(
         },
         onCancel = onCancel,
     ) {
-        OutlinedTextField(
-            value = intervalHours,
-            onValueChange = { intervalHours = it },
-            label = { Text(stringResource(R.string.add_reminder_every_hours)) },
-            keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-            singleLine = true,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(12.dp))
+        IntervalHoursField(intervalHours, intervalMinutesValue) { intervalHours = it }
+        Spacer(Modifier.height(8.dp))
         DoseField(dose, doseUnit) { dose = it }
-        Spacer(Modifier.height(16.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            TimeOfDayField(stringResource(R.string.common_window_start), startHour, startMinute) { h, m -> startHour = h; startMinute = m }
-            TimeOfDayField(stringResource(R.string.common_window_end), endHour, endMinute) { h, m -> endHour = h; endMinute = m }
-        }
+        Spacer(Modifier.height(8.dp))
+        val ws = stringResource(R.string.common_window_start)
+        val we = stringResource(R.string.common_window_end)
+        FieldPair(
+            listOf(ws, we, "00:00"), iconDp = 48.dp,
+            first = { m -> FormTimeField(ws, startHour, startMinute, m, onError = { startBad = it }) { h, mi -> startHour = h; startMinute = mi } },
+            second = { m -> FormTimeField(we, endHour, endMinute, m, onError = { endBad = it }) { h, mi -> endHour = h; endMinute = mi } },
+        )
         WindowEndsNextDayNote(startHour, startMinute, endHour, endMinute)
-        Spacer(Modifier.height(16.dp))
+        Spacer(Modifier.height(8.dp))
         StartBehaviorPicker(startBehavior) { startBehavior = it }
         AdvancedReminderFieldsSection(advanced)
     }
@@ -441,6 +385,7 @@ internal fun LinkedFollowingFormBody(
     }
 
     val delayValue = delayMinutes.toIntOrNull()
+    val delayOk = delayValue != null && delayValue in 1..1440
     val doseValue = parseDecimal(dose)
     val currentSiblings = siblings
     val selectedParent = currentSiblings?.let { list ->
@@ -453,7 +398,7 @@ internal fun LinkedFollowingFormBody(
         title = title,
         onDelete = onDelete,
         saveLabel = saveLabel,
-        saveEnabled = selectedParent != null && delayValue != null && delayValue in 1..1440 && doseValue != null && doseValue > 0,
+        saveEnabled = selectedParent != null && delayOk && doseValue != null && doseValue > 0 && advanced.errors().isEmpty(),
         onSave = {
             val parent = selectedParent
             val delay = delayValue
@@ -472,15 +417,10 @@ internal fun LinkedFollowingFormBody(
             )
             else -> {
                 ExposedDropdownMenuBox(expanded = menuExpanded, onExpandedChange = { menuExpanded = it }) {
-                    OutlinedTextField(
-                        value = selectedParent?.let { reminderLabel(it) } ?: "",
-                        onValueChange = {},
-                        readOnly = true,
-                        label = { Text(stringResource(R.string.add_reminder_follows)) },
-                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = menuExpanded) },
-                        modifier = Modifier
-                            .fillMaxWidth()
-                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true),
+                    FormTextField(
+                        selectedParent?.let { reminderLabel(it) } ?: "", {}, stringResource(R.string.add_reminder_follows),
+                        Modifier.fillMaxWidth().menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable, enabled = true),
+                        readOnly = true, trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = menuExpanded) },
                     )
                     ExposedDropdownMenu(expanded = menuExpanded, onDismissRequest = { menuExpanded = false }) {
                         currentSiblings.forEach { sibling ->
@@ -494,18 +434,14 @@ internal fun LinkedFollowingFormBody(
                         }
                     }
                 }
-                Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = delayMinutes,
-                    onValueChange = { delayMinutes = it },
-                    label = { Text(stringResource(R.string.add_reminder_minutes_after_parent_1_1440)) },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
+                Spacer(Modifier.height(8.dp))
+                FormTextField(
+                    delayMinutes, { delayMinutes = it }, stringResource(R.string.add_reminder_minutes_after), keyboardType = KeyboardType.Number,
+                    error = if (delayOk) null else stringResource(R.string.add_reminder_minutes_after_range), reserve = true,
                 )
-                Spacer(Modifier.height(12.dp))
+                Spacer(Modifier.height(8.dp))
                 DoseField(dose, doseUnit) { dose = it }
-                Spacer(Modifier.height(16.dp))
+                Spacer(Modifier.height(8.dp))
                 StartBehaviorPicker(startBehavior) { startBehavior = it }
                 AdvancedReminderFieldsSection(advanced)
             }
