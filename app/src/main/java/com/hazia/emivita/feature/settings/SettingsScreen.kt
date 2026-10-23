@@ -51,6 +51,7 @@ import com.hazia.emivita.core.security.BiometricAuthenticator
 import com.hazia.emivita.core.security.BiometricAvailability
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import com.hazia.emivita.ui.components.UnsavedQuestion
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
 import androidx.annotation.StringRes
@@ -246,25 +247,35 @@ fun SettingsScreen(settingsRepository: SettingsRepository, onOpenDetail: (Settin
     if (sheetDestination != null) {
         // Fully expanded from the start (§7 R88): the sheets hold whole screens,
         // and half expanded left Weekend's buttons under the navigation bar.
-        ModalBottomSheet(
-            onDismissRequest = { activeSheet = null },
-            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
-        ) {
+        val sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        // Annulla, the back arrow, Back and the scrim ask when the sheet's form is edited and
+        // leave at once when it is not, as every other form does (§7 R126, "Ask when edited").
+        var sheetDirty by remember(sheetDestination) { mutableStateOf(false) }
+        var asking by remember(sheetDestination) { mutableStateOf(false) }
+        val close = { asking = false; activeSheet = null }
+        val leave = { if (sheetDirty) asking = true else close() }
+        ModalBottomSheet(onDismissRequest = leave, sheetState = sheetState) {
             // The form's own foot ends the sheet (§7 R125), so no padding below it.
             Box {
                 when (sheetDestination) {
                     SettingsDestination.AlarmsSnooze -> AlarmsSnoozeScreen(
                         settingsRepository = settingsRepository,
-                        onBack = { activeSheet = null },
+                        onBack = leave,
+                        onSaved = close,
+                        onDirty = { sheetDirty = it },
                     )
                     SettingsDestination.WeekendMode -> WeekendModeScreen(
                         settingsRepository = settingsRepository,
-                        onBack = { activeSheet = null },
+                        onBack = leave,
+                        onSaved = close,
+                        onDirty = { sheetDirty = it },
                     )
                     else -> Unit
                 }
             }
         }
+        // Back and the scrim hide the sheet before asking; keeping the edits shows it again.
+        if (asking) UnsavedQuestion(onDiscard = close, onKeep = { asking = false; scope.launch { sheetState.show() } })
     }
 }
 

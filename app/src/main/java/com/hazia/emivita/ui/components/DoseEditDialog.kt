@@ -136,7 +136,7 @@ fun DoseEditDialog(
                 // The one field pattern (§7 R125), as in the forms.
                 FormTextField(doseAmount, { doseAmount = it }, stringResource(R.string.common_dose_amount), suffix = doseUnit)
                 Spacer(Modifier.height(12.dp))
-                FormTextField(notes, { notes = it }, stringResource(R.string.dose_edit_notes), maxLines = 4)
+                FormTextField(notes, { notes = it }, stringResource(R.string.dose_edit_notes), freeText = true)
 
                 if (wasUnresolved) {
                     // Move this dose (§9 #26): the slot itself changes and a one-off

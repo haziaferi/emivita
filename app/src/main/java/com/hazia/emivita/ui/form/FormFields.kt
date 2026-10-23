@@ -58,11 +58,16 @@ import java.time.format.DateTimeFormatterBuilder
 import java.time.format.FormatStyle
 import java.time.format.ResolverStyle
 
+/** The most lines a free-text field grows to before it scrolls inside (§7 R126). */
+const val FreeTextMaxLines = 6
+
 /**
  * The one field pattern (§7 R124, C3): the title always small inside the frame, one line inside
  * the box, help or error as one line below at the field's text inset. [value] stays the caller's
- * String state; a field that can show an error and has no help keeps its line empty ([reserve]).
- * [maxLines] above 1 lets a dialog's note grow; an empty [label] draws none (§7 R125).
+ * String state; a field that can show an error and has no help keeps its line empty ([reserve]),
+ * and an empty [label] draws none (§7 R125). [freeText], text that can be long (allergies, an
+ * address, notes), is one line when empty and grows a line at a time as it is typed, up to
+ * [FreeTextMaxLines], then scrolls inside, its title, help and error still one line (§7 R126).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -81,7 +86,7 @@ fun FormTextField(
     reserve: Boolean = false,
     onDone: (() -> Unit)? = null,
     flagError: Boolean = false,
-    maxLines: Int = 1,
+    freeText: Boolean = false,
 ) {
     val state = rememberTextFieldState(value)
     val report by rememberUpdatedState(onValueChange)
@@ -110,7 +115,7 @@ fun FormTextField(
         isError = error != null || flagError,
         keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = if (onDone != null) ImeAction.Done else ImeAction.Default),
         onKeyboardAction = onDone?.let { done -> KeyboardActionHandler { done() } },
-        lineLimits = if (maxLines <= 1) TextFieldLineLimits.SingleLine else TextFieldLineLimits.MultiLine(1, maxLines),
+        lineLimits = if (freeText) TextFieldLineLimits.MultiLine(1, FreeTextMaxLines) else TextFieldLineLimits.SingleLine,
     )
 }
 

@@ -52,6 +52,8 @@ import com.hazia.emivita.core.di.LocalAppContainer
 import com.hazia.emivita.core.data.settings.SettingsRepository
 import com.hazia.emivita.ui.form.FieldPair
 import com.hazia.emivita.ui.form.FormScaffold
+import com.hazia.emivita.ui.components.rememberDirty
+import androidx.compose.runtime.SideEffect
 import com.hazia.emivita.ui.form.FormTimeField
 import com.hazia.emivita.ui.form.WeekdayGrid
 import com.hazia.emivita.ui.theme.MedPalette
@@ -102,7 +104,7 @@ import androidx.annotation.StringRes
  *  via Reminder.weekendModeOptIn. Third copy of that stale sentence found
  *  and corrected (§7 R58 fixed the first two). */
 @Composable
-fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit) {
+fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit, onSaved: () -> Unit = onBack, onDirty: (Boolean) -> Unit = {}) {
     val schedulingCoordinator = LocalAppContainer.current.schedulingCoordinator
     var loaded by remember { mutableStateOf(false) }
     // Saveable and filled once (§7 R83 (a)), so a rotation keeps the edits.
@@ -130,7 +132,10 @@ fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit
     }
 
     var badTimes by remember { mutableStateOf(setOf<Int>()) }
-    // On the shared form parts (§7 R125): every field here is saved by Salva, as before; Annulla is Back.
+    // Every field here is saved by Salva, as before; the baseline is the stored settings once read,
+    // and Annulla and Back ask when anything differs from them (§7 R125, §7 R126).
+    val dirty = rememberDirty(filled, enabled, days, startHour, startMinute, endHour, endMinute)
+    SideEffect { onDirty(dirty) }
     FormScaffold(
         title = stringResource(R.string.settings_detail_weekend_mode),
         saveLabel = stringResource(R.string.common_save),
@@ -146,11 +151,11 @@ fun WeekendModeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit
                 // armed alarms keep their old times and the projection cache
                 // (which watches the medicines/reminders tables, not DataStore)
                 // never recomputes, so a saved change did nothing until the next
-                // reboot. Before onBack(), not after -- dismissing the sheet
+                // reboot. Before onSaved(), not after -- dismissing the sheet
                 // leaves the composition and cancels this scope mid-flight.
                 // See docs/SPEC.md §7 R23.
                 schedulingCoordinator.rescheduleAll()
-                onBack()
+                onSaved()
             }
         },
         onCancel = onBack,

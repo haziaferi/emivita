@@ -216,7 +216,7 @@ class QuickAddMedicineTest {
         compose.onNode(hasText("Cancel") and hasClickAction()).performSemanticsAction(SemanticsActions.OnClick)
         eventually { compose.onNodeWithText("Discard changes?").assertExists() }
         assertEquals("nothing dropped yet", 0, dismissed)
-        compose.onNode(hasText("Keep editing") and hasClickAction()).performClick()
+        compose.onNode(hasText("Edit") and hasClickAction()).performClick()
         settle()
         assertEquals("kept", 0, dismissed)
         compose.onNodeWithText("Metformin").assertExists()

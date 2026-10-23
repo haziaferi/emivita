@@ -353,7 +353,7 @@ internal fun NotesJournal(medicineId: Long, medicineRepository: MedicineReposito
                 value = draft,
                 onValueChange = { draft = it },
                 placeholder = { Text(stringResource(R.string.medicine_detail_journal_hint)) },
-                maxLines = 3,
+                maxLines = com.hazia.emivita.ui.form.FreeTextMaxLines,
                 modifier = Modifier.weight(1f),
             )
             TextButton(
@@ -392,7 +392,7 @@ internal fun NotesJournal(medicineId: Long, medicineRepository: MedicineReposito
             onDismissRequest = { editing = null },
             title = { Text(stringResource(R.string.medicine_detail_journal_edit)) },
             text = {
-                com.hazia.emivita.ui.form.FormTextField(text, { text = it }, "", maxLines = 6)
+                com.hazia.emivita.ui.form.FormTextField(text, { text = it }, "", freeText = true)
             },
             confirmButton = {
                 DialogActionPair(

@@ -22,13 +22,13 @@ internal val PairGap = 16.dp
 
 /**
  * The Salva/Annulla arrangement (C5), shared by the form's foot and every dialog: [dismiss] and
- * [confirm] the same width, confirm on the right edge, dismiss to its left [PairGap] apart. A
- * [tertiary] text action sits at the left edge on the same line when it fits, else on a line above;
- * with [stackWhenCut] (a dialog) a label that half the width would cut stacks the two at full
- * width, the confirm last. Children: dismiss (if [hasDismiss]), confirm, tertiary (if [hasTertiary]).
+ * [confirm] the same width, side by side (§7 R126: "Shorter labels, side by side"), confirm on the
+ * right edge, dismiss to its left [PairGap] apart. A [tertiary] text action sits at the left edge
+ * on the same line when it fits, else on a line above; children: dismiss (if [hasDismiss]),
+ * confirm, tertiary (if [hasTertiary]).
  */
 @Composable
-internal fun ActionPairLayout(hasDismiss: Boolean, hasTertiary: Boolean, modifier: Modifier = Modifier, stackWhenCut: Boolean = false, content: @Composable () -> Unit) {
+internal fun ActionPairLayout(hasDismiss: Boolean, hasTertiary: Boolean, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
     Layout(content, modifier.fillMaxWidth()) { ms, c ->
         val gap = PairGap.roundToPx()
         val loose = c.copy(minWidth = 0, minHeight = 0)
@@ -37,18 +37,6 @@ internal fun ActionPairLayout(hasDismiss: Boolean, hasTertiary: Boolean, modifie
         val room = if (c.hasBoundedWidth) c.maxWidth else (natural.sum() + gap)
         val half = (room - gap) / 2
         val t = if (hasTertiary) ms.last().measure(loose.copy(maxWidth = room)) else null
-        if (stackWhenCut && hasDismiss && natural.max() > half) {
-            // A label that would be cut at half the width: the two stack at full width, the confirm
-            // last, nearest the corner, so neither label is lost (a dialog's long choice).
-            val ps = pair.map { it.measure(loose.copy(minWidth = room, maxWidth = room)) }
-            val step = 8.dp.roundToPx()
-            val tH = t?.let { it.height + step } ?: 0
-            return@Layout layout(room, tH + ps[0].height + step + ps[1].height) {
-                t?.place(0, 0)
-                ps[0].place(0, tH)
-                ps[1].place(0, tH + ps[0].height + step)
-            }
-        }
         val w = if (hasDismiss) minOf(natural.max(), half) else minOf(natural.single(), room)
         val ps = pair.map { it.measure(loose.copy(minWidth = w, maxWidth = w)) }
         val pairW = if (hasDismiss) 2 * w + gap else w
@@ -106,7 +94,7 @@ fun DialogActionPair(
     tertiaryEnabled: Boolean = true,
     tertiaryDestructive: Boolean = true,
 ) {
-    ActionPairLayout(hasDismiss = onDismiss != null, hasTertiary = tertiary != null, stackWhenCut = true) {
+    ActionPairLayout(hasDismiss = onDismiss != null, hasTertiary = tertiary != null) {
         if (onDismiss != null) DismissButton(dismissLabel, enabled = true, onClick = onDismiss)
         ConfirmButton(confirmLabel, confirmEnabled, destructive, onConfirm)
         if (tertiary != null) {

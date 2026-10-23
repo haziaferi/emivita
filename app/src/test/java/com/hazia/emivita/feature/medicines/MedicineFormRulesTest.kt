@@ -40,15 +40,26 @@ class MedicineFormRulesTest : MedicineFormTestBase() {
             .associate { s(it) to "stockInfo is saved whatever the alert switch says" },
     )
 
+    /** The fields the code makes `freeText = true` (§7 R126, "Grow as you type"): Medical ID's allergies and the doctor's address. */
+    private val medicalDecl get() = FormDecl(freeText = setOf(s(R.string.medical_id_allergies), s(R.string.medical_id_doctor_address)))
+
+    /** The Dettagli sheet's notes, free text (§7 R126). */
+    private val detailsDecl get() = FormDecl(freeText = setOf(s(R.string.add_medicine_notes_optional)))
+
+    private val threeLines = "Penicillina\nLattosio\nNichel"
+
     /** A name typed, as in the approved mockups: with none, Salva is off and C5 reads its disabled grey. */
     private fun named() = typeInto(field(s(R.string.common_name)), "Prova")
 
     private fun add(fs: Float) { at(fs); addForm(); named(); gate("medicine add", fs, audit(sheet = false, decl = medicineDecl)) }
     private fun edit(fs: Float) { at(fs); editForm(); gate("medicine edit", fs, audit(sheet = false, decl = medicineDecl)) }
-    private fun sheet(fs: Float, group: Int) { at(fs); addForm(); named(); openGroup(group); gate("medicine sheet ${s(group)}", fs, audit(sheet = true)) }
+    private fun sheet(fs: Float, group: Int) {
+        at(fs); addForm(); named(); openGroup(group)
+        gate("medicine sheet ${s(group)}", fs, audit(sheet = true, decl = if (group == R.string.medicine_group_details) detailsDecl else FormDecl()))
+    }
     private fun quick(fs: Float) { at(fs); quickAdd(); named(); gate("quick-add", fs, audit(sheet = true)) }
     private fun stockScreen(fs: Float) { at(fs); stock(); gate("stock", fs, audit(sheet = false, decl = stockDecl)) }
-    private fun medical(fs: Float) { at(fs); medicalId(); gate("medical id", fs, audit(sheet = false)) }
+    private fun medical(fs: Float) { at(fs); medicalId(); gate("medical id", fs, audit(sheet = false, decl = medicalDecl)) }
     private fun alarms(fs: Float) { at(fs); alarmsSnooze(); gate("alarms & snooze", fs, audit(sheet = true)) }
     private fun weekend(fs: Float) { at(fs); weekendMode(); gate("weekend mode", fs, audit(sheet = true)) }
 
@@ -70,6 +81,21 @@ class MedicineFormRulesTest : MedicineFormTestBase() {
     @Test @Config(fontScale = 2f) fun alarms_snooze_fs20() = alarms(2f)
     @Test fun weekend_mode_fs10() = weekend(1f)
     @Test @Config(fontScale = 2f) fun weekend_mode_fs20() = weekend(2f)
+
+    /** "Grow as you type" (§7 R126): the allergies and the address at three lines each, every check still passing. */
+    @Test fun medical_id_grown_fs10() {
+        medicalId()
+        typeInto(field(s(R.string.medical_id_allergies)), threeLines)
+        typeInto(field(s(R.string.medical_id_doctor_address)), "Via Roma 1\n00100 Roma\nScala B")
+        gate("medical id, two fields at 3 lines", 1f, audit(sheet = false, decl = medicalDecl))
+    }
+
+    /** The Dettagli sheet's notes at three lines (§7 R126). */
+    @Test fun sheet_details_grown_fs10() {
+        addForm(); named(); openGroup(R.string.medicine_group_details)
+        typeInto(field(s(R.string.add_medicine_notes_optional)), threeLines)
+        gate("medicine sheet Dettagli, notes at 3 lines", 1f, audit(sheet = true, decl = detailsDecl))
+    }
 
     /** C4: the medicine form at rest and its two sheets, one look per kind of control. */
     @Test fun consistency_fs10() {

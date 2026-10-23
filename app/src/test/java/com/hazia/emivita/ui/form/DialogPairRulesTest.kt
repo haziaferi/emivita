@@ -40,13 +40,14 @@ import org.junit.Test
 /**
  * The owner's decision of 2026-10-23 for dialogs, "Yes, same order and look" (§7 R125): every
  * dialog keeps its place on screen and its confirm/dismiss pair follows the Salva/Annulla rule,
- * measured on the drawn pixels by [FormRules.dialogPair], one dialog per test.
+ * measured on the drawn pixels by [FormRules.dialogPair], one dialog per test. Since §7 R126
+ * ("Shorter labels, side by side") none stacks: every pair is on one line with neither label cut.
  */
 class DialogPairRulesTest : FormScreenTestBase() {
 
-    private fun pair(dialog: String, confirm: String, dismiss: String = s(R.string.common_cancel), stacks: Boolean = false) {
+    private fun pair(dialog: String, confirm: String, dismiss: String = s(R.string.common_cancel)) {
         waitFor("$dialog's pair") { windows() > 1 && inTop(hasText(confirm) and hasClickAction()) }
-        val check = rules.dialogPair(confirm, dismiss, allowStack = stacks)
+        val check = rules.dialogPair(confirm, dismiss)
         println("DIALOG-PAIR $dialog: $check")
         assertTrue("$dialog: $check", check.pass)
     }
@@ -142,8 +143,8 @@ class DialogPairRulesTest : FormScreenTestBase() {
                 confirmButton = { DialogActionPair(s(R.string.unsaved_discard), onConfirm = {}, onDismiss = {}, dismissLabel = s(R.string.unsaved_keep)) },
             )
         }
-        // "Continua a modificare" is cut at half the dialog's width: the two stack, the confirm last (§7 R125).
-        pair("unsaved changes", s(R.string.unsaved_discard), s(R.string.unsaved_keep), stacks = true)
+        // "Scarta" / "Modifica" side by side (§7 R126; R125 stacked "Continua a modificare").
+        pair("unsaved changes", s(R.string.unsaved_discard), s(R.string.unsaved_keep))
     }
 
     @Test fun month_year_picker() {
@@ -153,10 +154,10 @@ class DialogPairRulesTest : FormScreenTestBase() {
         pair("MonthYearField", s(R.string.common_ok))
     }
 
-    /** Its two choices are long: they stack at one width rather than be cut, the confirm last (§7 R125). */
-    @Test fun database_recovered_stacks_its_long_choices() {
+    /** "Ripristina" / "Senza dati" side by side (§7 R126; R125 stacked its two long choices). */
+    @Test fun database_recovered() {
         hostDialog { DatabaseRecoveredDialog(keyLost = false, onRestore = {}, onContinueEmpty = {}) }
-        pair("DatabaseRecoveredDialog", s(R.string.recovery_restore), s(R.string.recovery_continue_empty), stacks = true)
+        pair("DatabaseRecoveredDialog", s(R.string.recovery_restore), s(R.string.recovery_continue_empty))
     }
 
     private companion object {

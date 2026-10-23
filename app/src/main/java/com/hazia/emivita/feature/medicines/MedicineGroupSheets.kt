@@ -160,6 +160,6 @@ internal fun MedicineDetailsSheet(initial: MedicineDetails, close: () -> Unit, a
         Spacer(Modifier.height(8.dp))
         FormTextField(rx, { rx = it }, stringResource(R.string.add_medicine_rx_number_optional))
         Spacer(Modifier.height(8.dp))
-        FormTextField(notes, { notes = it }, stringResource(R.string.add_medicine_notes_optional))
+        FormTextField(notes, { notes = it }, stringResource(R.string.add_medicine_notes_optional), freeText = true)
     }
 }

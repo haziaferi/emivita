@@ -84,6 +84,8 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.ui.semantics.contentDescription
 import com.hazia.emivita.ui.form.FormScaffold
+import com.hazia.emivita.ui.components.rememberDirty
+import androidx.compose.runtime.SideEffect
 import com.hazia.emivita.ui.form.FormTextField
 import com.hazia.emivita.ui.form.SecondaryControlHeight
 
@@ -111,7 +113,7 @@ internal fun DetailHeader(title: String, onBack: () -> Unit, actions: (@Composab
  *  built yet (no audio-picker work has landed anywhere in this app) -- this
  *  screen is scoped to what's actually wired end-to-end: snooze length. */
 @Composable
-fun AlarmsSnoozeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit) {
+fun AlarmsSnoozeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit, onSaved: () -> Unit = onBack, onDirty: (Boolean) -> Unit = {}) {
     var minutesText by remember { mutableStateOf<String?>(null) }
     val scope = rememberCoroutineScope()
 
@@ -120,8 +122,12 @@ fun AlarmsSnoozeScreen(settingsRepository: SettingsRepository, onBack: () -> Uni
     }
 
     val minutesValue = minutesText?.toIntOrNull()
+    // The snooze length is the one edit Salva saves; its baseline is the stored value once read.
+    val dirty = rememberDirty(minutesText == null, minutesText)
+    SideEffect { onDirty(dirty) }
     // On the shared form parts (§7 R125). Salva saves the snooze length and leaves, as before;
-    // every switch and choice below still saves the moment it is tapped. Annulla is Back.
+    // every switch and choice below still saves the moment it is tapped. Annulla and Back ask
+    // when the length was edited, the host's question (§7 R126).
     FormScaffold(
         title = stringResource(R.string.settings_detail_alarms_snooze),
         saveLabel = stringResource(R.string.common_save),
@@ -130,7 +136,7 @@ fun AlarmsSnoozeScreen(settingsRepository: SettingsRepository, onBack: () -> Uni
             val value = minutesValue
             if (value != null) scope.launch {
                 settingsRepository.setSnoozeDurationMinutes(value)
-                onBack()
+                onSaved()
             }
         },
         onCancel = onBack,

@@ -144,7 +144,7 @@
     <string name="settings_detail_open_notification_settings">Apri le impostazioni delle notifiche</string>
     <string name="settings_detail_open_system_notification_settings">Apri le impostazioni di sistema delle notifiche</string>
     <string name="settings_detail_palette">Tavolozza</string>
-    <string name="settings_detail_pushes_reminders_that_fall_inside_the_window">Sposta alla fine della finestra qui sotto i promemoria che cadono al suo interno.</string>
+    <string name="settings_detail_pushes_reminders_that_fall_inside_the_window">Sposta i promemoria della finestra alla sua fine</string>
     <string name="settings_detail_reminders_can_arrive_late">I promemoria possono arrivare in ritardo</string>
     <string name="settings_detail_selected">Selezionato</string>
     <string name="settings_detail_snooze_duration_minutes">Durata del rinvio (minuti)</string>
@@ -481,11 +481,11 @@
     <string name="settings_alarm_tone_default">Sveglia predefinita di sistema</string>
     <string name="settings_alarm_tone_pick">Scegli un suono per la sveglia</string>
     <string name="settings_alarm_no_sound_when_silent">Nessun suono se il telefono è silenzioso</string>
-    <string name="settings_alarm_no_sound_when_silent_desc">Di norma le sveglie suonano anche in modalità silenziosa. Attiva questa opzione per rispettarla.</string>
+    <string name="settings_alarm_no_sound_when_silent_desc">Altrimenti le sveglie suonano anche in silenzioso</string>
     <string name="settings_alarm_no_vibration_when_silent">Nessuna vibrazione se il telefono è silenzioso</string>
     <string name="settings_alarm_no_vibration_when_silent_desc">Lo stesso, per la vibrazione.</string>
     <string name="settings_use_alarm_clock">Mostra il prossimo promemoria come sveglia</string>
-    <string name="settings_use_alarm_clock_desc">La barra di stato mostra l’icona della sveglia e la schermata di blocco l’ora del prossimo promemoria. Android inoltre ritarda meno queste sveglie.</string>
+    <string name="settings_use_alarm_clock_desc">Icona sveglia, ora sul blocco, meno ritardi</string>
     <string name="settings_test_reminder">Invia un promemoria di prova</string>
     <string name="settings_test_reminder_desc">Mostra una notifica vera, così vedi e senti come arriva un promemoria su questo telefono.</string>
     <string name="notif_test_title">Promemoria di prova</string>
@@ -499,7 +499,7 @@
     <string name="snooze_picker_minutes">%1$d min</string>
     <string name="snooze_picker_custom">Altro (minuti)</string>
     <string name="settings_snooze_ask_each_time">Chiedi la durata ogni volta</string>
-    <string name="settings_snooze_ask_each_time_desc">Il pulsante Rinvia apre una scelta rapida invece di usare la durata qui sopra.</string>
+    <string name="settings_snooze_ask_each_time_desc">Rinvia apre una scelta rapida della durata</string>
     <string name="status_deleted">Eliminata</string>
     <string name="dose_edit_notes">Nota (facoltativa)</string>
     <string name="dose_edit_move_title">Sposta questa dose</string>
@@ -635,7 +635,7 @@
     <string name="unsaved_title">Scartare le modifiche?</string>
     <string name="unsaved_text">Quello che hai scritto qui non è stato salvato.</string>
     <string name="unsaved_discard">Scarta</string>
-    <string name="unsaved_keep">Continua a modificare</string>
+    <string name="unsaved_keep">Modifica</string>
     <string name="disclaimer_title">Prima di iniziare</string>
     <string name="disclaimer_body">Emivita è un’app per ricordare e annotare, non un dispositivo medico. Non sostituisce il medico o il farmacista e non controlla dosi, interazioni o altro di ciò che inserisci. I promemoria dipendono dal telefono: un telefono spento, silenzioso o in risparmio energetico può perderne uno. Continua a prendere i farmaci come prescritto, qualunque cosa l’app dica o non dica.</string>
     <string name="disclaimer_understood">Ho capito</string>
@@ -669,8 +669,8 @@
     <!-- Ripristino del database (§9 #32) -->
     <string name="recovery_title">Impossibile aprire i tuoi farmaci</string>
     <string name="recovery_body">All’avvio il database dell’app non era leggibile. Il file è stato messo da parte, non eliminato, e l’app è partita con un elenco vuoto. Se hai un backup, ripristinalo ora in Dati e backup. Anche il file messo da parte è elencato lì.</string>
-    <string name="recovery_restore">Ripristina da backup</string>
-    <string name="recovery_continue_empty">Continua senza dati</string>
+    <string name="recovery_restore">Ripristina</string>
+    <string name="recovery_continue_empty">Senza dati</string>
     <string name="recovery_set_aside_title">File di database messi da parte</string>
     <plurals name="recovery_set_aside_count">
         <item quantity="one">%1$d file, %2$s, messo da parte il %3$s. Conservato finché non lo elimini.</item>

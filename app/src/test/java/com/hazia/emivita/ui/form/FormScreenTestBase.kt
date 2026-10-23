@@ -234,8 +234,8 @@ abstract class FormScreenTestBase {
     /** Sweeps the top window's form, runs C1-C10 and returns the verdicts. */
     protected fun audit(sheet: Boolean, decl: FormDecl = FormDecl()): FormRules.Audit {
         val sw = rules.sweep(sheet)
-        val first = rules.audit(sw, decl = decl)
+        val first = rules.audit(sw, decl = decl, oneLineSwitchHelp = fontScale.floatValue <= 1f)
         val ph = placeholders(sw)
-        return if (ph.isEmpty()) first else rules.audit(sw, ph, decl)
+        return if (ph.isEmpty()) first else rules.audit(sw, ph, decl, oneLineSwitchHelp = fontScale.floatValue <= 1f)
     }
 }

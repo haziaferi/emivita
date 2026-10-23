@@ -182,14 +182,14 @@ fun MedicalIdScreen(
 
         Field(stringResource(R.string.common_name), name, { name = it }, stringResource(R.string.medical_id_name_helper))
         Field(stringResource(R.string.medical_id_blood_type), bloodType, { bloodType = it }, stringResource(R.string.medical_id_blood_type_helper))
-        Field(stringResource(R.string.medical_id_allergies), allergies, { allergies = it }, stringResource(R.string.medical_id_allergies_helper))
+        Field(stringResource(R.string.medical_id_allergies), allergies, { allergies = it }, stringResource(R.string.medical_id_allergies_helper), freeText = true)
 
         Spacer(Modifier.height(8.dp))
         Text(stringResource(R.string.medical_id_doctor), style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(8.dp))
         Field(stringResource(R.string.medical_id_doctor_name), doctorName, { doctorName = it })
         Field(stringResource(R.string.medical_id_doctor_phone), doctorPhone, { doctorPhone = it })
-        Field(stringResource(R.string.medical_id_doctor_address), doctorAddress, { doctorAddress = it })
+        Field(stringResource(R.string.medical_id_doctor_address), doctorAddress, { doctorAddress = it }, freeText = true)
 
         Spacer(Modifier.height(8.dp))
         Text(stringResource(R.string.medical_id_pharmacy), style = MaterialTheme.typography.titleMedium)
@@ -227,9 +227,9 @@ fun MedicalIdScreen(
  *  write, here it is a value to recognise and refuse to show. */
 private const val PLACEHOLDER_PROFILE_NAME = "Me"
 
-/** One field in the form's pattern, its help line below (§7 R125). */
+/** One field in the form's pattern, its help line below (§7 R125); [freeText] grows as it is typed (§7 R126). */
 @Composable
-private fun Field(label: String, value: String, onValueChange: (String) -> Unit, helper: String? = null) {
-    FormTextField(value, onValueChange, label, help = helper)
+private fun Field(label: String, value: String, onValueChange: (String) -> Unit, helper: String? = null, freeText: Boolean = false) {
+    FormTextField(value, onValueChange, label, help = helper, freeText = freeText)
     Spacer(Modifier.height(8.dp))
 }

@@ -89,6 +89,42 @@ class MedicineFormBehaviourTest : MedicineFormTestBase() {
         assertEquals("the error moves nothing below", before, after, 0.5f)
     }
 
+    private fun bounds(m: androidx.compose.ui.test.SemanticsMatcher) = top(m).fetchSemanticsNode().boundsInWindow
+
+    /**
+     * "Grow as you type" keeps the anchored foot (§7 R126): on Medical ID the allergies grow from
+     * one line to three below their own top, Salva and the field's top unmoved; the field is taller.
+     */
+    @Test fun a_growing_field_moves_neither_the_foot_nor_itself_on_a_page() {
+        medicalId()
+        val allergies = field(s(R.string.medical_id_allergies))
+        val save = button(s(R.string.common_save))
+        reveal(allergies)
+        val field0 = bounds(allergies); val foot0 = bounds(save).bottom
+        typeInto(allergies, "Penicillina\nLattosio\nNichel")
+        val field1 = bounds(allergies); val foot1 = bounds(save).bottom
+        assertTrue("the field grew: ${field0.height} -> ${field1.height} px", field1.height >= field0.height + 30 * dp)
+        assertEquals("the field's top stays", field0.top, field1.top, 0.5f)
+        assertEquals("the foot stays", foot0, foot1, 0.5f)
+    }
+
+    /**
+     * In a sheet, which grows upward only (§7 R124 C5), the notes grow up from their last line: the
+     * foot and the line being typed (the field's bottom) stay where they were.
+     */
+    @Test fun a_growing_field_moves_neither_the_foot_nor_its_typed_line_in_a_sheet() {
+        addForm()
+        openGroup(R.string.medicine_group_details)
+        val notes = field(s(R.string.add_medicine_notes_optional))
+        val save = button(s(R.string.common_save))
+        val field0 = bounds(notes); val foot0 = bounds(save).bottom
+        typeInto(notes, "Dopo i pasti\nNon con il latte\nTenere al fresco")
+        val field1 = bounds(notes); val foot1 = bounds(save).bottom
+        assertTrue("the field grew: ${field0.height} -> ${field1.height} px", field1.height >= field0.height + 30 * dp)
+        assertEquals("the line being typed stays", field0.bottom, field1.bottom, 0.5f)
+        assertEquals("the foot stays", foot0, foot1, 0.5f)
+    }
+
     /** Delete on the edit form asks first, then archives (§9 #26) and leaves for the list. */
     @Test fun delete_on_the_edit_form_asks_then_archives() {
         editForm()

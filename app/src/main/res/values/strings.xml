@@ -152,7 +152,7 @@
     <string name="settings_detail_open_notification_settings">Open notification settings</string>
     <string name="settings_detail_open_system_notification_settings">Open system notification settings</string>
     <string name="settings_detail_palette">Palette</string>
-    <string name="settings_detail_pushes_reminders_that_fall_inside_the_window">Pushes reminders that fall inside the window below to its end time.</string>
+    <string name="settings_detail_pushes_reminders_that_fall_inside_the_window">Moves reminders in the window to its end</string>
     <string name="settings_detail_reminders_can_arrive_late">Reminders can arrive late</string>
     <string name="settings_detail_selected">Selected</string>
     <string name="settings_detail_snooze_duration_minutes">Snooze duration (minutes)</string>
@@ -521,11 +521,11 @@
     <string name="settings_alarm_tone_default">System default alarm</string>
     <string name="settings_alarm_tone_pick">Choose an alarm sound</string>
     <string name="settings_alarm_no_sound_when_silent">No sound when the phone is silent</string>
-    <string name="settings_alarm_no_sound_when_silent_desc">Alarms normally ring through silent mode. Turn this on to respect the switch.</string>
+    <string name="settings_alarm_no_sound_when_silent_desc">Otherwise alarms ring through silent mode</string>
     <string name="settings_alarm_no_vibration_when_silent">No vibration when the phone is silent</string>
     <string name="settings_alarm_no_vibration_when_silent_desc">Same, for the vibration.</string>
     <string name="settings_use_alarm_clock">Show the next reminder as an alarm</string>
-    <string name="settings_use_alarm_clock_desc">The status bar shows the alarm icon and the lock screen the next reminder time. Android also defers such alarms less.</string>
+    <string name="settings_use_alarm_clock_desc">Alarm icon, time on lock screen, fewer delays</string>
     <string name="settings_test_reminder">Send a test reminder</string>
     <string name="settings_test_reminder_desc">Posts a real notification so you can see and hear how a reminder arrives on this phone.</string>
     <string name="notif_test_title">Test reminder</string>
@@ -543,7 +543,7 @@
     <string name="snooze_picker_minutes">%1$d min</string>
     <string name="snooze_picker_custom">Other (minutes)</string>
     <string name="settings_snooze_ask_each_time">Ask how long each time</string>
-    <string name="settings_snooze_ask_each_time_desc">The Snooze button opens a quick picker instead of using the duration above.</string>
+    <string name="settings_snooze_ask_each_time_desc">Snooze opens a quick choice of length</string>
     <string name="status_deleted">Deleted</string>
     <string name="dose_edit_notes">Note (optional)</string>
     <string name="dose_edit_move_title">Move this dose</string>
@@ -646,7 +646,7 @@
     <string name="unsaved_title">Discard changes?</string>
     <string name="unsaved_text">What you typed here has not been saved.</string>
     <string name="unsaved_discard">Discard</string>
-    <string name="unsaved_keep">Keep editing</string>
+    <string name="unsaved_keep">Edit</string>
     <string name="disclaimer_title">Before you start</string>
     <string name="disclaimer_body">Emivita is a reminder and record-keeping app, not a medical device. It does not replace your doctor or pharmacist, and it does not check doses, interactions or anything else you enter. Reminders depend on the phone: a phone that is off, silenced, or saving battery can miss one. Keep taking your medicines as prescribed, whatever the app says or does not say.</string>
     <string name="disclaimer_understood">I understand</string>
@@ -680,8 +680,8 @@
     <!-- Database recovery (§9 #32): an unopenable file set aside, the app started empty -->
     <string name="recovery_title">Your medicines could not be opened</string>
     <string name="recovery_body">The app\'s database could not be read when it started. The file was set aside, not deleted, and the app has started with an empty list. If you have a backup, restore it now under Data &amp; Backup. The set-aside file is listed there too.</string>
-    <string name="recovery_restore">Restore from backup</string>
-    <string name="recovery_continue_empty">Continue empty</string>
+    <string name="recovery_restore">Restore</string>
+    <string name="recovery_continue_empty">Without data</string>
     <string name="recovery_set_aside_title">Set-aside database files</string>
     <plurals name="recovery_set_aside_count">
         <item quantity="one">%1$d file, %2$s, set aside on %3$s. Kept until you delete it.</item>

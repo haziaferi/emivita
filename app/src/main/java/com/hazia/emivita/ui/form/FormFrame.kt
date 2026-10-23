@@ -19,7 +19,7 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
-import androidx.compose.material3.AlertDialog
+import com.hazia.emivita.ui.components.UnsavedQuestion
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
@@ -134,15 +134,7 @@ fun FormSheetScaffold(title: String, dirty: Boolean, saveEnabled: Boolean, onSav
     }
     if (asking) {
         // Back and the scrim hide the sheet before asking; keeping the edits shows it again.
-        val keep = { asking = false; scope.launch { sheetState.show() }; Unit }
-        AlertDialog(
-            onDismissRequest = keep,
-            title = { Text(stringResource(R.string.unsaved_title)) },
-            text = { Text(stringResource(R.string.unsaved_text)) },
-            confirmButton = {
-                DialogActionPair(stringResource(R.string.unsaved_discard), onConfirm = { asking = false; close() }, onDismiss = keep, dismissLabel = stringResource(R.string.unsaved_keep))
-            },
-        )
+        UnsavedQuestion(onDiscard = { asking = false; close() }, onKeep = { asking = false; scope.launch { sheetState.show() } })
     }
 }
 

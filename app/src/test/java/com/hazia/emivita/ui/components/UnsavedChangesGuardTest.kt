@@ -37,7 +37,7 @@ class UnsavedChangesGuardTest {
     }
 
     @Test
-    fun `touched -- cancel asks, Keep editing stays, Discard goes`() {
+    fun `touched -- cancel asks, Edit stays, Discard goes`() {
         var discarded = 0
         compose.setContent {
             val cancel = unsavedChangesGuard(dirty = true, onDiscard = { discarded++ })
@@ -45,7 +45,7 @@ class UnsavedChangesGuardTest {
         }
         compose.onNodeWithText("Cancel").performClick()
         assertEquals(0, discarded)
-        compose.onNodeWithText("Keep editing").performClick()
+        compose.onNodeWithText("Edit").performClick()
         assertEquals(0, discarded)
         compose.onNodeWithText("Cancel").performClick()
         compose.onNodeWithText("Discard").performClick()
