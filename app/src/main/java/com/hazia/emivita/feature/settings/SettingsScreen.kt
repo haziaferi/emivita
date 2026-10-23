@@ -250,7 +250,8 @@ fun SettingsScreen(settingsRepository: SettingsRepository, onOpenDetail: (Settin
             onDismissRequest = { activeSheet = null },
             sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true),
         ) {
-            Box(Modifier.padding(bottom = 24.dp)) {
+            // The form's own foot ends the sheet (§7 R125), so no padding below it.
+            Box {
                 when (sheetDestination) {
                     SettingsDestination.AlarmsSnooze -> AlarmsSnoozeScreen(
                         settingsRepository = settingsRepository,

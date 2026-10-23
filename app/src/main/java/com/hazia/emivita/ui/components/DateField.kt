@@ -1,11 +1,11 @@
 package com.hazia.emivita.ui.components
 
+import com.hazia.emivita.ui.form.DialogActionPair
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.DatePicker
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.rememberDatePickerState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -47,13 +47,12 @@ fun DateField(label: String, epochDay: Long?, onChange: (Long?) -> Unit) {
             title = { Text(label) },
             text = { DatePicker(state = state) },
             confirmButton = {
-                TextButton(onClick = {
+                DialogActionPair(stringResource(R.string.common_ok), onConfirm = {
                     val millis = state.selectedDateMillis
                     onChange(millis?.let { it / 86_400_000L })
                     showDialog = false
-                }) { Text(stringResource(R.string.common_ok)) }
+                }, onDismiss = { showDialog = false })
             },
-            dismissButton = { TextButton(onClick = { showDialog = false }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
 }

@@ -1,13 +1,13 @@
 package com.hazia.emivita.ui.components
 
+import com.hazia.emivita.ui.form.FormTextField
+import com.hazia.emivita.ui.form.DialogActionPair
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -133,23 +133,10 @@ fun DoseEditDialog(
                 Spacer(Modifier.height(12.dp))
                 TimeOfDayField(stringResource(R.string.dose_edit_recorded_time), hour, minute) { h, m -> hour = h; minute = m }
                 Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = doseAmount,
-                    onValueChange = { doseAmount = it },
-                    label = { Text(stringResource(R.string.common_dose_amount)) },
-                    suffix = doseUnit?.let { unit -> { Text(unit) } },
-                    singleLine = true,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                // The one field pattern (§7 R125), as in the forms.
+                FormTextField(doseAmount, { doseAmount = it }, stringResource(R.string.common_dose_amount), suffix = doseUnit)
                 Spacer(Modifier.height(12.dp))
-                OutlinedTextField(
-                    value = notes,
-                    onValueChange = { notes = it },
-                    label = { Text(stringResource(R.string.dose_edit_notes)) },
-                    minLines = 1,
-                    maxLines = 4,
-                    modifier = Modifier.fillMaxWidth(),
-                )
+                FormTextField(notes, { notes = it }, stringResource(R.string.dose_edit_notes), maxLines = 4)
 
                 if (wasUnresolved) {
                     // Move this dose (§9 #26): the slot itself changes and a one-off
@@ -206,25 +193,25 @@ fun DoseEditDialog(
                     }
                 } else {
                     Text(stringResource(R.string.dose_edit_delete_confirm_text), style = MaterialTheme.typography.labelMedium)
-                    Row {
-                        TextButton(
-                            enabled = !saving,
-                            onClick = {
-                                saving = true
-                                scope.launch {
-                                    try {
-                                        doseEventRepository.softDelete(doseEventId)
-                                        ReminderNotifications.dismiss(context, doseEventId)
-                                        onDismiss()
-                                    } catch (e: Exception) {
-                                        saving = false
-                                        saveError = resources.getString(R.string.error_could_not_save, e.message ?: resources.getString(R.string.error_unknown))
-                                    }
+                    // The same pair as every dialog's (§7 R125), the delete in the error colour.
+                    Spacer(Modifier.height(8.dp))
+                    DialogActionPair(
+                        stringResource(R.string.dose_edit_delete_confirm), destructive = true, confirmEnabled = !saving,
+                        onDismiss = { confirmDelete = false },
+                        onConfirm = {
+                            saving = true
+                            scope.launch {
+                                try {
+                                    doseEventRepository.softDelete(doseEventId)
+                                    ReminderNotifications.dismiss(context, doseEventId)
+                                    onDismiss()
+                                } catch (e: Exception) {
+                                    saving = false
+                                    saveError = resources.getString(R.string.error_could_not_save, e.message ?: resources.getString(R.string.error_unknown))
                                 }
-                            },
-                        ) { Text(stringResource(R.string.dose_edit_delete_confirm), color = MaterialTheme.colorScheme.error) }
-                        TextButton(onClick = { confirmDelete = false }) { Text(stringResource(R.string.common_cancel)) }
-                    }
+                            }
+                        },
+                    )
                 }
                 saveError?.let {
                     Spacer(Modifier.height(8.dp))
@@ -233,11 +220,13 @@ fun DoseEditDialog(
             }
         },
         confirmButton = {
-            TextButton(
-                enabled = doseValue != null && doseValue > 0 && !saving && status != null,
-                onClick = {
-                    val amount = doseValue ?: return@TextButton
-                    val chosenStatus = status ?: return@TextButton
+            DialogActionPair(
+                stringResource(R.string.common_save),
+                onDismiss = onDismiss,
+                confirmEnabled = doseValue != null && doseValue > 0 && !saving && status != null,
+                onConfirm = onConfirm@{
+                    val amount = doseValue ?: return@onConfirm
+                    val chosenStatus = status ?: return@onConfirm
                     saving = true
                     saveError = null
                     scope.launch {
@@ -271,10 +260,7 @@ fun DoseEditDialog(
                         }
                     }
                 },
-            ) { Text(stringResource(R.string.common_save)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
+            )
         },
     )
 }

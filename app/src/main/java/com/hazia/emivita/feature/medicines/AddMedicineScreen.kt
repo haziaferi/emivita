@@ -1,78 +1,73 @@
 package com.hazia.emivita.feature.medicines
 
-import android.app.Activity.RESULT_OK
-import android.content.ActivityNotFoundException
-import android.content.Intent
-import androidx.activity.compose.rememberLauncherForActivityResult
-import androidx.activity.result.contract.ActivityResultContracts
+import androidx.annotation.StringRes
 import androidx.compose.foundation.background
+import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
-import androidx.compose.foundation.lazy.LazyRow
-import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.foundation.verticalScroll
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Close
-import androidx.compose.material.icons.filled.QrCodeScanner
-import androidx.compose.material3.AssistChip
-import androidx.compose.material3.Button
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilterChipDefaults
 import androidx.compose.material3.Icon
-import androidx.compose.material3.InputChip
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.RadioButton
-import androidx.compose.material3.Surface
-import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
-import com.hazia.emivita.ui.components.NullableColorSaver
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import com.hazia.emivita.R
 import com.hazia.emivita.core.data.entity.Medicine
+import com.hazia.emivita.core.data.entity.NotificationPriority
 import com.hazia.emivita.core.data.entity.Tag
 import com.hazia.emivita.core.data.repository.MedicineRepository
 import com.hazia.emivita.ui.components.ColorPickerDialog
+import com.hazia.emivita.ui.components.NullableColorSaver
 import com.hazia.emivita.ui.components.parseHexColor
+import com.hazia.emivita.ui.components.rememberDirty
 import com.hazia.emivita.ui.components.toHexString
+import com.hazia.emivita.ui.components.unsavedChangesGuard
+import com.hazia.emivita.ui.form.DialogActionPair
+import com.hazia.emivita.ui.form.FieldHelpLine
+import com.hazia.emivita.ui.form.FieldPair
+import com.hazia.emivita.ui.form.FormGroupRow
+import com.hazia.emivita.ui.form.FormScaffold
+import com.hazia.emivita.ui.form.FormSwitchRow
+import com.hazia.emivita.ui.form.FormTextField
+import com.hazia.emivita.ui.form.GridToggleCell
+import com.hazia.emivita.ui.form.SecondaryControlHeight
+import com.hazia.emivita.ui.icons.MedicineIconOption
 import com.hazia.emivita.ui.icons.MedicineIcons
 import com.hazia.emivita.ui.theme.NeutralMedicineAccent
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import androidx.compose.ui.res.stringResource
-import com.hazia.emivita.R
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.foundation.selection.toggleable
-import androidx.compose.ui.semantics.Role
-import com.hazia.emivita.core.data.entity.NotificationPriority
-import com.hazia.emivita.core.notification.ReminderNotificationChannels
-import androidx.annotation.StringRes
-import androidx.compose.foundation.text.KeyboardOptions
-import androidx.compose.ui.text.input.KeyboardType
-import androidx.compose.ui.platform.LocalResources
-import com.hazia.emivita.ui.components.unsavedChangesGuard
-import com.hazia.emivita.ui.components.rememberDirty
 
 /**
  * Add Medicine (spec §6 field order: name + barcode -> appearance (icon +
@@ -141,9 +136,9 @@ fun AddMedicineScreen(
  * existing [Medicine] and its tags, and saves tags as a plain set diff against
  * that snapshot, enough for a single-user, single-device app (spec §1).
  *
- * Delete is not on this form, because it cascades to reminders and dose
- * history and so lives behind a confirm dialog on MedicineDetailScreen (see
- * MedicineRepository.delete).
+ * Delete (§7 R125) is the form's tertiary text action when [onDeleted] is
+ * given: it asks as the detail screen's Delete does, then archives the
+ * medicine (§9 #26), never the cascade.
  */
 @Composable
 fun EditMedicineScreen(
@@ -151,6 +146,7 @@ fun EditMedicineScreen(
     medicineRepository: MedicineRepository,
     onSaved: () -> Unit,
     onCancel: () -> Unit,
+    onDeleted: (() -> Unit)? = null,
 ) {
     var loaded by remember { mutableStateOf(false) }
     var medicine by remember { mutableStateOf<Medicine?>(null) }
@@ -177,6 +173,21 @@ fun EditMedicineScreen(
     val tagsSnapshot = existingTags
     val colorsInUse = rememberColorsInUse(medicineRepository, current.profileId, excludeId = medicineId)
     val otherNames = rememberOtherNames(medicineRepository, current.profileId, excludeId = medicineId)
+    var confirmDelete by rememberSaveable { mutableStateOf(false) }
+    val scope = rememberCoroutineScope()
+    if (confirmDelete && onDeleted != null) {
+        AlertDialog(
+            onDismissRequest = { confirmDelete = false },
+            title = { Text(stringResource(R.string.medicine_detail_delete_title, current.name)) },
+            text = { Text(stringResource(R.string.medicine_detail_this_removes_every_reminder_and_all_dose)) },
+            confirmButton = {
+                DialogActionPair(stringResource(R.string.medicine_detail_delete), destructive = true, onDismiss = { confirmDelete = false }, onConfirm = {
+                    confirmDelete = false
+                    scope.launch { medicineRepository.archive(current); onDeleted() }
+                })
+            },
+        )
+    }
     MedicineFormBody(
         title = stringResource(R.string.edit_medicine_title),
         saveLabel = stringResource(R.string.common_save_changes),
@@ -198,6 +209,7 @@ fun EditMedicineScreen(
         initialPriority = current.notificationPriority,
         colorsInUse = colorsInUse,
         otherNames = otherNames,
+        onDelete = onDeleted?.let { { confirmDelete = true } },
         onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, notes, doseUnit, lockOverride, priority, prnMax, prnHours, strength, rxNumber, asNeeded ->
             medicineRepository.update(
                 current.copy(
@@ -295,6 +307,7 @@ private fun MedicineFormBody(
      *  not "too close to" itself. */
     colorsInUse: List<Pair<String, Color>>,
     otherNames: List<String>,
+    onDelete: (() -> Unit)? = null,
     onSave: suspend (
         name: String,
         barcodeValue: String?,
@@ -325,6 +338,8 @@ private fun MedicineFormBody(
     var showColorPicker by rememberSaveable { mutableStateOf(false) }
     var tagInput by rememberSaveable { mutableStateOf("") }
     var pendingTags by rememberSaveable { mutableStateOf(initialTagNames) }
+    // Every tag shown this visit, so one turned off stays as an off chip to turn back on.
+    var shownTags by rememberSaveable { mutableStateOf(initialTagNames) }
     var indication by rememberSaveable { mutableStateOf(initialIndication) }
     var storageNote by rememberSaveable { mutableStateOf(initialStorageNote) }
     var notes by rememberSaveable { mutableStateOf(initialNotes) }
@@ -337,6 +352,7 @@ private fun MedicineFormBody(
     var doseUnit by rememberSaveable { mutableStateOf(initialDoseUnit) }
     // null = inherit global default, true/false = explicit override
     var lockOverride by rememberSaveable { mutableStateOf(initialLockOverride) }
+    var open by rememberSaveable { mutableStateOf<MedicineGroup?>(null) }
     // §9 #29 (HM-40): every field a save would persist, against its first value.
     val dirty = rememberDirty(Unit, name, priority, barcodeValue, iconKey, color, pendingTags, indication, storageNote, notes, prnMax, prnHours, asNeeded, strength, rxNumber, doseUnit, lockOverride)
     val cancel = unsavedChangesGuard(dirty, onCancel)
@@ -347,317 +363,127 @@ private fun MedicineFormBody(
     // Today's Log dose then showed no ceiling.
     val prnCheck = checkPrnCeiling(prnMax, prnHours)
 
-    // zxing "Scan a barcode or QR code" intent -- delegates to an installed
-    // scanner app (e.g. Binary Eye) rather than bundling camera/ML code here
-    // (spec §3: local-only, no drug database or online lookup, this is purely
-    // for the user's own quick re-identification later).
-    var scanUnavailable by rememberSaveable { mutableStateOf(false) }
-    val scanLauncher = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == RESULT_OK) {
-            barcodeValue = result.data?.getStringExtra("SCAN_RESULT")
+    fun addTag() {
+        val trimmed = tagInput.trim()
+        if (trimmed.isNotEmpty()) {
+            if (trimmed !in pendingTags) pendingTags = pendingTags + trimmed
+            if (trimmed !in shownTags) shownTags = shownTags + trimmed
+        }
+        tagInput = ""
+    }
+
+    fun save() {
+        saving = true
+        saveError = null
+        scope.launch {
+            try {
+                onSave(
+                    name.trim(), barcodeValue, iconKey, color, pendingTags,
+                    indication.ifBlank { null }, storageNote.ifBlank { null }, notes.trim().ifBlank { null },
+                    doseUnit.trim().ifBlank { null }, lockOverride, priority,
+                    prnMax.trim().toIntOrNull()?.takeIf { it > 0 }, prnHours.trim().toIntOrNull()?.takeIf { it > 0 },
+                    strength.trim().ifBlank { null }, rxNumber.trim().ifBlank { null }, asNeeded,
+                )
+            } catch (e: Exception) {
+                // Reset on failure, not just success: a thrown onSave would otherwise
+                // leave Save off for good with no way to retry.
+                saving = false
+                saveError = resources.getString(R.string.error_could_not_save, e.message ?: resources.getString(R.string.error_unknown))
+            }
         }
     }
 
-    Column(
-        Modifier
-            .fillMaxWidth()
-            .verticalScroll(rememberScrollState())
-            .padding(16.dp),
+    FormScaffold(
+        title = title,
+        saveLabel = saveLabel,
+        saveEnabled = name.isNotBlank() && prnCheck.valid && !saving,
+        onSave = ::save,
+        onCancel = cancel,
+        deleteLabel = onDelete?.let { stringResource(R.string.medicine_detail_delete) },
+        onDelete = onDelete,
     ) {
-        Text(title, style = MaterialTheme.typography.headlineSmall)
-        Spacer(Modifier.height(20.dp))
-
         MedicineNameField(name, { name = it }, otherNames)
         Spacer(Modifier.height(8.dp))
 
-        // What a dose is measured in ("capsules", "drops", "tablet") -- a
-        // display label threaded into every dose-amount entry/display point
-        // (see Medicine.doseUnit's own doc comment), set once here rather
-        // than re-typed at each of those points.
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            OutlinedTextField(
-                value = doseUnit,
-                onValueChange = { doseUnit = it },
-                label = { Text(stringResource(R.string.add_medicine_measurement_optional)) },
-                placeholder = { Text(stringResource(R.string.add_medicine_e_g_capsules_drops_tablet)) },
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-            )
-            // Strength (§9 #27; HM-14): the "50 mg" on the box. A label for
-            // the card and the emergency card, never a dose amount.
-            OutlinedTextField(
-                value = strength,
-                onValueChange = { strength = it },
-                label = { Text(stringResource(R.string.add_medicine_strength_optional)) },
-                placeholder = { Text(stringResource(R.string.add_medicine_strength_hint)) },
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-            )
-        }
-        Spacer(Modifier.height(8.dp))
+        // What a dose is measured in, and the "50 mg" on the box (§9 #27; HM-14):
+        // a label for the card and the emergency card, never a dose amount.
+        val unitLabel = stringResource(R.string.add_medicine_measurement_optional)
+        val unitHelp = stringResource(R.string.add_medicine_e_g_capsules_drops_tablet)
+        val strengthLabel = stringResource(R.string.add_medicine_strength_optional)
+        val strengthHelp = stringResource(R.string.add_medicine_strength_hint)
+        FieldPair(
+            listOf(unitLabel, unitHelp, strengthLabel, strengthHelp),
+            first = { m -> FormTextField(doseUnit, { doseUnit = it }, unitLabel, m, help = unitHelp) },
+            second = { m -> FormTextField(strength, { strength = it }, strengthLabel, m, help = strengthHelp) },
+        )
 
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedButton(onClick = {
-                try {
-                    scanLauncher.launch(Intent("com.google.zxing.client.android.SCAN"))
-                    scanUnavailable = false
-                } catch (_: ActivityNotFoundException) {
-                    scanUnavailable = true
-                }
-            }) {
-                Icon(Icons.Filled.QrCodeScanner, contentDescription = null)
-                Spacer(Modifier.width(6.dp))
-                Text(barcodeValue?.let { stringResource(R.string.add_medicine_scanned, it) } ?: stringResource(R.string.add_medicine_scan_barcode))
-            }
-        }
-        if (scanUnavailable) {
-            Text(
-                stringResource(R.string.common_no_barcode_scanner_app_installed_e_g_binary),
-                style = MaterialTheme.typography.labelSmall,
-                // A note about an OPTIONAL convenience, not a failure. `error`
-                // here told the reader something had gone wrong when nothing had.
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
-        }
+        Spacer(Modifier.height(16.dp))
+        SectionTitle(stringResource(R.string.common_appearance))
+        AppearanceGrid(
+            iconKey = iconKey,
+            color = color,
+            onIcon = { option ->
+                iconKey = option.key
+                // The icon is the dosage form (§9 #27; HM-05): it fills a blank
+                // unit and never overwrites a typed one.
+                doseUnit = MedicineIcons.unitAfterPickingForm(doseUnit, option.defaultUnit?.let { resources.getString(it) })
+            },
+            onPickColor = { showColorPicker = true },
+        )
 
-        Spacer(Modifier.height(20.dp))
-        Text(stringResource(R.string.common_appearance), style = MaterialTheme.typography.labelLarge)
-        Spacer(Modifier.height(8.dp))
-        LazyRow(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
-            items(MedicineIcons.options) { option ->
-                val selected = option.key == iconKey
-                Surface(
-                    shape = CircleShape,
-                    color = if (selected) MaterialTheme.colorScheme.primaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh,
-                    modifier = Modifier
-                        .size(52.dp)
-                        .selectable(selected = selected, role = Role.RadioButton) {
-                            iconKey = option.key
-                            // The icon is the dosage form (§9 #27; HM-05): it
-                            // fills a blank unit and never overwrites a typed one.
-                            doseUnit = MedicineIcons.unitAfterPickingForm(doseUnit, option.defaultUnit?.let { resources.getString(it) })
-                        },
-                ) {
-                    Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
-                        Icon(
-                            option.icon,
-                            contentDescription = stringResource(option.label),
-                            tint = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
-                        )
-                    }
-                }
-            }
-        }
-        Spacer(Modifier.height(12.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            Box(
-                Modifier
-                    .size(36.dp)
-                    // A sole-content clickable: without this it announces as nothing at all.
-                    .clickable(role = Role.Button, onClickLabel = stringResource(R.string.add_medicine_pick_color)) { showColorPicker = true }
-                    .background(color ?: NeutralMedicineAccent, CircleShape),
-            )
-            Spacer(Modifier.width(10.dp))
-            AssistChip(onClick = { showColorPicker = true }, label = { Text(stringResource(if (color != null) R.string.add_medicine_change_color else R.string.add_medicine_pick_color)) })
-        }
-
-        Spacer(Modifier.height(20.dp))
-        Text(stringResource(R.string.add_medicine_tags), style = MaterialTheme.typography.labelLarge)
-        Spacer(Modifier.height(8.dp))
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            OutlinedTextField(
-                value = tagInput,
-                onValueChange = { tagInput = it },
-                label = { Text(stringResource(R.string.add_medicine_add_a_tag)) },
-                singleLine = true,
-                modifier = Modifier.weight(1f),
-            )
-            Spacer(Modifier.width(8.dp))
-            Button(onClick = {
-                val trimmed = tagInput.trim()
-                if (trimmed.isNotEmpty() && trimmed !in pendingTags) {
-                    pendingTags = pendingTags + trimmed
-                }
-                tagInput = ""
-            }) { Text(stringResource(R.string.add_medicine_add)) }
-        }
-        if (pendingTags.isNotEmpty()) {
+        Spacer(Modifier.height(16.dp))
+        SectionTitle(stringResource(R.string.add_medicine_tags))
+        FormTextField(
+            tagInput, { tagInput = it }, stringResource(R.string.add_medicine_add_a_tag), onDone = ::addTag,
+            trailingIcon = { IconButton(onClick = ::addTag) { Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.medicine_add_tag)) } },
+        )
+        if (shownTags.isNotEmpty()) {
             Spacer(Modifier.height(8.dp))
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                pendingTags.forEach { tag ->
-                    InputChip(
-                        selected = false,
-                        onClick = {},
-                        label = { Text(tag) },
-                        trailingIcon = {
-                            Icon(
-                                Icons.Filled.Close,
-                                contentDescription = stringResource(R.string.a11y_remove_tag, tag),
-                                modifier = Modifier
-                                    .size(16.dp)
-                                    .clickable(role = Role.Button) { pendingTags = pendingTags - tag },
-                            )
-                        },
-                    )
+            // The owner (2026-10-23): tag chips take their own width and wrap, left-aligned.
+            // A chip on is a tag this medicine has; tapping it takes the tag off, as the chip's
+            // close icon did (§7 R125).
+            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                shownTags.forEach { tag ->
+                    GridToggleCell(tag, tag in pendingTags) { on -> pendingTags = if (on) pendingTags + tag else pendingTags - tag }
                 }
             }
         }
 
-        Spacer(Modifier.height(20.dp))
-        OutlinedTextField(
-            value = indication,
-            onValueChange = { indication = it },
-            label = { Text(stringResource(R.string.add_medicine_what_it_s_for_optional)) },
-            singleLine = true,
-            textStyle = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        Spacer(Modifier.height(8.dp))
-        OutlinedTextField(
-            value = storageNote,
-            onValueChange = { storageNote = it },
-            label = { Text(stringResource(R.string.add_medicine_storage_note_optional)) },
-            singleLine = true,
-            textStyle = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        // Rx number (§9 #27; DT-10): what the pharmacy asks for on the phone.
-        Spacer(Modifier.height(8.dp))
-        OutlinedTextField(
-            value = rxNumber,
-            onValueChange = { rxNumber = it },
-            label = { Text(stringResource(R.string.add_medicine_rx_number_optional)) },
-            singleLine = true,
-            textStyle = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.fillMaxWidth(),
-        )
-        // Free-text notes (§6's inline section; the column existed from the
-        // first schema and nothing wrote it -- §7 R60 C F-4, wired at the
-        // owner's call). Multi-line: side effects, what the pharmacist said,
-        // anything that is not a storage instruction or an indication.
-        Spacer(Modifier.height(8.dp))
-        OutlinedTextField(
-            value = notes,
-            onValueChange = { notes = it },
-            label = { Text(stringResource(R.string.add_medicine_notes_optional)) },
-            minLines = 2,
-            maxLines = 6,
-            textStyle = MaterialTheme.typography.bodySmall,
-            modifier = Modifier.fillMaxWidth(),
-        )
+        // Taken when needed (§7 R116, the owner's switch).
+        Spacer(Modifier.height(16.dp))
+        FormSwitchRow(stringResource(R.string.add_medicine_as_needed), stringResource(R.string.add_medicine_as_needed_desc), asNeeded) { asNeeded = it }
 
-        // Taken when needed (§7 R116, the owner's switch), beside the limit it
-        // goes with; the limit alone never sets it.
-        Spacer(Modifier.height(20.dp))
-        Row(
-            Modifier.fillMaxWidth().toggleable(value = asNeeded, role = Role.Switch) { asNeeded = it },
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.add_medicine_as_needed), style = MaterialTheme.typography.bodyMedium)
-                Text(
-                    stringResource(R.string.add_medicine_as_needed_desc),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Switch(checked = asNeeded, onCheckedChange = null)
-        }
-
-        // As-needed ceiling (§9 #26; Pill Time PT-01): "at most N in any H
-        // hours". Shown as headroom on the Log dose dialog; at the ceiling
-        // logging asks once and never refuses (the owner's choice).
-        Spacer(Modifier.height(12.dp))
-        Text(stringResource(R.string.add_medicine_prn_ceiling), style = MaterialTheme.typography.labelLarge)
-        Text(
-            stringResource(R.string.add_medicine_prn_ceiling_desc),
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
+        // As-needed ceiling (§9 #26; Pill Time PT-01). The limit is not the switch's:
+        // getTakenSince counts every TAKEN dose and Log dose shows the headroom for any
+        // medicine (R116), so it has its own title and stays enabled.
+        Spacer(Modifier.height(16.dp))
+        SectionTitle(stringResource(R.string.add_medicine_prn_ceiling))
+        val maxLabel = stringResource(R.string.add_medicine_prn_max)
+        val hoursLabel = stringResource(R.string.add_medicine_prn_hours)
+        FieldPair(
+            listOf(maxLabel, hoursLabel),
+            first = { m -> FormTextField(prnMax, { prnMax = it }, maxLabel, m, keyboardType = KeyboardType.Number, flagError = prnCheck.maxError != null) },
+            second = { m -> FormTextField(prnHours, { prnHours = it }, hoursLabel, m, keyboardType = KeyboardType.Number, flagError = prnCheck.hoursError != null) },
         )
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            PrnField(prnMax, { prnMax = it }, R.string.add_medicine_prn_max, prnCheck.maxError, Modifier.weight(1f))
-            PrnField(prnHours, { prnHours = it }, R.string.add_medicine_prn_hours, prnCheck.hoursError, Modifier.weight(1f))
-        }
+        // One line for the pair: the help, or the first error in its place.
+        FieldHelpLine(stringResource(R.string.add_medicine_prn_ceiling_desc), (prnCheck.maxError ?: prnCheck.hoursError)?.let { stringResource(it) })
 
-        // Notification priority (spec §7 R59): the only place a medicine's
-        // channel tier is set, so without it the High and Alarm tiers are
-        // unreachable. Names and descriptions are the same resources the
-        // Notifications & Alerts screen and the channels themselves use.
-        Spacer(Modifier.height(20.dp))
-        Text(stringResource(R.string.add_medicine_notification_priority), style = MaterialTheme.typography.labelLarge)
-        for (option in NotificationPriority.entries) {
-            PriorityRow(
-                selected = priority == option,
-                title = stringResource(ReminderNotificationChannels.tierNameFor(option)),
-                description = stringResource(channelDescriptionFor(option)),
-                onSelect = { priority = option },
-            )
-        }
+        Spacer(Modifier.height(16.dp))
+        SectionTitle(stringResource(R.string.add_reminder_advanced))
+        FormGroupRow(stringResource(MedicineGroup.NOTIFICATION.title), notificationSummary(priority, lockOverride)) { open = MedicineGroup.NOTIFICATION }
+        FormGroupRow(stringResource(MedicineGroup.DETAILS.title), detailsSummary(indication, storageNote, rxNumber, notes, barcodeValue)) { open = MedicineGroup.DETAILS }
+        saveError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium) }
+    }
 
-        Spacer(Modifier.height(20.dp))
-        Text(stringResource(R.string.add_medicine_lock_reminders_until_taken), style = MaterialTheme.typography.labelLarge)
-        // One selectable node per option (§9 #19 Stage B). These were
-        // RadioButton + an unclickable Text -- the other shape of the pattern
-        // Stage B fixed, which its regex did not match.
-        for ((value, label) in listOf(
-            null to R.string.add_medicine_use_global_default,
-            true to R.string.add_medicine_always_lock,
-            false to R.string.add_medicine_never_lock,
-        )) {
-            Row(
-                Modifier.fillMaxWidth().selectable(selected = lockOverride == value, role = Role.RadioButton) { lockOverride = value },
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                RadioButton(selected = lockOverride == value, onClick = null)
-                Text(stringResource(label))
-            }
+    when (open) {
+        MedicineGroup.NOTIFICATION -> MedicineNotificationSheet(priority, lockOverride, close = { open = null }) { p, l -> priority = p; lockOverride = l }
+        MedicineGroup.DETAILS -> MedicineDetailsSheet(
+            MedicineDetails(barcodeValue ?: "", indication, storageNote, rxNumber, notes), close = { open = null },
+        ) { d ->
+            barcodeValue = d.barcode.trim().ifBlank { null }
+            indication = d.indication; storageNote = d.storage; rxNumber = d.rxNumber; notes = d.notes
         }
-
-        Spacer(Modifier.height(24.dp))
-        Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-            Button(
-                enabled = name.isNotBlank() && prnCheck.valid && !saving,
-                onClick = {
-                    saving = true
-                    saveError = null
-                    scope.launch {
-                        try {
-                            onSave(
-                                name.trim(),
-                                barcodeValue,
-                                iconKey,
-                                color,
-                                pendingTags,
-                                indication.ifBlank { null },
-                                storageNote.ifBlank { null },
-                                notes.trim().ifBlank { null },
-                                doseUnit.trim().ifBlank { null },
-                                lockOverride,
-                                priority,
-                                prnMax.trim().toIntOrNull()?.takeIf { it > 0 },
-                                prnHours.trim().toIntOrNull()?.takeIf { it > 0 },
-                                strength.trim().ifBlank { null },
-                                rxNumber.trim().ifBlank { null },
-                                asNeeded,
-                            )
-                        } catch (e: Exception) {
-                            // Reset on failure, not just success -- otherwise a
-                            // thrown onSave (a transient DB error, etc.) leaves
-                            // Save permanently disabled with no explanation and
-                            // no way to retry short of leaving the screen.
-                            saving = false
-                            saveError = resources.getString(R.string.error_could_not_save, e.message ?: resources.getString(R.string.error_unknown))
-                        }
-                    }
-                },
-            ) { Text(saveLabel) }
-            Button(onClick = cancel) { Text(stringResource(R.string.common_cancel)) }
-        }
-        saveError?.let {
-            Spacer(Modifier.height(8.dp))
-            Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
-        }
+        null -> Unit
     }
 
     if (showColorPicker) {
@@ -667,6 +493,59 @@ private fun MedicineFormBody(
             onConfirm = { picked -> color = picked; showColorPicker = false },
             inUse = colorsInUse,
         )
+    }
+}
+
+@Composable
+private fun SectionTitle(text: String) {
+    Text(text, style = MaterialTheme.typography.labelLarge)
+    Spacer(Modifier.height(8.dp))
+}
+
+/**
+ * The icons and the colour as one grid of 42 dp cells (§7 R125): rows of seven from the form's left
+ * edge to its right, the colour swatch the last cell; a short last row keeps the gap.
+ */
+@Composable
+private fun AppearanceGrid(iconKey: String, color: Color?, onIcon: (MedicineIconOption) -> Unit, onPickColor: () -> Unit) {
+    val options = MedicineIcons.options
+    val shape = FilterChipDefaults.shape
+    val pickColour = stringResource(R.string.add_medicine_pick_color)
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        val gap = ((maxWidth - SecondaryControlHeight * 7) / 6).coerceAtLeast(0.dp)
+        Column(verticalArrangement = Arrangement.spacedBy(gap)) {
+            (0..options.size).chunked(7).forEach { row ->
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = if (row.size == 7) Arrangement.SpaceBetween else Arrangement.spacedBy(gap)) {
+                    row.forEach { i ->
+                        if (i < options.size) {
+                            val option = options[i]
+                            val selected = option.key == iconKey
+                            Box(
+                                Modifier.size(SecondaryControlHeight)
+                                    .background(if (selected) MaterialTheme.colorScheme.secondaryContainer else MaterialTheme.colorScheme.surfaceContainerHigh, shape)
+                                    .selectable(selected = selected, role = Role.RadioButton) { onIcon(option) },
+                                contentAlignment = Alignment.Center,
+                            ) {
+                                Icon(
+                                    option.icon, contentDescription = stringResource(option.label),
+                                    tint = if (selected) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
+                                )
+                            }
+                        } else {
+                            // The colour as the grid's last cell: the swatch itself inside a ring.
+                            Box(
+                                Modifier.size(SecondaryControlHeight)
+                                    .semantics { contentDescription = pickColour }
+                                    .clickable(role = Role.Button, onClickLabel = pickColour, onClick = onPickColor)
+                                    .border(1.dp, MaterialTheme.colorScheme.outline, shape)
+                                    .padding(5.dp)
+                                    .background(color ?: NeutralMedicineAccent, shape),
+                            )
+                        }
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -686,41 +565,4 @@ internal fun checkPrnCeiling(max: String, hours: String): PrnCeilingCheck {
         else -> null
     }
     return PrnCeilingCheck(half(max, hours), half(hours, max))
-}
-
-@Composable
-private fun PrnField(value: String, onValueChange: (String) -> Unit, @StringRes label: Int, @StringRes error: Int?, modifier: Modifier) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(stringResource(label)) },
-        isError = error != null,
-        supportingText = error?.let { { Text(stringResource(it)) } },
-        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-        singleLine = true,
-        modifier = modifier,
-    )
-}
-
-/** The channel description for a tier, so the form's second line says exactly
- *  what the Notifications & Alerts screen and Android's own settings say. */
-@StringRes
-private fun channelDescriptionFor(priority: NotificationPriority): Int = when (priority) {
-    NotificationPriority.STANDARD -> R.string.channel_standard_desc
-    NotificationPriority.HIGH -> R.string.channel_high_desc
-    NotificationPriority.ALARM -> R.string.channel_alarm_desc
-}
-
-@Composable
-private fun PriorityRow(selected: Boolean, title: String, description: String, onSelect: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().selectable(selected = selected, role = Role.RadioButton, onClick = onSelect).padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(selected = selected, onClick = null)
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            Text(description, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
 }

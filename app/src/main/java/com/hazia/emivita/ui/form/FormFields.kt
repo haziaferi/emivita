@@ -10,6 +10,7 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.KeyboardActionHandler
 import androidx.compose.foundation.text.input.TextFieldLineLimits
 import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.text.input.setTextAndPlaceCursorAtEnd
@@ -22,9 +23,9 @@ import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedSecureTextField
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TextFieldLabelPosition
 import androidx.compose.material3.TimePicker
 import androidx.compose.material3.rememberDatePickerState
@@ -41,6 +42,7 @@ import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.intl.Locale
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -60,6 +62,7 @@ import java.time.format.ResolverStyle
  * The one field pattern (§7 R124, C3): the title always small inside the frame, one line inside
  * the box, help or error as one line below at the field's text inset. [value] stays the caller's
  * String state; a field that can show an error and has no help keeps its line empty ([reserve]).
+ * [maxLines] above 1 lets a dialog's note grow; an empty [label] draws none (§7 R125).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -76,6 +79,9 @@ fun FormTextField(
     suffix: String? = null,
     trailingIcon: (@Composable () -> Unit)? = null,
     reserve: Boolean = false,
+    onDone: (() -> Unit)? = null,
+    flagError: Boolean = false,
+    maxLines: Int = 1,
 ) {
     val state = rememberTextFieldState(value)
     val report by rememberUpdatedState(onValueChange)
@@ -97,13 +103,34 @@ fun FormTextField(
         readOnly = readOnly,
         textStyle = MaterialTheme.typography.bodyLarge,
         labelPosition = TextFieldLabelPosition.Attached(alwaysMinimize = true),
-        label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        label = if (label.isEmpty()) null else { { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
         suffix = suffix?.let { s -> { Text(s, maxLines = 1) } },
         trailingIcon = trailingIcon,
         supportingText = support,
+        isError = error != null || flagError,
+        keyboardOptions = KeyboardOptions(keyboardType = keyboardType, imeAction = if (onDone != null) ImeAction.Done else ImeAction.Default),
+        onKeyboardAction = onDone?.let { done -> KeyboardActionHandler { done() } },
+        lineLimits = if (maxLines <= 1) TextFieldLineLimits.SingleLine else TextFieldLineLimits.MultiLine(1, maxLines),
+    )
+}
+
+/** A password in the one field pattern: the text masked, the label small inside the frame (§7 R125). */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun FormSecureTextField(value: String, onValueChange: (String) -> Unit, label: String, modifier: Modifier = Modifier, error: String? = null) {
+    val state = rememberTextFieldState(value)
+    val report by rememberUpdatedState(onValueChange)
+    val current by rememberUpdatedState(value)
+    LaunchedEffect(value) { if (state.text.toString() != value) state.setTextAndPlaceCursorAtEnd(value) }
+    LaunchedEffect(state) { snapshotFlow { state.text.toString() }.collect { if (it != current) report(it) } }
+    OutlinedSecureTextField(
+        state = state,
+        modifier = Modifier.fillMaxWidth().then(modifier),
+        textStyle = MaterialTheme.typography.bodyLarge,
+        labelPosition = TextFieldLabelPosition.Attached(alwaysMinimize = true),
+        label = { Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis) },
+        supportingText = error?.let { e -> { Text(e, maxLines = 1, overflow = TextOverflow.Ellipsis) } },
         isError = error != null,
-        keyboardOptions = KeyboardOptions(keyboardType = keyboardType),
-        lineLimits = TextFieldLineLimits.SingleLine,
     )
 }
 
@@ -125,6 +152,7 @@ fun FormTimeField(
     hour: Int,
     minute: Int,
     modifier: Modifier = Modifier,
+    help: String? = null,
     onError: (Boolean) -> Unit = {},
     onChange: (hour: Int, minute: Int) -> Unit,
 ) {
@@ -138,6 +166,7 @@ fun FormTimeField(
         onValueChange = { t -> text = t; parseTimeOfDay(t)?.let { (h, m) -> if (h != hour || m != minute) onChange(h, m) } },
         label = label,
         modifier = modifier,
+        help = help,
         error = if (bad) stringResource(R.string.form_time_invalid) else null,
         keyboardType = KeyboardType.Number,
         reserve = true,
@@ -152,11 +181,10 @@ fun FormTimeField(
             title = { Text(label) },
             text = { TimePicker(state = state) },
             confirmButton = {
-                TextButton(onClick = { onChange(state.hour, state.minute); text = formatTimeOfDay(state.hour, state.minute); picking = false }) {
-                    Text(stringResource(R.string.common_ok))
-                }
+                DialogActionPair(stringResource(R.string.common_ok), onConfirm = {
+                    onChange(state.hour, state.minute); text = formatTimeOfDay(state.hour, state.minute); picking = false
+                }, onDismiss = { picking = false })
             },
-            dismissButton = { TextButton(onClick = { picking = false }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
 }
@@ -220,12 +248,11 @@ fun FormDateField(
             title = { Text(label) },
             text = { DatePicker(state = state) },
             confirmButton = {
-                TextButton(onClick = {
+                DialogActionPair(stringResource(R.string.common_ok), onConfirm = {
                     val d = state.selectedDateMillis?.let { it / 86_400_000L }
                     onChange(d); text = show(d); picking = false
-                }) { Text(stringResource(R.string.common_ok)) }
+                }, onDismiss = { picking = false })
             },
-            dismissButton = { TextButton(onClick = { picking = false }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
 }
@@ -256,10 +283,16 @@ fun FieldPair(texts: List<String>, iconDp: Dp = 0.dp, first: @Composable (Modifi
     }
 }
 
-/** A help line under a group of fields, at the fields' supporting-text inset (16 dp in, 4 dp below). */
+/**
+ * A help line under a group of fields, at the fields' supporting-text inset (16 dp in, 4 dp below).
+ * [error] takes the help's place, in the error colour, so nothing below moves (§7 R125).
+ */
 @Composable
-fun FieldHelpLine(text: String) {
+fun FieldHelpLine(text: String, error: String? = null) {
     Box(Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp, end = 16.dp)) {
-        Text(text, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Text(
+            error ?: text, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            color = if (error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+        )
     }
 }

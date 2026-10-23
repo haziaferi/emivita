@@ -26,8 +26,11 @@ class FormNames(
     val rules: Set<String>,
 )
 
-/** What the code says about a surface (C10): field label prefixes ignored in this state, or independent of the switch above. */
-class FormDecl(val ignored: Set<String> = emptySet(), val independent: Map<String, String> = emptyMap())
+/**
+ * What the code says about a surface (C10): field label prefixes ignored in this state, or independent of the switch above;
+ * and (C8) chip flows, grids whose first cell is in [flows], which wrap ragged right by the owner's rule (§7 R125, the tags).
+ */
+class FormDecl(val ignored: Set<String> = emptySet(), val independent: Map<String, String> = emptyMap(), val flows: Set<String> = emptySet())
 
 /** One check's verdict: its violations (empty = pass) and what it measured, for the failure message. */
 class Check(val name: String, val violations: List<String>, val detail: String = "") {
@@ -342,6 +345,7 @@ class FormRules(private val dp: Float, private val names: FormNames, private val
         }
         val c8 = mutableListOf<String>()
         for (g in grids) {
+            if (g.any { it.label in decl.flows }) continue
             val gl = g.minOf { (it.drawn ?: it.c).left } / dp; val gr = g.maxOf { (it.drawn ?: it.c).right } / dp
             if (abs(gl - left) > 1.0 || abs(right - gr) > 1.0) c8 += "the grid of '${g.first().label}' spans ${r1(gl)}..${r1(gr)} dp, not ${r1(left)}..${r1(right)}"
         }
@@ -377,6 +381,38 @@ class FormRules(private val dp: Float, private val names: FormNames, private val
             ),
             ctls,
         )
+    }
+
+    /**
+     * The dialog pair (§7 R125, the owner: "Yes, same order and look"): in the top window, the button
+     * [confirm] and the button [dismiss] on its line are drawn the same width, the confirm rightmost
+     * and the dismiss to its left at least 14 dp apart, 48 and 42 dp high, two colours with the
+     * dismiss the more desaturated. A dialog keeps its own place, so no edge or foot is checked.
+     */
+    fun dialogPair(confirm: String, dismiss: String, allowStack: Boolean = false): Check {
+        val f = FormProbe.frame()
+        val v = mutableListOf<String>()
+        val c = f.merged.firstOrNull { it.clickable && it.text == confirm && it.fullyVisible() }
+        val d = c?.let { cc -> f.merged.filter { it.clickable && it.text == dismiss && it.fullyVisible() }.minByOrNull { abs(it.touch.center.y - cc.touch.center.y) } }
+        if (c == null || d == null) return Check("dialog pair '$confirm'/'$dismiss'", listOf("not both on screen: confirm ${c != null}, dismiss ${d != null}"))
+        val cd = drawnBox(f.px, c.touch); val dd = drawnBox(f.px, d.touch)
+        if (cd == null || dd == null) return Check("dialog pair '$confirm'/'$dismiss'", listOf("not drawn"))
+        val ch = cd.height / dp; val dh = dd.height / dp
+        if (abs(ch - 48) > 1) v += "'$confirm' is ${r1(ch)} dp high, not 48"
+        if (abs(dh - 42) > 1) v += "'$dismiss' is ${r1(dh)} dp high, not 42"
+        if (abs(cd.width - dd.width) / dp > 1f) v += "widths differ: '$confirm' ${r1(cd.width / dp)} dp, '$dismiss' ${r1(dd.width / dp)} dp"
+        val sameLine = abs((cd.top + cd.bottom) / 2f - (dd.top + dd.bottom) / 2f) < 30 * dp
+        // Declared for a dialog whose label would be cut at half its width: one width, the confirm below.
+        val stacked = allowStack && !sameLine && cd.top >= dd.bottom
+        if (stacked) Unit
+        else if (!(sameLine && dd.right <= cd.left)) v += "'$dismiss' is not to the left of '$confirm' on its line"
+        else if ((cd.left - dd.right) / dp < 14f) v += "'$confirm' and '$dismiss' are ${r1((cd.left - dd.right) / dp)} dp apart, under 14"
+        val cf = modal(f.px, cd); val df = modal(f.px, dd)
+        if (FormProbe.deltaE2000(FormProbe.lab(cf), FormProbe.lab(df)) <= 2.0) v += "'$confirm' and '$dismiss' are not two colours"
+        else if (FormProbe.chroma(df) >= FormProbe.chroma(cf)) v += "'$dismiss' is not more desaturated than '$confirm'"
+        val detail = (if (stacked) "stacked, " else "") + "'$confirm' ${r1(cd.width / dp)}x${r1(ch)} dp, '$dismiss' ${r1(dd.width / dp)}x${r1(dh)} dp, gap ${r1((cd.left - dd.right) / dp)} dp, " +
+            "chroma ${"%.3f".format(FormProbe.chroma(cf))} / ${"%.3f".format(FormProbe.chroma(df))}"
+        return Check("dialog pair '$confirm'/'$dismiss'", v, detail)
     }
 
     /** C4 across surfaces: one look per kind (height, fill) for every control the surfaces share. */

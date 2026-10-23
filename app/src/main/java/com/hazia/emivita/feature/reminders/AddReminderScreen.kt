@@ -1,5 +1,6 @@
 package com.hazia.emivita.feature.reminders
 
+import com.hazia.emivita.ui.form.DialogActionPair
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -55,7 +56,6 @@ import com.hazia.emivita.R
 import androidx.annotation.StringRes
 import com.hazia.emivita.core.format.labelRes
 import androidx.compose.ui.semantics.Role
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.AlertDialog
 import com.hazia.emivita.ui.components.rememberDirty
 import com.hazia.emivita.ui.form.FieldHelpLine
@@ -255,15 +255,14 @@ fun EditReminderScreen(
             title = { Text(stringResource(R.string.reminder_delete_title)) },
             text = { Text(stringResource(R.string.reminder_delete_body)) },
             confirmButton = {
-                TextButton(onClick = {
+                DialogActionPair(stringResource(R.string.reminder_delete), destructive = true, onDismiss = { showDeleteConfirm = false }, onConfirm = {
                     showDeleteConfirm = false
                     scope.launch {
                         reminderRepository.delete(current)
                         onDone()
                     }
-                }) { Text(stringResource(R.string.reminder_delete)) }
+                })
             },
-            dismissButton = { TextButton(onClick = { showDeleteConfirm = false }) { Text(stringResource(R.string.common_cancel)) } },
         )
     }
 

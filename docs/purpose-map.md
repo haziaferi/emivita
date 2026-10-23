@@ -24,7 +24,7 @@ _see what is due, be told when, and answer it: taken, skipped, snoozed, or an ex
 |---|---|---|---|---|
 | Today | `route:Today`, `sheet:TakeGroupSheet`, `sheet:DoseDetailSheet` | §9 #5, §9 #37, R77, R107 | shipped | Next reminders widget |
 | The alarm ringing (full screen) | `activity:AlarmActivity` | R80 | shipped | Reminder notifications and their actions |
-| Snooze for… (from a notification) | `activity:SnoozePickerActivity` | §9 #25, R64 | shipped | Alarms & Snooze (sheet) |
+| Snooze for… (from a notification) | `activity:SnoozePickerActivity`, `dialog:SnoozePickerDialog` | §9 #25, R64 | shipped | Alarms & Snooze (sheet) |
 | Amount taken (from a notification) | `activity:TakeAmountActivity`, `dialog:TakeAmountDialog` | R109 | shipped | Reminder notifications and their actions, Edit a dose (status, time, note) |
 | Reminder notifications and their actions | `channel:reminders_alarm_v2`, `channel:reminders_high`, `channel:reminders_standard` | §9 #25, R64 | shipped | The alarm ringing (full screen), Notifications & alerts |
 | Log a dose (as needed, an extra one, or a one-off of a medicine not on the list) | `dialog:LogDoseDialog` | §9 #2, R111 | shipped | Edit a dose (status, time, note) |
@@ -39,7 +39,7 @@ _what I take, in what form, on which schedule, and how much is left before it ru
 |---|---|---|---|---|
 | Medicines list | `route:Medicines` | §9 #1, §9 #27 | shipped |  |
 | A medicine's page (reminders, stock, chart) | `route:MedicineDetail` | §9 #24, §9 #27 | shipped | History (calendar and list) |
-| Add or edit a medicine | `route:AddMedicine`, `route:EditMedicine`, `dialog:ColorPickerDialog`, `sheet:QuickAddMedicineSheet` | §9 #1, §9 #27, R114 | shipped |  |
+| Add or edit a medicine | `route:AddMedicine`, `route:EditMedicine`, `dialog:ColorPickerDialog`, `sheet:QuickAddMedicineSheet`, `sheet:MedicineNotificationSheet`, `sheet:MedicineDetailsSheet` | §9 #1, §9 #27, R114, R125 | shipped |  |
 | Add or edit a reminder (fixed times, interval, window, cycle, follow-up, taper) | `route:AddReminder`, `route:EditReminder`, `sheet:ReminderGroupSheet` | §9 #1, §9 #14, §9 #24, §9 #31 | shipped | Weekend mode (sheet) |
 | Stock and expiration | `route:StockExpiration` | §9 #8, §9 #27, R85 | shipped | Stock levels widget |
 | Stock levels widget | `widget:StockLevelsWidgetReceiver` | §9 #7, R108 | shipped | Stock and expiration |
@@ -65,7 +65,7 @@ _reminders that ring on time and a record that survives: the grants and channels
 | Alarms & Snooze (sheet) | `setting:AlarmsSnooze` | §9 #12 | shipped | Snooze for… (from a notification) |
 | Permission setup (first launch) and the missing-permissions card | `sheet:PermissionSetupSheet`, `card:MissingPermissionsCard`, `card:FullScreenAlarmAccessCard` | §9 #38, R83, R88, R102 | shipped; open: say what is missing and open Notifications & alerts, not grant in place (§7 R102) | Notifications & alerts |
 | 'A reminder did not fire' card | `card:MissedAlarmCard` | §9 #29, R102 | shipped; open: say what is missing and open Notifications & alerts, not grant in place (§7 R102) | Notifications & alerts |
-| Data & Backup (backup, restore, auto-sync, purge) | `route:DataBackupSettings`, `setting:DataBackup`, `dialog:PurgeConfirmDialog` | §9 #9, §9 #29, R83 | shipped | Export history (CSV, PDF): range and medicines, 'No backup yet' card |
+| Data & Backup (backup, restore, auto-sync, purge) | `route:DataBackupSettings`, `setting:DataBackup`, `dialog:PurgeConfirmDialog`, `dialog:BackupPasswordDialog` | §9 #9, §9 #29, R83 | shipped | Export history (CSV, PDF): range and medicines, 'No backup yet' card |
 | 'No backup yet' card | `card:NoBackupCard` | §9 #38, R83 | shipped | Data & Backup (backup, restore, auto-sync, purge) |
 | Database set aside (unreadable, or its key lost) | `dialog:DatabaseRecoveredDialog` | §9 #32, R83 | shipped | Data & Backup (backup, restore, auto-sync, purge) |
 | Privacy & security (app lock) | `setting:PrivacySecurity` | §9 #11 | shipped |  |

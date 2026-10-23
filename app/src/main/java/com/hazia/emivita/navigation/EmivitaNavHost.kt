@@ -260,6 +260,7 @@ fun EmivitaNavHost(startPage: StartPage = StartPage.TODAY, openDataAndBackupOnSt
                     medicineRepository = container.medicineRepository,
                     onSaved = { navController.popBackStack() },
                     onCancel = { navController.popBackStack() },
+                    onDeleted = { navController.popBackStack(EmivitaRoute.Medicines, inclusive = false) },
                 )
             }
             composable<EmivitaRoute.EditReminder> { entry ->

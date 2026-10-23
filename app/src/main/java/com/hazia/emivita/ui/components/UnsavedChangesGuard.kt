@@ -1,9 +1,9 @@
 package com.hazia.emivita.ui.components
 
+import com.hazia.emivita.ui.form.DialogActionPair
 import androidx.activity.compose.BackHandler
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -32,8 +32,9 @@ fun unsavedChangesGuard(dirty: Boolean, onDiscard: () -> Unit): () -> Unit {
             onDismissRequest = { asking = false },
             title = { Text(stringResource(R.string.unsaved_title)) },
             text = { Text(stringResource(R.string.unsaved_text)) },
-            confirmButton = { TextButton(onClick = { asking = false; onDiscard() }) { Text(stringResource(R.string.unsaved_discard)) } },
-            dismissButton = { TextButton(onClick = { asking = false }) { Text(stringResource(R.string.unsaved_keep)) } },
+            confirmButton = {
+                DialogActionPair(stringResource(R.string.unsaved_discard), onConfirm = { asking = false; onDiscard() }, onDismiss = { asking = false }, dismissLabel = stringResource(R.string.unsaved_keep))
+            },
         )
     }
     return if (dirty) { { asking = true } } else onDiscard

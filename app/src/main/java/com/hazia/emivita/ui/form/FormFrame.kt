@@ -8,19 +8,21 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material3.AlertDialog
-import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
-import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ModalBottomSheet
 import androidx.compose.material3.Surface
@@ -36,7 +38,6 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.text.style.TextOverflow
@@ -45,13 +46,10 @@ import com.hazia.emivita.R
 import kotlinx.coroutines.launch
 
 /** The primary tier (§7 R124, C2): the form's Salva. */
-private val PrimaryControlHeight = 48.dp
+internal val PrimaryControlHeight = 48.dp
 
 /** The tertiary tier (§7 R124, C2): a text action such as a form's delete. */
 val TertiaryControlHeight = 38.dp
-
-/** Salva and Annulla at least this far apart (the owner's rule, §7 R124 C5). */
-private val FootGap = 16.dp
 
 /**
  * The Salva/Annulla foot (§7 R124, C5): the same width, on the right, Salva rightmost and filled,
@@ -62,35 +60,18 @@ private val FootGap = 16.dp
 fun FormFootBar(saveLabel: String, saveEnabled: Boolean, onSave: () -> Unit, onCancel: () -> Unit, inSheet: Boolean = false) {
     val tone = if (inSheet) MaterialTheme.colorScheme.surfaceContainerHigh else MaterialTheme.colorScheme.surfaceContainer
     Surface(color = tone, modifier = Modifier.fillMaxWidth()) {
-        Layout(
-            modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp, vertical = 8.dp),
-            content = {
-                FilledTonalButton(onClick = onCancel, modifier = Modifier.height(SecondaryControlHeight)) {
-                    Text(stringResource(R.string.common_cancel), maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-                Button(onClick = onSave, enabled = saveEnabled, modifier = Modifier.height(PrimaryControlHeight)) {
-                    Text(saveLabel, maxLines = 1, overflow = TextOverflow.Ellipsis)
-                }
-            },
-        ) { ms, c ->
-            val gap = FootGap.roundToPx()
-            val loose = c.copy(minWidth = 0, minHeight = 0)
-            val natural = ms.map { it.maxIntrinsicWidth(c.maxHeight) }
-            val w = minOf(natural.max(), (c.maxWidth - gap) / 2)
-            val ps = ms.map { it.measure(loose.copy(minWidth = w, maxWidth = w)) }
-            val h = ps.maxOf { it.height }
-            layout(c.maxWidth, h) {
-                val saveX = c.maxWidth - w
-                ps[1].place(saveX, (h - ps[1].height) / 2)
-                ps[0].place(saveX - gap - w, (h - ps[0].height) / 2)
-            }
+        ActionPairLayout(hasDismiss = true, hasTertiary = false, modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp)) {
+            DismissButton(stringResource(R.string.common_cancel), enabled = true, onClick = onCancel)
+            ConfirmButton(saveLabel, saveEnabled, destructive = false, onClick = onSave)
         }
     }
 }
 
 /**
  * A form: its title and content scroll, the foot stays fixed at the bottom, above the navigation
- * bar. [onDelete], on an edit form, is a tertiary text action at the end of the content.
+ * bar. [onDelete], on an edit form, is a tertiary text action at the end of the content. [onBack]
+ * puts the back arrow of a Settings or stock screen before the title (§7 R125); [inSheet] is a
+ * Settings sheet's form, its foot on the sheet's tone.
  */
 @Composable
 fun FormScaffold(
@@ -101,11 +82,22 @@ fun FormScaffold(
     onCancel: () -> Unit,
     deleteLabel: String? = null,
     onDelete: (() -> Unit)? = null,
+    onBack: (() -> Unit)? = null,
+    inSheet: Boolean = false,
     content: @Composable ColumnScope.() -> Unit,
 ) {
-    Column(Modifier.fillMaxSize()) {
-        Column(Modifier.weight(1f).fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp)) {
-            Text(title, style = MaterialTheme.typography.headlineSmall)
+    // In a sheet the form takes the height it needs and the sheet grows upward; on a page it fills it.
+    Column(if (inSheet) Modifier.fillMaxWidth() else Modifier.fillMaxSize()) {
+        Column(Modifier.weight(1f, fill = !inSheet).fillMaxWidth().verticalScroll(rememberScrollState()).padding(16.dp)) {
+            if (onBack == null) {
+                Text(title, style = MaterialTheme.typography.headlineSmall)
+            } else {
+                Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back)) }
+                    Spacer(Modifier.width(4.dp))
+                    Text(title, style = MaterialTheme.typography.headlineSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                }
+            }
             Spacer(Modifier.height(16.dp))
             content()
             if (onDelete != null && deleteLabel != null) {
@@ -115,7 +107,7 @@ fun FormScaffold(
                 }
             }
         }
-        FormFootBar(saveLabel, saveEnabled, onSave, onCancel)
+        FormFootBar(saveLabel, saveEnabled, onSave, onCancel, inSheet = inSheet)
     }
 }
 
@@ -147,8 +139,9 @@ fun FormSheetScaffold(title: String, dirty: Boolean, saveEnabled: Boolean, onSav
             onDismissRequest = keep,
             title = { Text(stringResource(R.string.unsaved_title)) },
             text = { Text(stringResource(R.string.unsaved_text)) },
-            confirmButton = { TextButton(onClick = { asking = false; close() }) { Text(stringResource(R.string.unsaved_discard)) } },
-            dismissButton = { TextButton(onClick = keep) { Text(stringResource(R.string.unsaved_keep)) } },
+            confirmButton = {
+                DialogActionPair(stringResource(R.string.unsaved_discard), onConfirm = { asking = false; close() }, onDismiss = keep, dismissLabel = stringResource(R.string.unsaved_keep))
+            },
         )
     }
 }

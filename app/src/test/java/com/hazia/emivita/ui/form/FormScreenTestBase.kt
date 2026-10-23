@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.ui.Modifier
@@ -83,7 +84,8 @@ abstract class FormScreenTestBase {
     protected fun s(id: Int) = res.getString(id)
     protected fun s(id: Int, vararg args: Any) = res.getString(id, *args)
 
-    protected fun hostApp() {
+    /** [content] in the app's theme, at the test's font scale, with the production container (§7 R125). */
+    protected fun host(content: @Composable () -> Unit) {
         h.container // built before the composition reads it
         compose.mainClock.autoAdvance = false
         compose.setContent {
@@ -92,13 +94,17 @@ abstract class FormScreenTestBase {
                 EmivitaTheme(themeMode = themeMode) {
                     Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
                         CompositionLocalProvider(LocalAppContainer provides h.container, LocalCurrentProfileId provides h.profileId) {
-                            EmivitaNavHost(startPage = StartPage.MEDICINES)
+                            content()
                         }
                     }
                 }
             }
         }
-        waitFor("the Medicines list") { inTop(described(s(R.string.medicines_add_medicine))) }
+    }
+
+    protected fun hostApp(startPage: StartPage = StartPage.MEDICINES) {
+        host { EmivitaNavHost(startPage = startPage) }
+        if (startPage == StartPage.MEDICINES) waitFor("the Medicines list") { inTop(described(s(R.string.medicines_add_medicine))) }
     }
 
     protected fun settle() {
@@ -184,12 +190,20 @@ abstract class FormScreenTestBase {
             save = setOf(s(R.string.common_save), s(R.string.common_save_changes)),
             cancel = s(R.string.common_cancel),
             weekdays = (1..7).map { DayOfWeek.of(it).getDisplayName(TextStyle.SHORT, locale) }.toSet(),
-            textButtons = setOf(s(R.string.reminder_delete)),
-            groups = listOf(R.string.reminder_group_taking, R.string.reminder_group_notification, R.string.reminder_group_unanswered, R.string.reminder_group_duration).map { s(it) },
-            chips = listOf(R.string.common_daily, R.string.add_reminder_specific_days, R.string.add_reminder_every_n_days, R.string.add_reminder_active_pause_cycle).map { s(it) }.toSet(),
+            textButtons = setOf(s(R.string.reminder_delete), s(R.string.medicine_detail_delete), s(R.string.quick_add_more_details)),
+            groups = listOf(
+                R.string.reminder_group_taking, R.string.reminder_group_notification, R.string.reminder_group_unanswered, R.string.reminder_group_duration,
+                // §7 R125: the medicine form's second group, and Alarms & snooze's tone row (it opens the system picker).
+                R.string.medicine_group_details, R.string.settings_alarm_tone,
+            ).map { s(it) },
+            chips = listOf(
+                R.string.common_daily, R.string.add_reminder_specific_days, R.string.add_reminder_every_n_days, R.string.add_reminder_active_pause_cycle,
+                R.string.common_once, R.string.stock_expiration_always,
+            ).map { s(it) }.toSet(),
             rules = listOf(
                 R.string.form_min_one, R.string.form_min_one_minute, R.string.form_min_zero, R.string.form_time_invalid, R.string.form_date_invalid,
                 R.string.form_until_before_from, R.string.quick_add_dose_invalid, R.string.add_reminder_minutes_after_range,
+                R.string.add_medicine_prn_whole, R.string.add_medicine_prn_both, R.string.medicine_name_blank,
             ).map { s(it) }.toSet(),
         )
     }

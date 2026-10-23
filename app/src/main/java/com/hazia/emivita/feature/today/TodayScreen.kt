@@ -1,5 +1,6 @@
 package com.hazia.emivita.feature.today
 
+import com.hazia.emivita.ui.form.DialogActionPair
 import com.hazia.emivita.ui.components.AttentionCard
 import com.hazia.emivita.feature.permissions.rememberPermissionState
 import com.hazia.emivita.feature.permissions.rememberPermissionFixer
@@ -855,8 +856,7 @@ private fun LogDoseDialog(
                     else stringResource(R.string.today_prn_over_title),
                 )
             },
-            confirmButton = { TextButton(onClick = { confirmOverCeiling = false; log() }) { Text(stringResource(R.string.today_prn_log_anyway)) } },
-            dismissButton = { TextButton(onClick = { confirmOverCeiling = false }) { Text(stringResource(R.string.common_cancel)) } },
+            confirmButton = { DialogActionPair(stringResource(R.string.today_prn_log_anyway), onConfirm = { confirmOverCeiling = false; log() }, onDismiss = { confirmOverCeiling = false }) },
         )
     }
 
@@ -965,13 +965,12 @@ private fun LogDoseDialog(
             }
         },
         confirmButton = {
-            TextButton(
-                enabled = (selected != null || oneOffName != null) && parseDecimal(doseAmount) != null && !saving && (!backdate || atDay != null),
-                onClick = { if (headroom?.atCeiling == true) confirmOverCeiling = true else log() },
-            ) { Text(stringResource(R.string.today_log)) }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text(stringResource(R.string.common_cancel)) }
+            DialogActionPair(
+                stringResource(R.string.today_log),
+                confirmEnabled = (selected != null || oneOffName != null) && parseDecimal(doseAmount) != null && !saving && (!backdate || atDay != null),
+                onConfirm = { if (headroom?.atCeiling == true) confirmOverCeiling = true else log() },
+                onDismiss = onDismiss,
+            )
         },
     )
 }

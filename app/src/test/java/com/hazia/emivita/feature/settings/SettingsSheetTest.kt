@@ -50,12 +50,12 @@ class SettingsSheetTest {
         }
         compose.onAllNodesWithText("Weekend Mode").onFirst().performClick()
         compose.waitForIdle()
-        // Robolectric draws no navigation bar, so "displayed" alone passed on the
-        // half-expanded sheet too (Save at 2549 of 2673 px). The phone's bar is
-        // 48 dp; Save has to end above it.
+        // §7 R125: Save is in the form's foot, which ends the fully expanded sheet, so it
+        // ends within 24 dp of the window's bottom. The sheet's own window insets are to lift it
+        // above the phone's bar: unverified here, Robolectric reports none (a phone check).
         val save = compose.onNodeWithText("Save").fetchSemanticsNode().boundsInWindow
         val window = compose.onAllNodes(isRoot()).onFirst().fetchSemanticsNode().boundsInRoot
-        val navigationBar = with(compose.density) { 48.dp.toPx() }
-        assertTrue("Save ends at ${save.bottom}, under a bar from ${window.bottom - navigationBar}", save.bottom <= window.bottom - navigationBar)
+        val foot = with(compose.density) { 24.dp.toPx() }
+        assertTrue("Save ends at ${save.bottom} in a window to ${window.bottom}", save.bottom <= window.bottom && save.bottom >= window.bottom - foot)
     }
 }

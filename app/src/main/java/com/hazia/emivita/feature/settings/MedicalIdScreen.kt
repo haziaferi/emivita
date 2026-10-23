@@ -1,45 +1,41 @@
 package com.hazia.emivita.feature.settings
 
-import com.hazia.emivita.ui.components.unsavedChangesGuard
-import com.hazia.emivita.ui.components.rememberDirty
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
-import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.FilledTonalButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
-import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalResources
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
+import com.hazia.emivita.R
 import com.hazia.emivita.core.data.entity.Profile
 import com.hazia.emivita.core.data.export.EmergencyCardExporter
 import com.hazia.emivita.core.data.repository.MedicineRepository
 import com.hazia.emivita.core.data.repository.ProfileRepository
+import com.hazia.emivita.ui.components.rememberDirty
+import com.hazia.emivita.ui.components.unsavedChangesGuard
+import com.hazia.emivita.ui.form.FormScaffold
+import com.hazia.emivita.ui.form.FormTextField
+import com.hazia.emivita.ui.form.SecondaryControlHeight
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
-import androidx.compose.ui.res.stringResource
-import com.hazia.emivita.R
-import androidx.compose.ui.platform.LocalResources
 
 /**
  * Medical ID (spec section 9's parking lot, promoted in section 7 R48): text
@@ -144,17 +140,37 @@ fun MedicalIdScreen(
     val dirty = rememberDirty(filled, name, bloodType, allergies, doctorName, doctorPhone, doctorAddress, pharmacyName, pharmacyPhone)
     val back = unsavedChangesGuard(dirty, onBack)
 
-    Column(Modifier.fillMaxSize().padding(16.dp).verticalScroll(rememberScrollState())) {
-        DetailHeader(stringResource(R.string.medical_id_medical_id), back)
+    fun save() {
+        val base = profile ?: return
+        scope.launch {
+            try {
+                val updated = edited(base)
+                profileRepository.update(updated)
+                profile = updated
+                onBack()
+            } catch (e: Exception) {
+                saveError = resources.getString(R.string.medical_id_save_failed, e.message ?: resources.getString(R.string.common_unknown_error))
+            }
+        }
+    }
 
+    // On the shared form parts (§7 R125): Salva saves and leaves; Annulla is Back, asking when
+    // edited. Exporting the card saves first, as before.
+    FormScaffold(
+        title = stringResource(R.string.medical_id_medical_id),
+        saveLabel = stringResource(R.string.common_save),
+        saveEnabled = loaded && profile != null,
+        onSave = ::save,
+        onCancel = back,
+        onBack = back,
+    ) {
         if (!loaded) {
             CircularProgressIndicator()
-            return@Column
+            return@FormScaffold
         }
-        val base = profile
-        if (base == null) {
+        if (profile == null) {
             Text(stringResource(R.string.medical_id_profile_not_found), style = MaterialTheme.typography.bodyMedium)
-            return@Column
+            return@FormScaffold
         }
 
         Text(
@@ -166,20 +182,14 @@ fun MedicalIdScreen(
 
         Field(stringResource(R.string.common_name), name, { name = it }, stringResource(R.string.medical_id_name_helper))
         Field(stringResource(R.string.medical_id_blood_type), bloodType, { bloodType = it }, stringResource(R.string.medical_id_blood_type_helper))
-        Field(
-            stringResource(R.string.medical_id_allergies),
-            allergies,
-            { allergies = it },
-            stringResource(R.string.medical_id_allergies_helper),
-            singleLine = false,
-        )
+        Field(stringResource(R.string.medical_id_allergies), allergies, { allergies = it }, stringResource(R.string.medical_id_allergies_helper))
 
         Spacer(Modifier.height(8.dp))
         Text(stringResource(R.string.medical_id_doctor), style = MaterialTheme.typography.titleMedium)
         Spacer(Modifier.height(8.dp))
         Field(stringResource(R.string.medical_id_doctor_name), doctorName, { doctorName = it })
         Field(stringResource(R.string.medical_id_doctor_phone), doctorPhone, { doctorPhone = it })
-        Field(stringResource(R.string.medical_id_doctor_address), doctorAddress, { doctorAddress = it }, singleLine = false)
+        Field(stringResource(R.string.medical_id_doctor_address), doctorAddress, { doctorAddress = it })
 
         Spacer(Modifier.height(8.dp))
         Text(stringResource(R.string.medical_id_pharmacy), style = MaterialTheme.typography.titleMedium)
@@ -187,30 +197,16 @@ fun MedicalIdScreen(
         Field(stringResource(R.string.medical_id_pharmacy_name), pharmacyName, { pharmacyName = it })
         Field(stringResource(R.string.medical_id_pharmacy_phone), pharmacyPhone, { pharmacyPhone = it })
 
-        Spacer(Modifier.height(20.dp))
-        Row {
-            Button(onClick = {
-                scope.launch {
-                    try {
-                        val updated = edited(base)
-                        profileRepository.update(updated)
-                        profile = updated
-                        onBack()
-                    } catch (e: Exception) {
-                        saveError = resources.getString(R.string.medical_id_save_failed, e.message ?: resources.getString(R.string.common_unknown_error))
-                    }
-                }
-            }) { Text(stringResource(R.string.common_save)) }
-            OutlinedButton(
-                // A card headed with a placeholder is worse than no card, so
-                // this is the one field the export insists on. Every other
-                // field may legitimately be blank -- blood type and allergies
-                // print "Not recorded", and an empty contact block is omitted.
-                enabled = name.isNotBlank(),
-                onClick = { exportLauncher.launch("emivita-emergency-card.pdf") },
-                modifier = Modifier.padding(start = 12.dp),
-            ) { Text(stringResource(R.string.medical_id_export_card_pdf)) }
-        }
+        Spacer(Modifier.height(8.dp))
+        FilledTonalButton(
+            // A card headed with a placeholder is worse than no card, so
+            // this is the one field the export insists on. Every other
+            // field may legitimately be blank -- blood type and allergies
+            // print "Not recorded", and an empty contact block is omitted.
+            enabled = name.isNotBlank(),
+            onClick = { exportLauncher.launch("emivita-emergency-card.pdf") },
+            modifier = Modifier.fillMaxWidth().height(SecondaryControlHeight),
+        ) { Text(stringResource(R.string.medical_id_export_card_pdf), maxLines = 1, overflow = TextOverflow.Ellipsis) }
         if (name.isBlank()) {
             Spacer(Modifier.height(6.dp))
             Text(
@@ -223,7 +219,6 @@ fun MedicalIdScreen(
             Spacer(Modifier.height(8.dp))
             Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium)
         }
-        Spacer(Modifier.height(24.dp))
     }
 }
 
@@ -232,27 +227,9 @@ fun MedicalIdScreen(
  *  write, here it is a value to recognise and refuse to show. */
 private const val PLACEHOLDER_PROFILE_NAME = "Me"
 
+/** One field in the form's pattern, its help line below (§7 R125). */
 @Composable
-private fun Field(
-    label: String,
-    value: String,
-    onValueChange: (String) -> Unit,
-    helper: String? = null,
-    singleLine: Boolean = true,
-) {
-    OutlinedTextField(
-        value = value,
-        onValueChange = onValueChange,
-        label = { Text(label) },
-        singleLine = singleLine,
-        modifier = Modifier.fillMaxWidth(),
-    )
-    if (helper != null) {
-        Text(
-            helper,
-            style = MaterialTheme.typography.labelMedium,
-            color = MaterialTheme.colorScheme.onSurfaceVariant,
-        )
-    }
-    Spacer(Modifier.height(10.dp))
+private fun Field(label: String, value: String, onValueChange: (String) -> Unit, helper: String? = null) {
+    FormTextField(value, onValueChange, label, help = helper)
+    Spacer(Modifier.height(8.dp))
 }

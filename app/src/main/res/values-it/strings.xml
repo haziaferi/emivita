@@ -5,17 +5,16 @@
     <string name="app_name">Emivita</string>
     <string name="widget_next_reminders_label">Prossime dosi</string>
     <string name="widget_stock_levels_label">Scorte</string>
-    <string name="add_medicine_add">Aggiungi</string>
     <string name="add_medicine_add_a_tag">Aggiungi un tag</string>
     <string name="add_medicine_always_lock">Blocca sempre</string>
-    <string name="add_medicine_e_g_capsules_drops_tablet">es. capsule, gocce, compressa</string>
-    <string name="add_medicine_lock_reminders_until_taken">Blocca i promemoria finché la dose non è presa</string>
-    <string name="add_medicine_measurement_optional">Unità di misura (facoltativa)</string>
+    <string name="add_medicine_e_g_capsules_drops_tablet">es. compresse, gocce</string>
+    <string name="add_medicine_lock_reminders_until_taken">Blocca finché non presa</string>
+    <string name="add_medicine_measurement_optional">Unità</string>
     <string name="add_medicine_never_lock">Non bloccare mai</string>
-    <string name="add_medicine_storage_note_optional">Nota di conservazione (facoltativa)</string>
+    <string name="add_medicine_storage_note_optional">Conservazione</string>
     <string name="add_medicine_tags">Tag</string>
     <string name="add_medicine_use_global_default">Usa l’impostazione generale</string>
-    <string name="add_medicine_what_it_s_for_optional">A cosa serve (facoltativo)</string>
+    <string name="add_medicine_what_it_s_for_optional">A cosa serve</string>
     <string name="add_reminder_active_days">Giorni attivi</string>
     <string name="add_reminder_active_pause_cycle">Ciclo attività/pausa</string>
     <string name="add_reminder_advanced">Avanzate</string>
@@ -139,7 +138,7 @@
     <string name="settings_detail_delay_reminders_on_chosen_days">Posticipa i promemoria nei giorni scelti</string>
     <string name="settings_detail_every_reminder_posts_to_one_of_three">Ogni promemoria passa da uno dei tre canali, in base alla priorità di notifica del farmaco.</string>
     <string name="settings_detail_find_emivita_in_the_list_and_set_it_to_not">Cerca Emivita nell’elenco e impostala su «Non ottimizzata».</string>
-    <string name="settings_detail_how_long_a_snoozed_reminder_waits_before">Quanto aspetta un promemoria rinviato prima di suonare di nuovo.</string>
+    <string name="settings_detail_how_long_a_snoozed_reminder_waits_before">Quanto aspetta un promemoria rinviato</string>
     <string name="settings_detail_notifications_alerts">Notifiche e avvisi</string>
     <string name="settings_detail_open_battery_settings">Apri le impostazioni della batteria</string>
     <string name="settings_detail_open_notification_settings">Apri le impostazioni delle notifiche</string>
@@ -315,8 +314,6 @@
     <string name="medicine_not_found">Farmaco non trovato.</string>
     <string name="reminder_not_found">Promemoria non trovato.</string>
     <string name="add_medicine_scan_barcode">Scansiona il codice a barre</string>
-    <string name="add_medicine_scanned">Scansionato: %1$s</string>
-    <string name="add_medicine_change_color">Cambia colore</string>
     <string name="add_medicine_pick_color">Scegli un colore</string>
     <string name="reminder_fixed_time">Ora fissa</string>
     <string name="reminder_repeating_interval">Intervallo ripetuto</string>
@@ -397,7 +394,6 @@
     <string name="a11y_no_doses">nessuna dose</string>
     <string name="a11y_adherence_chart">Grafico dell’aderenza. %1$s</string>
     <string name="a11y_sort_by">Ordina per %1$s</string>
-    <string name="a11y_remove_tag">Rimuovi il tag %1$s</string>
     <string name="a11y_expanded">Espanso</string>
     <string name="a11y_collapsed">Compresso</string>
 
@@ -405,7 +401,7 @@
     <string name="theme_mode_light">Chiaro</string>
     <string name="theme_mode_dark">Scuro</string>
     <string name="theme_mode_system">Sistema</string>
-    <string name="medical_id_allergies_helper">Testo libero. Riportato sulla scheda esattamente come scritto qui</string>
+    <string name="medical_id_allergies_helper">Stampato sulla scheda così come scritto</string>
 
     <!-- The notifications-blocked card (§7 R58). -->
     <string name="notif_card_all_blocked_title">I promemoria non possono raggiungerti</string>
@@ -438,7 +434,7 @@
     <string name="settings_lock_until_taken_default">Blocca i promemoria finché la dose non è presa (impostazione generale)</string>
     <string name="settings_lock_until_taken_default_desc">I nuovi farmaci la ereditano; ogni farmaco può cambiarla nella propria scheda.</string>
     <string name="stock_production_date">Data di produzione</string>
-    <string name="add_medicine_notes_optional">Note (facoltative)</string>
+    <string name="add_medicine_notes_optional">Note</string>
     <string name="reminder_delete">Elimina promemoria</string>
     <string name="reminder_delete_title">Eliminare questo promemoria?</string>
     <string name="reminder_delete_body">Le dosi passate restano nello Storico. Un promemoria che segue questo viene disattivato.</string>
@@ -520,9 +516,9 @@
     <string name="add_reminder_course_desc">Si ferma da solo dopo l’ultima dose</string>
     <string name="add_reminder_doses_remaining">Dosi rimanenti</string>
     <string name="add_medicine_as_needed">Al bisogno</string>
-    <string name="add_medicine_as_needed_desc">Si prende quando serve: resta in Oggi con il pulsante Registra</string>
-    <string name="add_medicine_prn_ceiling">Limite per le dosi al bisogno (facoltativo)</string>
-    <string name="add_medicine_prn_ceiling_desc">Numero massimo di dosi in una finestra di ore a tua scelta. Quando registri una dose vedi il margine che resta; al limite chiede conferma una volta e non rifiuta mai.</string>
+    <string name="add_medicine_as_needed_desc">Resta in Oggi con il pulsante Registra</string>
+    <string name="add_medicine_prn_ceiling">Limite di dosi</string>
+    <string name="add_medicine_prn_ceiling_desc">Al limite chiede conferma, non rifiuta mai</string>
     <string name="add_medicine_prn_max">Dosi massime</string>
     <string name="add_medicine_prn_hours">Ogni quante ore</string>
     <string name="medicine_detail_journal">Diario</string>
@@ -569,9 +565,9 @@
     <string name="unit_drop">goccia</string>
     <string name="unit_puff">erogazione</string>
     <string name="unit_application">applicazione</string>
-    <string name="add_medicine_strength_optional">Dosaggio (facoltativo)</string>
-    <string name="add_medicine_strength_hint">50 mg</string>
-    <string name="add_medicine_rx_number_optional">Numero di ricetta (facoltativo)</string>
+    <string name="add_medicine_strength_optional">Dosaggio</string>
+    <string name="add_medicine_strength_hint">es. 50 mg</string>
+    <string name="add_medicine_rx_number_optional">Numero di ricetta</string>
     <string name="medicine_detail_rx">Ricetta %1$s</string>
     <string name="stock_expiry_exact_day">Giorno esatto</string>
     <string name="stock_opened_on">Aperto il</string>
@@ -724,7 +720,7 @@
     <string name="add_reminder_variable_amount_desc">Prendi apre un campo con la dose, modificabile</string>
     <string name="notif_amount_taken">Quantità presa</string>
     <!-- D-07 one-sheet add, name checks, the as-needed limit pair, Today's no-reminder section (§7 R114) -->
-    <string name="quick_add_dose_invalid">Inserisci una quantità maggiore di zero</string>
+    <string name="quick_add_dose_invalid">Maggiore di zero</string>
     <string name="quick_add_more_details">Salva e aggiungi dettagli</string>
     <string name="medicine_name_blank">Scrivi il nome del farmaco</string>
     <string name="medicine_name_duplicate">Hai già un farmaco con questo nome</string>
@@ -760,4 +756,14 @@
     <string name="add_reminder_minutes_after">Minuti dopo</string>
     <string name="add_reminder_minutes_after_range">Da 1 a 1440</string>
     <string name="add_reminder_cycle_help">Il ciclo inizia oggi</string>
+    <string name="medicine_group_details">Dettagli</string>
+    <string name="medicine_details_none">Niente aggiunto</string>
+    <string name="medicine_details_code">Codice %1$s</string>
+    <string name="medicine_details_rx">Ricetta %1$s</string>
+    <string name="medicine_sum_lock_default">Blocco: generale</string>
+    <string name="medicine_sum_lock_on">Blocco: sempre</string>
+    <string name="medicine_sum_lock_off">Blocco: mai</string>
+    <string name="medicine_barcode">Codice a barre</string>
+    <string name="medicine_scan_unavailable">Nessuna app di scansione installata</string>
+    <string name="medicine_add_tag">Aggiungi il tag</string>
 </resources>

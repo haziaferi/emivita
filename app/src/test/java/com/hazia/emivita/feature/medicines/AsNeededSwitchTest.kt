@@ -47,7 +47,7 @@ class AsNeededSwitchTest {
 
     private fun field(label: String) = compose.onNode(hasSetTextAction() and hasText(label))
     private fun switchRow() = compose.onNode(isToggleable() and hasText("As needed"))
-    private fun save(label: String = "Save") = compose.onNode(hasText(label) and hasClickAction()).performScrollTo().performClick()
+    private fun save(label: String = "Save") = compose.onNode(hasText(label) and hasClickAction()).performClick()
 
     @Test
     fun `turning it on saves an as-needed medicine, its line said beside it`() {
@@ -57,7 +57,7 @@ class AsNeededSwitchTest {
         compose.setContent { AddMedicineScreen(profileId = 1L, medicineRepository = medicines, onSaved = {}, onCancel = {}) }
         compose.waitForIdle()
         field("Name").performTextInput("Paracetamol")
-        compose.onNodeWithText("Taken when needed: stays on Today with its Log button", useUnmergedTree = true).assertExists()
+        compose.onNodeWithText("Stays on Today with its Log button", useUnmergedTree = true).assertExists()
         switchRow().performScrollTo().assertIsOff().performClick()
         switchRow().assertIsOn()
         save()
