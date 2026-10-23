@@ -57,6 +57,14 @@ class CalendarDayCellSemanticsTest {
     }
 
     @Test
+    fun aDoseStillDueIsCountedAsDueNotMissed() {
+        // §7 R119: the list passes a due dose as a count of its own, not a PENDING status.
+        compose.setContent { CalendarDayCell(day(), today = tuesday, statuses = listOf(DoseStatus.TAKEN), selected = false, onClick = {}, due = 1) }
+        compose.onNode(hasContentDescription("Tuesday 9 June", substring = true))
+            .assert(hasContentDescription("1 Taken, 1 Due", substring = true))
+    }
+
+    @Test
     fun aDayWithNothingRecordedSaysSo() {
         // "no doses" is information; silence would be ambiguous between "none"
         // and "the cell is empty for some other reason".

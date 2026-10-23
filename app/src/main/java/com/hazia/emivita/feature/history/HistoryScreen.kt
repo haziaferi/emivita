@@ -51,6 +51,8 @@ import com.hazia.emivita.core.data.export.HistoryExporter
 import com.hazia.emivita.core.data.repository.DoseEventRepository
 import com.hazia.emivita.ui.components.DoseEditDialog
 import com.hazia.emivita.ui.components.rememberCurrentDate
+import com.hazia.emivita.ui.components.rememberNowEpochMillis
+import com.hazia.emivita.core.data.entity.isMissedAt
 import com.hazia.emivita.core.format.formatDoseWithUnit
 import com.hazia.emivita.ui.theme.doseCritical
 import kotlinx.coroutines.Dispatchers
@@ -129,6 +131,8 @@ fun HistoryScreen(
     // this rolling window silently stops rolling once the screen has been
     // open across midnight. See rememberCurrentDate.
     val today = rememberCurrentDate(zone)
+    // What Due and Missed are read at (§7 R119), re-read each minute.
+    val now = rememberNowEpochMillis()
     val rangeEnd = remember(today, zone) { today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli() }
     val rangeStart = remember(today, zone) { today.minusDays(HISTORY_LOOKBACK_DAYS).atStartOfDay(zone).toInstant().toEpochMilli() }
 
@@ -184,7 +188,7 @@ fun HistoryScreen(
         scope.launch {
             exportStatus = try {
                 withContext(Dispatchers.IO) {
-                    val csv = HistoryExporter.buildCsv(rowsForExport(), zone)
+                    val csv = HistoryExporter.buildCsv(rowsForExport(), zone, System.currentTimeMillis())
                     val out = context.contentResolver.openOutputStream(uri)
                         ?: error(resources.getString(R.string.history_export_no_stream))
                     out.use { it.write(csv.toByteArray(Charsets.UTF_8)) }
@@ -201,7 +205,8 @@ fun HistoryScreen(
             exportStatus = try {
                 withContext(Dispatchers.IO) {
                     val rows = rowsForExport()
-                    val document = HistoryExporter.buildPdf(context, rows, adherenceSubtitle(context, rows, exportRange), zone)
+                    val at = System.currentTimeMillis()
+                    val document = HistoryExporter.buildPdf(context, rows, adherenceSubtitle(context, rows, exportRange, at), zone, at)
                     val out = context.contentResolver.openOutputStream(uri)
                         ?: error(resources.getString(R.string.history_export_no_stream))
                     out.use { HistoryExporter.writePdf(document, it) }
@@ -294,8 +299,8 @@ fun HistoryScreen(
                     )
                 }
                 else -> {
-                    AdherenceSummary(events)
-                    val dailyCounts = remember(events, zone, today) { dailyAdherenceCounts(events, zone, today) }
+                    AdherenceSummary(events, now)
+                    val dailyCounts = remember(events, zone, today, now) { dailyAdherenceCounts(events, zone, today, now) }
                     if (dailyCounts.any { it.total > 0 }) {
                         AdherenceChart(dailyCounts)
                         Spacer(Modifier.height(12.dp))
@@ -307,7 +312,7 @@ fun HistoryScreen(
                                 // The row itself already refuses the click for a
                                 // REFILLED entry; re-testing it here is what let
                                 // this surface and the row disagree (§7 R47).
-                                HistoryEntryRow(row, onClick = { editingId = row.doseEvent.id })
+                                HistoryEntryRow(row, now, onClick = { editingId = row.doseEvent.id })
                                 Spacer(Modifier.height(8.dp))
                             }
                             Spacer(Modifier.height(8.dp))
@@ -338,6 +343,7 @@ fun HistoryScreen(
                 else -> HistoryTableView(
                     events = exportRows,
                     zone = zone,
+                    nowEpochMillis = now,
                     onRowClick = { editingId = it.doseEvent.id },
                 )
             }
@@ -384,8 +390,8 @@ private fun defaultExportFileName(extension: String): String {
  *  count is named by the Export dialog's own label for it. */
 // Takes a Context: this builds the PDF subtitle from a coroutine, not a
 // composable, so stringResource() is out of reach (§9 #19).
-internal fun adherenceSubtitle(context: Context, events: List<DoseEventWithMedicine>, range: ExportRange): String {
-    val counts = adherenceCounts(events)
+internal fun adherenceSubtitle(context: Context, events: List<DoseEventWithMedicine>, range: ExportRange, nowEpochMillis: Long): String {
+    val counts = adherenceCounts(events, nowEpochMillis)
     val days = when (range) {
         ExportRange.LAST_30_DAYS -> 30
         ExportRange.LAST_90_DAYS -> 90
@@ -421,32 +427,32 @@ private data class AdherenceCounts(val taken: Int, val skipped: Int, val missed:
     val percent: Int get() = if (answered == 0) 0 else (taken * 100) / answered
 }
 
-/** PENDING means "fired, never resolved" -- the same reading
- *  [historyStatusLabel] gives it as "Missed" and [dailyAdherenceCounts] uses
- *  for the chart's third series. A refill is not a dose and a one-off dose is
- *  not on the list (§7 R111), so neither is in any of the three counts. */
-private fun adherenceCounts(events: List<DoseEventWithMedicine>): AdherenceCounts {
+/** Missed is [isMissedAt] (§7 R119): a pending dose whose last repeat has
+ *  passed, the reading every History row, the chart and both exports share. A
+ *  dose still due is in none of the three counts until then. A refill is not a
+ *  dose and a one-off dose is not on the list (§7 R111), so neither counts. */
+private fun adherenceCounts(events: List<DoseEventWithMedicine>, nowEpochMillis: Long): AdherenceCounts {
     val counted = events.filter { it.countsTowardAdherence }
     return AdherenceCounts(
         taken = counted.count { it.doseEvent.status == DoseStatus.TAKEN },
         skipped = counted.count { it.doseEvent.status == DoseStatus.SKIPPED },
-        missed = counted.count { it.doseEvent.status == DoseStatus.PENDING },
+        missed = counted.count { it.doseEvent.isMissedAt(nowEpochMillis) },
     )
 }
 
 /** Adherence measures the plan: only doses a reminder scheduled count (§7 R111,
- *  R112). A one-off or an as-needed dose was never planned, so it shows in
- *  History and the exports but cannot be taken against the plan or missed. */
+ *  R112), `planned` since §7 R118 so a deleted reminder's doses still do. A
+ *  one-off or an as-needed dose was never planned, so it shows in History and
+ *  the exports but cannot be taken against the plan or missed. */
 private val DoseEventWithMedicine.countsTowardAdherence: Boolean
-    get() = doseEvent.reminderId != null && !doseEvent.status.isRecordOnly
+    get() = doseEvent.planned && !doseEvent.status.isRecordOnly
 
 /** [DayAdherenceCounts] for every day in the visible [HISTORY_LOOKBACK_DAYS]
  *  window, oldest first -- including days with zero entries, so the chart's
  *  x-axis reads as a continuous 30-day span rather than only the days that
  *  happened to have a dose. Refills are excluded (see [DayAdherenceCounts]'s
- *  own doc comment); PENDING here means "fired, never resolved," same
- *  reading [historyStatusLabel] already gives it as "Missed." */
-private fun dailyAdherenceCounts(events: List<DoseEventWithMedicine>, zone: ZoneId, today: LocalDate): List<DayAdherenceCounts> {
+ *  own doc comment); missed is [isMissedAt], as in [adherenceCounts]. */
+private fun dailyAdherenceCounts(events: List<DoseEventWithMedicine>, zone: ZoneId, today: LocalDate, nowEpochMillis: Long): List<DayAdherenceCounts> {
     val windowStart = today.minusDays(HISTORY_LOOKBACK_DAYS - 1)
     val byDay = events
         .filter { it.countsTowardAdherence }
@@ -458,7 +464,7 @@ private fun dailyAdherenceCounts(events: List<DoseEventWithMedicine>, zone: Zone
             date = date,
             taken = rows.count { it.doseEvent.status == DoseStatus.TAKEN },
             skipped = rows.count { it.doseEvent.status == DoseStatus.SKIPPED },
-            missed = rows.count { it.doseEvent.status == DoseStatus.PENDING },
+            missed = rows.count { it.doseEvent.isMissedAt(nowEpochMillis) },
         )
     }
 }
@@ -474,8 +480,8 @@ private fun groupByDay(events: List<DoseEventWithMedicine>?, zone: ZoneId): List
 /** See [adherenceCounts] for what this shows and what it deliberately does
  *  not decide. */
 @Composable
-private fun AdherenceSummary(events: List<DoseEventWithMedicine>) {
-    val counts = adherenceCounts(events)
+private fun AdherenceSummary(events: List<DoseEventWithMedicine>, nowEpochMillis: Long) {
+    val counts = adherenceCounts(events, nowEpochMillis)
     // Was `if (taken + skipped == 0) return`, which hid the whole card for a
     // window containing nothing but missed doses -- the one window whose
     // summary matters most.
@@ -533,10 +539,10 @@ private fun DayHeader(date: LocalDate, today: LocalDate) {
  *  [HistoryCalendarView]'s day-detail list (both file-scoped-private in
  *  Kotlin would otherwise block cross-file reuse within this package). */
 @Composable
-internal fun HistoryEntryRow(row: DoseEventWithMedicine, onClick: () -> Unit) {
+internal fun HistoryEntryRow(row: DoseEventWithMedicine, nowEpochMillis: Long, onClick: () -> Unit) {
     val medicine = row.medicine
     val status = row.doseEvent.status
-    // Not an allow-list: a PENDING ("Missed") dose is the case §7 R46 exists to
+    // Not an allow-list: a PENDING (Due or Missed) dose is the case §7 R46 exists to
     // make correctable, and gating on the two resolved statuses is what kept it
     // uncorrectable on this row after R46 shipped (§7 R47). A REFILLED row is
     // a restock with nothing to resolve, so it stays inert -- matching
@@ -549,7 +555,7 @@ internal fun HistoryEntryRow(row: DoseEventWithMedicine, onClick: () -> Unit) {
 
     // One merged node per entry, state as stateDescription (§9 #19 Stage B);
     // see TimelineEntryRow in TodayScreen for the reasoning.
-    val statusLabel = stringResource(doseStatusLabelRes(status))
+    val statusLabel = stringResource(doseStatusLabelRes(row.doseEvent, nowEpochMillis))
     val editLabel = stringResource(R.string.a11y_edit_dose)
     Surface(
         shape = RoundedCornerShape(14.dp),

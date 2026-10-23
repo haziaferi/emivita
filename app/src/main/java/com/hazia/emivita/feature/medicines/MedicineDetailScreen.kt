@@ -36,6 +36,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -86,6 +87,13 @@ fun MedicineDetailScreen(
     }
     val reminders by produceState<List<Reminder>>(initialValue = emptyList(), medicineId) {
         reminderRepository.observeForMedicine(medicineId).collect { value = it }
+    }
+    // The reminders a following dose follows, which may be another medicine's,
+    // so its row can name the one it comes after (§7 R120).
+    val parents by produceState<Map<Long, Reminder>>(initialValue = emptyMap(), reminders) {
+        value = reminders.mapNotNull { it.parentReminderId }.distinct()
+            .mapNotNull { id -> reminders.firstOrNull { it.id == id } ?: reminderRepository.getById(id) }
+            .associateBy { it.id }
     }
     var showOverflowMenu by remember { mutableStateOf(false) }
     var showDeleteConfirm by remember { mutableStateOf(false) }
@@ -220,6 +228,8 @@ fun MedicineDetailScreen(
                     items(reminders, key = { it.id }) { reminder ->
                         ReminderRow(
                             reminder = reminder,
+                            doseUnit = medicine?.doseUnit,
+                            parent = reminder.parentReminderId?.let { parents[it] },
                             onEdit = { onEditReminder(reminder.id) },
                             onEnabledChange = { enabled -> scope.launch { reminderRepository.setEnabled(reminder, enabled) } },
                         )
@@ -268,11 +278,22 @@ fun MedicineDetailScreen(
  * they do different things, so the switch carries its own label ("Enabled,
  * Fixed time"). An alert reminder (low stock / expiry) has no switch here,
  * since the stock screen owns those.
+ *
+ * Its text is [reminderRowText], "08:00 · Daily · 1 drops", with the kind
+ * beneath it (§7 R120); an alert keeps its kind as its text.
  */
 @Composable
-internal fun ReminderRow(reminder: Reminder, onEdit: () -> Unit, onEnabledChange: (Boolean) -> Unit) {
+internal fun ReminderRow(
+    reminder: Reminder,
+    onEdit: () -> Unit,
+    onEnabledChange: (Boolean) -> Unit,
+    doseUnit: String? = null,
+    parent: Reminder? = null,
+) {
     val isAlert = reminder.type == ReminderType.LOW_STOCK_ALERT || reminder.type == ReminderType.EXPIRATION_ALERT
     val typeLabel = stringResource(reminder.type.labelRes())
+    val resources = LocalResources.current
+    val summary = remember(reminder, doseUnit, parent, resources) { reminderRowText(reminder, doseUnit, parent, resources) }
     val switchLabel = stringResource(R.string.reminder_enabled_switch, typeLabel)
     Surface(
         shape = RoundedCornerShape(12.dp),
@@ -284,7 +305,14 @@ internal fun ReminderRow(reminder: Reminder, onEdit: () -> Unit, onEnabledChange
     ) {
         Row(Modifier.padding(horizontal = 12.dp, vertical = 4.dp), verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f).padding(vertical = 8.dp)) {
-                Text(typeLabel, style = MaterialTheme.typography.bodyMedium)
+                Text(summary ?: typeLabel, style = MaterialTheme.typography.bodyMedium)
+                if (summary != null) {
+                    Text(
+                        typeLabel,
+                        style = MaterialTheme.typography.labelSmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                }
                 if (!reminder.enabled) {
                     Text(
                         stringResource(R.string.reminder_paused),

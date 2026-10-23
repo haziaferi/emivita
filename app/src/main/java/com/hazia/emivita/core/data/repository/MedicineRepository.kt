@@ -192,15 +192,12 @@ class MedicineRepository(
 
     /** Cascade delete (spec §9 #1's deferred data-integrity question,
      *  resolved: cascade) -- removes the medicine's Reminders and every
-     *  DoseEvent tied to it, scheduled or PRN. `reminders.medicineId` is
-     *  already a CASCADE FK, so deleting the Medicine row alone would
-     *  transitively take reminder-linked DoseEvents with it (their own FK
-     *  is CASCADE too) -- but PRN/refill DoseEvents only carry a
-     *  denormalized `medicineId`, no FK, so [DoseEventDao.deleteAllForMedicine]
-     *  is what actually catches those. Alarms are OS state, not DB rows --
-     *  Room's cascade can't touch AlarmManager, so every reminder's pending
-     *  alarm (regular + nag) is explicitly cancelled first via
-     *  [SchedulingCoordinator.onReminderRemoved]. */
+     *  DoseEvent tied to it, scheduled or PRN. `reminders.medicineId` is a
+     *  CASCADE FK, but since §7 R118 a reminder's own deletion keeps its doses
+     *  (SET NULL), so every DoseEvent, a deleted reminder's included, goes by
+     *  its denormalized `medicineId` in [DoseEventDao.deleteAllForMedicine].
+     *  Alarms are OS state, not DB rows, so every reminder's pending alarm
+     *  (regular + nag) is cancelled via [SchedulingCoordinator.onReminderRemoved]. */
     suspend fun delete(medicine: Medicine) {
         val reminderIds = reminderDao.observeForMedicine(medicine.id).first().map { it.id }
         // The due doses' notifications go with them (§7 R113).

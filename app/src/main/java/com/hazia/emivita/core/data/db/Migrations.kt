@@ -271,10 +271,47 @@ object Migrations {
         }
     }
 
+    /** v12 -> v13 (§7 R118, R119): the `dose_events.reminderId` FK goes from
+     *  CASCADE to SET NULL, with `planned` (backfilled `reminderId IS NOT NULL`)
+     *  and `missedAfterEpochMillis` (a pending dose of a repeating reminder: its
+     *  last repeat under the reminder's present settings, else null) added.
+     *  SQLite cannot change an FK in place, so the table is rebuilt as
+     *  MIGRATION_10_11 rebuilt it, with Room's own v13 DDL. */
+    val MIGRATION_12_13 = object : Migration(12, 13) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL(
+                "CREATE TABLE IF NOT EXISTS `dose_events_new` (" +
+                    "`id` INTEGER PRIMARY KEY AUTOINCREMENT NOT NULL, `reminderId` INTEGER, `medicineId` INTEGER, " +
+                    "`scheduledEpochMillis` INTEGER NOT NULL, `doseAmount` REAL NOT NULL, `status` TEXT NOT NULL, " +
+                    "`resolvedAtEpochMillis` INTEGER, `stockBefore` REAL NOT NULL, `stockAfter` REAL NOT NULL, " +
+                    "`repeatCount` INTEGER NOT NULL, `notes` TEXT, `createdAtEpochMillis` INTEGER NOT NULL, " +
+                    "`customName` TEXT, `customProfileId` INTEGER, `planned` INTEGER NOT NULL, `missedAfterEpochMillis` INTEGER, " +
+                    "FOREIGN KEY(`reminderId`) REFERENCES `reminders`(`id`) ON UPDATE NO ACTION ON DELETE SET NULL , " +
+                    "FOREIGN KEY(`customProfileId`) REFERENCES `profiles`(`id`) ON UPDATE NO ACTION ON DELETE CASCADE )",
+            )
+            val columns = "id, reminderId, medicineId, scheduledEpochMillis, doseAmount, status, resolvedAtEpochMillis, " +
+                "stockBefore, stockAfter, repeatCount, notes, createdAtEpochMillis, customName, customProfileId"
+            db.execSQL(
+                "INSERT INTO dose_events_new ($columns, planned, missedAfterEpochMillis) " +
+                    "SELECT $columns, reminderId IS NOT NULL, " +
+                    "CASE WHEN status = 'PENDING' THEN (SELECT dose_events.scheduledEpochMillis + reminders.repeat_delayMinutes * reminders.repeat_maxRepeats * 60000 " +
+                    "FROM reminders WHERE reminders.id = dose_events.reminderId AND reminders.repeat_delayMinutes IS NOT NULL " +
+                    "AND reminders.repeat_maxRepeats IS NOT NULL) END " +
+                    "FROM dose_events",
+            )
+            db.execSQL("DROP TABLE dose_events")
+            db.execSQL("ALTER TABLE dose_events_new RENAME TO dose_events")
+            db.execSQL("CREATE UNIQUE INDEX IF NOT EXISTS `index_dose_events_reminderId_scheduledEpochMillis` ON `dose_events` (`reminderId`, `scheduledEpochMillis`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_dose_events_scheduledEpochMillis` ON `dose_events` (`scheduledEpochMillis`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_dose_events_medicineId` ON `dose_events` (`medicineId`)")
+            db.execSQL("CREATE INDEX IF NOT EXISTS `index_dose_events_customProfileId` ON `dose_events` (`customProfileId`)")
+        }
+    }
+
     /** Every migration, oldest first: the database and its migration tests open
      *  through the same list. */
     val ALL: Array<Migration> by lazy {
-        arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
+        arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
     }
 
     /** v9 -> v10 (§7 R109, Appendix E B-42 and B-45): two per-reminder flags,

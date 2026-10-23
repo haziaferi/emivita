@@ -6,6 +6,7 @@ import java.text.ParsePosition
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
+import java.time.ZoneOffset
 import java.time.format.DateTimeFormatter
 import java.util.Locale
 
@@ -32,6 +33,10 @@ object LocaleFormats {
         val skeletonName = when (hour24) { true -> "Hm"; false -> "hm"; null -> "jm" }
         return Instant.ofEpochMilli(epochMillis).atZone(zone).format(skeleton(skeletonName, locale))
     }
+
+    /** [time] for a time of day with no date: a reminder's own 08:00 (§7 R120). */
+    fun timeOfDay(hour: Int, minute: Int, locale: Locale = Locale.getDefault()): String =
+        time(LocalDate.of(2000, 1, 1).atTime(hour, minute).toInstant(ZoneOffset.UTC).toEpochMilli(), ZoneOffset.UTC, locale)
 
     /** "Fri, Sep 12" / "ven 12 set". */
     fun weekdayMonthDay(date: LocalDate, locale: Locale = Locale.getDefault()): String =

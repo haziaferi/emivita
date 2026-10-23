@@ -31,6 +31,11 @@ class HistoryEntryRowTest {
     @get:Rule
     val compose = createComposeRule()
 
+    private companion object {
+        /** A fixed clock (§7 R119): a day after the slot, so a pending dose is missed. */
+        const val NOW = 1_700_086_400_000L
+    }
+
     private fun medicine() = Medicine(
         id = 1L,
         profileId = 1L,
@@ -55,7 +60,7 @@ class HistoryEntryRowTest {
 
     private fun clicksFor(status: DoseStatus): Int {
         var clicks = 0
-        compose.setContent { HistoryEntryRow(row(status), onClick = { clicks++ }) }
+        compose.setContent { HistoryEntryRow(row(status), NOW, onClick = { clicks++ }) }
         compose.onNodeWithText("Sertraline").performClick()
         compose.waitForIdle()
         return clicks
@@ -93,7 +98,7 @@ class HistoryEntryRowTest {
         // PENDING is relabelled "Missed" everywhere it is shown; the semantic
         // state must say the same, or a screen reader hears "pending" for a
         // dose the screen calls missed.
-        compose.setContent { HistoryEntryRow(row(DoseStatus.PENDING), onClick = {}) }
+        compose.setContent { HistoryEntryRow(row(DoseStatus.PENDING), NOW, onClick = {}) }
         compose.onNode(androidx.compose.ui.test.hasStateDescription("Missed"))
             .assert(hasRole(androidx.compose.ui.semantics.Role.Button))
             .assert(androidx.compose.ui.test.hasText("Sertraline", substring = true))
@@ -101,8 +106,17 @@ class HistoryEntryRowTest {
     }
 
     @Test
+    fun aDoseWhoseRepeatsAreNotOverSaysDue() {
+        // §7 R119: due until its last repeat, Missed only after it.
+        val due = row(DoseStatus.PENDING).let { it.copy(doseEvent = it.doseEvent.copy(missedAfterEpochMillis = NOW + 1)) }
+        compose.setContent { HistoryEntryRow(due, NOW, onClick = {}) }
+        compose.onNode(androidx.compose.ui.test.hasStateDescription("Due")).assertHasClickAction()
+        compose.onNode(androidx.compose.ui.test.hasText("Due", substring = true)).assertExists()
+    }
+
+    @Test
     fun aRefillAnnouncesItsStateWithoutBeingAButton() {
-        compose.setContent { HistoryEntryRow(row(DoseStatus.REFILLED), onClick = {}) }
+        compose.setContent { HistoryEntryRow(row(DoseStatus.REFILLED), NOW, onClick = {}) }
         compose.onNode(androidx.compose.ui.test.hasStateDescription("Refilled")).assertHasNoClickAction()
     }
 }

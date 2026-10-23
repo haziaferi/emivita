@@ -26,11 +26,11 @@ val DoseStatus.isAlertSeen: Boolean
 @Entity(
     tableName = "dose_events",
     foreignKeys = [
-        // ON DELETE CASCADE only applies when reminderId is non-null; SQLite FK
-        // enforcement is a no-op for NULL FK columns, which is exactly what a PRN/
-        // ad-hoc-logged event (reminderId = null) needs -- it isn't tied to any
-        // reminder's lifecycle at all.
-        ForeignKey(entity = Reminder::class, parentColumns = ["id"], childColumns = ["reminderId"], onDelete = ForeignKey.CASCADE),
+        // SET NULL, not CASCADE (§7 R118): deleting a reminder keeps the doses
+        // it scheduled, as its dialog promises ("Its past doses stay in
+        // History"); the phone check found a fired dose gone with its reminder.
+        // [planned] keeps saying the dose was scheduled once reminderId is null.
+        ForeignKey(entity = Reminder::class, parentColumns = ["id"], childColumns = ["reminderId"], onDelete = ForeignKey.SET_NULL),
         // A one-off dose (§7 R111, C-15) has no medicine to take a profile from,
         // so it names its own, and goes with the profile as its medicines do.
         ForeignKey(entity = Profile::class, parentColumns = ["id"], childColumns = ["customProfileId"], onDelete = ForeignKey.CASCADE),
@@ -53,7 +53,8 @@ val DoseStatus.isAlertSeen: Boolean
 data class DoseEvent(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     // Nullable -- null marks a manually-logged (PRN) dose not tied to any scheduled
-    // occurrence. See DoseEventRepository.logAdhocDose (spec §3/§9 #2).
+    // occurrence. See DoseEventRepository.logAdhocDose (spec §3/§9 #2). Also
+    // null on a dose whose reminder was deleted (§7 R118); [planned] tells the two apart.
     val reminderId: Long? = null,
     // Denormalized, copied from the reminder at materialization time and stored
     // directly on a PRN event, which has no reminder to derive it from. Null only
@@ -90,6 +91,16 @@ data class DoseEvent(
      *  name and its profile, with no medicine row behind it. */
     val customName: String? = null,
     val customProfileId: Long? = null,
+    /** A reminder scheduled this dose (§7 R118): what adherence counts. Set by
+     *  the one path that materialises scheduled doses and kept when the
+     *  reminder is deleted and [reminderId] goes null. The default derives it
+     *  for a row written without it, a backup older than the field included,
+     *  the way MIGRATION_12_13 backfills it. */
+    val planned: Boolean = reminderId != null,
+    /** When this dose, still PENDING, stops being due and reads Missed (§7 R119):
+     *  the last repeat of its notification, written when it fires, is snoozed
+     *  or is moved. Null reads as [scheduledEpochMillis]: missed at once. */
+    val missedAfterEpochMillis: Long? = null,
 )
 
 /** A one-off dose (§7 R111): not scheduled, so it never counts as missed, and
@@ -101,3 +112,25 @@ val DoseEvent.isOneOff: Boolean
 val DoseEvent.hasOneSubject: Boolean
     get() = if (medicineId != null) customName == null && customProfileId == null
     else !customName.isNullOrBlank() && customProfileId != null
+
+/** The instant a PENDING dose becomes Missed (§7 R119); see [DoseEvent.missedAfterEpochMillis]. */
+val DoseEvent.missedFromEpochMillis: Long
+    get() = missedAfterEpochMillis ?: scheduledEpochMillis
+
+/** The owner's rule (§7 R119, 2026-10-23): a PENDING dose is Due while its
+ *  notification is up or will repeat, and Missed after the last repeat. The
+ *  one test History, its chart and counts, the PDF and the CSV all read. */
+fun DoseEvent.isMissedAt(nowEpochMillis: Long): Boolean =
+    status == DoseStatus.PENDING && nowEpochMillis >= missedFromEpochMillis
+
+/** The other half of [isMissedAt]: counted neither taken nor missed. */
+fun DoseEvent.isDueAt(nowEpochMillis: Long): Boolean =
+    status == DoseStatus.PENDING && nowEpochMillis < missedFromEpochMillis
+
+/** The deadline a notification shown at [shownAtEpochMillis] sets (§7 R119):
+ *  the repeats still owed under [repeat] after [repeatCount], [RepeatConfig.delayMinutes]
+ *  apart; with none configured or none left, the moment it is shown. */
+fun missedAfterShowing(shownAtEpochMillis: Long, repeat: RepeatConfig?, repeatCount: Int): Long {
+    val left = repeat?.let { (it.maxRepeats - repeatCount).coerceAtLeast(0) } ?: 0
+    return shownAtEpochMillis + left * (repeat?.delayMinutes ?: 0) * 60_000L
+}

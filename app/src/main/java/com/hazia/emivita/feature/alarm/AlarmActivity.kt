@@ -214,11 +214,13 @@ private suspend fun snoozeAndDismiss(container: AppContainer, context: Context, 
     val event = container.doseEventRepository.getById(doseEventId)
     val reminderId = event?.reminderId
     if (event != null && reminderId != null) {
+        val fireAt = System.currentTimeMillis() + snoozeMinutes * 60_000L
+        container.doseEventRepository.recordSnoozed(doseEventId, fireAt)
         container.alarmScheduler.scheduleSnooze(
             reminderId = reminderId,
             doseEventId = doseEventId,
             originalScheduledEpochMillis = event.scheduledEpochMillis,
-            fireAtEpochMillis = System.currentTimeMillis() + snoozeMinutes * 60_000L,
+            fireAtEpochMillis = fireAt,
         )
     }
     ReminderNotifications.dismiss(context, doseEventId)

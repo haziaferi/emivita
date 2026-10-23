@@ -165,11 +165,13 @@ class ReminderActionReceiver : BroadcastReceiver() {
                     return
                 }
                 val snoozeMinutes = container.settingsRepository.snoozeDurationMinutes.first()
+                val fireAt = System.currentTimeMillis() + snoozeMinutes * 60_000L
+                container.doseEventRepository.recordSnoozed(doseEventId, fireAt)
                 container.alarmScheduler.scheduleSnooze(
                     reminderId = reminderId,
                     doseEventId = doseEventId,
                     originalScheduledEpochMillis = doseEvent.scheduledEpochMillis,
-                    fireAtEpochMillis = System.currentTimeMillis() + snoozeMinutes * 60_000L,
+                    fireAtEpochMillis = fireAt,
                 )
                 dismissNotification(context, doseEventId)
             }
