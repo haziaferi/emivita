@@ -29,7 +29,8 @@ private val TIME_FORMAT = DateTimeFormatter.ofPattern("HH:mm")
  * Both entry points take rows already in report order and never re-sort.
  */
 object HistoryExporter {
-    fun buildCsv(rows: List<DoseEventWithMedicine>, zone: ZoneId = ZoneId.systemDefault()): String {
+    /** [nowEpochMillis] reads each pending dose as Due or Missed (§7 R119). */
+    fun buildCsv(rows: List<DoseEventWithMedicine>, zone: ZoneId, nowEpochMillis: Long): String {
         val builder = StringBuilder()
         // Dose and Measurement stay separate columns, unlike the in-app Table
         // view, so a plain numeric Dose column stays usable for SUM() and sorting.
@@ -47,7 +48,7 @@ object HistoryExporter {
             builder.append(scheduled.format(TIME_FORMAT)).append(',')
             builder.append(recorded).append(',')
             builder.append(csvEscape(row.displayName)).append(',')
-            builder.append(csvStatusLabel(row.doseEvent.status)).append(',')
+            builder.append(csvStatusLabel(row.doseEvent, nowEpochMillis)).append(',')
             builder.append(formatDecimal(row.doseEvent.doseAmount)).append(',')
             builder.append(csvEscape(row.doseUnit ?: "")).append(',')
             builder.append(csvEscape(row.doseEvent.notes ?: "")).append('\n')
@@ -74,7 +75,8 @@ object HistoryExporter {
         context: Context,
         rows: List<DoseEventWithMedicine>,
         subtitle: String,
-        zone: ZoneId = ZoneId.systemDefault(),
+        zone: ZoneId,
+        nowEpochMillis: Long,
     ): PdfDocument {
         val pageWidth = 595 // A4 at 72dpi
         val pageHeight = 842
@@ -125,7 +127,7 @@ object HistoryExporter {
             canvas!!.drawText(scheduled.format(DATE_FORMAT), colDate, y, rowPaint)
             canvas.drawText(time, colTime, y, rowPaint)
             canvas.drawText(row.displayName.take(28), colMedicine, y, rowPaint)
-            canvas.drawText(context.getString(doseStatusLabelRes(row.doseEvent.status)), colStatus, y, rowPaint)
+            canvas.drawText(context.getString(doseStatusLabelRes(row.doseEvent, nowEpochMillis)), colStatus, y, rowPaint)
             // A seen alert (§7 R105) has no amount; the CSV keeps its 0, as data.
             if (!row.doseEvent.status.isAlertSeen) {
                 canvas.drawText(formatDoseWithUnit(row.doseEvent.doseAmount, row.doseUnit, context.resources), colDose, y, rowPaint)

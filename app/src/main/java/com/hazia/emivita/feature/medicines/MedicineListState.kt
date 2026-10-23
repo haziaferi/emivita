@@ -58,7 +58,7 @@ fun cardStateFor(
     todayStartEpochMillis: Long,
     todayEndEpochMillis: Long,
 ): MedicineCardState {
-    val mine = todayEvents.filter { it.medicineId == medicine.id && it.reminderId != null }
+    val mine = todayEvents.filter { it.medicineId == medicine.id && it.planned }
     val projectedToday = projected.any {
         it.medicineId == medicine.id && it.epochMillis >= nowEpochMillis && it.epochMillis in todayStartEpochMillis until todayEndEpochMillis
     }

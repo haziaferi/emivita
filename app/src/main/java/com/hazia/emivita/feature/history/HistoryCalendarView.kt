@@ -37,6 +37,8 @@ import com.hazia.emivita.core.data.entity.DoseStatus
 import com.hazia.emivita.core.data.entity.isRecordOnly
 import com.hazia.emivita.core.data.repository.DoseEventRepository
 import com.hazia.emivita.ui.components.rememberCurrentDate
+import com.hazia.emivita.ui.components.rememberNowEpochMillis
+import com.hazia.emivita.core.data.entity.isDueAt
 import com.hazia.emivita.ui.theme.EmivitaTheme
 import com.kizitonwose.calendar.compose.CalendarState
 import com.kizitonwose.calendar.compose.HorizontalCalendar
@@ -91,6 +93,8 @@ fun HistoryCalendarView(
     // for the whole grid, and it keeps tracking after midnight so the
     // today-marker doesn't stay stuck on the day the screen opened.
     val today = rememberCurrentDate(zone)
+    // Due or Missed (§7 R119), read at the same clock as the list.
+    val now = rememberNowEpochMillis()
     val currentMonth = remember(today, zone) { YearMonth.now(zone) }
     val startMonth = remember { currentMonth.minusMonths(24) }
     val daysOfWeek = remember { daysOfWeek() }
@@ -129,7 +133,9 @@ fun HistoryCalendarView(
                 CalendarDayCell(
                     day = day,
                     today = today,
-                    statuses = byDay[day.date]?.map { it.doseEvent.status }.orEmpty(),
+                    // A dose still due is neither a dot nor a missed one (§7 R119).
+                    statuses = byDay[day.date]?.filterNot { it.doseEvent.isDueAt(now) }?.map { it.doseEvent.status }.orEmpty(),
+                    due = byDay[day.date]?.count { it.doseEvent.isDueAt(now) } ?: 0,
                     selected = day.date == selectedDate,
                     onClick = { selectedDate = if (selectedDate == day.date) null else day.date },
                 )
@@ -140,6 +146,7 @@ fun HistoryCalendarView(
             selectedDate = selectedDate,
             entries = selectedDate?.let { byDay[it].orEmpty().sortedByDescending { row -> row.doseEvent.scheduledEpochMillis } },
             monthLoading = monthEvents == null,
+            nowEpochMillis = now,
             onEntryClick = onEntryClick,
         )
     }
@@ -150,6 +157,7 @@ private fun CalendarSelectedDayPanel(
     selectedDate: LocalDate?,
     entries: List<DoseEventWithMedicine>?,
     monthLoading: Boolean,
+    nowEpochMillis: Long,
     onEntryClick: (DoseEventWithMedicine) -> Unit,
 ) {
     Column(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
@@ -183,7 +191,7 @@ private fun CalendarSelectedDayPanel(
                     // Gate lives in HistoryEntryRow itself (§7 R47) -- this
                     // callback used to repeat it, which is how the row's own
                     // stricter allow-list went unnoticed here.
-                    HistoryEntryRow(row, onClick = { onEntryClick(row) })
+                    HistoryEntryRow(row, nowEpochMillis, onClick = { onEntryClick(row) })
                     Spacer(Modifier.height(8.dp))
                 }
             }
@@ -211,12 +219,12 @@ private fun DaysOfWeekTitle(daysOfWeek: List<DayOfWeek>) {
 }
 
 @Composable
-internal fun CalendarDayCell(day: CalendarDay, today: LocalDate, statuses: List<DoseStatus>, selected: Boolean, onClick: () -> Unit) {
+internal fun CalendarDayCell(day: CalendarDay, today: LocalDate, statuses: List<DoseStatus>, selected: Boolean, onClick: () -> Unit, due: Int = 0) {
     val inMonth = day.position == DayPosition.MonthDate
     // Accessibility (spec §9 #19 Stage B; R55): the dots below carry state by
     // colour alone, so the description names the date and counts each status
     // for a screen reader.
-    val description = calendarDayDescription(day.date, statuses)
+    val description = calendarDayDescription(day.date, statuses, due)
     val showDoses = stringResource(R.string.a11y_show_doses)
     Box(
         modifier = Modifier
@@ -252,7 +260,7 @@ internal fun CalendarDayCell(day: CalendarDay, today: LocalDate, statuses: List<
             Row(Modifier.height(6.dp), horizontalArrangement = Arrangement.spacedBy(2.dp)) {
                 if (statuses.contains(DoseStatus.TAKEN)) DayDot(MaterialTheme.colorScheme.primary)
                 // PENDING here is what doseStatusLabelRes renders as "Missed" --
-                // fired and never resolved -- so it takes the same pair as
+                // past its last repeat, due ones filtered out above -- so it takes the same pair as
                 // AdherenceChart's series rather than a second opinion about the
                 // same two states. Neither is an error: see Color.kt.
                 if (statuses.contains(DoseStatus.SKIPPED)) DayDot(MaterialTheme.colorScheme.outline)
@@ -268,7 +276,7 @@ internal fun CalendarDayCell(day: CalendarDay, today: LocalDate, statuses: List<
  * Internal so the Compose test can pin the wording.
  */
 @Composable
-internal fun calendarDayDescription(date: LocalDate, statuses: List<DoseStatus>): String {
+internal fun calendarDayDescription(date: LocalDate, statuses: List<DoseStatus>, due: Int = 0): String {
     val dateText = date.format(DateTimeFormatter.ofPattern("EEEE d MMMM", Locale.current.platformLocale))
     val parts = listOf(
         DoseStatus.TAKEN to R.string.status_taken,
@@ -277,7 +285,7 @@ internal fun calendarDayDescription(date: LocalDate, statuses: List<DoseStatus>)
     ).mapNotNull { (status, label) ->
         val n = statuses.count { it == status }
         if (n == 0) null else stringResource(R.string.a11y_count_status, n, stringResource(label))
-    }
+    } + listOfNotNull(if (due == 0) null else stringResource(R.string.a11y_count_status, due, stringResource(R.string.status_due)))
     val counts = if (parts.isEmpty()) stringResource(R.string.a11y_no_doses) else parts.joinToString(", ")
     return stringResource(R.string.a11y_calendar_day, dateText, counts)
 }

@@ -378,6 +378,14 @@
     <string name="reminder_label_at">%1$s – %2$s</string>
     <string name="reminder_label_every_hours">%1$s – ogni %2$s h</string>
     <string name="reminder_label_plus_minutes">%1$s – +%2$d min</string>
+    <!-- A reminder row on the medicine page (§7 R120): when, how often, how much. -->
+    <string name="reminder_row_every_hours">Ogni %1$s h</string>
+    <string name="reminder_row_after_parent">%1$s dopo %2$s</string>
+    <plurals name="reminder_row_every_n_days">
+        <item quantity="one">Ogni %1$d giorno</item>
+        <item quantity="many">Ogni %1$d giorni</item>
+        <item quantity="other">Ogni %1$d giorni</item>
+    </plurals>
     <string name="stock_section_low_stock">Avviso di scorta bassa</string>
 
     <!-- Accessibility (§9 #19 Stage B). -->
@@ -413,7 +421,7 @@
     <string name="add_medicine_notification_priority">Priorità di notifica</string>
 
     <!-- Stage A part 4 (§7 R60): -->
-    <string name="notif_dose_body">Dose di %1$s alle %2$s</string>
+    <string name="notif_dose_body">%1$s alle %2$s</string>
     <string name="widget_runs_out">Finisce il %1$s</string>
     <string name="widget_no_imminent_run_out">Nessuna scorta in esaurimento</string>
     <string name="stock_runs_out">Finisce: %1$s</string>

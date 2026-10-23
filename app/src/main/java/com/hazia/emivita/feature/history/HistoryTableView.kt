@@ -67,6 +67,7 @@ private enum class HistoryTableColumn(@StringRes val label: Int, val weight: Flo
 fun HistoryTableView(
     events: List<DoseEventWithMedicine>,
     zone: ZoneId,
+    nowEpochMillis: Long,
     onRowClick: (DoseEventWithMedicine) -> Unit,
 ) {
     var sortColumn by remember { mutableStateOf(HistoryTableColumn.DATE) }
@@ -102,7 +103,7 @@ fun HistoryTableView(
         HorizontalDivider()
         LazyColumn(contentPadding = PaddingValues(bottom = 8.dp)) {
             items(sorted, key = { it.doseEvent.id }) { row ->
-                HistoryTableRow(row, zone, onClick = {
+                HistoryTableRow(row, zone, nowEpochMillis, onClick = {
                     if (!row.doseEvent.status.isRecordOnly) onRowClick(row) // §7 R46
                 })
                 HorizontalDivider(color = MaterialTheme.colorScheme.outlineVariant)
@@ -142,7 +143,7 @@ private fun HistoryTableHeader(sortColumn: HistoryTableColumn, descending: Boole
 }
 
 @Composable
-private fun HistoryTableRow(row: DoseEventWithMedicine, zone: ZoneId, onClick: () -> Unit) {
+private fun HistoryTableRow(row: DoseEventWithMedicine, zone: ZoneId, nowEpochMillis: Long, onClick: () -> Unit) {
     val medicine = row.medicine
     val accent = medicine?.color?.let { parseHexColor(it) } ?: NeutralMedicineAccent
     val editable = !row.doseEvent.status.isRecordOnly
@@ -179,7 +180,7 @@ private fun HistoryTableRow(row: DoseEventWithMedicine, zone: ZoneId, onClick: (
                 )
             }
             Text(
-                stringResource(doseStatusLabelRes(row.doseEvent.status)),
+                stringResource(doseStatusLabelRes(row.doseEvent, nowEpochMillis)),
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                 modifier = Modifier.weight(HistoryTableColumn.STATUS.weight),

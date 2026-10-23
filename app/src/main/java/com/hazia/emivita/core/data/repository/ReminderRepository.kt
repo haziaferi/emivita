@@ -234,9 +234,9 @@ class ReminderRepository(
      *  `parentReminderId` as part of it. One level down only, matching
      *  [getChildrenOf] and [setEnabled]: a grandchild is not orphaned, just
      *  following a parent that no longer fires. */
-    suspend fun delete(reminder: Reminder) {
+    suspend fun delete(reminder: Reminder, nowEpochMillis: Long = System.currentTimeMillis()) {
         val children = reminderDao.getChildrenOf(reminder.id)
-        // Its doses go with it by the FK cascade, so their notifications go
+        // Nothing can answer its due doses' notifications any more, so they go
         // first: a sticky one had nothing left to answer it (§7 R113).
         val showing = database.doseEventDao().pendingIds(reminder.id, null)
 
@@ -244,6 +244,12 @@ class ReminderRepository(
             for (child in children) {
                 reminderDao.update(child.copy(enabled = false))
             }
+            // Its doses stay, as the dialog says (§7 R118): the FK sets their
+            // reminderId to null and `planned` keeps them in adherence. A pending
+            // one still to come goes, since nothing will fire it; one whose time
+            // has passed stays and, with no repeats left, reads Missed (§7 R119).
+            database.doseEventDao().deletePendingAfter(reminder.id, nowEpochMillis)
+            database.doseEventDao().clearMissedAfterOfPending(reminder.id)
             reminderDao.delete(reminder)
         }
 

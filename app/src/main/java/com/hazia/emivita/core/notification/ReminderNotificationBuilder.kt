@@ -17,6 +17,7 @@ import com.hazia.emivita.core.scheduling.EXTRA_REMINDER_ID
 import com.hazia.emivita.core.scheduling.ReminderActionReceiver
 import com.hazia.emivita.feature.alarm.AlarmActivity
 import com.hazia.emivita.core.format.formatDecimalLocalized
+import com.hazia.emivita.core.format.formatDoseWithUnit
 import com.hazia.emivita.core.format.maskedMedicineName
 import kotlinx.coroutines.flow.first
 import com.hazia.emivita.core.format.LocaleFormats
@@ -257,7 +258,10 @@ class ReminderNotificationBuilder(
 
     private fun contentText(doseEvent: DoseEvent, reminder: Reminder, medicine: Medicine): String {
         val time = LocaleFormats.time(doseEvent.scheduledEpochMillis)
-        val parts = mutableListOf(context.getString(R.string.notif_dose_body, formatDecimalLocalized(doseEvent.doseAmount), time))
+        // The amount with its unit, then the time (§7 R120, the owner's pick):
+        // "1 gocce alle 08:00", the dose text Today shows.
+        val dose = formatDoseWithUnit(doseEvent.doseAmount, medicine.doseUnit, context.resources)
+        val parts = mutableListOf(context.getString(R.string.notif_dose_body, dose, time))
         // Instructions first (§9 #26; medTimer MT-06): "with food" is the one
         // line that belongs on the notification, before the stock count.
         reminder.instructions?.takeIf { it.isNotBlank() }?.let { parts += it }

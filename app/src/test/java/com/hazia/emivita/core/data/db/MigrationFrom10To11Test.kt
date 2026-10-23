@@ -123,9 +123,9 @@ class MigrationFrom10To11Test {
             ),
             query("SELECT name FROM sqlite_master WHERE type = 'index' AND tbl_name = 'dose_events' AND name LIKE 'index_%' ORDER BY name").map { it[0] },
         )
-        // table, from, to, on_delete
+        // table, from, to, on_delete; the reminders FK is SET NULL since v13 (§7 R118)
         assertEquals(
-            listOf(listOf("profiles", "customProfileId", "id", "CASCADE"), listOf("reminders", "reminderId", "id", "CASCADE")),
+            listOf(listOf("profiles", "customProfileId", "id", "CASCADE"), listOf("reminders", "reminderId", "id", "SET NULL")),
             query("SELECT \"table\", \"from\", \"to\", on_delete FROM pragma_foreign_key_list('dose_events') ORDER BY \"table\""),
         )
         assertEquals("medicineId now takes null", listOf(listOf("medicineId", "0")), query("SELECT name, \"notnull\" FROM pragma_table_info('dose_events') WHERE name = 'medicineId'"))
@@ -137,9 +137,11 @@ class MigrationFrom10To11Test {
     }
 
     @Test
-    fun `deleting the reminder still cascades to its doses and leaves the as-needed ones`() = runBlocking {
+    fun `deleting the reminder keeps its doses, detached, since v13`() = runBlocking {
+        // Was a cascade until §7 R118: the migration chain now ends at v13's SET NULL.
         database.openHelper.writableDatabase.execSQL("DELETE FROM reminders WHERE id = 1")
-        assertEquals(listOf(5L, 9L), database.doseEventDao().getAllOnce().map { it.id }.sorted())
+        assertEquals(listOf(1L, 2L, 5L, 9L), database.doseEventDao().getAllOnce().map { it.id }.sorted())
+        assertNull(database.doseEventDao().getById(1)!!.reminderId)
     }
 
     @Test

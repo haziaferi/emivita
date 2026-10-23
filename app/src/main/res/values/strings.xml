@@ -408,6 +408,13 @@
     <string name="reminder_label_at">%1$s – %2$s</string>
     <string name="reminder_label_every_hours">%1$s – every %2$sh</string>
     <string name="reminder_label_plus_minutes">%1$s – +%2$dmin</string>
+    <!-- A reminder row on the medicine page (§7 R120): when, how often, how much. -->
+    <string name="reminder_row_every_hours">Every %1$s h</string>
+    <string name="reminder_row_after_parent">%1$s after %2$s</string>
+    <plurals name="reminder_row_every_n_days">
+        <item quantity="one">Every %1$d day</item>
+        <item quantity="other">Every %1$d days</item>
+    </plurals>
     <string name="stock_section_low_stock">Low-stock alert</string>
 
     <!-- Accessibility (§9 #19 Stage B). Read by TalkBack, never drawn. -->
@@ -449,7 +456,7 @@
     <!-- Stage A part 4 (§7 R60): literals that were assigned to a val before
          reaching a sink, which the gate cannot see and the R59 sweep did not
          render (error paths, a cold widget, a stock screen with a run-out). -->
-    <string name="notif_dose_body">Dose of %1$s at %2$s</string>
+    <string name="notif_dose_body">%1$s at %2$s</string>
     <string name="widget_runs_out">Runs out %1$s</string>
     <string name="widget_no_imminent_run_out">No imminent run-out</string>
     <string name="stock_runs_out">Runs out: %1$s</string>

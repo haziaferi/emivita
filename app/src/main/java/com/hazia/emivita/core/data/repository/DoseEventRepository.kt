@@ -4,6 +4,8 @@ import com.hazia.emivita.core.data.entity.isRecordOnly
 import com.hazia.emivita.core.data.entity.isAlertSeen
 import com.hazia.emivita.core.data.entity.hasOneSubject
 import com.hazia.emivita.core.data.entity.isOneOff
+import com.hazia.emivita.core.data.entity.RepeatConfig
+import com.hazia.emivita.core.data.entity.missedAfterShowing
 import androidx.room.withTransaction
 import com.hazia.emivita.core.data.backup.AutoSyncManager
 import com.hazia.emivita.core.data.dao.DoseEventDao
@@ -83,9 +85,30 @@ class DoseEventRepository(
                 scheduledEpochMillis = scheduledEpochMillis,
                 doseAmount = doseAmount,
                 createdAtEpochMillis = System.currentTimeMillis(),
+                // The one writer of scheduled doses (§7 R118): planned stays when
+                // the reminder is deleted and reminderId goes null.
+                planned = true,
             )
         )
         return insertedId.takeIf { it != -1L }
+    }
+
+    /** A notification of this pending dose was shown at [shownAtEpochMillis] (§7 R119):
+     *  it is due until the repeats [repeat] still owes it are over. */
+    suspend fun recordShown(doseEventId: Long, shownAtEpochMillis: Long, repeat: RepeatConfig?, repeatCount: Int) =
+        doseEventDao.updateMissedAfter(doseEventId, missedAfterShowing(shownAtEpochMillis, repeat, repeatCount))
+
+    /** A repeat of this pending dose was shown (§7 R119): [recordShown], except
+     *  that a snooze still running keeps the later instant it set. */
+    suspend fun recordRepeatShown(doseEventId: Long, shownAtEpochMillis: Long, repeat: RepeatConfig, repeatCount: Int) =
+        doseEventDao.extendMissedAfter(doseEventId, missedAfterShowing(shownAtEpochMillis, repeat, repeatCount))
+
+    /** Snoozed to [fireAtEpochMillis] (§7 R119): due until that fire and its
+     *  repeats are over, from the reminder's settings and the repeats already used. */
+    suspend fun recordSnoozed(doseEventId: Long, fireAtEpochMillis: Long) {
+        val event = doseEventDao.getById(doseEventId) ?: return
+        val repeat = event.reminderId?.let { reminderDao.getById(it) }?.repeatOnUnanswered
+        doseEventDao.updateMissedAfter(doseEventId, missedAfterShowing(fireAtEpochMillis, repeat, event.repeatCount))
     }
 
     /** The single entry point for Taken / Skipped from any screen or receiver.
@@ -352,6 +375,8 @@ class DoseEventRepository(
         if (event.status != DoseStatus.PENDING) return false
         val reminderId = event.reminderId ?: return false
         doseEventDao.updateScheduledAt(doseEventId, newScheduledEpochMillis)
+        // Due until the moved slot and its repeats are over (§7 R119), as a snooze.
+        recordSnoozed(doseEventId, newScheduledEpochMillis)
         schedulingCoordinator.onDoseRescheduled(reminderId, doseEventId, newScheduledEpochMillis)
         occurrenceProjectionCache.invalidate()
         autoSyncManager.notifyChanged()
