@@ -7,6 +7,8 @@ import android.util.Log
 import androidx.core.app.NotificationCompat
 import androidx.core.app.NotificationManagerCompat
 import com.hazia.emivita.R
+import com.hazia.emivita.core.data.config.ReminderConfig
+import com.hazia.emivita.core.data.config.decodeReminderConfig
 import com.hazia.emivita.core.data.dao.DoseGroupDao
 import com.hazia.emivita.core.data.entity.DoseEvent
 import com.hazia.emivita.core.data.entity.Medicine
@@ -227,7 +229,8 @@ class ReminderNotificationBuilder(
         )
     }
 
-    /** The silent pre-alarm (§9 #25): the medicine and the dose time, on the
+    /** The silent pre-alarm (§9 #25): the medicine, then the dose and its time
+     *  as the reminder words them, "1 gocce alle 08:00" (§7 R121), on the
      *  Standard channel, no sound, no actions, gone on tap or when the real
      *  reminder fires. Id in its own negative range so it cannot collide with
      *  a dose (positive) or an alert (negative reminder id). */
@@ -235,11 +238,15 @@ class ReminderNotificationBuilder(
         accentArgb = notificationAccentArgb(settingsRepository)
         val hideNames = settingsRepository.hideMedicineNames.first()
         val time = LocaleFormats.time(doseEpochMillis)
+        // An alert reminder schedules no amount, so it would show the title alone.
+        val body = scheduledDose(reminder)?.let {
+            context.getString(R.string.notif_dose_body, formatDoseWithUnit(it, medicine.doseUnit, context.resources), time)
+        }
         val notification = NotificationCompat.Builder(context, ReminderNotificationChannels.CHANNEL_STANDARD)
             .setSmallIcon(R.drawable.ic_notification_reminder)
             .setColor(accentArgb)
             .setContentTitle(context.getString(R.string.notif_pre_alarm_title, maskedMedicineName(medicine.name, hideNames)))
-            .setContentText(context.getString(R.string.notif_pre_alarm_text, time))
+            .setContentText(body)
             .setCategory(NotificationCompat.CATEGORY_REMINDER)
             .setSilent(true)
             .setAutoCancel(true)
@@ -254,6 +261,15 @@ class ReminderNotificationBuilder(
     private fun compatPriorityFor(priority: NotificationPriority): Int = when (priority) {
         NotificationPriority.STANDARD -> NotificationCompat.PRIORITY_DEFAULT
         NotificationPriority.HIGH, NotificationPriority.ALARM -> NotificationCompat.PRIORITY_HIGH
+    }
+
+    /** The amount a dose reminder schedules, the one the slot will materialise. */
+    private fun scheduledDose(reminder: Reminder): Double? = when (val config = decodeReminderConfig(reminder.configJson)) {
+        is ReminderConfig.FixedTime -> config.dose
+        is ReminderConfig.RepeatingInterval -> config.dose
+        is ReminderConfig.DailyWindow -> config.dose
+        is ReminderConfig.LinkedFollowing -> config.dose
+        is ReminderConfig.LowStockAlert, is ReminderConfig.ExpirationAlert -> null
     }
 
     private fun contentText(doseEvent: DoseEvent, reminder: Reminder, medicine: Medicine): String {

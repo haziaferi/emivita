@@ -118,7 +118,7 @@ class OneOffDoseTest {
     @Test
     fun `the CSV's Medicine column carries the one-off's name`() = runBlocking {
         doses.logOneOffDose(profileId, "Paracetamol, 500", 1.0, at)
-        val csv = HistoryExporter.buildCsv(rows(), ZoneOffset.UTC, at)
+        val csv = HistoryExporter.buildCsv(rows(), ZoneOffset.UTC)
         val line = csv.lines()[1]
         assertTrue(line, line.contains(",\"Paracetamol, 500\",Taken,1,,"))
     }

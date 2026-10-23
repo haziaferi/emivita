@@ -131,8 +131,6 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
                 // a duplicate alarm delivery after the user already acted on it
                 // shouldn't re-notify.
                 container.notificationBuilder.buildAndPost(doseEvent, reminder, medicine)
-                // Due until the repeats armed below are over (§7 R119), a snooze's fire included.
-                container.doseEventRepository.recordShown(doseEvent.id, System.currentTimeMillis(), reminder.repeatOnUnanswered, doseEvent.repeatCount)
                 scheduleFirstNagIfConfigured(reminder, doseEvent, scheduledEpochMillis, container)
             }
         }
@@ -268,9 +266,6 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
         val newRepeatCount = doseEvent.repeatCount + 1
         Log.d(TAG, "Nag re-fire ${newRepeatCount}/${repeatConfig.maxRepeats} for reminder $reminderId.")
         container.notificationBuilder.buildAndPost(doseEvent, reminder, medicine)
-        // The deadline follows the repeats actually fired (§7 R119): the last one
-        // ends it, unless a snooze, which leaves this repeat armed, runs later.
-        container.doseEventRepository.recordRepeatShown(doseEvent.id, System.currentTimeMillis(), repeatConfig, newRepeatCount)
 
         if (newRepeatCount < repeatConfig.maxRepeats) {
             container.alarmScheduler.scheduleNag(

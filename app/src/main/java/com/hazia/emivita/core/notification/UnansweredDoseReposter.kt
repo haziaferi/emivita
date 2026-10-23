@@ -15,8 +15,8 @@ import com.hazia.emivita.core.scheduling.SnoozeLedger
  * `AutostartService.restoreNotifications`), since a reboot or force-stop
  * clears the shade and `rescheduleAll()` only re-arms the *future* (§7 R61).
  *
- * Only doses from the last [LOOKBACK_MILLIS] (older ones already show as
- * Missed) with no active notification are posted, so calling this on every
+ * Only doses from the last [LOOKBACK_MILLIS] (older ones already count as
+ * missed) with no active notification are posted, so calling this on every
  * launch cannot re-chime a reminder that is still showing.
  */
 class UnansweredDoseReposter(

@@ -95,7 +95,8 @@ data class BackupData(
     val reminders: List<Reminder>,
     /** `planned` and `missedAfterEpochMillis` (§7 R118, R119) are additive, as
      *  `asNeeded` was (§7 R116), so the version stays: an older file decodes
-     *  `planned` from its own reminderId through the field's default. */
+     *  `planned` from its own reminderId through the field's default. The
+     *  second is inert since §7 R121 and still decodes from a schema-13 file. */
     val doseEvents: List<DoseEvent>,
     /** Since §9 #26. Defaulted so a pre-#26 file still decodes; the schema
      *  version stays 1 because an older build can read a file that carries

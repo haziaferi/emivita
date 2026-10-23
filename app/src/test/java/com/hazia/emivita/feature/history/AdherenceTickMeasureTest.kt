@@ -61,7 +61,7 @@ class AdherenceTickMeasureTest {
             val total = if (i % 7 == 3) max else 1 + (i * 5) % max
             val missed = if (i % 9 == 4 && total > 1) 1 else 0
             val skipped = if (i % 6 == 2 && total - missed > 1) 1 else 0
-            DayAdherenceCounts(start.plusDays(i.toLong()), taken = total - missed - skipped, skipped = skipped, missed = missed)
+            DayAdherenceCounts(start.plusDays(i.toLong()), taken = total - missed - skipped, missed = missed + skipped)
         }
     }
 

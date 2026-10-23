@@ -247,9 +247,9 @@ class ReminderRepository(
             // Its doses stay, as the dialog says (§7 R118): the FK sets their
             // reminderId to null and `planned` keeps them in adherence. A pending
             // one still to come goes, since nothing will fire it; one whose time
-            // has passed stays and, with no repeats left, reads Missed (§7 R119).
+            // has passed stays, Due on screen and missed in the figures after
+            // its day's midnight (§7 R121).
             database.doseEventDao().deletePendingAfter(reminder.id, nowEpochMillis)
-            database.doseEventDao().clearMissedAfterOfPending(reminder.id)
             reminderDao.delete(reminder)
         }
 

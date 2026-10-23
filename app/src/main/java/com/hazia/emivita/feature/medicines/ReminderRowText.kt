@@ -58,7 +58,8 @@ private fun repeatText(pattern: RepeatPattern, resources: Resources): String = w
         if (pattern.days.isEmpty()) resources.getString(R.string.add_reminder_specific_days)
         else pattern.days.sorted().joinToString(", ") { DayOfWeek.of(it).getDisplayName(TextStyle.SHORT, Locale.getDefault()) }
     is RepeatPattern.EveryNDays -> resources.getQuantityString(R.plurals.reminder_row_every_n_days, pattern.n, pattern.n)
-    is RepeatPattern.CyclicActivePause -> resources.getString(R.string.add_reminder_active_pause_cycle)
+    // "21 days on, 7 off" (§7 R121, the owner's "Add counts").
+    is RepeatPattern.CyclicActivePause -> resources.getQuantityString(R.plurals.reminder_row_cycle_days, pattern.activeDays, pattern.activeDays, pattern.pauseDays)
 }
 
 private fun parentName(parent: Reminder, resources: Resources): String =

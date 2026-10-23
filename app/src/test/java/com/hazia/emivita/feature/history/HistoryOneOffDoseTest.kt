@@ -66,7 +66,8 @@ class HistoryOneOffDoseTest {
         }
         compose.waitUntil(10_000) { compose.onAllNodes(hasText("Paracetamol")).fetchSemanticsNodes().isNotEmpty() }
         compose.waitUntil(10_000) { compose.onAllNodes(hasText("Ibuprofen")).fetchSemanticsNodes().isNotEmpty() }
-        compose.onNodeWithText("50% of answered doses taken").assertExists()
-        compose.onNodeWithText("1 taken, 1 skipped, 0 missed, last 30 days").assertExists()
+        // The skip counts as missed (§7 R121): "1 taken, 1 missed" on the screen's card.
+        compose.onNodeWithText("50% of doses taken").assertExists()
+        compose.onNodeWithText("1 taken, 1 missed, last 30 days").assertExists()
     }
 }
