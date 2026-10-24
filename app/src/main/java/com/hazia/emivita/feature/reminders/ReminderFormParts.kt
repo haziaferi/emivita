@@ -26,6 +26,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.hazia.emivita.core.data.config.LowStockTriggerMode
 import com.hazia.emivita.core.data.config.ReminderConfig
+import com.hazia.emivita.core.data.entity.NotificationPriority
 import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.entity.RepeatConfig
 import kotlinx.coroutines.launch
@@ -89,6 +90,7 @@ internal data class AdvancedFields(
     val dosesRemaining: Int?,
     val stickyUntilAnswered: Boolean,
     val variableAmount: Boolean,
+    val importance: NotificationPriority?,
 )
 
 /** The Avanzate fields that can be refused, each with the error it shows. */
@@ -114,9 +116,11 @@ internal class AdvancedReminderFieldsState(initialReminder: Reminder?) {
     var dosesRemaining by mutableStateOf(initialReminder?.dosesRemaining?.toString() ?: "10")
     var stickyUntilAnswered by mutableStateOf(initialReminder?.stickyUntilAnswered ?: false)
     var variableAmount by mutableStateOf(initialReminder?.variableAmount ?: false)
+    /** The reminder's own notification tier (§7 R127, B-38), null = its medicine's. */
+    var importance by mutableStateOf(initialReminder?.importance)
 
     private fun values(): List<Any?> = listOf(autoResolve, activeFromEpochDay, activeUntilEpochDay, nagEnabled, nagDelayMinutes, nagMaxRepeats,
-        weekendModeOptIn, preAlarmEnabled, preAlarmMinutes, instructions, courseEnabled, dosesRemaining, stickyUntilAnswered, variableAmount)
+        weekendModeOptIn, preAlarmEnabled, preAlarmMinutes, instructions, courseEnabled, dosesRemaining, stickyUntilAnswered, variableAmount, importance)
 
     private fun restore(v: List<Any?>) {
         autoResolve = v[0] as Boolean; activeFromEpochDay = v[1] as Long?; activeUntilEpochDay = v[2] as Long?
@@ -124,6 +128,7 @@ internal class AdvancedReminderFieldsState(initialReminder: Reminder?) {
         weekendModeOptIn = v[6] as Boolean; preAlarmEnabled = v[7] as Boolean; preAlarmMinutes = v[8] as String
         instructions = v[9] as String; courseEnabled = v[10] as Boolean; dosesRemaining = v[11] as String
         stickyUntilAnswered = v[12] as Boolean; variableAmount = v[13] as Boolean
+        importance = v[14] as NotificationPriority?
     }
 
     /** A group sheet's draft: a copy it edits, applied back only by the sheet's Salva. */
@@ -170,6 +175,7 @@ internal class AdvancedReminderFieldsState(initialReminder: Reminder?) {
         dosesRemaining = if (courseEnabled) dosesRemaining.toIntOrNull()?.takeIf { it >= 0 } else null,
         stickyUntilAnswered = stickyUntilAnswered,
         variableAmount = variableAmount,
+        importance = importance,
     )
 }
 

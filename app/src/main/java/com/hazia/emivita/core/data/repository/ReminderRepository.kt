@@ -8,6 +8,7 @@ import com.hazia.emivita.core.data.config.decodeReminderConfig
 import com.hazia.emivita.core.data.config.encodeReminderConfig
 import com.hazia.emivita.core.data.dao.ReminderDao
 import com.hazia.emivita.core.data.db.EmivitaDatabase
+import com.hazia.emivita.core.data.entity.NotificationPriority
 import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.entity.RepeatConfig
 import com.hazia.emivita.core.scheduling.SchedulingCoordinator
@@ -73,6 +74,7 @@ class ReminderRepository(
         dosesRemaining: Int? = null,
         stickyUntilAnswered: Boolean = false,
         variableAmount: Boolean = false,
+        importance: NotificationPriority? = null,
     ): Long {
         val id = reminderDao.insert(
             Reminder(
@@ -91,6 +93,7 @@ class ReminderRepository(
                 dosesRemaining = dosesRemaining,
                 stickyUntilAnswered = stickyUntilAnswered,
                 variableAmount = variableAmount,
+                importance = importance,
                 createdAtEpochMillis = System.currentTimeMillis(),
             )
         )
@@ -121,6 +124,7 @@ class ReminderRepository(
         dosesRemaining: Int? = reminder.dosesRemaining,
         stickyUntilAnswered: Boolean = reminder.stickyUntilAnswered,
         variableAmount: Boolean = reminder.variableAmount,
+        importance: NotificationPriority? = reminder.importance,
     ) {
         reminderDao.update(
             reminder.copy(
@@ -136,6 +140,7 @@ class ReminderRepository(
                 dosesRemaining = dosesRemaining,
                 stickyUntilAnswered = stickyUntilAnswered,
                 variableAmount = variableAmount,
+                importance = importance,
             )
         )
         schedulingCoordinator.onReminderChanged(reminder.id, System.currentTimeMillis())
@@ -162,6 +167,7 @@ class ReminderRepository(
         dosesRemaining: Int? = reminder.dosesRemaining,
         stickyUntilAnswered: Boolean = reminder.stickyUntilAnswered,
         variableAmount: Boolean = reminder.variableAmount,
+        importance: NotificationPriority? = reminder.importance,
     ) {
         reminderDao.update(
             reminder.copy(
@@ -175,6 +181,7 @@ class ReminderRepository(
                 dosesRemaining = dosesRemaining,
                 stickyUntilAnswered = stickyUntilAnswered,
                 variableAmount = variableAmount,
+                importance = importance,
             )
         )
         schedulingCoordinator.onReminderChanged(reminder.id, System.currentTimeMillis())

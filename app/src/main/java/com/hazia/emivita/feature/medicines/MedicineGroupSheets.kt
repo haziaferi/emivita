@@ -70,14 +70,14 @@ internal fun detailsSummary(indication: String, storage: String, rxNumber: Strin
 /** The channel description for a tier, so the sheet says exactly what the
  *  Notifications & Alerts screen and Android's own settings say. */
 @StringRes
-private fun channelDescriptionFor(priority: NotificationPriority): Int = when (priority) {
+internal fun channelDescriptionFor(priority: NotificationPriority): Int = when (priority) {
     NotificationPriority.STANDARD -> R.string.channel_standard_desc
     NotificationPriority.HIGH -> R.string.channel_high_desc
     NotificationPriority.ALARM -> R.string.channel_alarm_desc
 }
 
 @Composable
-private fun ChoiceRow(selected: Boolean, title: String, description: String?, onSelect: () -> Unit) {
+internal fun ChoiceRow(selected: Boolean, title: String, description: String?, onSelect: () -> Unit) {
     Row(
         Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(selected = selected, role = Role.RadioButton, onClick = onSelect).padding(vertical = 4.dp),
         verticalAlignment = Alignment.CenterVertically,

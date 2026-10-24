@@ -36,7 +36,7 @@ import com.hazia.emivita.core.data.entity.MedicineNote
         DoseEvent::class,
         MedicineNote::class,
     ],
-    version = 13,
+    version = 14,
     exportSchema = true,
 )
 @TypeConverters(Converters::class)

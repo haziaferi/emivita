@@ -97,6 +97,9 @@ class SettingsRepository(context: Context) {
         // §9 #27: the tag filter on Medicines, by tag name (tags are keyed by
         // name on the form; a renamed or deleted tag simply stops matching).
         val MEDICINES_TAG_FILTER = stringSetPreferencesKey("medicines_tag_filter")
+        // §7 R127 (C-29 V2): the reminder ids pause-all switched off, so Riattiva switches back
+        // on only those and a reminder paused on purpose stays paused.
+        val PAUSED_BY_PAUSE_ALL = stringSetPreferencesKey("paused_by_pause_all")
         // §9 #25: what a swiped-away reminder records (enum name; default SNOOZE,
         // the owner's choice) and whether notifications mask the medicine name.
         val SWIPE_ACTION = stringPreferencesKey("notification_swipe_action")
@@ -317,6 +320,11 @@ class SettingsRepository(context: Context) {
     val medicinesTagFilter: Flow<Set<String>> = dataStore.data.map { prefs -> prefs[Keys.MEDICINES_TAG_FILTER] ?: emptySet() }
     suspend fun setMedicinesTagFilter(tags: Set<String>) {
         dataStore.edit { it[Keys.MEDICINES_TAG_FILTER] = tags }
+    }
+
+    val pausedByPauseAll: Flow<Set<Long>> = dataStore.data.map { prefs -> prefs[Keys.PAUSED_BY_PAUSE_ALL].orEmpty().mapNotNull { it.toLongOrNull() }.toSet() }
+    suspend fun setPausedByPauseAll(ids: Set<Long>) {
+        dataStore.edit { it[Keys.PAUSED_BY_PAUSE_ALL] = ids.map { id -> id.toString() }.toSet() }
     }
 
     /** Null clears the setting (the "Stop syncing" action) -- callers also

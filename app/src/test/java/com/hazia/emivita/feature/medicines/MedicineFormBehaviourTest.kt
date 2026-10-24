@@ -76,11 +76,18 @@ class MedicineFormBehaviourTest : MedicineFormTestBase() {
         val both = s(R.string.add_medicine_prn_both)
         val atRest = said(help) && !said(both)
         val next = group(R.string.medicine_group_details)
+        val max = field(s(R.string.add_medicine_prn_max))
+        // Measured from the field to the next row, not in the window: typing scrolls the field
+        // into view, by an amount that depends on timing (CI moved the page 50 dp), and a
+        // scroll moves both alike while an error that pushed content down would not.
+        fun gap() = bounds(next).top - bounds(max).top
         reveal(next)
-        val before = top(next).fetchSemanticsNode().boundsInWindow.top
-        typeInto(field(s(R.string.add_medicine_prn_max)), "3")
+        reveal(max)
+        val before = gap()
+        typeInto(max, "3")
         val broken = said(both) && !said(help)
-        val after = top(next).fetchSemanticsNode().boundsInWindow.top
+        reveal(next)
+        val after = gap()
         typeInto(field(s(R.string.add_medicine_prn_hours)), "24")
         val fixed = said(help) && !said(both)
         assertTrue("at rest the help, no rule", atRest)

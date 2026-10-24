@@ -75,6 +75,8 @@ class FormRules(private val dp: Float, private val names: FormNames, private val
     class Swept(
         val frames: List<ProbeFrame>, val scrolls: List<Float>, val nodes: List<Kept>, val leaves: List<Leaf>,
         val navTop: Float?, val windowBottom: Float, val sheet: Boolean,
+        /** The scroll container's viewport in window pixels, null when nothing scrolls. */
+        val viewport: Rect? = null,
     )
 
     private class ScrollInfo(val id: Int, val value: Float, val max: Float, val vp: Rect, val node: SemanticsNode)
@@ -133,7 +135,7 @@ class FormRules(private val dp: Float, private val names: FormNames, private val
             }
         }
         val top = frames.first().top
-        return Swept(frames, scrolls, nodes, leaves, navTop, (top.top + top.view.height).toFloat(), sheet)
+        return Swept(frames, scrolls, nodes, leaves, navTop, (top.top + top.view.height).toFloat(), sheet, sc?.vp)
     }
 
     // ---- classification and pixels --------------------------------------------------------------
@@ -205,7 +207,12 @@ class FormRules(private val dp: Float, private val names: FormNames, private val
                 Ctl(k.n, kind, tier, k.c, r1(h), null, k.inScroll, null, bb?.first?.toFloat()?.plus(k.dy), bb?.second?.toFloat()?.plus(k.dy), k.frame, k.dy)
             }
             in drawnKinds -> {
-                val d = drawnBox(px, k.n.touch)
+                // A control's padded touch box, cut to the scroll viewport when it scrolls: a cell kept
+                // on the frame that first shows it whole can sit on the foot's edge, and the foot's
+                // tone below the viewport is not the cell (§7 R127, found on the days of the month).
+                val vp = sw.viewport
+                val touch = if (k.inScroll && vp != null) k.n.touch.intersect(vp) else k.n.touch
+                val d = drawnBox(px, touch)
                 val h = d?.height?.div(dp) ?: (k.n.unclipped.height / dp)
                 Ctl(k.n, kind, tier, k.c, r1(h), d?.let { modal(px, it) }, k.inScroll,
                     d?.let { Rect(it.left.toFloat(), it.top + k.dy, it.right.toFloat(), it.bottom + k.dy) }, null, null, k.frame, k.dy)

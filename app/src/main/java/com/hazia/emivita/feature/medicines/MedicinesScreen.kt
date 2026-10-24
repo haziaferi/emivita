@@ -74,6 +74,8 @@ import com.hazia.emivita.R
 import com.hazia.emivita.ui.components.TabHeader
 import com.hazia.emivita.core.data.repository.DoseEventRepository
 import com.hazia.emivita.core.data.repository.MedicineRepository
+import com.hazia.emivita.core.data.entity.Medicine
+import com.hazia.emivita.core.data.repository.ReminderRepository
 import com.hazia.emivita.core.data.settings.SettingsRepository
 import com.hazia.emivita.core.format.LocaleFormats
 import com.hazia.emivita.core.scheduling.OccurrenceProjectionCache
@@ -111,6 +113,7 @@ fun MedicinesScreen(
     doseEventRepository: DoseEventRepository,
     occurrenceProjectionCache: OccurrenceProjectionCache,
     settingsRepository: SettingsRepository,
+    reminderRepository: ReminderRepository,
     onAddMedicineWithBarcode: (barcode: String) -> Unit,
     onOpenMedicine: (medicineId: Long) -> Unit,
     /** "Save and add details" in the add sheet: the new medicine's full edit form (§7 R114). */
@@ -139,6 +142,8 @@ fun MedicinesScreen(
     val sort = remember(sortName) { sortName?.let { n -> MedicinesSort.entries.firstOrNull { it.name == n } } ?: MedicinesSort.MANUAL }
     val locale = Locale.current.platformLocale
     val scope = rememberCoroutineScope()
+    // A swiped card's delete is the medicine page's: an archive, restorable (§7 R127, D-03).
+    val archive: suspend (Medicine) -> Unit = { medicineRepository.archive(it) }
 
     val entries = remember(withReminders, tagsByMedicine, todayEvents, projection, today, sort, hideEmpty, query, selectedTags, locale) {
         val now = System.currentTimeMillis()
@@ -232,6 +237,8 @@ fun MedicinesScreen(
                     ) {
                         Icon(Icons.Filled.QrCodeScanner, contentDescription = stringResource(R.string.medicines_scan_to_find))
                     }
+                    // Pause or resume every medicine's reminders (§7 R127, C-29 V2).
+                    PauseAllMenu(withReminders, reminderRepository, settingsRepository)
             }
             if (scanUnavailable) {
                 Text(
@@ -256,6 +263,7 @@ fun MedicinesScreen(
                 hideEmpty = hideEmpty,
                 onHideEmpty = { scope.launch { settingsRepository.setMedicinesHideEmpty(!hideEmpty) } },
             )
+            AllPausedLine(withReminders, reminderRepository, settingsRepository)
             if (withReminders.isEmpty()) {
                 Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
                     Text(stringResource(R.string.medicines_no_medicines_yet_tap_to_add_your_first_one), style = MaterialTheme.typography.bodyMedium)
@@ -283,7 +291,9 @@ fun MedicinesScreen(
                             }
                         }
                         items(section.entries, key = { (section.name ?: "") + "/" + it.medicine.id }) { entry ->
-                            MedicineCard(entry = entry, onClick = { onOpenMedicine(entry.medicine.id) }, dragHandle = null)
+                            SwipeToDelete(entry.medicine, archive) {
+                                MedicineCard(entry = entry, onClick = { onOpenMedicine(entry.medicine.id) }, dragHandle = null)
+                            }
                             Spacer(Modifier.height(10.dp))
                         }
                     }
@@ -301,6 +311,7 @@ fun MedicinesScreen(
                                 .zIndex(if (dragging) 1f else 0f)
                                 .graphicsLayer { translationY = if (dragging) drag.offsetY else 0f },
                         ) {
+                            SwipeToDelete(entry.medicine, archive) {
                             MedicineCard(
                                 entry = entry,
                                 onClick = { onOpenMedicine(entry.medicine.id) },
@@ -326,6 +337,7 @@ fun MedicinesScreen(
                                     }
                                 } else null,
                             )
+                            }
                         }
                         Spacer(Modifier.height(10.dp))
                     }

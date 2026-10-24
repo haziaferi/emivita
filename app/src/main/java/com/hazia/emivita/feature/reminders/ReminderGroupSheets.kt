@@ -14,7 +14,16 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.staticCompositionLocalOf
 import com.hazia.emivita.R
+import com.hazia.emivita.core.data.entity.NotificationPriority
+import com.hazia.emivita.core.notification.ReminderNotificationChannels
+import com.hazia.emivita.feature.medicines.ChoiceRow
+import com.hazia.emivita.feature.medicines.channelDescriptionFor
+import com.hazia.emivita.ui.form.GridActionCell
+import com.hazia.emivita.ui.form.SpanGrid
 import com.hazia.emivita.core.format.LocaleFormats
 import com.hazia.emivita.ui.form.FieldPair
 import com.hazia.emivita.ui.form.FormDateField
@@ -43,8 +52,8 @@ internal fun groupSummary(g: ReminderGroup, s: AdvancedReminderFieldsState): Str
             if (parts.isEmpty()) parts += stringResource(R.string.reminder_sum_no_instructions)
         }
         ReminderGroup.NOTIFICATION -> {
-            // The reminder notifies at its medicine's importance; its own tier comes with B-38.
-            parts += stringResource(R.string.reminder_sum_as_medicine)
+            // Its own tier when it has one (§7 R127, B-38), else its medicine's.
+            parts += s.importance?.let { stringResource(ReminderNotificationChannels.tierNameFor(it)) } ?: stringResource(R.string.reminder_sum_as_medicine)
             if (s.weekendModeOptIn) parts += stringResource(R.string.reminder_sum_weekend)
             if (s.autoResolve) parts += stringResource(R.string.add_reminder_auto_resolve)
         }
@@ -108,6 +117,31 @@ private fun TakingGroup(s: AdvancedReminderFieldsState) {
     Spacer(Modifier.height(8.dp))
     // Instructions (§9 #26; medTimer): the one line that goes on the notification, whatever the switch says.
     FormTextField(s.instructions, { s.instructions = it }, stringResource(R.string.add_reminder_instructions), help = stringResource(R.string.add_reminder_instructions_hint))
+    Spacer(Modifier.height(8.dp))
+    // The samples on the grid (§7 R127, D-10 V1): a tap adds one to what is there, never twice.
+    val samples = instructionSamples.map { stringResource(it) }
+    SpanGrid { samples.forEach { t -> GridActionCell(t) { s.instructions = appendSample(s.instructions, t) } } }
+}
+
+/** The instruction samples (§7 R127, D-10; medTimer's), in the rig's approved words. */
+internal val instructionSamples = listOf(
+    R.string.instructions_sample_with_food,
+    R.string.instructions_sample_empty_stomach,
+    R.string.instructions_sample_before_bed,
+    R.string.instructions_sample_with_water,
+)
+
+/** What joins a picked sample to the text before it: the reminder row's own separator. */
+private const val SAMPLE_SEPARATOR = " · "
+
+/** [sample] added after what [current] holds, joined with " · "; a sample already there is not added again. */
+internal fun appendSample(current: String, sample: String): String {
+    val parts = current.split(SAMPLE_SEPARATOR.trim()).map { it.trim() }.filter { it.isNotEmpty() }
+    return when {
+        parts.any { it.equals(sample, ignoreCase = true) } -> current
+        current.isBlank() -> sample
+        else -> current.trimEnd() + SAMPLE_SEPARATOR + sample
+    }
 }
 
 @Composable
@@ -118,7 +152,25 @@ private fun NotificationGroup(s: AdvancedReminderFieldsState) {
     }
     Spacer(Modifier.height(8.dp))
     FormSwitchRow(stringResource(R.string.add_reminder_auto_resolve), stringResource(R.string.add_reminder_silently_mark_taken_no_notification_for), s.autoResolve) { s.autoResolve = it }
+    // The reminder's own tier (§7 R127, B-38 V1): only tiers above its medicine's, none for an Alarm medicine.
+    val medicine = LocalMedicinePriority.current
+    val higher = medicine?.let { m -> NotificationPriority.entries.filter { it > m } }.orEmpty()
+    if (medicine != null && higher.isNotEmpty()) {
+        Spacer(Modifier.height(12.dp))
+        Text(stringResource(R.string.add_reminder_importance), style = MaterialTheme.typography.labelLarge)
+        ChoiceRow(
+            s.importance.let { it == null || it <= medicine },
+            stringResource(R.string.add_reminder_importance_same, stringResource(ReminderNotificationChannels.tierNameFor(medicine))),
+            stringResource(channelDescriptionFor(medicine)),
+        ) { s.importance = null }
+        for (tier in higher) {
+            ChoiceRow(s.importance == tier, stringResource(ReminderNotificationChannels.tierNameFor(tier)), stringResource(channelDescriptionFor(tier))) { s.importance = tier }
+        }
+    }
 }
+
+/** The tier of the medicine whose reminder the form edits; null until it has loaded (§7 R127, B-38). */
+internal val LocalMedicinePriority = staticCompositionLocalOf<NotificationPriority?> { null }
 
 /** The dependent fields stay in place, off while their switch is off, so a toggle moves nothing. */
 @Composable

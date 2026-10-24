@@ -256,7 +256,8 @@ class ReminderNotificationBuilder(
     }
 
     private suspend fun effectivePriority(reminder: Reminder, medicine: Medicine): NotificationPriority =
-        reminder.groupId?.let { doseGroupDao.getById(it)?.priority } ?: medicine.notificationPriority
+        // The reminder's own tier first (§7 R127, B-38), then its confirmed group's, then its medicine's.
+        reminder.importance ?: reminder.groupId?.let { doseGroupDao.getById(it)?.priority } ?: medicine.notificationPriority
 
     private fun compatPriorityFor(priority: NotificationPriority): Int = when (priority) {
         NotificationPriority.STANDARD -> NotificationCompat.PRIORITY_DEFAULT

@@ -63,6 +63,58 @@ class MedicineFormRulesTest : MedicineFormTestBase() {
     private fun alarms(fs: Float) { at(fs); alarmsSnooze(); gate("alarms & snooze", fs, audit(sheet = true)) }
     private fun weekend(fs: Float) { at(fs); weekendMode(); gate("weekend mode", fs, audit(sheet = true)) }
 
+    /** §7 R127 (C-31): the tags sheet over the edit form, one field and its bin per tag. */
+    private fun tagsSheet(fs: Float) {
+        at(fs); editForm()
+        tap(button(s(R.string.add_medicine_manage_tags)))
+        waitFor("the tags sheet") { windows() > 1 && inTop(button(s(R.string.common_save))) }
+        gate("tags sheet", fs, audit(sheet = true))
+    }
+
+    /** §7 R127 (C-20): Stock & expiry with a run-out date, so "Aggiungi al calendario" shows. */
+    private fun stockWithCalendar(fs: Float) {
+        at(fs)
+        h.medicine("Levotiroxina", stock = 30.0, unit = "compresse")
+        metformina = h.medicine("Metformina", stock = 5.0, unit = "compresse")
+        h.reminder(metformina, com.hazia.emivita.core.data.config.ReminderConfig.FixedTime(8, 0, 1.0))
+        hostApp(); openMedicine()
+        tap(described(s(R.string.medicine_detail_more)))
+        waitFor("the menu") { inTop(hasText(s(R.string.common_stock_expiration)) and androidx.compose.ui.test.hasClickAction()) }
+        tapNode(top(hasText(s(R.string.common_stock_expiration)) and androidx.compose.ui.test.hasClickAction()))
+        waitFor("the calendar button") { inTop(button(s(R.string.stock_add_to_calendar))) }
+        gate("stock with the calendar button", fs, audit(sheet = false, decl = stockDecl))
+    }
+
+    /**
+     * §7 R127 (C-29): the Medicines list while every reminder is paused. A list, not a form: it has no
+     * Salva/Annulla foot, so C5 does not apply; and the tab header's icons and the add button float
+     * over the edges by the header's own rule (§9 #33), so C1 skips the rows they start. Every other
+     * check, and C1 on every other row, the paused line's included, must pass.
+     */
+    private fun listPaused(fs: Float) {
+        at(fs)
+        val rl = h.reminder(h.medicine("Levotiroxina"), com.hazia.emivita.core.data.config.ReminderConfig.FixedTime(8, 0, 1.0))
+        val rm = h.reminder(h.medicine("Metformina"), com.hazia.emivita.core.data.config.ReminderConfig.FixedTime(20, 0, 1.0))
+        kotlinx.coroutines.runBlocking { for (id in listOf(rl, rm)) h.container.reminderRepository.run { setEnabled(getById(id)!!, false) } }
+        hostApp()
+        waitFor("the paused line") { inTop(button(s(R.string.medicines_resume))) }
+        val a = audit(sheet = false)
+        val report = "medicines list paused fs$fs\n$a"
+        println("FORM-RULES $report")
+        val header = listOf(s(R.string.medicines_medicines), s(R.string.medicines_add_medicine)).map { "'$it'" }
+        val left = a.checks.filter { !it.name.startsWith("C5") }.flatMap { c ->
+            c.violations.filter { v -> !(c.name.startsWith("C1") && header.any { v.contains(it) }) }.map { "${c.name}: $it" }
+        }
+        assertTrue(report, left.isEmpty())
+        assertTrue("the paused line is measured", a.controls.any { it.label == s(R.string.medicines_resume) })
+    }
+
+    @Test fun tags_sheet_fs10() = tagsSheet(1f)
+    @Test @Config(fontScale = 2f) fun tags_sheet_fs20() = tagsSheet(2f)
+    @Test fun stock_calendar_fs10() = stockWithCalendar(1f)
+    @Test @Config(fontScale = 2f) fun stock_calendar_fs20() = stockWithCalendar(2f)
+    @Test fun list_paused_fs10() = listPaused(1f)
+    @Test @Config(fontScale = 2f) fun list_paused_fs20() = listPaused(2f)
     @Test fun add_fs10() = add(1f)
     @Test @Config(fontScale = 2f) fun add_fs20() = add(2f)
     @Test fun edit_fs10() = edit(1f)

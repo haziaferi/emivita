@@ -23,6 +23,14 @@ interface TagDao {
     @Delete
     suspend fun delete(tag: Tag)
 
+    /** A tag's new name (§7 R127, C-31): the row keeps its id, so every medicine keeps it. */
+    @Query("UPDATE tags SET name = :name WHERE id = :id")
+    suspend fun rename(id: Long, name: String)
+
+    /** Which medicine carries which tag, live: the tags sheet asks before deleting one another medicine uses. */
+    @Query("SELECT * FROM medicine_tag_cross_ref")
+    fun observeAllCrossRefs(): Flow<List<MedicineTagCrossRef>>
+
     @Insert(onConflict = OnConflictStrategy.IGNORE)
     suspend fun attachToMedicine(crossRef: MedicineTagCrossRef)
 

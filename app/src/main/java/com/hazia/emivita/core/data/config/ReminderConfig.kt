@@ -46,7 +46,35 @@ sealed interface RepeatPattern {
         val activeDays: Int,
         val pauseDays: Int,
     ) : RepeatPattern
+
+    /** Day rules that combine (§7 R127, A-10 + A-13, medTimer's day masks): the days of the week,
+     *  an active/pause cycle and the days of the month (1..31), each null when unused. Every rule
+     *  that is set must hold on a date for the reminder to fire on it. JSON only: no migration. */
+    @Serializable
+    data class DayRules(
+        val weekdays: Set<Int>? = null,
+        val cycle: CyclicActivePause? = null,
+        val daysOfMonth: Set<Int>? = null,
+    ) : RepeatPattern
 }
+
+/** How far ahead [DayRules] are searched: ten years, as a 31st inside a cycle can be years apart. */
+const val DAY_RULES_HORIZON_DAYS = 3660
+
+/** Whether every rule of [this] holds on [date]; a degenerate cycle never holds. */
+fun RepeatPattern.DayRules.holdsOn(date: java.time.LocalDate): Boolean {
+    weekdays?.let { if (date.dayOfWeek.value !in it) return false }
+    daysOfMonth?.let { if (date.dayOfMonth !in it) return false }
+    cycle?.let { c ->
+        if (c.activeDays < 1 || c.pauseDays < 0) return false
+        if (!c.isActiveOn(date.toEpochDay())) return false
+    }
+    return true
+}
+
+/** The first [count] dates on or after [from] when [this] fires, searched as far as the scheduler searches. */
+fun RepeatPattern.DayRules.nextDates(from: java.time.LocalDate, count: Int): List<java.time.LocalDate> =
+    (0 until DAY_RULES_HORIZON_DAYS).asSequence().map { from.plusDays(it.toLong()) }.filter { holdsOn(it) }.take(count).toList()
 
 /** A date is active when `floorMod(date.epochDay - firstCycleStartEpochDay,
  *  activeDays + pauseDays) < activeDays` -- floor-mod specifically (not `%`,

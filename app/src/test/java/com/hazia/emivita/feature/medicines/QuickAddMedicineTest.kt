@@ -71,6 +71,7 @@ class QuickAddMedicineTest {
                     doseEventRepository = c.doseEventRepository,
                     occurrenceProjectionCache = c.occurrenceProjectionCache,
                     settingsRepository = c.settingsRepository,
+                    reminderRepository = c.reminderRepository,
                     onAddMedicineWithBarcode = {},
                     onOpenMedicine = {},
                     onAddDetails = { detailsFor += it },

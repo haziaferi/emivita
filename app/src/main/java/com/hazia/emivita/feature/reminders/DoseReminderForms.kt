@@ -32,7 +32,17 @@ import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.repository.ReminderRepository
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import androidx.annotation.PluralsRes
+import androidx.compose.runtime.saveable.Saver
+import androidx.compose.runtime.saveable.listSaver
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.foundation.layout.padding
+import androidx.compose.ui.text.style.TextOverflow
+import com.hazia.emivita.core.data.config.nextDates
+import com.hazia.emivita.core.format.LocaleFormats
+import com.hazia.emivita.ui.form.FieldHelpLine
+import com.hazia.emivita.ui.form.MonthDayGrid
 import com.hazia.emivita.R
 import com.hazia.emivita.core.format.labelRes
 import com.hazia.emivita.core.format.parseDecimal
@@ -67,12 +77,81 @@ private fun StartBehaviorPicker(value: IntervalStartBehavior, onChange: (Interva
     }
 }
 
-/** The repeat kinds of a fixed-time reminder, in the order of their cells. */
-private enum class RepeatKind(val label: Int) {
-    DAILY(R.string.common_daily),
-    WEEKDAYS(R.string.add_reminder_specific_days),
-    EVERY_N_DAYS(R.string.add_reminder_every_n_days),
-    CYCLE(R.string.add_reminder_active_pause_cycle),
+/**
+ * The repeat kinds of a fixed-time reminder, in the order of their cells. Daily and every N days
+ * stand alone; the days of the week, the cycle and the days of the month combine, every one chosen
+ * having to hold (§7 R127, A-10 + A-13 V2).
+ */
+private enum class RepeatKind(val label: Int, val combines: Boolean) {
+    DAILY(R.string.common_daily, false),
+    WEEKDAYS(R.string.add_reminder_specific_days, true),
+    EVERY_N_DAYS(R.string.add_reminder_every_n_days, false),
+    CYCLE(R.string.add_reminder_active_pause_cycle, true),
+    DAYS_OF_MONTH(R.string.add_reminder_days_of_month, true),
+}
+
+/** The kinds an existing pattern shows as chosen. */
+private fun kindsOf(pattern: RepeatPattern): Set<RepeatKind> = when (pattern) {
+    RepeatPattern.Daily -> setOf(RepeatKind.DAILY)
+    is RepeatPattern.SpecificDaysOfWeek -> setOf(RepeatKind.WEEKDAYS)
+    is RepeatPattern.EveryNDays -> setOf(RepeatKind.EVERY_N_DAYS)
+    is RepeatPattern.CyclicActivePause -> setOf(RepeatKind.CYCLE)
+    is RepeatPattern.DayRules -> setOfNotNull(
+        pattern.weekdays?.let { RepeatKind.WEEKDAYS },
+        pattern.cycle?.let { RepeatKind.CYCLE },
+        pattern.daysOfMonth?.let { RepeatKind.DAYS_OF_MONTH },
+    ).ifEmpty { setOf(RepeatKind.DAILY) }
+}
+
+/** A tap on [k]: a kind that stands alone replaces the rest; a rule toggles among the rules, and none left is Daily. */
+private fun Set<RepeatKind>.tapped(k: RepeatKind): Set<RepeatKind> {
+    if (!k.combines) return setOf(k)
+    val rules = filter { it.combines }.toSet()
+    return (if (k in rules) rules - k else rules + k).ifEmpty { setOf(RepeatKind.DAILY) }
+}
+
+/**
+ * The pattern the chosen rules make: one rule alone keeps its own stored shape (so a weekdays-only
+ * or cycle-only reminder is stored exactly as before), two or more are [RepeatPattern.DayRules].
+ */
+private fun rulesPattern(kinds: Set<RepeatKind>, weekdays: Set<Int>, cycle: RepeatPattern.CyclicActivePause, daysOfMonth: Set<Int>): RepeatPattern {
+    val rules = RepeatPattern.DayRules(
+        weekdays = weekdays.takeIf { RepeatKind.WEEKDAYS in kinds },
+        cycle = cycle.takeIf { RepeatKind.CYCLE in kinds },
+        daysOfMonth = daysOfMonth.takeIf { RepeatKind.DAYS_OF_MONTH in kinds },
+    )
+    return when (kinds) {
+        setOf(RepeatKind.WEEKDAYS) -> RepeatPattern.SpecificDaysOfWeek(weekdays)
+        setOf(RepeatKind.CYCLE) -> cycle
+        else -> rules
+    }
+}
+
+/** The dates the rules give, as [RepeatPattern.DayRules] whatever shape they are stored in. */
+private fun asRules(pattern: RepeatPattern): RepeatPattern.DayRules? = when (pattern) {
+    is RepeatPattern.DayRules -> pattern
+    is RepeatPattern.SpecificDaysOfWeek -> RepeatPattern.DayRules(weekdays = pattern.days)
+    is RepeatPattern.CyclicActivePause -> RepeatPattern.DayRules(cycle = pattern)
+    else -> null
+}
+
+/**
+ * "Prossimi: 1 nov, 15 nov, 1 dic", or in the error colour that the rules never meet (§7 R127, A-10 V2).
+ * Under the cycle's fields it is their help line, at their text inset; under a grid it starts on the edge.
+ */
+@Composable
+private fun NextDatesLine(dates: List<LocalDate>, underField: Boolean) {
+    val text = stringResource(R.string.add_reminder_next_dates, dates.joinToString(", ") { LocaleFormats.monthDay(it) })
+    val never = stringResource(R.string.add_reminder_rules_never).takeIf { dates.isEmpty() }
+    if (underField) {
+        FieldHelpLine(text, never)
+    } else {
+        Text(
+            never ?: text, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            color = if (never != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(top = 4.dp),
+        )
+    }
 }
 
 /** Shared by AddReminderScreen (create) and EditReminderScreen (update) --
@@ -95,24 +174,17 @@ internal fun FixedTimeFormBody(
     var timeBad by remember { mutableStateOf(false) }
     var dose by rememberSaveable { mutableStateOf(formatDecimalLocalized(initial.dose)) }
     val initialPattern = initial.repeatPattern
-    var kind by rememberSaveable {
-        mutableStateOf(
-            when (initialPattern) {
-                is RepeatPattern.SpecificDaysOfWeek -> RepeatKind.WEEKDAYS
-                is RepeatPattern.EveryNDays -> RepeatKind.EVERY_N_DAYS
-                is RepeatPattern.CyclicActivePause -> RepeatKind.CYCLE
-                RepeatPattern.Daily -> RepeatKind.DAILY
-            }
-        )
-    }
-    var selectedDays by rememberSaveable { mutableStateOf((initialPattern as? RepeatPattern.SpecificDaysOfWeek)?.days ?: setOf()) }
+    val initialRules = asRules(initialPattern)
+    var kinds by rememberSaveable { mutableStateOf(kindsOf(initialPattern)) }
+    var selectedDays by rememberSaveable { mutableStateOf(initialRules?.weekdays ?: setOf()) }
+    var daysOfMonth by rememberSaveable { mutableStateOf(initialRules?.daysOfMonth ?: setOf()) }
     var everyN by rememberSaveable { mutableStateOf((initialPattern as? RepeatPattern.EveryNDays)?.n?.toString() ?: "2") }
     val everyNStartEpochDay = (initialPattern as? RepeatPattern.EveryNDays)?.startEpochDay ?: LocalDate.now().toEpochDay()
-    var activeDays by rememberSaveable { mutableStateOf((initialPattern as? RepeatPattern.CyclicActivePause)?.activeDays?.toString() ?: "21") }
-    var pauseDays by rememberSaveable { mutableStateOf((initialPattern as? RepeatPattern.CyclicActivePause)?.pauseDays?.toString() ?: "7") }
+    var activeDays by rememberSaveable { mutableStateOf(initialRules?.cycle?.activeDays?.toString() ?: "21") }
+    var pauseDays by rememberSaveable { mutableStateOf(initialRules?.cycle?.pauseDays?.toString() ?: "7") }
     // The first cycle's anchor is not editable: today for a new reminder, kept as it is when
     // editing one, as EveryNDays' own startEpochDay is above.
-    val firstCycleStartEpochDay = (initialPattern as? RepeatPattern.CyclicActivePause)?.firstCycleStartEpochDay ?: LocalDate.now().toEpochDay()
+    val firstCycleStartEpochDay = initialRules?.cycle?.firstCycleStartEpochDay ?: LocalDate.now().toEpochDay()
     val scope = rememberCoroutineScope()
     val doseValue = parseDecimal(dose)
     val activeDaysValue = activeDays.toIntOrNull()
@@ -127,26 +199,34 @@ internal fun FixedTimeFormBody(
     // matchingDateOnOrAfter's guard): the field refuses only a negative or missing number (§7 R124).
     val pauseOk = pauseDaysValue != null && pauseDaysValue >= 0
 
-    val dirty = rememberDirty(Unit, hour, minute, dose, kind, selectedDays, everyN, activeDays, pauseDays, advanced.snapshot())
+    val showWeekdays = RepeatKind.WEEKDAYS in kinds
+    val showCycle = RepeatKind.CYCLE in kinds
+    val showDaysOfMonth = RepeatKind.DAYS_OF_MONTH in kinds
+    val rulesOk = (!showWeekdays || selectedDays.isNotEmpty()) && (!showCycle || (activeOk && pauseOk)) && (!showDaysOfMonth || daysOfMonth.isNotEmpty())
+    val cycle = RepeatPattern.CyclicActivePause(firstCycleStartEpochDay, activeDaysValue ?: 21, pauseDaysValue ?: 7)
+    val anyRule = kinds.any { it.combines }
+    // The next three dates the rules give, empty when they never meet; read only while every rule is complete.
+    val pattern = rulesPattern(kinds, selectedDays, cycle, daysOfMonth)
+    val nextDates = if (anyRule && rulesOk) asRules(pattern)?.nextDates(LocalDate.now(), 3) else null
+    val never = nextDates?.isEmpty() == true
+
+    val dirty = rememberDirty(Unit, hour, minute, dose, kinds, selectedDays, daysOfMonth, everyN, activeDays, pauseDays, advanced.snapshot())
     ReminderFormScaffold(
         dirty = dirty,
         title = title,
         onDelete = onDelete,
         saveLabel = saveLabel,
-        saveEnabled = !timeBad && doseValue != null && doseValue > 0 &&
-            (kind != RepeatKind.WEEKDAYS || selectedDays.isNotEmpty()) &&
-            (kind != RepeatKind.EVERY_N_DAYS || everyNOk) &&
-            (kind != RepeatKind.CYCLE || (activeOk && pauseOk)) &&
+        saveEnabled = !timeBad && doseValue != null && doseValue > 0 && rulesOk && !never &&
+            (RepeatKind.EVERY_N_DAYS !in kinds || everyNOk) &&
             advanced.errors().isEmpty(),
         onSave = {
-            val pattern = when (kind) {
-                RepeatKind.WEEKDAYS -> RepeatPattern.SpecificDaysOfWeek(selectedDays)
-                RepeatKind.EVERY_N_DAYS -> RepeatPattern.EveryNDays(everyNValue ?: 2, everyNStartEpochDay)
-                RepeatKind.CYCLE -> RepeatPattern.CyclicActivePause(firstCycleStartEpochDay, activeDaysValue ?: 21, pauseDaysValue ?: 7)
-                RepeatKind.DAILY -> RepeatPattern.Daily
+            val saved = when {
+                RepeatKind.EVERY_N_DAYS in kinds -> RepeatPattern.EveryNDays(everyNValue ?: 2, everyNStartEpochDay)
+                anyRule -> pattern
+                else -> RepeatPattern.Daily
             }
             scope.launch {
-                onSave(ReminderConfig.FixedTime(hour, minute, doseValue ?: 1.0, pattern), advanced.snapshot())
+                onSave(ReminderConfig.FixedTime(hour, minute, doseValue ?: 1.0, saved), advanced.snapshot())
             }
         },
         onCancel = onCancel,
@@ -160,20 +240,28 @@ internal fun FixedTimeFormBody(
         // The kinds on the day toggles' 7-column grid (§7 R124, C6): each takes the columns its
         // one line needs and every row ends on the right edge.
         SpanGrid {
-            RepeatKind.entries.forEach { k -> GridToggleCell(stringResource(k.label), kind == k) { kind = k } }
+            RepeatKind.entries.forEach { k -> GridToggleCell(stringResource(k.label), k in kinds) { kinds = kinds.tapped(k) } }
         }
-        if (kind == RepeatKind.WEEKDAYS) {
+        if (kinds.count { it.combines } > 1) {
+            Text(
+                stringResource(R.string.add_reminder_rules_combine),
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(top = 4.dp),
+            )
+        }
+        if (showWeekdays) {
             Spacer(Modifier.height(16.dp))
             WeekdayGrid(selectedDays) { selectedDays = it }
         }
-        if (kind == RepeatKind.EVERY_N_DAYS) {
+        if (RepeatKind.EVERY_N_DAYS in kinds) {
             Spacer(Modifier.height(16.dp))
             FormTextField(
                 everyN, { everyN = it }, stringResource(R.string.add_reminder_every_n_days), keyboardType = KeyboardType.Number,
                 error = if (everyNOk) null else stringResource(R.string.form_min_one), reserve = true,
             )
         }
-        if (kind == RepeatKind.CYCLE) {
+        if (showCycle) {
             Spacer(Modifier.height(16.dp))
             val a = stringResource(R.string.add_reminder_active_days)
             val p = stringResource(R.string.add_reminder_pause_days)
@@ -184,23 +272,73 @@ internal fun FixedTimeFormBody(
                 listOfNotNull(a, p, cycleHelp),
                 first = { m ->
                     FormTextField(activeDays, { activeDays = it }, a, m, help = cycleHelp, keyboardType = KeyboardType.Number,
-                        error = if (activeOk) null else stringResource(R.string.form_min_one), reserve = true)
+                        error = if (activeOk) null else stringResource(R.string.form_min_one), reserve = true, flagError = never)
                 },
                 second = { m ->
                     FormTextField(pauseDays, { pauseDays = it }, p, m, keyboardType = KeyboardType.Number,
-                        error = if (pauseOk) null else stringResource(R.string.form_min_zero), reserve = true)
+                        error = if (pauseOk) null else stringResource(R.string.form_min_zero), reserve = true, flagError = never)
                 },
             )
         }
+        if (showDaysOfMonth) {
+            Spacer(Modifier.height(16.dp))
+            Text(stringResource(R.string.add_reminder_days_of_month), style = MaterialTheme.typography.labelLarge)
+            Spacer(Modifier.height(8.dp))
+            MonthDayGrid(daysOfMonth) { daysOfMonth = it }
+        }
+        if (nextDates != null) NextDatesLine(nextDates, underField = showCycle && !showDaysOfMonth)
         AdvancedReminderFieldsSection(advanced)
     }
 }
 
+/** The interval's units (§7 R127, D-12; medTimer's), each in minutes. */
+internal enum class IntervalUnit(val minutes: Int, @PluralsRes val label: Int) {
+    MINUTES(1, R.plurals.interval_unit_minutes),
+    HOURS(60, R.plurals.interval_unit_hours),
+    DAYS(1440, R.plurals.interval_unit_days),
+    WEEKS(10080, R.plurals.interval_unit_weeks),
+}
+
+/** medTimer's `getUnit()`: the largest unit [minutes] is a whole number of, so 10080 reads "1 week". */
+internal fun largestExactUnit(minutes: Int): IntervalUnit =
+    IntervalUnit.entries.reversed().firstOrNull { minutes > 0 && minutes % it.minutes == 0 } ?: IntervalUnit.MINUTES
+
+/** The minutes a typed count of [unit] stores, or null when it is not a whole number that fits. */
+internal fun intervalMinutes(count: String, unit: IntervalUnit): Int? =
+    count.trim().toLongOrNull()?.times(unit.minutes)?.takeIf { it in Int.MIN_VALUE..Int.MAX_VALUE }?.toInt()
+
+/** The interval as typed: its count and its unit, opened in the largest exact unit of what is stored. */
+private class IntervalInput(minutes: Int) {
+    var unit by mutableStateOf(largestExactUnit(minutes))
+    var count by mutableStateOf((minutes / largestExactUnit(minutes).minutes).toString())
+    val minutes get() = intervalMinutes(count, unit)
+
+    companion object {
+        val Saver: Saver<IntervalInput, Any> = listSaver(
+            save = { listOf(it.unit.name, it.count) },
+            restore = { v -> IntervalInput(1).apply { unit = IntervalUnit.valueOf(v[0]); count = v[1] } },
+        )
+    }
+}
+
+/**
+ * "Ogni" and its unit on the grid (§7 R127, D-12 V1): the stored value stays minutes. Under an hour
+ * the field asks whether that is right, and Salva still saves (the owner: "Warn under 1 hour").
+ */
 @Composable
-private fun IntervalHoursField(intervalHours: String, minutes: Int?, onChange: (String) -> Unit) = FormTextField(
-    intervalHours, onChange, stringResource(R.string.add_reminder_every_hours), keyboardType = KeyboardType.Decimal,
-    error = if ((minutes ?: 0) < 1) stringResource(R.string.form_min_one_minute) else null, reserve = true,
-)
+private fun IntervalField(input: IntervalInput) {
+    val minutes = input.minutes
+    val count = input.count.trim().toIntOrNull() ?: 0
+    FormTextField(
+        input.count, { input.count = it }, stringResource(R.string.add_reminder_every), keyboardType = KeyboardType.Number,
+        help = minutes?.takeIf { it in 1..59 }?.let { pluralStringResource(R.plurals.add_reminder_interval_minutes_check, it, it) },
+        error = if (minutes == null || minutes < 1) stringResource(R.string.form_min_one) else null, reserve = true,
+    )
+    Spacer(Modifier.height(8.dp))
+    SpanGrid {
+        IntervalUnit.entries.forEach { u -> GridToggleCell(pluralStringResource(u.label, count, count), input.unit == u) { input.unit = u } }
+    }
+}
 
 @Composable
 internal fun RepeatingIntervalFormBody(
@@ -214,17 +352,15 @@ internal fun RepeatingIntervalFormBody(
     onDelete: (() -> Unit)? = null,
 ) {
     val advanced = rememberAdvancedReminderFieldsState(initialReminder)
-    var intervalHours by rememberSaveable { mutableStateOf(formatHours(initial.intervalMinutes)) }
+    val interval = rememberSaveable(saver = IntervalInput.Saver) { IntervalInput(initial.intervalMinutes) }
     var dose by rememberSaveable { mutableStateOf(formatDecimalLocalized(initial.dose)) }
     var startBehavior by rememberSaveable { mutableStateOf(initial.startBehavior) }
     val scope = rememberCoroutineScope()
     val doseValue = parseDecimal(dose)
-    val hoursValue = parseDecimal(intervalHours)
-    // Guard the value actually stored, not the raw hours: 0.01 passes `hoursValue > 0` but
-    // truncates to 0 minutes, a reminder that silently never fires (docs/SPEC.md §7 R23, R33).
-    val intervalMinutesValue = hoursValue?.let { (it * 60).toInt() }
+    // Guard the value actually stored: a zero is a reminder that silently never fires (docs/SPEC.md §7 R23, R33).
+    val intervalMinutesValue = interval.minutes
 
-    val dirty = rememberDirty(Unit, intervalHours, dose, startBehavior, advanced.snapshot())
+    val dirty = rememberDirty(Unit, interval.unit, interval.count, dose, startBehavior, advanced.snapshot())
     ReminderFormScaffold(
         dirty = dirty,
         title = title,
@@ -250,7 +386,7 @@ internal fun RepeatingIntervalFormBody(
         },
         onCancel = onCancel,
     ) {
-        IntervalHoursField(intervalHours, intervalMinutesValue) { intervalHours = it }
+        IntervalField(interval)
         Spacer(Modifier.height(8.dp))
         DoseField(dose, doseUnit) { dose = it }
         Spacer(Modifier.height(8.dp))
@@ -271,7 +407,7 @@ internal fun DailyWindowFormBody(
     onDelete: (() -> Unit)? = null,
 ) {
     val advanced = rememberAdvancedReminderFieldsState(initialReminder)
-    var intervalHours by rememberSaveable { mutableStateOf(formatHours(initial.intervalMinutes)) }
+    val interval = rememberSaveable(saver = IntervalInput.Saver) { IntervalInput(initial.intervalMinutes) }
     var dose by rememberSaveable { mutableStateOf(formatDecimalLocalized(initial.dose)) }
     var startHour by rememberSaveable { mutableIntStateOf(initial.windowStartHour) }
     var startMinute by rememberSaveable { mutableIntStateOf(initial.windowStartMinute) }
@@ -282,11 +418,10 @@ internal fun DailyWindowFormBody(
     var startBehavior by rememberSaveable { mutableStateOf(initial.startBehavior) }
     val scope = rememberCoroutineScope()
     val doseValue = parseDecimal(dose)
-    val hoursValue = parseDecimal(intervalHours)
-    // The stored minutes are guarded, not the raw hours, as in RepeatingIntervalFormBody (§7 R23).
-    val intervalMinutesValue = hoursValue?.let { (it * 60).toInt() }
+    // The stored minutes are guarded, as in RepeatingIntervalFormBody (§7 R23).
+    val intervalMinutesValue = interval.minutes
 
-    val dirty = rememberDirty(Unit, intervalHours, dose, startHour, startMinute, endHour, endMinute, startBehavior, advanced.snapshot())
+    val dirty = rememberDirty(Unit, interval.unit, interval.count, dose, startHour, startMinute, endHour, endMinute, startBehavior, advanced.snapshot())
     ReminderFormScaffold(
         dirty = dirty,
         title = title,
@@ -312,7 +447,7 @@ internal fun DailyWindowFormBody(
         },
         onCancel = onCancel,
     ) {
-        IntervalHoursField(intervalHours, intervalMinutesValue) { intervalHours = it }
+        IntervalField(interval)
         Spacer(Modifier.height(8.dp))
         DoseField(dose, doseUnit) { dose = it }
         Spacer(Modifier.height(8.dp))

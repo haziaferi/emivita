@@ -308,10 +308,18 @@ object Migrations {
         }
     }
 
+    /** v13 -> v14 (§7 R127, B-38): `reminders.importance`, a reminder's own notification tier.
+     *  Null on every existing row, which is "as the medicine": nothing a reminder did changes. */
+    val MIGRATION_13_14 = object : Migration(13, 14) {
+        override fun migrate(db: SupportSQLiteDatabase) {
+            db.execSQL("ALTER TABLE reminders ADD COLUMN importance TEXT")
+        }
+    }
+
     /** Every migration, oldest first: the database and its migration tests open
      *  through the same list. */
     val ALL: Array<Migration> by lazy {
-        arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13)
+        arrayOf(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
     }
 
     /** v9 -> v10 (§7 R109, Appendix E B-42 and B-45): two per-reminder flags,

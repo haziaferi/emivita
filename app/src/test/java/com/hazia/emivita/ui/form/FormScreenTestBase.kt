@@ -190,7 +190,7 @@ abstract class FormScreenTestBase {
             save = setOf(s(R.string.common_save), s(R.string.common_save_changes)),
             cancel = s(R.string.common_cancel),
             weekdays = (1..7).map { DayOfWeek.of(it).getDisplayName(TextStyle.SHORT, locale) }.toSet(),
-            textButtons = setOf(s(R.string.reminder_delete), s(R.string.medicine_detail_delete), s(R.string.quick_add_more_details)),
+            textButtons = setOf(s(R.string.reminder_delete), s(R.string.medicine_detail_delete), s(R.string.quick_add_more_details), s(R.string.medicines_resume)),
             groups = listOf(
                 R.string.reminder_group_taking, R.string.reminder_group_notification, R.string.reminder_group_unanswered, R.string.reminder_group_duration,
                 // §7 R125: the medicine form's second group, and Alarms & snooze's tone row (it opens the system picker).
@@ -198,12 +198,14 @@ abstract class FormScreenTestBase {
             ).map { s(it) },
             chips = listOf(
                 R.string.common_daily, R.string.add_reminder_specific_days, R.string.add_reminder_every_n_days, R.string.add_reminder_active_pause_cycle,
-                R.string.common_once, R.string.stock_expiration_always,
+                R.string.common_once, R.string.stock_expiration_always, R.string.add_reminder_days_of_month,
             ).map { s(it) }.toSet(),
             rules = listOf(
                 R.string.form_min_one, R.string.form_min_one_minute, R.string.form_min_zero, R.string.form_time_invalid, R.string.form_date_invalid,
                 R.string.form_until_before_from, R.string.quick_add_dose_invalid, R.string.add_reminder_minutes_after_range,
                 R.string.add_medicine_prn_whole, R.string.add_medicine_prn_both, R.string.medicine_name_blank,
+                // §7 R127: the day rules that never meet, and a tag's name.
+                R.string.add_reminder_rules_never, R.string.tag_name_blank, R.string.tag_name_taken,
             ).map { s(it) }.toSet(),
         )
     }

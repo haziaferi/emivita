@@ -16,6 +16,7 @@ import com.hazia.emivita.core.scheduling.OccurrenceProjectionCache
 import com.hazia.emivita.core.scheduling.SchedulingCoordinator
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.map
 import com.hazia.emivita.core.data.entity.StockInfo
 import com.hazia.emivita.core.data.config.decodeReminderConfig
 import com.hazia.emivita.core.data.dao.MedicineWithReminders
@@ -135,6 +136,7 @@ class MedicineRepository(
                     dosesRemaining = r.dosesRemaining,
                     stickyUntilAnswered = r.stickyUntilAnswered,
                     variableAmount = r.variableAmount,
+                    importance = r.importance,
                 )
                 idMap[r.id] = copiedId
             }
@@ -219,6 +221,26 @@ class MedicineRepository(
     }
 
     fun observeTagsForMedicine(medicineId: Long): Flow<List<Tag>> = tagDao.observeTagsForMedicine(medicineId)
+
+    /** Every tag, by name (§7 R127, C-31: the form offers them all). */
+    fun observeAllTags(): Flow<List<Tag>> = tagDao.observeAll()
+
+    /** Each tag's id with the ids of the medicines that carry it. */
+    fun observeTagUse(): Flow<Map<Long, Set<Long>>> =
+        tagDao.observeAllCrossRefs().map { refs -> refs.groupBy({ it.tagId }, { it.medicineId }).mapValues { it.value.toSet() } }
+
+    /** The tags sheet's Salva (§7 R127, C-31): renames, then deletions, in one transaction. A
+     *  deleted tag leaves every medicine with it (the cross-reference FK cascades). */
+    suspend fun applyTagEdits(renamed: Map<Long, String>, deleted: Set<Long>) {
+        database.withTransaction {
+            for (tag in tagDao.getAllOnce()) if (tag.id in deleted) tagDao.delete(tag)
+            // Through a placeholder first, so two tags can swap names under the unique index.
+            val kept = renamed.filterKeys { it !in deleted }
+            for (id in kept.keys) tagDao.rename(id, "#renaming-$id")
+            for ((id, name) in kept) tagDao.rename(id, name)
+        }
+        autoSyncManager.notifyChanged()
+    }
 
     // Was two un-wrapped suspend calls (flagged in review, R1) -- a process death
     // or thrown exception between insert() and attachToMedicine() could leave a

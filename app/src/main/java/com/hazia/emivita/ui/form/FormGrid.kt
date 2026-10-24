@@ -2,6 +2,7 @@ package com.hazia.emivita.ui.form
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -34,9 +35,10 @@ val SecondaryControlHeight = 42.dp
  * The form's 7-column grid (§7 R124, C1/C6/C8): [cell] dp columns from the content's left edge to
  * its right edge, equal gaps. Each child takes the fewest whole columns its one line needs and a
  * row's spare columns go to its widest children, so every row, the last included, ends on the edge.
+ * With [stretch] off a short row keeps one column per child, lined up under the columns above it.
  */
 @Composable
-fun SpanGrid(modifier: Modifier = Modifier, columns: Int = 7, cell: Dp = SecondaryControlHeight, content: @Composable () -> Unit) {
+fun SpanGrid(modifier: Modifier = Modifier, columns: Int = 7, cell: Dp = SecondaryControlHeight, stretch: Boolean = true, content: @Composable () -> Unit) {
     Layout(content, modifier.fillMaxWidth()) { ms, c ->
         val w = c.maxWidth
         val cellPx = cell.roundToPx()
@@ -51,7 +53,7 @@ fun SpanGrid(modifier: Modifier = Modifier, columns: Int = 7, cell: Dp = Seconda
             if (rows.isEmpty() || used + k > columns) { rows += mutableListOf(i); used = k } else { rows.last() += i; used += k }
         }
         val spans = mins.toMutableList()
-        for (row in rows) {
+        if (stretch) for (row in rows) {
             var spare = columns - row.sumOf { spans[it] }
             val order = row.sortedByDescending { natural[it] }
             var j = 0
@@ -104,12 +106,13 @@ fun GridToggleCell(label: String, on: Boolean, modifier: Modifier = Modifier, pa
 }
 
 /**
- * Day toggles on the 7-column grid (C6), rows of seven: the weekdays now, the month's days later.
+ * Day toggles on the 7-column grid (C6), rows of seven: the weekdays and the month's days.
  * Each cell is a 42 dp square; the first column sits on the content's left edge, the last on its right.
  */
 @Composable
 fun DayGrid(labels: List<String>, isOn: (Int) -> Boolean, onToggle: (index: Int, on: Boolean) -> Unit) {
-    SpanGrid {
+    // A short last row (the 29th to the 31st) keeps its squares under columns 1 to 3 (§7 R127, the approved grid).
+    SpanGrid(stretch = false) {
         labels.forEachIndexed { i, label ->
             GridToggleCell(label, isOn(i), Modifier.size(SecondaryControlHeight), padded = false) { on -> onToggle(i, on) }
         }
@@ -122,4 +125,30 @@ fun WeekdayGrid(selected: Set<Int>, onChange: (Set<Int>) -> Unit) {
     val locale = Locale.current.platformLocale
     val labels = (1..7).map { DayOfWeek.of(it).getDisplayName(TextStyle.SHORT, locale) }
     DayGrid(labels, isOn = { (it + 1) in selected }) { i, on -> onChange(if (on) selected + (i + 1) else selected - (i + 1)) }
+}
+
+/** The days of the month 1 to 31 as [DayGrid] toggles, rows of seven (§7 R127, A-13 with the 42 dp grid). */
+@Composable
+fun MonthDayGrid(selected: Set<Int>, onChange: (Set<Int>) -> Unit) {
+    DayGrid((1..31).map { it.toString() }, isOn = { (it + 1) in selected }) { i, on -> onChange(if (on) selected + (i + 1) else selected - (i + 1)) }
+}
+
+/**
+ * A cell that acts once (an instruction sample, "Gestisci i tag"): the toggle cell's outline and
+ * height, never filled, the label in the text colour; a button for TalkBack.
+ */
+@Composable
+fun GridActionCell(label: String, modifier: Modifier = Modifier, onClick: () -> Unit) {
+    val shape = FilterChipDefaults.shape
+    Box(
+        modifier
+            .height(SecondaryControlHeight)
+            .clip(shape)
+            .border(FilterChipDefaults.filterChipBorder(enabled = true, selected = false), shape)
+            .clickable(role = Role.Button, onClick = onClick)
+            .padding(horizontal = 12.dp),
+        contentAlignment = Alignment.Center,
+    ) {
+        Text(label, style = MaterialTheme.typography.labelLarge, maxLines = 1, overflow = TextOverflow.Ellipsis, color = MaterialTheme.colorScheme.onSurface)
+    }
 }

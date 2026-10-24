@@ -22,7 +22,6 @@
     <string name="add_reminder_alert_when_stock_is_at_or_below">Avvisa quando la scorta è pari o inferiore a</string>
     <string name="add_reminder_auto_resolve">Conferma automatica</string>
     <string name="add_reminder_days_before_expiration_to_start_alerting">Giorni di preavviso prima della scadenza</string>
-    <string name="add_reminder_every_hours">Ogni (ore)</string>
     <string name="add_reminder_every_min">Ogni (min)</string>
     <string name="add_reminder_every_n_days">Ogni N giorni</string>
     <string name="add_reminder_every_relevant_change_while_low">A ogni variazione, finché è bassa</string>
@@ -766,4 +765,52 @@
     <string name="medicine_barcode">Codice a barre</string>
     <string name="medicine_scan_unavailable">Nessuna app di scansione installata</string>
     <string name="medicine_add_tag">Aggiungi il tag</string>
+    <!-- §7 R127: le scelte P2 della proprietaria. -->
+    <string name="add_reminder_days_of_month">Giorni del mese</string>
+    <string name="add_reminder_rules_combine">Il promemoria suona solo nei giorni che rispettano tutte le regole scelte.</string>
+    <string name="add_reminder_rules_never">Queste regole non cadono mai nello stesso giorno.</string>
+    <string name="add_reminder_next_dates">Prossimi: %1$s</string>
+    <string name="reminder_row_days_of_month">Giorni %1$s del mese</string>
+    <string name="add_reminder_importance">Importanza della notifica</string>
+    <string name="add_reminder_importance_same">Come il farmaco (%1$s)</string>
+    <string name="instructions_sample_with_food">Durante il pasto</string>
+    <string name="instructions_sample_empty_stomach">A stomaco vuoto</string>
+    <string name="instructions_sample_before_bed">Prima di dormire</string>
+    <string name="instructions_sample_with_water">Con un bicchiere d’acqua</string>
+    <string name="add_reminder_every">Ogni</string>
+    <plurals name="interval_unit_minutes">
+        <item quantity="one">minuto</item>
+        <item quantity="many">minuti</item>
+        <item quantity="other">minuti</item>
+    </plurals>
+    <plurals name="interval_unit_hours">
+        <item quantity="one">ora</item>
+        <item quantity="many">ore</item>
+        <item quantity="other">ore</item>
+    </plurals>
+    <plurals name="interval_unit_days">
+        <item quantity="one">giorno</item>
+        <item quantity="many">giorni</item>
+        <item quantity="other">giorni</item>
+    </plurals>
+    <plurals name="interval_unit_weeks">
+        <item quantity="one">settimana</item>
+        <item quantity="many">settimane</item>
+        <item quantity="other">settimane</item>
+    </plurals>
+    <plurals name="add_reminder_interval_minutes_check">
+        <item quantity="one">Ogni %1$d minuto: è giusto?</item>
+        <item quantity="many">Ogni %1$d minuti: è giusto?</item>
+        <item quantity="other">Ogni %1$d minuti: è giusto?</item>
+    </plurals>
+    <string name="stock_add_to_calendar">Aggiungi al calendario</string>
+    <string name="stock_calendar_title">%1$s finisce</string>
+    <string name="add_medicine_manage_tags">Gestisci i tag</string>
+    <string name="tag_delete_a11y">Elimina il tag %1$s</string>
+    <string name="tag_delete_title">Eliminare il tag %1$s?</string>
+    <string name="tag_delete_text">Viene tolto da tutti i farmaci che lo hanno.</string>
+    <string name="tag_name_blank">Scrivi il nome del tag</string>
+    <string name="tag_name_taken">Un altro tag ha questo nome</string>
+    <string name="medicines_all_paused">Tutti i promemoria sono in pausa</string>
+    <string name="medicines_resume">Riattiva</string>
 </resources>

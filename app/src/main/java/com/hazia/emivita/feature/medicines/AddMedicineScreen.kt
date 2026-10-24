@@ -8,7 +8,6 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -61,7 +60,6 @@ import com.hazia.emivita.ui.form.FormGroupRow
 import com.hazia.emivita.ui.form.FormScaffold
 import com.hazia.emivita.ui.form.FormSwitchRow
 import com.hazia.emivita.ui.form.FormTextField
-import com.hazia.emivita.ui.form.GridToggleCell
 import com.hazia.emivita.ui.form.SecondaryControlHeight
 import com.hazia.emivita.ui.icons.MedicineIconOption
 import com.hazia.emivita.ui.icons.MedicineIcons
@@ -101,6 +99,8 @@ fun AddMedicineScreen(
         initialPriority = NotificationPriority.STANDARD,
         colorsInUse = colorsInUse,
         otherNames = otherNames,
+        tagRepository = medicineRepository,
+        medicineId = null,
         onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, notes, doseUnit, lockOverride, priority, prnMax, prnHours, strength, rxNumber, asNeeded ->
             val id = medicineRepository.create(
                 Medicine(
@@ -209,6 +209,8 @@ fun EditMedicineScreen(
         initialPriority = current.notificationPriority,
         colorsInUse = colorsInUse,
         otherNames = otherNames,
+        tagRepository = medicineRepository,
+        medicineId = medicineId,
         onDelete = onDeleted?.let { { confirmDelete = true } },
         onSave = { name, barcodeValue, iconKey, color, tagNames, indication, storageNote, notes, doseUnit, lockOverride, priority, prnMax, prnHours, strength, rxNumber, asNeeded ->
             medicineRepository.update(
@@ -307,6 +309,10 @@ private fun MedicineFormBody(
      *  not "too close to" itself. */
     colorsInUse: List<Pair<String, Color>>,
     otherNames: List<String>,
+    /** Where the tags sheet reads and writes every tag (§7 R127). */
+    tagRepository: MedicineRepository,
+    /** The medicine being edited, null on the add form: its own tags never make a delete ask. */
+    medicineId: Long?,
     onDelete: (() -> Unit)? = null,
     onSave: suspend (
         name: String,
@@ -437,16 +443,11 @@ private fun MedicineFormBody(
             tagInput, { tagInput = it }, stringResource(R.string.add_medicine_add_a_tag), onDone = ::addTag,
             trailingIcon = { IconButton(onClick = ::addTag) { Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.medicine_add_tag)) } },
         )
-        if (shownTags.isNotEmpty()) {
-            Spacer(Modifier.height(8.dp))
-            // The owner (2026-10-23): tag chips take their own width and wrap, left-aligned.
-            // A chip on is a tag this medicine has; tapping it takes the tag off, as the chip's
-            // close icon did (§7 R125).
-            FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                shownTags.forEach { tag ->
-                    GridToggleCell(tag, tag in pendingTags) { on -> pendingTags = if (on) pendingTags + tag else pendingTags - tag }
-                }
-            }
+        // The owner (2026-10-23): tag chips take their own width and wrap, left-aligned. A chip on
+        // is a tag this medicine has (§7 R125); every tag is offered, "Gestisci i tag" last (§7 R127).
+        TagChips(tagRepository, medicineId, shownTags, pendingTags, onPending = { pendingTags = it }) { edits ->
+            pendingTags = edits.appliedTo(pendingTags)
+            shownTags = edits.appliedTo(shownTags)
         }
 
         // Taken when needed (§7 R116, the owner's switch).

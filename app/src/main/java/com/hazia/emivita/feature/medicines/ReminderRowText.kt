@@ -60,7 +60,16 @@ private fun repeatText(pattern: RepeatPattern, resources: Resources): String = w
     is RepeatPattern.EveryNDays -> resources.getQuantityString(R.plurals.reminder_row_every_n_days, pattern.n, pattern.n)
     // "21 days on, 7 off" (§7 R121, the owner's "Add counts").
     is RepeatPattern.CyclicActivePause -> resources.getQuantityString(R.plurals.reminder_row_cycle_days, pattern.activeDays, pattern.activeDays, pattern.pauseDays)
+    // The combined rules (§7 R127): each in its own words, joined with " + " as the rig said them.
+    is RepeatPattern.DayRules -> listOfNotNull(
+        pattern.weekdays?.let { repeatText(RepeatPattern.SpecificDaysOfWeek(it), resources) },
+        pattern.cycle?.let { repeatText(it, resources) },
+        pattern.daysOfMonth?.let { resources.getString(R.string.reminder_row_days_of_month, it.sorted().joinToString(", ")) },
+    ).joinToString(RULE_SEPARATOR)
 }
+
+/** The rules of a combined pattern are joined so they read as one item of the row. */
+private const val RULE_SEPARATOR = " + "
 
 private fun parentName(parent: Reminder, resources: Resources): String =
     when (val config = decodeReminderConfig(parent.configJson)) {
