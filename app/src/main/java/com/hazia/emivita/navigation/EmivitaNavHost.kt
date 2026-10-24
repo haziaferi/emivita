@@ -132,6 +132,7 @@ fun EmivitaNavHost(startPage: StartPage = StartPage.TODAY, openDataAndBackupOnSt
                     doseEventRepository = container.doseEventRepository,
                     occurrenceProjectionCache = container.occurrenceProjectionCache,
                     settingsRepository = container.settingsRepository,
+                    reminderRepository = container.reminderRepository,
                     // An unknown scanned code keeps the full form: the code is
                     // one of its fields and the sheet has none (§7 R114).
                     onAddMedicineWithBarcode = { barcode -> navController.navigate(EmivitaRoute.AddMedicine(prefilledBarcode = barcode)) },

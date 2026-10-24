@@ -70,6 +70,14 @@ class ReminderRowTextTest {
     }
 
     @Test
+    fun `combined day rules read each rule, joined`() {
+        // §7 R127 (A-10 + A-13): the row says every rule the reminder must meet.
+        val rules = RepeatPattern.DayRules(weekdays = setOf(5, 1, 3), cycle = RepeatPattern.CyclicActivePause(0, 21, 7), daysOfMonth = setOf(15, 1))
+        assertEquals("08:00 · Mon, Wed, Fri + 21 days on, 7 off + Days 1, 15 of the month · 1 dose", reminderRowText(fixed(8, 0, pattern = rules), null, null, resources))
+        assertEquals("08:00 · Days 1, 15 of the month · 1 dose", reminderRowText(fixed(8, 0, pattern = RepeatPattern.DayRules(daysOfMonth = setOf(1, 15))), null, null, resources))
+    }
+
+    @Test
     @Config(qualifiers = "it")
     fun `in Italian a cycle reads 21 giorni si, 7 no`() {
         assertEquals("08:00 · 21 giorni sì, 7 no · 1 compressa", reminderRowText(fixed(8, 0, pattern = RepeatPattern.CyclicActivePause(0, 21, 7)), "compressa", null, resources))

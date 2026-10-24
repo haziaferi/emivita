@@ -6,6 +6,8 @@ import com.hazia.emivita.core.data.config.LowStockTriggerMode
 import com.hazia.emivita.core.data.config.ReminderConfig
 import com.hazia.emivita.core.data.config.RepeatPattern
 import com.hazia.emivita.core.data.config.isActiveOn
+import com.hazia.emivita.core.data.config.holdsOn
+import com.hazia.emivita.core.data.config.DAY_RULES_HORIZON_DAYS
 import java.time.Duration
 import java.time.Instant
 import java.time.LocalDate
@@ -75,6 +77,10 @@ private fun matchingDateOnOrAfter(pattern: RepeatPattern, fromDate: LocalDate): 
             .map { fromDate.plusDays(it.toLong()) }
             .firstOrNull { pattern.isActiveOn(it.toEpochDay()) }
     }
+    // The combined day rules (§7 R127): null when they never coincide within the horizon.
+    is RepeatPattern.DayRules -> (0 until DAY_RULES_HORIZON_DAYS).asSequence()
+        .map { fromDate.plusDays(it.toLong()) }
+        .firstOrNull { pattern.holdsOn(it) }
 }
 
 /** Next occurrence of a [ReminderConfig.FixedTime] reminder at/after

@@ -46,6 +46,8 @@ import com.hazia.emivita.core.data.config.IntervalStartBehavior
 import com.hazia.emivita.core.data.config.ReminderConfig
 import com.hazia.emivita.core.data.config.ReminderType
 import com.hazia.emivita.core.data.config.RepeatPattern
+import androidx.compose.runtime.CompositionLocalProvider
+import com.hazia.emivita.core.data.entity.NotificationPriority
 import com.hazia.emivita.core.data.entity.Reminder
 import com.hazia.emivita.core.data.repository.MedicineRepository
 import com.hazia.emivita.core.data.repository.ReminderRepository
@@ -109,105 +111,115 @@ fun AddReminderScreen(
     val doseUnit by produceState<String?>(initialValue = null, medicineId) {
         value = medicineRepository.getById(medicineId)?.doseUnit
     }
+    // The medicine's tier, which the Notifica sheet names and offers to raise (§7 R127, B-38).
+    val medicinePriority = produceState<NotificationPriority?>(initialValue = null, medicineId) {
+        value = medicineRepository.getById(medicineId)?.notificationPriority
+    }
 
-    when (selectedType) {
-        null -> ReminderTypePicker(onSelect = { selectedType = it }, onCancel = onCancel)
-        ReminderType.FIXED_TIME -> FixedTimeFormBody(
-            title = stringResource(R.string.reminder_fixed_time),
-            saveLabel = stringResource(R.string.common_save),
-            initial = ReminderConfig.FixedTime(hour = 8, minute = 0, dose = 1.0, repeatPattern = RepeatPattern.Daily),
-            doseUnit = doseUnit,
-            onSave = { config, advanced ->
-                reminderRepository.create(
-                    medicineId, null, ReminderType.FIXED_TIME, config,
-                    autoResolve = advanced.autoResolve, activeFromEpochDay = advanced.activeFromEpochDay,
-                    activeUntilEpochDay = advanced.activeUntilEpochDay, repeatOnUnanswered = advanced.repeatOnUnanswered,
-                    weekendModeOptIn = advanced.weekendModeOptIn, preAlarmMinutes = advanced.preAlarmMinutes,
-                    instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
-                    stickyUntilAnswered = advanced.stickyUntilAnswered, variableAmount = advanced.variableAmount,
-                )
-                onDone()
-            },
-            onCancel = { selectedType = null },
-        )
-        ReminderType.REPEATING_INTERVAL -> RepeatingIntervalFormBody(
-            title = stringResource(R.string.reminder_repeating_interval),
-            saveLabel = stringResource(R.string.common_save),
-            initial = ReminderConfig.RepeatingInterval(
-                intervalMinutes = 8 * 60,
-                dose = 1.0,
-                startBehavior = IntervalStartBehavior.ON_REMINDED,
-                anchorEpochMillis = System.currentTimeMillis(),
-            ),
-            doseUnit = doseUnit,
-            onSave = { config, advanced ->
-                reminderRepository.create(
-                    medicineId, null, ReminderType.REPEATING_INTERVAL, config,
-                    autoResolve = advanced.autoResolve, activeFromEpochDay = advanced.activeFromEpochDay,
-                    activeUntilEpochDay = advanced.activeUntilEpochDay, repeatOnUnanswered = advanced.repeatOnUnanswered,
-                    weekendModeOptIn = advanced.weekendModeOptIn, preAlarmMinutes = advanced.preAlarmMinutes,
-                    instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
-                    stickyUntilAnswered = advanced.stickyUntilAnswered, variableAmount = advanced.variableAmount,
-                )
-                onDone()
-            },
-            onCancel = { selectedType = null },
-        )
-        ReminderType.DAILY_WINDOW -> DailyWindowFormBody(
-            title = stringResource(R.string.reminder_daily_window),
-            saveLabel = stringResource(R.string.common_save),
-            initial = ReminderConfig.DailyWindow(
-                intervalMinutes = 4 * 60,
-                dose = 1.0,
-                windowStartHour = 8,
-                windowStartMinute = 0,
-                windowEndHour = 20,
-                windowEndMinute = 0,
-                startBehavior = IntervalStartBehavior.ON_REMINDED,
-            ),
-            doseUnit = doseUnit,
-            onSave = { config, advanced ->
-                reminderRepository.create(
-                    medicineId, null, ReminderType.DAILY_WINDOW, config,
-                    autoResolve = advanced.autoResolve, activeFromEpochDay = advanced.activeFromEpochDay,
-                    activeUntilEpochDay = advanced.activeUntilEpochDay, repeatOnUnanswered = advanced.repeatOnUnanswered,
-                    weekendModeOptIn = advanced.weekendModeOptIn, preAlarmMinutes = advanced.preAlarmMinutes,
-                    instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
-                    stickyUntilAnswered = advanced.stickyUntilAnswered, variableAmount = advanced.variableAmount,
-                )
-                onDone()
-            },
-            onCancel = { selectedType = null },
-        )
-        // Unreachable: [reminderTypeOptions] excludes both, since
-        // StockExpirationScreen is their sole creation path (spec §6/§9 #1:
-        // "one entry point, no duplicated fields elsewhere"). Kept as an
-        // explicit case rather than an `else` so adding a 7th ReminderType
-        // still forces this file to be revisited (EditReminderScreen below
-        // routes to their form bodies).
-        ReminderType.LOW_STOCK_ALERT, ReminderType.EXPIRATION_ALERT -> Unit
-        ReminderType.LINKED_FOLLOWING -> LinkedFollowingFormBody(
-            title = stringResource(R.string.reminder_linked_following),
-            saveLabel = stringResource(R.string.common_save),
-            medicineId = medicineId,
-            excludeReminderId = null,
-            reminderRepository = reminderRepository,
-            initial = ReminderConfig.LinkedFollowing(delayMinutes = 30, dose = 1.0, startBehavior = IntervalStartBehavior.ON_RESOLVED),
-            initialParentReminderId = null,
-            doseUnit = doseUnit,
-            onSave = { parentId, config, advanced ->
-                reminderRepository.create(
-                    medicineId, null, ReminderType.LINKED_FOLLOWING, config, parentReminderId = parentId,
-                    autoResolve = advanced.autoResolve, activeFromEpochDay = advanced.activeFromEpochDay,
-                    activeUntilEpochDay = advanced.activeUntilEpochDay, repeatOnUnanswered = advanced.repeatOnUnanswered,
-                    weekendModeOptIn = advanced.weekendModeOptIn, preAlarmMinutes = advanced.preAlarmMinutes,
-                    instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
-                    stickyUntilAnswered = advanced.stickyUntilAnswered, variableAmount = advanced.variableAmount,
-                )
-                onDone()
-            },
-            onCancel = { selectedType = null },
-        )
+    CompositionLocalProvider(LocalMedicinePriority provides medicinePriority.value) {
+        when (selectedType) {
+            null -> ReminderTypePicker(onSelect = { selectedType = it }, onCancel = onCancel)
+            ReminderType.FIXED_TIME -> FixedTimeFormBody(
+                title = stringResource(R.string.reminder_fixed_time),
+                saveLabel = stringResource(R.string.common_save),
+                initial = ReminderConfig.FixedTime(hour = 8, minute = 0, dose = 1.0, repeatPattern = RepeatPattern.Daily),
+                doseUnit = doseUnit,
+                onSave = { config, advanced ->
+                    reminderRepository.create(
+                        medicineId, null, ReminderType.FIXED_TIME, config,
+                        autoResolve = advanced.autoResolve, activeFromEpochDay = advanced.activeFromEpochDay,
+                        activeUntilEpochDay = advanced.activeUntilEpochDay, repeatOnUnanswered = advanced.repeatOnUnanswered,
+                        weekendModeOptIn = advanced.weekendModeOptIn, preAlarmMinutes = advanced.preAlarmMinutes,
+                        instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
+                        stickyUntilAnswered = advanced.stickyUntilAnswered, variableAmount = advanced.variableAmount,
+                        importance = advanced.importance,
+                    )
+                    onDone()
+                },
+                onCancel = { selectedType = null },
+            )
+            ReminderType.REPEATING_INTERVAL -> RepeatingIntervalFormBody(
+                title = stringResource(R.string.reminder_repeating_interval),
+                saveLabel = stringResource(R.string.common_save),
+                initial = ReminderConfig.RepeatingInterval(
+                    intervalMinutes = 8 * 60,
+                    dose = 1.0,
+                    startBehavior = IntervalStartBehavior.ON_REMINDED,
+                    anchorEpochMillis = System.currentTimeMillis(),
+                ),
+                doseUnit = doseUnit,
+                onSave = { config, advanced ->
+                    reminderRepository.create(
+                        medicineId, null, ReminderType.REPEATING_INTERVAL, config,
+                        autoResolve = advanced.autoResolve, activeFromEpochDay = advanced.activeFromEpochDay,
+                        activeUntilEpochDay = advanced.activeUntilEpochDay, repeatOnUnanswered = advanced.repeatOnUnanswered,
+                        weekendModeOptIn = advanced.weekendModeOptIn, preAlarmMinutes = advanced.preAlarmMinutes,
+                        instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
+                        stickyUntilAnswered = advanced.stickyUntilAnswered, variableAmount = advanced.variableAmount,
+                        importance = advanced.importance,
+                    )
+                    onDone()
+                },
+                onCancel = { selectedType = null },
+            )
+            ReminderType.DAILY_WINDOW -> DailyWindowFormBody(
+                title = stringResource(R.string.reminder_daily_window),
+                saveLabel = stringResource(R.string.common_save),
+                initial = ReminderConfig.DailyWindow(
+                    intervalMinutes = 4 * 60,
+                    dose = 1.0,
+                    windowStartHour = 8,
+                    windowStartMinute = 0,
+                    windowEndHour = 20,
+                    windowEndMinute = 0,
+                    startBehavior = IntervalStartBehavior.ON_REMINDED,
+                ),
+                doseUnit = doseUnit,
+                onSave = { config, advanced ->
+                    reminderRepository.create(
+                        medicineId, null, ReminderType.DAILY_WINDOW, config,
+                        autoResolve = advanced.autoResolve, activeFromEpochDay = advanced.activeFromEpochDay,
+                        activeUntilEpochDay = advanced.activeUntilEpochDay, repeatOnUnanswered = advanced.repeatOnUnanswered,
+                        weekendModeOptIn = advanced.weekendModeOptIn, preAlarmMinutes = advanced.preAlarmMinutes,
+                        instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
+                        stickyUntilAnswered = advanced.stickyUntilAnswered, variableAmount = advanced.variableAmount,
+                        importance = advanced.importance,
+                    )
+                    onDone()
+                },
+                onCancel = { selectedType = null },
+            )
+            // Unreachable: [reminderTypeOptions] excludes both, since
+            // StockExpirationScreen is their sole creation path (spec §6/§9 #1:
+            // "one entry point, no duplicated fields elsewhere"). Kept as an
+            // explicit case rather than an `else` so adding a 7th ReminderType
+            // still forces this file to be revisited (EditReminderScreen below
+            // routes to their form bodies).
+            ReminderType.LOW_STOCK_ALERT, ReminderType.EXPIRATION_ALERT -> Unit
+            ReminderType.LINKED_FOLLOWING -> LinkedFollowingFormBody(
+                title = stringResource(R.string.reminder_linked_following),
+                saveLabel = stringResource(R.string.common_save),
+                medicineId = medicineId,
+                excludeReminderId = null,
+                reminderRepository = reminderRepository,
+                initial = ReminderConfig.LinkedFollowing(delayMinutes = 30, dose = 1.0, startBehavior = IntervalStartBehavior.ON_RESOLVED),
+                initialParentReminderId = null,
+                doseUnit = doseUnit,
+                onSave = { parentId, config, advanced ->
+                    reminderRepository.create(
+                        medicineId, null, ReminderType.LINKED_FOLLOWING, config, parentReminderId = parentId,
+                        autoResolve = advanced.autoResolve, activeFromEpochDay = advanced.activeFromEpochDay,
+                        activeUntilEpochDay = advanced.activeUntilEpochDay, repeatOnUnanswered = advanced.repeatOnUnanswered,
+                        weekendModeOptIn = advanced.weekendModeOptIn, preAlarmMinutes = advanced.preAlarmMinutes,
+                        instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
+                        stickyUntilAnswered = advanced.stickyUntilAnswered, variableAmount = advanced.variableAmount,
+                        importance = advanced.importance,
+                    )
+                    onDone()
+                },
+                onCancel = { selectedType = null },
+            )
+        }
     }
 }
 
@@ -230,11 +242,14 @@ fun EditReminderScreen(
     var loaded by remember { mutableStateOf(false) }
     var reminder by remember { mutableStateOf<Reminder?>(null) }
     var doseUnit by remember { mutableStateOf<String?>(null) }
+    var medicinePriority by remember { mutableStateOf<NotificationPriority?>(null) }
 
     LaunchedEffect(reminderId) {
         val loadedReminder = reminderRepository.getById(reminderId)
         reminder = loadedReminder
-        doseUnit = loadedReminder?.let { medicineRepository.getById(it.medicineId)?.doseUnit }
+        val medicine = loadedReminder?.let { medicineRepository.getById(it.medicineId) }
+        doseUnit = medicine?.doseUnit
+        medicinePriority = medicine?.notificationPriority
         loaded = true
     }
 
@@ -266,100 +281,106 @@ fun EditReminderScreen(
         )
     }
 
-    when (val config = reminderRepository.decodeConfig(current)) {
-        is ReminderConfig.FixedTime -> FixedTimeFormBody(
-            title = stringResource(R.string.reminder_edit_fixed_time),
-            saveLabel = stringResource(R.string.common_save_changes),
-            initial = config,
-            initialReminder = current,
-            doseUnit = doseUnit,
-            onSave = { updated, advanced ->
-                reminderRepository.updateConfigAndAdvancedFields(
-                    current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
-                    advanced.activeUntilEpochDay, advanced.repeatOnUnanswered, advanced.weekendModeOptIn,
-                    preAlarmMinutes = advanced.preAlarmMinutes, instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
-                    stickyUntilAnswered = advanced.stickyUntilAnswered, variableAmount = advanced.variableAmount,
-                )
-                onDone()
-            },
-            onCancel = onCancel,
-            onDelete = onDelete,
-        )
-        is ReminderConfig.RepeatingInterval -> RepeatingIntervalFormBody(
-            title = stringResource(R.string.reminder_edit_repeating_interval),
-            saveLabel = stringResource(R.string.common_save_changes),
-            initial = config,
-            initialReminder = current,
-            doseUnit = doseUnit,
-            onSave = { updated, advanced ->
-                reminderRepository.updateConfigAndAdvancedFields(
-                    current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
-                    advanced.activeUntilEpochDay, advanced.repeatOnUnanswered, advanced.weekendModeOptIn,
-                    preAlarmMinutes = advanced.preAlarmMinutes, instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
-                    stickyUntilAnswered = advanced.stickyUntilAnswered, variableAmount = advanced.variableAmount,
-                )
-                onDone()
-            },
-            onCancel = onCancel,
-            onDelete = onDelete,
-        )
-        is ReminderConfig.DailyWindow -> DailyWindowFormBody(
-            title = stringResource(R.string.reminder_edit_daily_window),
-            saveLabel = stringResource(R.string.common_save_changes),
-            initial = config,
-            initialReminder = current,
-            doseUnit = doseUnit,
-            onSave = { updated, advanced ->
-                reminderRepository.updateConfigAndAdvancedFields(
-                    current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
-                    advanced.activeUntilEpochDay, advanced.repeatOnUnanswered, advanced.weekendModeOptIn,
-                    preAlarmMinutes = advanced.preAlarmMinutes, instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
-                    stickyUntilAnswered = advanced.stickyUntilAnswered, variableAmount = advanced.variableAmount,
-                )
-                onDone()
-            },
-            onCancel = onCancel,
-            onDelete = onDelete,
-        )
-        is ReminderConfig.LowStockAlert -> LowStockAlertFormBody(
-            title = stringResource(R.string.reminder_edit_low_stock),
-            saveLabel = stringResource(R.string.common_save_changes),
-            initial = config,
-            onSave = { updated -> reminderRepository.updateConfig(current, updated); onDone() },
-            onCancel = onCancel,
-            onDelete = onDelete,
-        )
-        is ReminderConfig.ExpirationAlert -> ExpirationAlertFormBody(
-            title = stringResource(R.string.reminder_edit_expiration),
-            saveLabel = stringResource(R.string.common_save_changes),
-            initial = config,
-            onSave = { updated -> reminderRepository.updateConfig(current, updated); onDone() },
-            onCancel = onCancel,
-            onDelete = onDelete,
-        )
-        is ReminderConfig.LinkedFollowing -> LinkedFollowingFormBody(
-            title = stringResource(R.string.reminder_edit_linked_following),
-            saveLabel = stringResource(R.string.common_save_changes),
-            medicineId = current.medicineId,
-            excludeReminderId = current.id,
-            reminderRepository = reminderRepository,
-            initial = config,
-            initialParentReminderId = current.parentReminderId,
-            initialReminder = current,
-            doseUnit = doseUnit,
-            onSave = { parentId, updated, advanced ->
-                reminderRepository.updateConfigAndAdvancedFields(
-                    current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
-                    advanced.activeUntilEpochDay, advanced.repeatOnUnanswered, advanced.weekendModeOptIn,
-                    preAlarmMinutes = advanced.preAlarmMinutes, instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
-                    stickyUntilAnswered = advanced.stickyUntilAnswered, variableAmount = advanced.variableAmount,
-                    parentReminderId = parentId,
-                )
-                onDone()
-            },
-            onCancel = onCancel,
-            onDelete = onDelete,
-        )
+    CompositionLocalProvider(LocalMedicinePriority provides medicinePriority) {
+        when (val config = reminderRepository.decodeConfig(current)) {
+            is ReminderConfig.FixedTime -> FixedTimeFormBody(
+                title = stringResource(R.string.reminder_edit_fixed_time),
+                saveLabel = stringResource(R.string.common_save_changes),
+                initial = config,
+                initialReminder = current,
+                doseUnit = doseUnit,
+                onSave = { updated, advanced ->
+                    reminderRepository.updateConfigAndAdvancedFields(
+                        current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
+                        advanced.activeUntilEpochDay, advanced.repeatOnUnanswered, advanced.weekendModeOptIn,
+                        preAlarmMinutes = advanced.preAlarmMinutes, instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
+                        stickyUntilAnswered = advanced.stickyUntilAnswered, variableAmount = advanced.variableAmount,
+                        importance = advanced.importance,
+                    )
+                    onDone()
+                },
+                onCancel = onCancel,
+                onDelete = onDelete,
+            )
+            is ReminderConfig.RepeatingInterval -> RepeatingIntervalFormBody(
+                title = stringResource(R.string.reminder_edit_repeating_interval),
+                saveLabel = stringResource(R.string.common_save_changes),
+                initial = config,
+                initialReminder = current,
+                doseUnit = doseUnit,
+                onSave = { updated, advanced ->
+                    reminderRepository.updateConfigAndAdvancedFields(
+                        current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
+                        advanced.activeUntilEpochDay, advanced.repeatOnUnanswered, advanced.weekendModeOptIn,
+                        preAlarmMinutes = advanced.preAlarmMinutes, instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
+                        stickyUntilAnswered = advanced.stickyUntilAnswered, variableAmount = advanced.variableAmount,
+                        importance = advanced.importance,
+                    )
+                    onDone()
+                },
+                onCancel = onCancel,
+                onDelete = onDelete,
+            )
+            is ReminderConfig.DailyWindow -> DailyWindowFormBody(
+                title = stringResource(R.string.reminder_edit_daily_window),
+                saveLabel = stringResource(R.string.common_save_changes),
+                initial = config,
+                initialReminder = current,
+                doseUnit = doseUnit,
+                onSave = { updated, advanced ->
+                    reminderRepository.updateConfigAndAdvancedFields(
+                        current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
+                        advanced.activeUntilEpochDay, advanced.repeatOnUnanswered, advanced.weekendModeOptIn,
+                        preAlarmMinutes = advanced.preAlarmMinutes, instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
+                        stickyUntilAnswered = advanced.stickyUntilAnswered, variableAmount = advanced.variableAmount,
+                        importance = advanced.importance,
+                    )
+                    onDone()
+                },
+                onCancel = onCancel,
+                onDelete = onDelete,
+            )
+            is ReminderConfig.LowStockAlert -> LowStockAlertFormBody(
+                title = stringResource(R.string.reminder_edit_low_stock),
+                saveLabel = stringResource(R.string.common_save_changes),
+                initial = config,
+                onSave = { updated -> reminderRepository.updateConfig(current, updated); onDone() },
+                onCancel = onCancel,
+                onDelete = onDelete,
+            )
+            is ReminderConfig.ExpirationAlert -> ExpirationAlertFormBody(
+                title = stringResource(R.string.reminder_edit_expiration),
+                saveLabel = stringResource(R.string.common_save_changes),
+                initial = config,
+                onSave = { updated -> reminderRepository.updateConfig(current, updated); onDone() },
+                onCancel = onCancel,
+                onDelete = onDelete,
+            )
+            is ReminderConfig.LinkedFollowing -> LinkedFollowingFormBody(
+                title = stringResource(R.string.reminder_edit_linked_following),
+                saveLabel = stringResource(R.string.common_save_changes),
+                medicineId = current.medicineId,
+                excludeReminderId = current.id,
+                reminderRepository = reminderRepository,
+                initial = config,
+                initialParentReminderId = current.parentReminderId,
+                initialReminder = current,
+                doseUnit = doseUnit,
+                onSave = { parentId, updated, advanced ->
+                    reminderRepository.updateConfigAndAdvancedFields(
+                        current, updated, advanced.autoResolve, advanced.activeFromEpochDay,
+                        advanced.activeUntilEpochDay, advanced.repeatOnUnanswered, advanced.weekendModeOptIn,
+                        preAlarmMinutes = advanced.preAlarmMinutes, instructions = advanced.instructions, dosesRemaining = advanced.dosesRemaining,
+                        stickyUntilAnswered = advanced.stickyUntilAnswered, variableAmount = advanced.variableAmount,
+                        importance = advanced.importance,
+                        parentReminderId = parentId,
+                    )
+                    onDone()
+                },
+                onCancel = onCancel,
+                onDelete = onDelete,
+            )
+        }
     }
 }
 

@@ -1,5 +1,12 @@
 package com.hazia.emivita.feature.medicines
 
+import android.content.ActivityNotFoundException
+import android.content.Intent
+import android.provider.CalendarContract
+import androidx.compose.ui.platform.LocalContext
+import java.time.LocalDate
+import java.time.ZoneOffset
+
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -121,6 +128,8 @@ fun StockExpirationScreen(
     var frequency by rememberSaveable { mutableStateOf(ExpirationTriggerFrequency.ONCE) }
 
     var saveStatus by remember { mutableStateOf<String?>(null) }
+    // The calendar event's title names the medicine in full, hide-names or not (§7 R127, the owner's C-20).
+    var medicineName by remember { mutableStateOf("") }
     // LocalResources, not LocalContext, for strings resolved inside a
     // callback: Compose's own lint (LocalContextGetResourceValueCall) flags
     // context.getString() on a captured context because it will not see a
@@ -129,6 +138,7 @@ fun StockExpirationScreen(
 
     LaunchedEffect(medicineId) {
         val medicine = medicineRepository.getById(medicineId) ?: return@LaunchedEffect
+        medicineName = medicine.name
         if (!filled) quantity = formatDecimalLocalized(medicine.stockInfo.quantity)
         if (!filled) unit = medicine.stockInfo.unit ?: ""
         trackingSaved = medicine.stockInfo.unit != null
@@ -296,6 +306,17 @@ fun StockExpirationScreen(
             keyboardType = KeyboardType.Decimal,
             help = if (runOut != null) stringResource(R.string.stock_runs_out, LocaleFormats.monthDayYear(runOut)) else stringResource(R.string.stock_runs_out_not_tracked),
         )
+        if (runOut != null) {
+            // The run-out date in the calendar app's own insert screen, an all-day event (§7 R127, C-20;
+            // medTimer's CalendarHelper): no calendar permission, and nothing happens without a calendar app.
+            val context = LocalContext.current
+            val eventTitle = stringResource(R.string.stock_calendar_title, medicineName)
+            Spacer(Modifier.height(8.dp))
+            FilledTonalButton(
+                modifier = Modifier.fillMaxWidth().height(SecondaryControlHeight),
+                onClick = { try { context.startActivity(runOutCalendarIntent(eventTitle, runOut)) } catch (_: ActivityNotFoundException) { } },
+            ) { Text(stringResource(R.string.stock_add_to_calendar), maxLines = 1, overflow = TextOverflow.Ellipsis) }
+        }
         Spacer(Modifier.height(8.dp))
         val refillAmount = parseDecimal(refillQuantity)?.takeIf { it > 0 }
         FilledTonalButton(
@@ -404,3 +425,12 @@ private fun SectionTitle(title: String, warns: Boolean = false) {
     }
     Spacer(Modifier.height(8.dp))
 }
+
+/** medTimer's `createCalendarEventIntent` (§7 R127, C-20): an all-day event titled [title] on [date]. */
+internal fun runOutCalendarIntent(title: String, date: LocalDate): Intent =
+    Intent(Intent.ACTION_INSERT)
+        .setData(CalendarContract.Events.CONTENT_URI)
+        .putExtra(CalendarContract.Events.TITLE, title)
+        .putExtra(CalendarContract.EXTRA_EVENT_ALL_DAY, true)
+        .putExtra(CalendarContract.EXTRA_EVENT_BEGIN_TIME, date.atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())
+        .putExtra(CalendarContract.EXTRA_EVENT_END_TIME, date.plusDays(1).atStartOfDay(ZoneOffset.UTC).toInstant().toEpochMilli())

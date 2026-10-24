@@ -37,11 +37,11 @@ _what I take, in what form, on which schedule, and how much is left before it ru
 
 | Screen | In the code | SPEC | Status | Overlaps |
 |---|---|---|---|---|
-| Medicines list | `route:Medicines` | §9 #1, §9 #27 | shipped |  |
+| Medicines list, its menu (pause all) and a card's swipe to delete | `route:Medicines` | §9 #1, §9 #27, R127 | shipped |  |
 | A medicine's page (reminders, stock, chart) | `route:MedicineDetail` | §9 #24, §9 #27 | shipped | History (calendar and list) |
-| Add or edit a medicine | `route:AddMedicine`, `route:EditMedicine`, `dialog:ColorPickerDialog`, `sheet:QuickAddMedicineSheet`, `sheet:MedicineNotificationSheet`, `sheet:MedicineDetailsSheet` | §9 #1, §9 #27, R114, R125 | shipped |  |
-| Add or edit a reminder (fixed times, interval, window, cycle, follow-up, taper) | `route:AddReminder`, `route:EditReminder`, `sheet:ReminderGroupSheet` | §9 #1, §9 #14, §9 #24, §9 #31 | shipped | Weekend mode (sheet) |
-| Stock and expiration | `route:StockExpiration` | §9 #8, §9 #27, R85 | shipped | Stock levels widget |
+| Add or edit a medicine | `route:AddMedicine`, `route:EditMedicine`, `dialog:ColorPickerDialog`, `sheet:QuickAddMedicineSheet`, `sheet:MedicineNotificationSheet`, `sheet:MedicineDetailsSheet`, `sheet:ManageTagsSheet` | §9 #1, §9 #27, R114, R125, R127 | shipped |  |
+| Add or edit a reminder (fixed times, interval, window, cycle, follow-up, taper) | `route:AddReminder`, `route:EditReminder`, `sheet:ReminderGroupSheet` | §9 #1, §9 #14, §9 #24, §9 #31, R127 | shipped | Weekend mode (sheet) |
+| Stock and expiration | `route:StockExpiration` | §9 #8, §9 #27, R85, R127 | shipped | Stock levels widget |
 | Stock levels widget | `widget:StockLevelsWidgetReceiver` | §9 #7, R108 | shipped | Stock and expiration |
 | Medical ID | `route:MedicalIdSettings`, `setting:MedicalId` | §9 #18, R85 | shipped |  |
 

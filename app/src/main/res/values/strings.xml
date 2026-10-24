@@ -30,7 +30,6 @@
     <string name="add_reminder_alert_when_stock_is_at_or_below">Alert when stock is at or below</string>
     <string name="add_reminder_auto_resolve">Auto-resolve</string>
     <string name="add_reminder_days_before_expiration_to_start_alerting">Days before expiration to start alerting</string>
-    <string name="add_reminder_every_hours">Every (hours)</string>
     <string name="add_reminder_every_min">Every (min)</string>
     <string name="add_reminder_every_n_days">Every N days</string>
     <string name="add_reminder_every_relevant_change_while_low">Every relevant change, while low</string>
@@ -774,4 +773,47 @@
     <string name="medicine_barcode">Barcode</string>
     <string name="medicine_scan_unavailable">No scanner app installed</string>
     <string name="medicine_add_tag">Add the tag</string>
+    <!-- §7 R127: the owner's P2 picks. -->
+    <string name="add_reminder_days_of_month">Days of the month</string>
+    <string name="add_reminder_rules_combine">The reminder rings only on days that meet every rule chosen.</string>
+    <string name="add_reminder_rules_never">These rules never fall on the same day.</string>
+    <string name="add_reminder_next_dates">Next: %1$s</string>
+    <string name="reminder_row_days_of_month">Days %1$s of the month</string>
+    <string name="add_reminder_importance">Notification importance</string>
+    <string name="add_reminder_importance_same">As the medicine (%1$s)</string>
+    <string name="instructions_sample_with_food">With food</string>
+    <string name="instructions_sample_empty_stomach">On an empty stomach</string>
+    <string name="instructions_sample_before_bed">Before bed</string>
+    <string name="instructions_sample_with_water">With a glass of water</string>
+    <string name="add_reminder_every">Every</string>
+    <plurals name="interval_unit_minutes">
+        <item quantity="one">minute</item>
+        <item quantity="other">minutes</item>
+    </plurals>
+    <plurals name="interval_unit_hours">
+        <item quantity="one">hour</item>
+        <item quantity="other">hours</item>
+    </plurals>
+    <plurals name="interval_unit_days">
+        <item quantity="one">day</item>
+        <item quantity="other">days</item>
+    </plurals>
+    <plurals name="interval_unit_weeks">
+        <item quantity="one">week</item>
+        <item quantity="other">weeks</item>
+    </plurals>
+    <plurals name="add_reminder_interval_minutes_check">
+        <item quantity="one">Every %1$d minute: is that right?</item>
+        <item quantity="other">Every %1$d minutes: is that right?</item>
+    </plurals>
+    <string name="stock_add_to_calendar">Add to calendar</string>
+    <string name="stock_calendar_title">%1$s runs out</string>
+    <string name="add_medicine_manage_tags">Manage tags</string>
+    <string name="tag_delete_a11y">Delete the tag %1$s</string>
+    <string name="tag_delete_title">Delete the tag %1$s?</string>
+    <string name="tag_delete_text">It comes off every medicine that has it.</string>
+    <string name="tag_name_blank">Write the tag\'s name</string>
+    <string name="tag_name_taken">Another tag has this name</string>
+    <string name="medicines_all_paused">Every reminder is paused</string>
+    <string name="medicines_resume">Resume</string>
 </resources>

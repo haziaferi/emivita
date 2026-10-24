@@ -86,6 +86,10 @@ data class Reminder(
      *  `variableAmount`): the notification's Take opens TakeAmountActivity
      *  instead of recording the planned dose. Same default rule as above. */
     @ColumnInfo(defaultValue = "0") val variableAmount: Boolean = false,
+    /** This reminder's own notification tier (§7 R127, B-38), null = its medicine's (or its
+     *  group's). The form offers only tiers above the medicine's. Nullable with no default
+     *  expression, so MIGRATION_13_14 is a plain ADD COLUMN and older backups decode as null. */
+    val importance: NotificationPriority? = null,
     // LOW_STOCK_ALERT / EXPIRATION_ALERT only (spec §9 #8) -- the epoch day this
     // alert last posted a notification, so Once/Daily trigger modes don't
     // re-notify on every cache recompute. Null = never notified (or, for
