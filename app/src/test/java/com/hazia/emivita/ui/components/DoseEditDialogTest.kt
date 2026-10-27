@@ -164,7 +164,7 @@ class DoseEditDialogTest {
         show(DoseStatus.TAKEN, resolvedAt = scheduled, repository = repository)
         compose.onNodeWithText("Delete this record").performScrollTo().performClick()
         coVerify(exactly = 0) { repository.softDelete(any()) }
-        compose.onNodeWithText("Delete").performScrollTo().performClick()
+        compose.onNodeWithText("Confirm").performScrollTo().performClick()
         compose.waitForIdle()
         coVerify(exactly = 1) { repository.softDelete(7L) }
     }

@@ -61,7 +61,6 @@
     <string name="backup_sync_choose_backup_file">Choose backup file</string>
     <string name="backup_sync_choose_sync_folder">Choose sync folder</string>
     <string name="backup_sync_export_a_full_snapshot_for_a_new_phone">Export a full snapshot for a new phone, sharing with someone, or before a risky change. Separate from the History screen\'s PDF/CSV export.</string>
-    <string name="backup_sync_export_anyway">Export anyway</string>
     <string name="backup_sync_export_backup">Export backup</string>
     <string name="backup_sync_export_without_a_password">Export without a password?</string>
     <string name="backup_sync_keeps_a_password_protected_zip_current_in_a">Keeps a password-protected zip current in a folder of your choice, so a sync tool you already run (e.g. a Syncthing fork) can mirror it. Not a sync mechanism itself — distinct from the manual export above.</string>
@@ -79,11 +78,11 @@
     <string name="color_picker_choose_a_color">Choose a color</string>
     <string name="color_picker_hex">Hex</string>
     <string name="color_picker_not_a_valid_hex_color_e_g_4b7a6b">Not a valid hex color (e.g. #4B7A6B)</string>
-    <string name="color_picker_use_color">Use color</string>
     <string name="common_add_reminder">Add reminder</string>
     <string name="common_appearance">Appearance</string>
     <string name="common_back">Back</string>
     <string name="common_cancel">Cancel</string>
+    <string name="common_confirm">Confirm</string>
     <string name="common_daily">Daily</string>
     <string name="common_dose_amount">Dose amount</string>
     <string name="common_loading">Loading…</string>
@@ -132,7 +131,6 @@
     <string name="medicine_detail_reminders">Reminders</string>
     <string name="medicine_detail_this_removes_every_reminder_and_all_dose">It leaves every list and its reminders stop; the dose history stays. Restore it from Settings › Data &amp; Backup.</string>
     <string name="medicines_add_medicine">Add medicine</string>
-    <string name="medicines_add_new">Add new</string>
     <string name="medicines_medicines">Medicines</string>
     <string name="medicines_no_medicine_matches_that_code_yet_add_it_as">No medicine matches that code yet. Add it as a new one?</string>
     <string name="medicines_no_medicines_yet_tap_to_add_your_first_one">No medicines yet. Tap + to add your first one.</string>
@@ -363,7 +361,6 @@
     <string name="backup_unreadable_file">Couldn\'t read the selected file.</string>
     <string name="backup_restore_complete">Restore complete.</string>
     <string name="backup_restore_confirm_title">Replace everything with this backup?</string>
-    <string name="backup_restore_confirm_action">Restore</string>
     <string name="backup_invalid_file">This file isn\'t a valid Emivita backup.</string>
     <string name="backup_restore_failed">Restore failed: %1$s</string>
     <string name="medical_id_name_helper">Printed at the top of the card</string>
@@ -552,7 +549,6 @@
     <string name="dose_edit_return_to_due">Return to due</string>
     <string name="dose_edit_delete">Delete this record</string>
     <string name="dose_edit_delete_confirm_text">It leaves History and the exports; a taken dose goes back into the bottle.</string>
-    <string name="dose_edit_delete_confirm">Delete</string>
     <string name="add_reminder_instructions">Instructions</string>
     <string name="add_reminder_instructions_hint">With food · Not with the iron · Before bed</string>
     <string name="add_reminder_course">A set number of doses</string>
@@ -586,7 +582,6 @@
     <string name="today_prn_headroom_returns">room again at %1$s</string>
     <string name="today_prn_over_title">Over the as-needed limit</string>
     <string name="today_prn_over_text">Already at %1$d of %2$d in the last %3$d h. Log this one anyway?</string>
-    <string name="today_prn_log_anyway">Log anyway</string>
     <string name="data_archived_title">Archived medicines</string>
     <string name="data_archived_desc">Deleted medicines rest here with their history. Restore one, or delete it for good — its history goes with it.</string>
     <string name="data_archived_none">Nothing archived.</string>

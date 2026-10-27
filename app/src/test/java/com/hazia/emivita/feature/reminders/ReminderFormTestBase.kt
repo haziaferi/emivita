@@ -23,6 +23,8 @@ abstract class ReminderFormTestBase : FormScreenTestBase() {
     }
 
     protected fun openMedicine() {
+        // The list loads its rows from Room: wait for the row before revealing it (slow CI, as R127's edit form).
+        waitFor("the medicine row") { inTop(button("Metformina")) }
         tap(button("Metformina"))
         waitFor("the medicine's page") { inTop(described(s(R.string.medicine_detail_edit_medicine))) }
     }

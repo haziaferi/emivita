@@ -92,7 +92,7 @@ internal fun SnoozePickerDialog(choices: List<Int>, onSnooze: (Int) -> Unit, onD
         },
         confirmButton = {
             val minutes = custom.toIntOrNull()?.takeIf { it > 0 }
-            DialogActionPair(stringResource(R.string.common_snooze), onConfirm = { minutes?.let(onSnooze) }, onDismiss = onDismiss, confirmEnabled = minutes != null)
+            DialogActionPair(stringResource(R.string.common_confirm), onConfirm = { minutes?.let(onSnooze) }, onDismiss = onDismiss, confirmEnabled = minutes != null)
         },
     )
 }

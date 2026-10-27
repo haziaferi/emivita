@@ -66,7 +66,7 @@ class MedicineP2BehaviourTest : MedicineFormTestBase() {
         tagsSheet()
         tap(bin("Sera"))
         assertTrue("Levotiroxina has Sera: the question", asked("Sera"))
-        val check = rules.dialogPair(s(R.string.medicine_detail_delete), s(R.string.common_cancel))
+        val check = rules.dialogPair(s(R.string.common_confirm), s(R.string.common_cancel))
         println("DIALOG-PAIR tag delete: $check")
         assertTrue(check.toString(), check.pass)
     }
@@ -155,7 +155,7 @@ class MedicineP2BehaviourTest : MedicineFormTestBase() {
         waitFor("the list") { inTop(button("Metformina")) }
         swipe("Metformina")
         waitFor("the question") { inTop(hasText(s(R.string.medicine_detail_delete_title, "Metformina"))) }
-        val check = rules.dialogPair(s(R.string.medicine_detail_delete), s(R.string.common_cancel))
+        val check = rules.dialogPair(s(R.string.common_confirm), s(R.string.common_cancel))
         println("DIALOG-PAIR swipe delete: $check")
         assertTrue(check.toString(), check.pass)
         tapNode(top(button(s(R.string.common_cancel))))
@@ -173,7 +173,7 @@ class MedicineP2BehaviourTest : MedicineFormTestBase() {
         waitFor("the list") { inTop(button("Metformina")) }
         swipe("Metformina")
         waitFor("the question") { inTop(hasText(s(R.string.medicine_detail_delete_title, "Metformina"))) }
-        tapNode(top(button(s(R.string.medicine_detail_delete))))
+        tapNode(top(button(s(R.string.common_confirm))))
         waitFor("archived") { h.medicineRow(metformina).archived }
         waitFor("gone from the list") { !inTop(button("Metformina")) }
         assertTrue("Levotiroxina stays", inTop(button("Levotiroxina")))

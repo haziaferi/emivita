@@ -243,7 +243,7 @@ fun ColorPickerDialog(
             }
         },
         confirmButton = {
-            DialogActionPair(stringResource(R.string.color_picker_use_color), onConfirm = { onConfirm(currentColor()) }, onDismiss = onDismiss, confirmEnabled = !hexError)
+            DialogActionPair(stringResource(R.string.common_confirm), onConfirm = { onConfirm(currentColor()) }, onDismiss = onDismiss, confirmEnabled = !hexError)
         },
     )
 }

@@ -856,7 +856,7 @@ private fun LogDoseDialog(
                     else stringResource(R.string.today_prn_over_title),
                 )
             },
-            confirmButton = { DialogActionPair(stringResource(R.string.today_prn_log_anyway), onConfirm = { confirmOverCeiling = false; log() }, onDismiss = { confirmOverCeiling = false }) },
+            confirmButton = { DialogActionPair(stringResource(R.string.common_confirm), onConfirm = { confirmOverCeiling = false; log() }, onDismiss = { confirmOverCeiling = false }) },
         )
     }
 
@@ -966,7 +966,7 @@ private fun LogDoseDialog(
         },
         confirmButton = {
             DialogActionPair(
-                stringResource(R.string.today_log),
+                stringResource(R.string.common_confirm),
                 confirmEnabled = (selected != null || oneOffName != null) && parseDecimal(doseAmount) != null && !saving && (!backdate || atDay != null),
                 onConfirm = { if (headroom?.atCeiling == true) confirmOverCeiling = true else log() },
                 onDismiss = onDismiss,

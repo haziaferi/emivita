@@ -257,7 +257,7 @@ fun MedicineDetailScreen(
             },
             text = { Text(stringResource(R.string.medicine_detail_this_removes_every_reminder_and_all_dose)) },
             confirmButton = {
-                DialogActionPair(stringResource(R.string.medicine_detail_delete), destructive = true, onDismiss = { showDeleteConfirm = false }, onConfirm = onConfirm@{
+                DialogActionPair(stringResource(R.string.common_confirm), destructive = true, onDismiss = { showDeleteConfirm = false }, onConfirm = onConfirm@{
                     showDeleteConfirm = false
                     val toDelete = currentMedicine ?: return@onConfirm
                     scope.launch {

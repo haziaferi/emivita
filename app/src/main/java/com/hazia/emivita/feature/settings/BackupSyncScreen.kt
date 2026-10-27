@@ -376,7 +376,7 @@ fun BackupSyncScreen(
             title = { Text(stringResource(R.string.backup_restore_confirm_title)) },
             text = { Text(stringResource(R.string.backup_sync_replaces_everything_currently_on_this_device)) },
             confirmButton = {
-                DialogActionPair(stringResource(R.string.backup_restore_confirm_action), onDismiss = { confirmRestoreUri = null }, onConfirm = {
+                DialogActionPair(stringResource(R.string.common_confirm), onDismiss = { confirmRestoreUri = null }, onConfirm = {
                     confirmRestoreUri = null
                     scope.launch { attemptRestore(uri, null) }
                 })
@@ -390,7 +390,7 @@ fun BackupSyncScreen(
             title = { Text(stringResource(R.string.backup_sync_export_without_a_password)) },
             text = { Text(stringResource(R.string.backup_sync_this_file_will_contain_readable_medication)) },
             confirmButton = {
-                DialogActionPair(stringResource(R.string.backup_sync_export_anyway), onDismiss = { showUnencryptedConfirm = false }, onConfirm = {
+                DialogActionPair(stringResource(R.string.common_confirm), onDismiss = { showUnencryptedConfirm = false }, onConfirm = {
                     showUnencryptedConfirm = false
                     launchExport(null)
                 })
@@ -497,7 +497,7 @@ private fun ArchivedMedicinesSection(profileId: Long, medicineRepository: Medici
             text = { Text(stringResource(R.string.data_archived_delete_text)) },
             confirmButton = {
                 DialogActionPair(
-                    stringResource(R.string.data_archived_delete), destructive = true, onDismiss = { confirmDelete = null },
+                    stringResource(R.string.common_confirm), destructive = true, onDismiss = { confirmDelete = null },
                     onConfirm = { scope.launch { medicineRepository.deletePermanently(medicine); confirmDelete = null } },
                 )
             },
@@ -587,7 +587,7 @@ internal fun SetAsideFilesSection(
             title = { Text(stringResource(R.string.recovery_set_aside_confirm_title)) },
             text = { Text(stringResource(R.string.recovery_set_aside_confirm_text)) },
             confirmButton = {
-                DialogActionPair(stringResource(R.string.recovery_set_aside_delete), destructive = true, onDismiss = { asking = false }, onConfirm = {
+                DialogActionPair(stringResource(R.string.common_confirm), destructive = true, onDismiss = { asking = false }, onConfirm = {
                     asking = false
                     scope.launch {
                         val locked = settingsRepository.biometricLockEnabled.first()
@@ -624,7 +624,7 @@ internal fun BackupPasswordDialog(password: String, onPassword: (String) -> Unit
             }
         },
         confirmButton = {
-            DialogActionPair(stringResource(R.string.common_unlock), onConfirm = onUnlock, onDismiss = onDismiss, confirmEnabled = password.isNotBlank())
+            DialogActionPair(stringResource(R.string.common_confirm), onConfirm = onUnlock, onDismiss = onDismiss, confirmEnabled = password.isNotBlank())
         },
     )
 }
@@ -650,7 +650,7 @@ internal fun PurgeConfirmDialog(onDismiss: () -> Unit, onConfirm: () -> Unit) {
             }
         },
         confirmButton = {
-            DialogActionPair(stringResource(R.string.purge_button), onConfirm = onConfirm, onDismiss = onDismiss, confirmEnabled = understood, destructive = true)
+            DialogActionPair(stringResource(R.string.common_confirm), onConfirm = onConfirm, onDismiss = onDismiss, confirmEnabled = understood, destructive = true)
         },
     )
 }

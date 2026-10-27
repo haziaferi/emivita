@@ -106,7 +106,7 @@ class LogOneOffDoseTest {
         showToday()
         logTyped("Paracetamol")
         compose.onNodeWithText("“Paracetamol” is not on your list: only this dose is recorded.").assertExists()
-        compose.onNode(hasText("Log") and hasClickAction()).performClick()
+        compose.onNode(hasText("Confirm") and hasClickAction()).performClick()
         settle()
 
         eventually {
@@ -128,7 +128,7 @@ class LogOneOffDoseTest {
         showToday()
         logTyped("metformin")
         compose.onAllNodes(hasText("is not on your list", substring = true)).assertCountEquals(0)
-        compose.onNode(hasText("Log") and hasClickAction()).performClick()
+        compose.onNode(hasText("Confirm") and hasClickAction()).performClick()
         settle()
         eventually {
             val dose = rows().single().doseEvent

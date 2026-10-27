@@ -356,7 +356,7 @@ fun MedicinesScreen(
             title = { Text(stringResource(R.string.medicines_not_found)) },
             text = { Text(stringResource(R.string.medicines_no_medicine_matches_that_code_yet_add_it_as)) },
             confirmButton = {
-                DialogActionPair(stringResource(R.string.medicines_add_new), onConfirm = { notFoundCode = null; onAddMedicineWithBarcode(pendingCode) }, onDismiss = { notFoundCode = null })
+                DialogActionPair(stringResource(R.string.common_confirm), onConfirm = { notFoundCode = null; onAddMedicineWithBarcode(pendingCode) }, onDismiss = { notFoundCode = null })
             },
         )
     }

@@ -196,7 +196,7 @@ fun DoseEditDialog(
                     // The same pair as every dialog's (§7 R125), the delete in the error colour.
                     Spacer(Modifier.height(8.dp))
                     DialogActionPair(
-                        stringResource(R.string.dose_edit_delete_confirm), destructive = true, confirmEnabled = !saving,
+                        stringResource(R.string.common_confirm), destructive = true, confirmEnabled = !saving,
                         onDismiss = { confirmDelete = false },
                         onConfirm = {
                             saving = true
