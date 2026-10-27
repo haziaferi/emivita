@@ -142,7 +142,7 @@ class MedicineFormBehaviourTest : MedicineFormTestBase() {
         val stillThere = runBlocking { h.container.medicineRepository.observeForProfile(h.profileId).first() }.any { it.medicine.id == metformina }
         tap(button(s(R.string.medicine_detail_delete)))
         waitFor("the question") { said(s(R.string.medicine_detail_delete_title, "Metformina")) }
-        tapNode(top(button(s(R.string.medicine_detail_delete)) and hasText(s(R.string.medicine_detail_delete))))
+        tapNode(top(button(s(R.string.common_confirm)) and hasText(s(R.string.common_confirm))))
         waitFor("the list") { inTop(described(s(R.string.medicines_add_medicine))) }
         val listed = runBlocking { h.container.medicineRepository.observeForProfile(h.profileId).first() }.any { it.medicine.id == metformina }
         assertTrue("Annulla keeps it", stillThere)

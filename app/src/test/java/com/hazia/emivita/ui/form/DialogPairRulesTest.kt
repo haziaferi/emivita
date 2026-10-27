@@ -41,9 +41,10 @@ import org.junit.Test
  * The owner's decision of 2026-10-23 for dialogs, "Yes, same order and look" (§7 R125): every
  * dialog keeps its place on screen and its confirm/dismiss pair follows the Salva/Annulla rule,
  * measured on the drawn pixels by [FormRules.dialogPair], one dialog per test. Since §7 R126
- * ("Shorter labels, side by side") none stacks: every pair is on one line with neither label cut.
+ * ("Shorter labels, side by side") none stacks: every pair is on one line with neither label cut;
+ * [DialogPairRulesFs2Test] holds the same at font 2.0 (§7 R128: "Annulla / Conferma").
  */
-class DialogPairRulesTest : FormScreenTestBase() {
+open class DialogPairRulesTest : FormScreenTestBase() {
 
     private fun pair(dialog: String, confirm: String, dismiss: String = s(R.string.common_cancel)) {
         waitFor("$dialog's pair") { windows() > 1 && inTop(hasText(confirm) and hasClickAction()) }
@@ -90,13 +91,13 @@ class DialogPairRulesTest : FormScreenTestBase() {
             )
         }
         tap(button(s(R.string.dose_edit_delete)))
-        reveal(button(s(R.string.dose_edit_delete_confirm)))
-        pair("DoseEditDialog delete", s(R.string.dose_edit_delete_confirm))
+        reveal(button(s(R.string.common_confirm)))
+        pair("DoseEditDialog delete", s(R.string.common_confirm))
     }
 
     @Test fun color_picker() {
         hostDialog { ColorPickerDialog(initialColor = null, onDismiss = {}, onConfirm = {}) }
-        pair("ColorPickerDialog", s(R.string.color_picker_use_color))
+        pair("ColorPickerDialog", s(R.string.common_confirm))
     }
 
     @Test fun journal_note_edit() {
@@ -110,29 +111,29 @@ class DialogPairRulesTest : FormScreenTestBase() {
 
     @Test fun backup_password() {
         hostDialog { BackupPasswordDialog(password = "segreta", onPassword = {}, error = null, onDismiss = {}, onUnlock = {}) }
-        pair("BackupPasswordDialog", s(R.string.common_unlock))
+        pair("BackupPasswordDialog", s(R.string.common_confirm))
     }
 
     @Test fun take_amount() {
         hostDialog { TakeAmountDialog(name = "Metformina", planned = 1.0, unit = "compresse", onTake = {}, onDismiss = {}) }
-        pair("TakeAmountDialog", s(R.string.common_take))
+        pair("TakeAmountDialog", s(R.string.common_confirm))
     }
 
     @Test fun snooze_picker() {
         hostDialog { SnoozePickerDialog(choices = listOf(5, 15, 30, 60), onSnooze = {}, onDismiss = {}) }
         typeInto(field(s(R.string.snooze_picker_custom)), "10")
-        pair("SnoozePickerDialog", s(R.string.common_snooze))
+        pair("SnoozePickerDialog", s(R.string.common_confirm))
     }
 
     @Test fun purge_confirm() {
         hostDialog { PurgeConfirmDialog(onDismiss = {}, onConfirm = {}) }
         tap(toggle and hasText(s(R.string.purge_confirm_check)))
-        pair("PurgeConfirmDialog", s(R.string.purge_button))
+        pair("PurgeConfirmDialog", s(R.string.common_confirm))
     }
 
     @Test fun export_scope() {
         hostDialog { ExportScopeDialog(range = ExportRange.LAST_30_DAYS, onRange = {}, medicines = emptyList(), medicineId = null, onMedicine = {}, onDismiss = {}, onConfirm = {}) }
-        pair("ExportScopeDialog", s(R.string.history_export))
+        pair("ExportScopeDialog", s(R.string.common_confirm))
     }
 
     @Test fun unsaved_changes() {

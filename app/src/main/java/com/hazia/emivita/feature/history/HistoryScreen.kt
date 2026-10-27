@@ -631,6 +631,6 @@ internal fun ExportScopeDialog(
                 }
             }
         },
-        confirmButton = { DialogActionPair(stringResource(R.string.history_export), onConfirm = onConfirm, onDismiss = onDismiss) },
+        confirmButton = { DialogActionPair(stringResource(R.string.common_confirm), onConfirm = onConfirm, onDismiss = onDismiss) },
     )
 }

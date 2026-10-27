@@ -270,7 +270,7 @@ fun EditReminderScreen(
             title = { Text(stringResource(R.string.reminder_delete_title)) },
             text = { Text(stringResource(R.string.reminder_delete_body)) },
             confirmButton = {
-                DialogActionPair(stringResource(R.string.reminder_delete), destructive = true, onDismiss = { showDeleteConfirm = false }, onConfirm = {
+                DialogActionPair(stringResource(R.string.common_confirm), destructive = true, onDismiss = { showDeleteConfirm = false }, onConfirm = {
                     showDeleteConfirm = false
                     scope.launch {
                         reminderRepository.delete(current)

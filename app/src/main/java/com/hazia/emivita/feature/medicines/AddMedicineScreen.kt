@@ -181,7 +181,7 @@ fun EditMedicineScreen(
             title = { Text(stringResource(R.string.medicine_detail_delete_title, current.name)) },
             text = { Text(stringResource(R.string.medicine_detail_this_removes_every_reminder_and_all_dose)) },
             confirmButton = {
-                DialogActionPair(stringResource(R.string.medicine_detail_delete), destructive = true, onDismiss = { confirmDelete = false }, onConfirm = {
+                DialogActionPair(stringResource(R.string.common_confirm), destructive = true, onDismiss = { confirmDelete = false }, onConfirm = {
                     confirmDelete = false
                     scope.launch { medicineRepository.archive(current); onDeleted() }
                 })

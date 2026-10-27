@@ -56,6 +56,6 @@ class ColorPickerDialogTest {
     @Test
     fun neverBlocksConfirmation() {
         show(sertralineAmber, listOf("Sertraline" to sertralineAmber))
-        compose.onNodeWithText("Use color").assertExists()
+        compose.onNodeWithText("Confirm").assertExists()
     }
 }

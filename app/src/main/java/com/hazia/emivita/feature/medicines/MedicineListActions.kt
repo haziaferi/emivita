@@ -164,7 +164,7 @@ internal fun SwipeToDelete(medicine: Medicine, onDelete: suspend (Medicine) -> U
             title = { Text(stringResource(R.string.medicine_detail_delete_title, medicine.name)) },
             text = { Text(stringResource(R.string.medicine_detail_this_removes_every_reminder_and_all_dose)) },
             confirmButton = {
-                DialogActionPair(deleteLabel, destructive = true, onDismiss = cancel, onConfirm = {
+                DialogActionPair(stringResource(R.string.common_confirm), destructive = true, onDismiss = cancel, onConfirm = {
                     asking = false
                     // Whole once begun: the card leaves the list as the archive lands.
                     scope.launch { withContext(NonCancellable) { onDelete(medicine) } }

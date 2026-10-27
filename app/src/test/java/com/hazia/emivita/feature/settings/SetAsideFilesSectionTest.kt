@@ -1,7 +1,6 @@
 package com.hazia.emivita.feature.settings
 
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.test.onAllNodesWithText
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
 import com.hazia.emivita.core.data.settings.SettingsRepository
@@ -51,8 +50,7 @@ class SetAsideFilesSectionTest {
         compose.onNodeWithText("Cancel").performClick()
         assertEquals(0, deleted)
         compose.onNodeWithText("Delete set-aside files").performClick()
-        // The dialog's confirm carries the same label as the section's button; it is the second node.
-        compose.onAllNodesWithText("Delete set-aside files")[1].performClick()
+        compose.onNodeWithText("Confirm").performClick()
         compose.waitForIdle()
         assertEquals(1, deleted)
         compose.onNodeWithText("Set-aside files deleted.").assertExists()

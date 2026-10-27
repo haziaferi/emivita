@@ -105,7 +105,7 @@ internal fun TakeAmountDialog(name: String, planned: Double, unit: String?, onTa
             FormTextField(text, { text = it }, stringResource(R.string.notif_amount_taken), keyboardType = KeyboardType.Decimal, suffix = unit)
         },
         confirmButton = {
-            DialogActionPair(stringResource(R.string.common_take), onConfirm = { amount?.let(onTake) }, onDismiss = onDismiss, confirmEnabled = amount != null)
+            DialogActionPair(stringResource(R.string.common_confirm), onConfirm = { amount?.let(onTake) }, onDismiss = onDismiss, confirmEnabled = amount != null)
         },
     )
 }

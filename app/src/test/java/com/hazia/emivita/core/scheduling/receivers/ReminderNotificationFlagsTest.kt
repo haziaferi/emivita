@@ -151,7 +151,7 @@ class ReminderNotificationFlagsTest {
         ActivityScenario.launch<TakeAmountActivity>(Intent(pi.savedIntent)).use {
             compose.waitUntil(5_000) { compose.onAllNodes(hasSetTextAction()).fetchSemanticsNodes().isNotEmpty() }
             compose.onNode(hasSetTextAction()).performTextReplacement("2")
-            compose.onNode(hasText(take) and hasClickAction()).performClick()
+            compose.onNode(hasText(h.context.getString(R.string.common_confirm)) and hasClickAction()).performClick()
             // Room writes run on Dispatchers.IO, outside the test's clock (as TodayTakeAllTest waits).
             val deadline = System.nanoTime() + 10_000_000_000L
             while (h.doseEvent(doseId).status != DoseStatus.TAKEN && System.nanoTime() < deadline) {

@@ -53,7 +53,6 @@
     <string name="backup_sync_choose_backup_file">Scegli il file di backup</string>
     <string name="backup_sync_choose_sync_folder">Scegli la cartella di sincronizzazione</string>
     <string name="backup_sync_export_a_full_snapshot_for_a_new_phone">Esporta una copia completa per un nuovo telefono, per condividerla con qualcuno o prima di una modifica rischiosa. È diversa dall’esportazione PDF/CSV della schermata Storico.</string>
-    <string name="backup_sync_export_anyway">Esporta comunque</string>
     <string name="backup_sync_export_backup">Esporta backup</string>
     <string name="backup_sync_export_without_a_password">Esportare senza password?</string>
     <string name="backup_sync_keeps_a_password_protected_zip_current_in_a">Mantiene aggiornato uno zip protetto da password in una cartella a tua scelta, così uno strumento di sincronizzazione che usi già (per esempio un fork di Syncthing) può copiarlo altrove. Non è di per sé un meccanismo di sincronizzazione ed è distinto dall’esportazione manuale qui sopra.</string>
@@ -71,11 +70,11 @@
     <string name="color_picker_choose_a_color">Scegli un colore</string>
     <string name="color_picker_hex">Esadecimale</string>
     <string name="color_picker_not_a_valid_hex_color_e_g_4b7a6b">Non è un colore esadecimale valido (es. #4B7A6B)</string>
-    <string name="color_picker_use_color">Usa questo colore</string>
     <string name="common_add_reminder">Aggiungi promemoria</string>
     <string name="common_appearance">Aspetto</string>
     <string name="common_back">Indietro</string>
     <string name="common_cancel">Annulla</string>
+    <string name="common_confirm">Conferma</string>
     <string name="common_daily">Ogni giorno</string>
     <string name="common_dose_amount">Quantità della dose</string>
     <string name="common_loading">Caricamento…</string>
@@ -124,7 +123,6 @@
     <string name="medicine_detail_reminders">Promemoria</string>
     <string name="medicine_detail_this_removes_every_reminder_and_all_dose">Il farmaco sparisce dagli elenchi e i suoi promemoria si fermano; lo storico delle dosi resta. Puoi ripristinarlo da Impostazioni › Dati e backup.</string>
     <string name="medicines_add_medicine">Aggiungi farmaco</string>
-    <string name="medicines_add_new">Aggiungi nuovo</string>
     <string name="medicines_medicines">Farmaci</string>
     <string name="medicines_no_medicine_matches_that_code_yet_add_it_as">Nessun farmaco corrisponde a questo codice. Aggiungerlo come nuovo?</string>
     <string name="medicines_no_medicines_yet_tap_to_add_your_first_one">Ancora nessun farmaco. Tocca + per aggiungere il primo.</string>
@@ -337,7 +335,6 @@
     <string name="backup_unreadable_file">Impossibile leggere il file selezionato.</string>
     <string name="backup_restore_complete">Ripristino completato.</string>
     <string name="backup_restore_confirm_title">Sostituire tutto con questo backup?</string>
-    <string name="backup_restore_confirm_action">Ripristina</string>
     <string name="backup_invalid_file">Questo file non è un backup Emivita valido.</string>
     <string name="backup_restore_failed">Ripristino non riuscito: %1$s</string>
     <string name="medical_id_name_helper">Stampato in cima alla scheda</string>
@@ -508,7 +505,6 @@
     <string name="dose_edit_return_to_due">Riporta a «Da prendere»</string>
     <string name="dose_edit_delete">Elimina questa registrazione</string>
     <string name="dose_edit_delete_confirm_text">Sparisce dallo Storico e dalle esportazioni; una dose presa torna nella confezione.</string>
-    <string name="dose_edit_delete_confirm">Elimina</string>
     <string name="add_reminder_instructions">Istruzioni</string>
     <string name="add_reminder_instructions_hint">A stomaco pieno · Non con il ferro · Prima di dormire</string>
     <string name="add_reminder_course">Un numero fisso di dosi</string>
@@ -542,7 +538,6 @@
     <string name="today_prn_headroom_returns">di nuovo margine dalle %1$s</string>
     <string name="today_prn_over_title">Oltre il limite delle dosi al bisogno</string>
     <string name="today_prn_over_text">Sei già a %1$d di %2$d nelle ultime %3$d h. Registrare comunque questa dose?</string>
-    <string name="today_prn_log_anyway">Registra comunque</string>
     <string name="data_archived_title">Farmaci archiviati</string>
     <string name="data_archived_desc">I farmaci eliminati restano qui con il loro storico. Ripristinane uno, oppure eliminalo per sempre, storico compreso.</string>
     <string name="data_archived_none">Niente in archivio.</string>

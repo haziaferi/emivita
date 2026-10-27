@@ -21,9 +21,9 @@ class PurgeConfirmDialogTest {
     fun `Delete is disabled until the checkbox names what goes`() {
         var confirmed = 0
         compose.setContent { PurgeConfirmDialog(onDismiss = {}, onConfirm = { confirmed++ }) }
-        compose.onNodeWithText("Delete everything").assertIsNotEnabled()
+        compose.onNodeWithText("Confirm").assertIsNotEnabled()
         compose.onNodeWithText("Every medicine, reminder, dose and note on this phone").performClick()
-        compose.onNodeWithText("Delete everything").assertIsEnabled().performClick()
+        compose.onNodeWithText("Confirm").assertIsEnabled().performClick()
         assertEquals(1, confirmed)
     }
 }

@@ -121,7 +121,7 @@ internal fun ManageTagsSheet(tags: List<Tag>, usedElsewhere: (Tag) -> Boolean, c
             title = { Text(stringResource(R.string.tag_delete_title, tag.name)) },
             text = { Text(stringResource(R.string.tag_delete_text)) },
             confirmButton = {
-                DialogActionPair(stringResource(R.string.medicine_detail_delete), destructive = true, onDismiss = { asking = null }, onConfirm = {
+                DialogActionPair(stringResource(R.string.common_confirm), destructive = true, onDismiss = { asking = null }, onConfirm = {
                     gone = gone + tag.id; asking = null
                 })
             },
