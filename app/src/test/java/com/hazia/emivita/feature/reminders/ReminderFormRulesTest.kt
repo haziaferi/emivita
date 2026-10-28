@@ -44,7 +44,7 @@ class ReminderFormRulesTest : ReminderFormTestBase() {
     private fun weekdays(fs: Float) {
         at(fs); reminderForm()
         tap(button(s(R.string.add_reminder_specific_days)))
-        tap(toggle and hasText(DayOfWeek.MONDAY.getDisplayName(TextStyle.SHORT, res.configuration.locales[0])))
+        tap(toggle and dayNamed(DayOfWeek.MONDAY.getDisplayName(TextStyle.SHORT, res.configuration.locales[0])))
         gate("weekdays", fs, audit(sheet = false))
     }
 
@@ -65,7 +65,7 @@ class ReminderFormRulesTest : ReminderFormTestBase() {
     private fun combination(fs: Float, weekdayOffset: Long = 0) {
         at(fs); reminderForm()
         tap(button(s(R.string.add_reminder_specific_days)))
-        tap(toggle and hasText(java.time.LocalDate.now().plusDays(weekdayOffset).dayOfWeek.getDisplayName(TextStyle.SHORT, res.configuration.locales[0])))
+        tap(toggle and dayNamed(java.time.LocalDate.now().plusDays(weekdayOffset).dayOfWeek.getDisplayName(TextStyle.SHORT, res.configuration.locales[0])))
         tap(button(s(R.string.add_reminder_active_pause_cycle)))
         typeInto(field(s(R.string.add_reminder_active_days)), "1")
         typeInto(field(s(R.string.add_reminder_pause_days)), "6")
@@ -95,7 +95,7 @@ class ReminderFormRulesTest : ReminderFormTestBase() {
         // The medicine page loads its reminders from Room: wait for the row before revealing it (slow CI).
         waitFor("the reminder row") { inTop(hasText("08:00", substring = true) and androidx.compose.ui.test.hasClickAction()) }
         tap(hasText("08:00", substring = true) and androidx.compose.ui.test.hasClickAction())
-        waitFor("the edit form") { inTop(button(s(R.string.common_save_changes))) }
+        waitFor("the edit form") { inTop(button(s(R.string.common_save))) }
         gate("edit", fs, audit(sheet = false))
     }
 

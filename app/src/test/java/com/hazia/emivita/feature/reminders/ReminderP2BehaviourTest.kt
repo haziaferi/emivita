@@ -186,7 +186,7 @@ class ReminderP2BehaviourTest : ReminderFormTestBase() {
         hostApp(); openMedicine()
         waitFor("the reminder row") { inTop(hasText(s(R.string.reminder_row_every_hours, "168"), substring = true) and hasClickAction()) }
         tap(hasText(s(R.string.reminder_row_every_hours, "168"), substring = true) and hasClickAction())
-        waitFor("the edit form") { inTop(button(s(R.string.common_save_changes))) }
+        waitFor("the edit form") { inTop(button(s(R.string.common_save))) }
         assertEquals("1", top(every).fetchSemanticsNode().config[SemanticsProperties.EditableText].text)
         assertEquals("settimana is on", true, top(unit(R.plurals.interval_unit_weeks, 1)).fetchSemanticsNode().config[SemanticsProperties.ToggleableState] == androidx.compose.ui.state.ToggleableState.On)
     }

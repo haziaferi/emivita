@@ -102,7 +102,7 @@ fun FormScaffold(
             content()
             if (onDelete != null && deleteLabel != null) {
                 Spacer(Modifier.height(24.dp))
-                TextButton(onClick = onDelete, modifier = Modifier.height(TertiaryControlHeight)) {
+                TextButton(onClick = onDelete, modifier = Modifier.heightIn(min = TertiaryControlHeight)) {
                     Text(deleteLabel, color = MaterialTheme.colorScheme.error)
                 }
             }

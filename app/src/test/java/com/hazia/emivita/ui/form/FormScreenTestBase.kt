@@ -58,7 +58,9 @@ import kotlin.math.abs
 @RunWith(RobolectricTestRunner::class)
 @GraphicsMode(GraphicsMode.Mode.NATIVE)
 @SQLiteMode(SQLiteMode.Mode.NATIVE)
-@Config(application = TestEmivitaApplication::class, qualifiers = "it-rIT-w411dp-h891dp-xxhdpi")
+// The narrowest phone in use, the 9 Pro as set (1080 px at 480 dpi): 411 dp measured a phone
+// nobody holds, and font-2.0 pairs cut on the 6T and 9 Pro passed here (§7 R129).
+@Config(application = TestEmivitaApplication::class, qualifiers = "it-rIT-w360dp-h804dp-xxhdpi")
 abstract class FormScreenTestBase {
 
     // Effects on a standard dispatcher, run on the main thread as the clock advances: a form that
@@ -147,6 +149,8 @@ abstract class FormScreenTestBase {
 
     protected fun button(text: String) = hasText(text) and hasClickAction()
     protected fun described(text: String) = hasContentDescription(text) and hasClickAction()
+    /** A weekday cell by its short name: shown, or spoken when the cell shows one letter (§7 R129). */
+    protected fun dayNamed(name: String) = hasText(name) or hasContentDescription(name)
     protected fun field(label: String) = hasSetTextAction() and hasText(label)
     protected val toggle = SemanticsMatcher.keyIsDefined(SemanticsProperties.ToggleableState)
 
@@ -187,7 +191,7 @@ abstract class FormScreenTestBase {
     protected val names by lazy {
         val locale = res.configuration.locales[0]
         FormNames(
-            save = setOf(s(R.string.common_save), s(R.string.common_save_changes)),
+            save = setOf(s(R.string.common_save)),
             cancel = s(R.string.common_cancel),
             weekdays = (1..7).map { DayOfWeek.of(it).getDisplayName(TextStyle.SHORT, locale) }.toSet(),
             textButtons = setOf(s(R.string.reminder_delete), s(R.string.medicine_detail_delete), s(R.string.quick_add_more_details), s(R.string.medicines_resume)),
@@ -236,8 +240,8 @@ abstract class FormScreenTestBase {
     /** Sweeps the top window's form, runs C1-C10 and returns the verdicts. */
     protected fun audit(sheet: Boolean, decl: FormDecl = FormDecl()): FormRules.Audit {
         val sw = rules.sweep(sheet)
-        val first = rules.audit(sw, decl = decl, oneLineSwitchHelp = fontScale.floatValue <= 1f)
+        val first = rules.audit(sw, decl = decl, oneLineSwitchHelp = fontScale.floatValue <= 1f, exactTiers = fontScale.floatValue <= 1f)
         val ph = placeholders(sw)
-        return if (ph.isEmpty()) first else rules.audit(sw, ph, decl, oneLineSwitchHelp = fontScale.floatValue <= 1f)
+        return if (ph.isEmpty()) first else rules.audit(sw, ph, decl, oneLineSwitchHelp = fontScale.floatValue <= 1f, exactTiers = fontScale.floatValue <= 1f)
     }
 }

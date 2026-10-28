@@ -51,7 +51,7 @@ data class ProbeNode(
     val disabled: Boolean,
     val error: Boolean,
     val on: Boolean?,
-    /** Its text ends in an ellipsis: drawn short of itself (§7 R126). */
+    /** Its text ends in an ellipsis, or is taller than the room it was given and clipped (§7 R126, R129): drawn short of itself. */
     val cut: Boolean = false,
 ) {
     val visible get() = bounds.width > 0f && bounds.height > 0f
@@ -176,7 +176,7 @@ object FormProbe {
                 disabled = SemanticsProperties.Disabled in c,
                 error = SemanticsProperties.Error in c,
                 on = c.getOrNull(SemanticsProperties.ToggleableState)?.let { it == androidx.compose.ui.state.ToggleableState.On },
-                cut = layout != null && layout.lineCount > 0 && layout.isLineEllipsized(layout.lineCount - 1),
+                cut = layout != null && layout.lineCount > 0 && (layout.isLineEllipsized(layout.lineCount - 1) || layout.didOverflowHeight),
             )
             n.children.forEach { walk(it, anc + n.id) }
         }

@@ -285,7 +285,7 @@ fun EditReminderScreen(
         when (val config = reminderRepository.decodeConfig(current)) {
             is ReminderConfig.FixedTime -> FixedTimeFormBody(
                 title = stringResource(R.string.reminder_edit_fixed_time),
-                saveLabel = stringResource(R.string.common_save_changes),
+                saveLabel = stringResource(R.string.common_save),
                 initial = config,
                 initialReminder = current,
                 doseUnit = doseUnit,
@@ -304,7 +304,7 @@ fun EditReminderScreen(
             )
             is ReminderConfig.RepeatingInterval -> RepeatingIntervalFormBody(
                 title = stringResource(R.string.reminder_edit_repeating_interval),
-                saveLabel = stringResource(R.string.common_save_changes),
+                saveLabel = stringResource(R.string.common_save),
                 initial = config,
                 initialReminder = current,
                 doseUnit = doseUnit,
@@ -323,7 +323,7 @@ fun EditReminderScreen(
             )
             is ReminderConfig.DailyWindow -> DailyWindowFormBody(
                 title = stringResource(R.string.reminder_edit_daily_window),
-                saveLabel = stringResource(R.string.common_save_changes),
+                saveLabel = stringResource(R.string.common_save),
                 initial = config,
                 initialReminder = current,
                 doseUnit = doseUnit,
@@ -342,7 +342,7 @@ fun EditReminderScreen(
             )
             is ReminderConfig.LowStockAlert -> LowStockAlertFormBody(
                 title = stringResource(R.string.reminder_edit_low_stock),
-                saveLabel = stringResource(R.string.common_save_changes),
+                saveLabel = stringResource(R.string.common_save),
                 initial = config,
                 onSave = { updated -> reminderRepository.updateConfig(current, updated); onDone() },
                 onCancel = onCancel,
@@ -350,7 +350,7 @@ fun EditReminderScreen(
             )
             is ReminderConfig.ExpirationAlert -> ExpirationAlertFormBody(
                 title = stringResource(R.string.reminder_edit_expiration),
-                saveLabel = stringResource(R.string.common_save_changes),
+                saveLabel = stringResource(R.string.common_save),
                 initial = config,
                 onSave = { updated -> reminderRepository.updateConfig(current, updated); onDone() },
                 onCancel = onCancel,
@@ -358,7 +358,7 @@ fun EditReminderScreen(
             )
             is ReminderConfig.LinkedFollowing -> LinkedFollowingFormBody(
                 title = stringResource(R.string.reminder_edit_linked_following),
-                saveLabel = stringResource(R.string.common_save_changes),
+                saveLabel = stringResource(R.string.common_save),
                 medicineId = current.medicineId,
                 excludeReminderId = current.id,
                 reminderRepository = reminderRepository,

@@ -25,7 +25,7 @@ class MedicineFormBehaviourTest : MedicineFormTestBase() {
     }
 
     private fun saveForm() {
-        tap(button(s(R.string.common_save_changes)))
+        tap(button(s(R.string.common_save)))
         waitFor("the medicine's page") { inTop(described(s(R.string.medicine_detail_edit_medicine))) }
     }
 

@@ -9,6 +9,7 @@ import android.content.pm.PackageManager
 import android.os.PowerManager
 import android.provider.Settings
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -284,7 +285,7 @@ private fun AlarmSettingsSection(settingsRepository: SettingsRepository) {
     ) { scope.launch { settingsRepository.setUseAlarmClock(it) } }
 
     Spacer(Modifier.height(16.dp))
-    FilledTonalButton(onClick = { postTestReminder(context) }, modifier = Modifier.fillMaxWidth().height(SecondaryControlHeight)) { Text(stringResource(R.string.settings_test_reminder)) }
+    FilledTonalButton(onClick = { postTestReminder(context) }, modifier = Modifier.fillMaxWidth().heightIn(min = SecondaryControlHeight)) { Text(stringResource(R.string.settings_test_reminder)) }
     Text(
         stringResource(R.string.settings_test_reminder_desc),
         style = MaterialTheme.typography.labelMedium,

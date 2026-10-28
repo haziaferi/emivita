@@ -1,11 +1,11 @@
 package com.hazia.emivita.feature.medicines
 
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -127,7 +127,7 @@ internal fun AllPausedLine(medicines: List<MedicineWithReminders>, reminders: Re
             color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.weight(1f),
         )
         // A text action on the line, the tertiary tier (§7 R124 C2), as a form's delete is.
-        TextButton(onClick = { scope.launch { reactivate(medicines, reminders, settings) } }, modifier = Modifier.height(TertiaryControlHeight)) {
+        TextButton(onClick = { scope.launch { reactivate(medicines, reminders, settings) } }, modifier = Modifier.heightIn(min = TertiaryControlHeight)) {
             Text(stringResource(R.string.medicines_resume), maxLines = 1)
         }
     }

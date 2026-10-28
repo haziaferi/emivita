@@ -88,7 +88,7 @@ class AsNeededSwitchTest {
         compose.setContent { EditMedicineScreen(medicineId = 1L, medicineRepository = medicines, onSaved = {}, onCancel = {}) }
         compose.waitForIdle()
         switchRow().performScrollTo().assertIsOn().performClick()
-        save("Save changes")
+        save("Save")
         compose.waitForIdle()
         coVerify { medicines.update(match { it.id == 1L && !it.asNeeded }) }
     }

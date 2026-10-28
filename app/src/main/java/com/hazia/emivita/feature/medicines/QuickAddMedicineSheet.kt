@@ -1,5 +1,6 @@
 package com.hazia.emivita.feature.medicines
 
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -149,7 +150,7 @@ internal fun QuickAddMedicineSheet(
         // The third action, a tertiary text action on the grid's left edge above the foot.
         TextButton(
             enabled = canSave, onClick = { submit(addDetails = true) },
-            modifier = Modifier.fillMaxWidth().height(TertiaryControlHeight), contentPadding = PaddingValues(horizontal = 0.dp),
+            modifier = Modifier.fillMaxWidth().heightIn(min = TertiaryControlHeight), contentPadding = PaddingValues(horizontal = 0.dp),
         ) { Text(stringResource(R.string.quick_add_more_details), modifier = Modifier.weight(1f), maxLines = 1, overflow = TextOverflow.Ellipsis) }
         saveError?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.labelMedium) }
     }

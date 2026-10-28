@@ -7,6 +7,7 @@ import androidx.compose.ui.platform.LocalContext
 import java.time.LocalDate
 import java.time.ZoneOffset
 
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -313,7 +314,7 @@ fun StockExpirationScreen(
             val eventTitle = stringResource(R.string.stock_calendar_title, medicineName)
             Spacer(Modifier.height(8.dp))
             FilledTonalButton(
-                modifier = Modifier.fillMaxWidth().height(SecondaryControlHeight),
+                modifier = Modifier.fillMaxWidth().heightIn(min = SecondaryControlHeight),
                 onClick = { try { context.startActivity(runOutCalendarIntent(eventTitle, runOut)) } catch (_: ActivityNotFoundException) { } },
             ) { Text(stringResource(R.string.stock_add_to_calendar), maxLines = 1, overflow = TextOverflow.Ellipsis) }
         }
@@ -321,7 +322,7 @@ fun StockExpirationScreen(
         val refillAmount = parseDecimal(refillQuantity)?.takeIf { it > 0 }
         FilledTonalButton(
             enabled = refillAmount != null && trackingSaved,
-            modifier = Modifier.fillMaxWidth().height(SecondaryControlHeight),
+            modifier = Modifier.fillMaxWidth().heightIn(min = SecondaryControlHeight),
             onClick = {
                 val amount = refillAmount ?: return@FilledTonalButton
                 scope.launch {
