@@ -282,7 +282,8 @@ android {
 // The same patched versions as the root build.gradle.kts (§7 R86), for the
 // app's own configurations: lint and the tests run AGP's tooling too, and the
 // device-test runner (com.google.testing.platform) brings Netty 4.1.93 and
-// protobuf 3.24.4. None of it is in the APK. Keep the two tables equal.
+// protobuf 3.24.4; Guava 33.7.2 since GHSA-xxph-c9ww-hj94 (§7 R129). None of
+// it is in the APK. Keep the two tables equal.
 val patchedVersions = mapOf(
     "org.bouncycastle:bcprov-jdk18on" to "1.86",
     "org.bouncycastle:bcpkix-jdk18on" to "1.86",
@@ -291,6 +292,7 @@ val patchedVersions = mapOf(
     "org.bitbucket.b_c:jose4j" to "0.9.6",
     "org.jdom:jdom2" to "2.0.6.1",
     "org.apache.httpcomponents:httpclient" to "4.5.14",
+    "com.google.guava:guava" to "33.7.2-jre",
 )
 configurations.configureEach {
     resolutionStrategy.eachDependency {
