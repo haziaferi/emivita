@@ -3,9 +3,9 @@ package com.hazia.emivita.ui.form
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.selection.toggleable
@@ -17,9 +17,14 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.clearAndSetSemantics
 import androidx.compose.ui.text.intl.Locale
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
@@ -86,11 +91,12 @@ fun SpanGrid(modifier: Modifier = Modifier, columns: Int = 7, cell: Dp = Seconda
  * line, a text toggle with no checkbox. [modifier] sets its width; a day cell is a 42 dp square.
  */
 @Composable
-fun GridToggleCell(label: String, on: Boolean, modifier: Modifier = Modifier, padded: Boolean = true, onToggle: (Boolean) -> Unit) {
+fun GridToggleCell(label: String, on: Boolean, modifier: Modifier = Modifier, padded: Boolean = true, spoken: String? = null, onToggle: (Boolean) -> Unit) {
     val shape = FilterChipDefaults.shape
     Box(
         modifier
-            .height(SecondaryControlHeight)
+            .then(if (spoken != null) Modifier.semantics { contentDescription = spoken } else Modifier)
+            .heightIn(min = SecondaryControlHeight)
             .clip(shape)
             .background(if (on) MaterialTheme.colorScheme.secondaryContainer else Color.Transparent)
             .border(FilterChipDefaults.filterChipBorder(enabled = true, selected = on), shape)
@@ -100,6 +106,7 @@ fun GridToggleCell(label: String, on: Boolean, modifier: Modifier = Modifier, pa
     ) {
         Text(
             label, style = MaterialTheme.typography.labelLarge, maxLines = 1, softWrap = false, overflow = TextOverflow.Clip,
+            modifier = if (spoken != null) Modifier.clearAndSetSemantics {} else Modifier,
             color = if (on) MaterialTheme.colorScheme.onSecondaryContainer else MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }
@@ -110,21 +117,30 @@ fun GridToggleCell(label: String, on: Boolean, modifier: Modifier = Modifier, pa
  * Each cell is a 42 dp square; the first column sits on the content's left edge, the last on its right.
  */
 @Composable
-fun DayGrid(labels: List<String>, isOn: (Int) -> Boolean, onToggle: (index: Int, on: Boolean) -> Unit) {
+fun DayGrid(labels: List<String>, isOn: (Int) -> Boolean, spoken: List<String>? = null, onToggle: (index: Int, on: Boolean) -> Unit) {
     // A short last row (the 29th to the 31st) keeps its squares under columns 1 to 3 (§7 R127, the approved grid).
     SpanGrid(stretch = false) {
         labels.forEachIndexed { i, label ->
-            GridToggleCell(label, isOn(i), Modifier.size(SecondaryControlHeight), padded = false) { on -> onToggle(i, on) }
+            GridToggleCell(label, isOn(i), Modifier.size(SecondaryControlHeight), padded = false, spoken = spoken?.get(i)) { on -> onToggle(i, on) }
         }
     }
 }
 
-/** The weekdays Monday (1) to Sunday (7) in the locale's short names, as [DayGrid] toggles. */
+/**
+ * The weekdays Monday (1) to Sunday (7) in the locale's short names, as [DayGrid] toggles; one letter
+ * when a short name would not fit its square at the current font, still spoken in full (§7 R129, the
+ * owner: "One letter when cut").
+ */
 @Composable
 fun WeekdayGrid(selected: Set<Int>, onChange: (Set<Int>) -> Unit) {
     val locale = Locale.current.platformLocale
-    val labels = (1..7).map { DayOfWeek.of(it).getDisplayName(TextStyle.SHORT, locale) }
-    DayGrid(labels, isOn = { (it + 1) in selected }) { i, on -> onChange(if (on) selected + (i + 1) else selected - (i + 1)) }
+    val short = (1..7).map { DayOfWeek.of(it).getDisplayName(TextStyle.SHORT, locale) }
+    val measurer = rememberTextMeasurer()
+    val style = MaterialTheme.typography.labelLarge
+    val room = with(LocalDensity.current) { SecondaryControlHeight.roundToPx() }
+    val fits = short.all { measurer.measure(it, style, maxLines = 1, softWrap = false).size.width <= room }
+    val labels = if (fits) short else (1..7).map { DayOfWeek.of(it).getDisplayName(TextStyle.NARROW, locale) }
+    DayGrid(labels, isOn = { (it + 1) in selected }, spoken = if (fits) null else short) { i, on -> onChange(if (on) selected + (i + 1) else selected - (i + 1)) }
 }
 
 /** The days of the month 1 to 31 as [DayGrid] toggles, rows of seven (§7 R127, A-13 with the 42 dp grid). */
@@ -142,7 +158,7 @@ fun GridActionCell(label: String, modifier: Modifier = Modifier, onClick: () -> 
     val shape = FilterChipDefaults.shape
     Box(
         modifier
-            .height(SecondaryControlHeight)
+            .heightIn(min = SecondaryControlHeight)
             .clip(shape)
             .border(FilterChipDefaults.filterChipBorder(enabled = true, selected = false), shape)
             .clickable(role = Role.Button, onClick = onClick)

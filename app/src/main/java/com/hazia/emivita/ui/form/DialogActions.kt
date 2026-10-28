@@ -1,7 +1,7 @@
 package com.hazia.emivita.ui.form
 
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FilledTonalButton
@@ -23,9 +23,10 @@ internal val PairGap = 16.dp
 /**
  * The Salva/Annulla arrangement (C5), shared by the form's foot and every dialog: [dismiss] and
  * [confirm] the same width, side by side (§7 R126: "Shorter labels, side by side"), confirm on the
- * right edge, dismiss to its left [PairGap] apart. A [tertiary] text action sits at the left edge
- * on the same line when it fits, else on a line above; children: dismiss (if [hasDismiss]),
- * confirm, tertiary (if [hasTertiary]).
+ * right edge, dismiss to its left [PairGap] apart. When side by side would cut a label (large font
+ * on a narrow phone), the two stack right-aligned, confirm on top, [PairGap] apart (§7 R129: "B:
+ * stack when cut"). A [tertiary] text action sits at the left edge on the same line when it fits,
+ * else on a line above; children: dismiss (if [hasDismiss]), confirm, tertiary (if [hasTertiary]).
  */
 @Composable
 internal fun ActionPairLayout(hasDismiss: Boolean, hasTertiary: Boolean, modifier: Modifier = Modifier, content: @Composable () -> Unit) {
@@ -37,6 +38,16 @@ internal fun ActionPairLayout(hasDismiss: Boolean, hasTertiary: Boolean, modifie
         val room = if (c.hasBoundedWidth) c.maxWidth else (natural.sum() + gap)
         val half = (room - gap) / 2
         val t = if (hasTertiary) ms.last().measure(loose.copy(maxWidth = room)) else null
+        if (hasDismiss && natural.max() > half) {
+            val sw = minOf(natural.max(), room)
+            val (dismiss, confirm) = pair.map { it.measure(loose.copy(minWidth = sw, maxWidth = sw)) }
+            val above = t?.let { it.height + 8.dp.roundToPx() } ?: 0
+            return@Layout layout(room, above + confirm.height + gap + dismiss.height) {
+                t?.place(0, 0)
+                confirm.place(room - sw, above)
+                dismiss.place(room - sw, above + confirm.height + gap)
+            }
+        }
         val w = if (hasDismiss) minOf(natural.max(), half) else minOf(natural.single(), room)
         val ps = pair.map { it.measure(loose.copy(minWidth = w, maxWidth = w)) }
         val pairW = if (hasDismiss) 2 * w + gap else w
@@ -62,7 +73,7 @@ internal fun ConfirmButton(label: String, enabled: Boolean, destructive: Boolean
     } else {
         ButtonDefaults.buttonColors()
     }
-    Button(onClick = onClick, enabled = enabled, colors = colors, modifier = Modifier.height(PrimaryControlHeight)) {
+    Button(onClick = onClick, enabled = enabled, colors = colors, modifier = Modifier.heightIn(min = PrimaryControlHeight)) {
         Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
@@ -70,7 +81,7 @@ internal fun ConfirmButton(label: String, enabled: Boolean, destructive: Boolean
 /** The dismiss button: the secondary tier, tonal, more desaturated than the confirm beside it. */
 @Composable
 internal fun DismissButton(label: String, enabled: Boolean, onClick: () -> Unit) {
-    FilledTonalButton(onClick = onClick, enabled = enabled, modifier = Modifier.height(SecondaryControlHeight)) {
+    FilledTonalButton(onClick = onClick, enabled = enabled, modifier = Modifier.heightIn(min = SecondaryControlHeight)) {
         Text(label, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }
@@ -98,7 +109,7 @@ fun DialogActionPair(
         if (onDismiss != null) DismissButton(dismissLabel, enabled = true, onClick = onDismiss)
         ConfirmButton(confirmLabel, confirmEnabled, destructive, onConfirm)
         if (tertiary != null) {
-            TextButton(onClick = onTertiary, enabled = tertiaryEnabled, modifier = Modifier.height(TertiaryControlHeight)) {
+            TextButton(onClick = onTertiary, enabled = tertiaryEnabled, modifier = Modifier.heightIn(min = TertiaryControlHeight)) {
                 Text(
                     tertiary, maxLines = 1, overflow = TextOverflow.Ellipsis,
                     color = if (tertiaryDestructive) MaterialTheme.colorScheme.error else Color.Unspecified,

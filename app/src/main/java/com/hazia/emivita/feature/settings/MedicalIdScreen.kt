@@ -3,6 +3,7 @@ package com.hazia.emivita.feature.settings
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -205,7 +206,7 @@ fun MedicalIdScreen(
             // print "Not recorded", and an empty contact block is omitted.
             enabled = name.isNotBlank(),
             onClick = { exportLauncher.launch("emivita-emergency-card.pdf") },
-            modifier = Modifier.fillMaxWidth().height(SecondaryControlHeight),
+            modifier = Modifier.fillMaxWidth().heightIn(min = SecondaryControlHeight),
         ) { Text(stringResource(R.string.medical_id_export_card_pdf), maxLines = 1, overflow = TextOverflow.Ellipsis) }
         if (name.isBlank()) {
             Spacer(Modifier.height(6.dp))

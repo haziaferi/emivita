@@ -7,6 +7,10 @@ import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Density
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavDestination.Companion.hasRoute
@@ -94,7 +98,7 @@ fun EmivitaNavHost(startPage: StartPage = StartPage.TODAY, openDataAndBackupOnSt
                                 Icon(item.icon, contentDescription = stringResource(item.label))
                             }
                         },
-                        label = { Text(stringResource(item.label)) },
+                        label = { NavLabel(stringResource(item.label)) },
                     )
                 }
             }
@@ -275,5 +279,17 @@ fun EmivitaNavHost(startPage: StartPage = StartPage.TODAY, openDataAndBackupOnSt
                 )
             }
         }
+    }
+}
+
+/** How far a navigation label grows with the font: past it the label stops, so it stays on one line (§7 R129, the owner: "Cap their size"); 1.2 is the most "Impostazioni" takes whole at 360 dp. */
+internal const val NavLabelMaxScale = 1.2f
+
+/** A navigation tab's label at the phone's font size, capped at [NavLabelMaxScale]: at 2.0 "Impostazioni" broke mid-word. */
+@Composable
+internal fun NavLabel(text: String) {
+    val density = LocalDensity.current
+    CompositionLocalProvider(LocalDensity provides Density(density.density, minOf(density.fontScale, NavLabelMaxScale))) {
+        Text(text, maxLines = 1, overflow = TextOverflow.Ellipsis)
     }
 }

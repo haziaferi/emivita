@@ -7,9 +7,9 @@
 
 // Patched versions for libraries AGP's own tooling brings (§7 R86): the
 // signer's Bouncy Castle, gRPC's Netty, sdk-common's commons-compress,
-// bundletool's jose4j, jetifier's jdom2, and since AGP 9 an HttpClient 4.5.6
-// (§7 R94). Each had advisories; none of them is
-// in the APK. app/build.gradle.kts applies the same table to the app's
+// bundletool's jose4j, jetifier's jdom2, since AGP 9 an HttpClient 4.5.6
+// (§7 R94), and Guava (GHSA-xxph-c9ww-hj94, §7 R129). Each had advisories;
+// none of them is in the APK. app/build.gradle.kts applies the same table to the app's
 // configurations (lint, tests, the device-test runner); keep the two equal.
 buildscript {
     val patched = mapOf(
@@ -20,6 +20,7 @@ buildscript {
         "org.bitbucket.b_c:jose4j" to "0.9.6",
         "org.jdom:jdom2" to "2.0.6.1",
         "org.apache.httpcomponents:httpclient" to "4.5.14",
+        "com.google.guava:guava" to "33.7.2-jre",
     )
     configurations.classpath {
         resolutionStrategy.eachDependency {

@@ -164,7 +164,9 @@ class DoseEditDialogTest {
         show(DoseStatus.TAKEN, resolvedAt = scheduled, repository = repository)
         compose.onNodeWithText("Delete this record").performScrollTo().performClick()
         coVerify(exactly = 0) { repository.softDelete(any()) }
-        compose.onNodeWithText("Confirm").performScrollTo().performClick()
+        // Its own dialog, titled with the action (§7 R129), so the confirm is not in the edit's scroll.
+        compose.onNodeWithText("Delete this record?").assertExists()
+        compose.onNodeWithText("Confirm").performClick()
         compose.waitForIdle()
         coVerify(exactly = 1) { repository.softDelete(7L) }
     }

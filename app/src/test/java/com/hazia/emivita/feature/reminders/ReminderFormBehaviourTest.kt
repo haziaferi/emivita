@@ -147,7 +147,7 @@ class ReminderFormBehaviourTest : ReminderFormTestBase() {
         }
         hostApp(); openMedicine()
         tap(hasText("08:00", substring = true) and hasClickAction())
-        waitFor("the edit form") { inTop(button(s(R.string.common_save_changes))) }
+        waitFor("the edit form") { inTop(button(s(R.string.common_save))) }
         fun row(g: Int, vararg parts: String) = assertTrue("${s(g)}: ${parts.toList()}", inTop(parts.fold(group(g)) { m, p -> m and hasText(p, substring = true) }))
         row(R.string.reminder_group_taking, s(R.string.reminder_sum_ask_amount), "Con acqua")
         row(R.string.reminder_group_notification, s(R.string.reminder_sum_weekend), s(R.string.add_reminder_auto_resolve))

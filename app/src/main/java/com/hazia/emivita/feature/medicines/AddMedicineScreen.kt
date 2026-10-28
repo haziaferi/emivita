@@ -190,7 +190,7 @@ fun EditMedicineScreen(
     }
     MedicineFormBody(
         title = stringResource(R.string.edit_medicine_title),
-        saveLabel = stringResource(R.string.common_save_changes),
+        saveLabel = stringResource(R.string.common_save),
         initialName = current.name,
         initialBarcodeValue = current.barcodeValue,
         initialIconKey = current.iconKey,

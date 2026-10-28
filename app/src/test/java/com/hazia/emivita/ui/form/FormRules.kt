@@ -151,7 +151,7 @@ class FormRules(private val dp: Float, private val names: FormNames, private val
             n.role == Role.RadioButton -> "radio row" to null
             t in names.save -> "save button" to 48
             t == names.cancel -> "cancel button" to 42
-            t in names.weekdays || t.toIntOrNull() in 1..31 -> "day cell" to 42
+            t in names.weekdays || n.description in names.weekdays || t.toIntOrNull() in 1..31 -> "day cell" to 42
             t in names.textButtons -> "text button" to 38
             names.groups.any { t.startsWith(it) } -> "group row" to null
             t in names.chips || n.role == Role.Checkbox -> "chip" to 42
@@ -247,7 +247,7 @@ class FormRules(private val dp: Float, private val names: FormNames, private val
         override fun toString() = checks.joinToString("\n")
     }
 
-    fun audit(sw: Swept, placeholders: Map<Int, List<String>> = emptyMap(), decl: FormDecl = FormDecl(), oneLineSwitchHelp: Boolean = true): Audit {
+    fun audit(sw: Swept, placeholders: Map<Int, List<String>> = emptyMap(), decl: FormDecl = FormDecl(), oneLineSwitchHelp: Boolean = true, exactTiers: Boolean = true): Audit {
         val wDp = sw.frames.first().px.width / dp
         val ctls = controls(sw)
         val fields = ctls.filter { it.kind == "field" }
@@ -278,15 +278,19 @@ class FormRules(private val dp: Float, private val names: FormNames, private val
             val onGrid = abs(first.c.left / dp - left) <= 1.0 || footBar
             if (!onGrid) c1 += "'${first.n.label}' starts ${r1(first.c.left / dp - left)} dp off the left edge"
             val flow = byLeft.any { classify(it.n)?.first in setOf("chip", "day cell") }
-            val textOnly = byLeft.all { !it.n.isControl }
+            // A tertiary text action keeps to the left edge by design (FormFootBar's delete), however wide its label.
+            val textOnly = byLeft.all { !it.n.isControl || classify(it.n)?.first == "text button" }
             if (!flow && !textOnly && (last.c.right - first.c.left) / dp >= 0.75 * (right - left) && abs(right - last.c.right / dp) > 1.0) {
                 c1 += "row of '${first.n.label}' ends ${r1(right - last.c.right / dp)} dp short of the right edge"
             }
         }
 
-        // C2 height by function; fields share one height.
+        // C2 height by function; fields share one height. Past font 1.0 a tier is a minimum the
+        // control grows from (§7 R129, the owner: "Grow with the font"), and no label may be cut.
         val c2 = mutableListOf<String>()
-        ctls.filter { it.tier != null && abs(it.hDp - it.tier) > 1.0 }.forEach { c2 += "${it.kind} '${it.label}' is ${it.hDp} dp, its tier ${it.tier}" }
+        ctls.filter { it.tier != null && (if (exactTiers) abs(it.hDp - it.tier) > 1.0 else it.hDp < it.tier - 1.0) }
+            .forEach { c2 += "${it.kind} '${it.label}' is ${it.hDp} dp, its tier ${it.tier}" }
+        ctls.filter { it.tier != null }.forEach { k -> sw.leaves.filter { it.cut && k.node.id in it.ancestors }.forEach { c2 += "${k.kind} '${k.label}': '${it.text}' is cut short" } }
         ctls.filter { !it.grown }.groupBy { it.kind }.filter { (k, l) -> k !in setOf("switch row", "radio row", "group row", "icon button") && l.map { it.hDp.roundToInt() }.distinct().size > 1 }
             .forEach { (k, l) -> c2 += "${k}s have several heights: ${l.map { "${it.label}=${it.hDp}" }}" }
         // No control taller than the field beside it.
@@ -423,9 +427,11 @@ class FormRules(private val dp: Float, private val names: FormNames, private val
      * [confirm] and the button [dismiss] on its line are drawn the same width, the confirm rightmost
      * and the dismiss to its left at least 14 dp apart, 48 and 42 dp high, two colours with the
      * dismiss the more desaturated, and neither label cut short. A dialog keeps its own place, so no
-     * edge or foot is checked. Every dialog is side by side (§7 R126, "Shorter labels, side by side").
+     * edge or foot is checked. Every dialog is side by side (§7 R126, "Shorter labels, side by side");
+     * at [largeFont] the heights are minimums and the pair may stack, the confirm on top, right edges
+     * aligned, at least 14 dp apart (§7 R129: "Grow with the font", "B: stack when cut").
      */
-    fun dialogPair(confirm: String, dismiss: String): Check {
+    fun dialogPair(confirm: String, dismiss: String, largeFont: Boolean = false): Check {
         val f = FormProbe.frame()
         val v = mutableListOf<String>()
         val c = f.merged.firstOrNull { it.clickable && it.text == confirm && it.fullyVisible() }
@@ -434,19 +440,22 @@ class FormRules(private val dp: Float, private val names: FormNames, private val
         val cd = drawnBox(f.px, c.touch); val dd = drawnBox(f.px, d.touch)
         if (cd == null || dd == null) return Check("dialog pair '$confirm'/'$dismiss'", listOf("not drawn"))
         val ch = cd.height / dp; val dh = dd.height / dp
-        if (abs(ch - 48) > 1) v += "'$confirm' is ${r1(ch)} dp high, not 48"
-        if (abs(dh - 42) > 1) v += "'$dismiss' is ${r1(dh)} dp high, not 42"
+        if (if (largeFont) ch < 47 else abs(ch - 48) > 1) v += "'$confirm' is ${r1(ch)} dp high, not 48"
+        if (if (largeFont) dh < 41 else abs(dh - 42) > 1) v += "'$dismiss' is ${r1(dh)} dp high, not 42"
         if (abs(cd.width - dd.width) / dp > 1f) v += "widths differ: '$confirm' ${r1(cd.width / dp)} dp, '$dismiss' ${r1(dd.width / dp)} dp"
         val sameLine = abs((cd.top + cd.bottom) / 2f - (dd.top + dd.bottom) / 2f) < 30 * dp
         for (label in listOf(confirm, dismiss)) {
             if (f.leaves.any { it.text == label && it.cut && (c.id in it.ancestors || d.id in it.ancestors) }) v += "'$label' is cut short"
         }
-        if (!(sameLine && dd.right <= cd.left)) v += "'$dismiss' is not to the left of '$confirm' on its line"
+        val stacked = largeFont && !sameLine && dd.top >= cd.bottom && abs(dd.right - cd.right) / dp <= 1f
+        if (stacked) {
+            if ((dd.top - cd.bottom) / dp < 14f) v += "'$confirm' and '$dismiss' are ${r1((dd.top - cd.bottom) / dp)} dp apart, under 14"
+        } else if (!(sameLine && dd.right <= cd.left)) v += "'$dismiss' is not to the left of '$confirm' on its line"
         else if ((cd.left - dd.right) / dp < 14f) v += "'$confirm' and '$dismiss' are ${r1((cd.left - dd.right) / dp)} dp apart, under 14"
         val cf = modal(f.px, cd); val df = modal(f.px, dd)
         if (FormProbe.deltaE2000(FormProbe.lab(cf), FormProbe.lab(df)) <= 2.0) v += "'$confirm' and '$dismiss' are not two colours"
         else if (FormProbe.chroma(df) >= FormProbe.chroma(cf)) v += "'$dismiss' is not more desaturated than '$confirm'"
-        val detail = "'$confirm' ${r1(cd.width / dp)}x${r1(ch)} dp, '$dismiss' ${r1(dd.width / dp)}x${r1(dh)} dp, gap ${r1((cd.left - dd.right) / dp)} dp, " +
+        val detail = "'$confirm' ${r1(cd.width / dp)}x${r1(ch)} dp, '$dismiss' ${r1(dd.width / dp)}x${r1(dh)} dp, ${if (stacked) "stacked, gap ${r1((dd.top - cd.bottom) / dp)}" else "gap ${r1((cd.left - dd.right) / dp)}"} dp, " +
             "chroma ${"%.3f".format(FormProbe.chroma(cf))} / ${"%.3f".format(FormProbe.chroma(df))}"
         return Check("dialog pair '$confirm'/'$dismiss'", v, detail)
     }

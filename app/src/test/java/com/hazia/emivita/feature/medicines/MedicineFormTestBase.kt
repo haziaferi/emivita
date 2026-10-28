@@ -36,7 +36,7 @@ abstract class MedicineFormTestBase : FormScreenTestBase() {
     protected fun editForm() {
         seed(); hostApp(); openMedicine()
         tap(described(s(R.string.medicine_detail_edit_medicine)))
-        waitFor("the edit form") { inTop(button(s(R.string.common_save_changes))) }
+        waitFor("the edit form") { inTop(button(s(R.string.common_save))) }
     }
 
     protected fun quickAdd() {
@@ -56,7 +56,8 @@ abstract class MedicineFormTestBase : FormScreenTestBase() {
     private fun settingsRow(row: Int) {
         seed(); hostApp()
         tap(hasText(s(R.string.nav_settings)) and hasClickAction())
-        waitFor("Settings") { inTop(hasText(s(row)) and hasClickAction()) }
+        // The list is lazy: a row below the fold is not composed until revealed (360 dp at font 2.0, §7 R129).
+        waitFor("Settings") { inTop(hasText(s(R.string.settings_row_alarms)) and hasClickAction()) }
         tap(hasText(s(row)) and hasClickAction())
     }
 

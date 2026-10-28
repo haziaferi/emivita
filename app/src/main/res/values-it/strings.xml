@@ -304,7 +304,6 @@
     <string name="history_counts_plain">%1$d prese, %2$d mancate</string>
 
     <!-- Form titles and save labels. -->
-    <string name="common_save_changes">Salva le modifiche</string>
     <string name="common_unknown_error">errore sconosciuto</string>
     <string name="add_medicine_title">Aggiungi farmaco</string>
     <string name="edit_medicine_title">Modifica farmaco</string>
@@ -504,6 +503,7 @@
     <string name="dose_edit_move_action">Sposta e ricordamelo a quell’ora</string>
     <string name="dose_edit_return_to_due">Riporta a «Da prendere»</string>
     <string name="dose_edit_delete">Elimina questa registrazione</string>
+    <string name="dose_edit_delete_title">Eliminare questa registrazione?</string>
     <string name="dose_edit_delete_confirm_text">Sparisce dallo Storico e dalle esportazioni; una dose presa torna nella confezione.</string>
     <string name="add_reminder_instructions">Istruzioni</string>
     <string name="add_reminder_instructions_hint">A stomaco pieno · Non con il ferro · Prima di dormire</string>

@@ -187,29 +187,35 @@ fun DoseEditDialog(
                 // Delete (§9 #26, soft): the row hides, its slot stays claimed,
                 // a Taken dose gives its stock back. Two taps, never one.
                 Spacer(Modifier.height(4.dp))
-                if (!confirmDelete) {
-                    TextButton(enabled = !saving, onClick = { confirmDelete = true }) {
-                        Text(stringResource(R.string.dose_edit_delete), color = MaterialTheme.colorScheme.error)
-                    }
-                } else {
-                    Text(stringResource(R.string.dose_edit_delete_confirm_text), style = MaterialTheme.typography.labelMedium)
-                    // The same pair as every dialog's (§7 R125), the delete in the error colour.
-                    Spacer(Modifier.height(8.dp))
-                    DialogActionPair(
-                        stringResource(R.string.common_confirm), destructive = true, confirmEnabled = !saving,
-                        onDismiss = { confirmDelete = false },
-                        onConfirm = {
-                            saving = true
-                            scope.launch {
-                                try {
-                                    doseEventRepository.softDelete(doseEventId)
-                                    ReminderNotifications.dismiss(context, doseEventId)
-                                    onDismiss()
-                                } catch (e: Exception) {
-                                    saving = false
-                                    saveError = resources.getString(R.string.error_could_not_save, e.message ?: resources.getString(R.string.error_unknown))
-                                }
-                            }
+                TextButton(enabled = !saving, onClick = { confirmDelete = true }) {
+                    Text(stringResource(R.string.dose_edit_delete), color = MaterialTheme.colorScheme.error)
+                }
+                if (confirmDelete) {
+                    // Its own dialog, titled with the action (§7 R129, the owner: "2: separate
+                    // dialog"): inline, its Annulla / Conferma sat over the edit's Annulla / Salva.
+                    AlertDialog(
+                        onDismissRequest = { confirmDelete = false },
+                        title = { Text(stringResource(R.string.dose_edit_delete_title)) },
+                        text = { Text(stringResource(R.string.dose_edit_delete_confirm_text)) },
+                        confirmButton = {
+                            DialogActionPair(
+                                stringResource(R.string.common_confirm), destructive = true, confirmEnabled = !saving,
+                                onDismiss = { confirmDelete = false },
+                                onConfirm = {
+                                    saving = true
+                                    scope.launch {
+                                        try {
+                                            doseEventRepository.softDelete(doseEventId)
+                                            ReminderNotifications.dismiss(context, doseEventId)
+                                            onDismiss()
+                                        } catch (e: Exception) {
+                                            saving = false
+                                            confirmDelete = false
+                                            saveError = resources.getString(R.string.error_could_not_save, e.message ?: resources.getString(R.string.error_unknown))
+                                        }
+                                    }
+                                },
+                            )
                         },
                     )
                 }

@@ -1,5 +1,6 @@
 package com.hazia.emivita.core.scheduling.receivers
 
+import androidx.lifecycle.Lifecycle
 import android.app.Notification
 import android.app.NotificationManager
 import android.content.Context
@@ -153,8 +154,10 @@ class ReminderNotificationFlagsTest {
             compose.onNode(hasSetTextAction()).performTextReplacement("2")
             compose.onNode(hasText(h.context.getString(R.string.common_confirm)) and hasClickAction()).performClick()
             // Room writes run on Dispatchers.IO, outside the test's clock (as TodayTakeAllTest waits).
+            // The activity's own finish() ends the take: the reschedule and the group summary come after
+            // the Taken row, and closing it earlier left them to meet the next test's closed database (§7 R129).
             val deadline = System.nanoTime() + 10_000_000_000L
-            while (h.doseEvent(doseId).status != DoseStatus.TAKEN && System.nanoTime() < deadline) {
+            while ((h.doseEvent(doseId).status != DoseStatus.TAKEN || it.state != Lifecycle.State.DESTROYED) && System.nanoTime() < deadline) {
                 Thread.sleep(50)
                 compose.waitForIdle()
             }

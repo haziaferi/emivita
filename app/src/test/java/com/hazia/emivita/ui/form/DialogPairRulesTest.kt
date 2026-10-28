@@ -40,15 +40,16 @@ import org.junit.Test
 /**
  * The owner's decision of 2026-10-23 for dialogs, "Yes, same order and look" (§7 R125): every
  * dialog keeps its place on screen and its confirm/dismiss pair follows the Salva/Annulla rule,
- * measured on the drawn pixels by [FormRules.dialogPair], one dialog per test. Since §7 R126
- * ("Shorter labels, side by side") none stacks: every pair is on one line with neither label cut;
- * [DialogPairRulesFs2Test] holds the same at font 2.0 (§7 R128: "Annulla / Conferma").
+ * measured on the drawn pixels by [FormRules.dialogPair], one dialog per test. At font 1.0 (§7 R126,
+ * "Shorter labels, side by side") every pair is on one line with neither label cut;
+ * [DialogPairRulesFs2Test] holds them at font 2.0 (§7 R128: "Annulla / Conferma"), where the heights are
+ * minimums and a pair that would cut a label stacks (§7 R129).
  */
 open class DialogPairRulesTest : FormScreenTestBase() {
 
     private fun pair(dialog: String, confirm: String, dismiss: String = s(R.string.common_cancel)) {
         waitFor("$dialog's pair") { windows() > 1 && inTop(hasText(confirm) and hasClickAction()) }
-        val check = rules.dialogPair(confirm, dismiss)
+        val check = rules.dialogPair(confirm, dismiss, largeFont = res.configuration.fontScale > 1f)
         println("DIALOG-PAIR $dialog: $check")
         assertTrue("$dialog: $check", check.pass)
     }
