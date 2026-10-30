@@ -1,5 +1,6 @@
 package com.hazia.emivita.feature.reminders
 
+import com.hazia.emivita.ui.form.FormRadioRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -72,8 +73,8 @@ private fun rememberAdvancedReminderFieldsState(initialReminder: Reminder?): Adv
 private fun StartBehaviorPicker(value: IntervalStartBehavior, onChange: (IntervalStartBehavior) -> Unit) {
     Column {
         Text(stringResource(R.string.add_reminder_interval_starts), style = MaterialTheme.typography.labelLarge)
-        RadioRow(stringResource(R.string.add_reminder_when_reminded), value == IntervalStartBehavior.ON_REMINDED) { onChange(IntervalStartBehavior.ON_REMINDED) }
-        RadioRow(stringResource(R.string.add_reminder_when_taken_or_skipped), value == IntervalStartBehavior.ON_RESOLVED) { onChange(IntervalStartBehavior.ON_RESOLVED) }
+        FormRadioRow(stringResource(R.string.add_reminder_when_reminded), value == IntervalStartBehavior.ON_REMINDED) { onChange(IntervalStartBehavior.ON_REMINDED) }
+        FormRadioRow(stringResource(R.string.add_reminder_when_taken_or_skipped), value == IntervalStartBehavior.ON_RESOLVED) { onChange(IntervalStartBehavior.ON_RESOLVED) }
     }
 }
 

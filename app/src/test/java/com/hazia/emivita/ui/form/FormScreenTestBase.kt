@@ -199,6 +199,8 @@ abstract class FormScreenTestBase {
                 R.string.reminder_group_taking, R.string.reminder_group_notification, R.string.reminder_group_unanswered, R.string.reminder_group_duration,
                 // §7 R125: the medicine form's second group, and Alarms & snooze's tone row (it opens the system picker).
                 R.string.medicine_group_details, R.string.settings_alarm_tone,
+                // §7 R130: Alarms & snooze as grouped rows.
+                R.string.alarms_group_snooze, R.string.settings_swipe_title, R.string.settings_alarm_tier_title,
             ).map { s(it) },
             chips = listOf(
                 R.string.common_daily, R.string.add_reminder_specific_days, R.string.add_reminder_every_n_days, R.string.add_reminder_active_pause_cycle,
@@ -240,8 +242,8 @@ abstract class FormScreenTestBase {
     /** Sweeps the top window's form, runs C1-C10 and returns the verdicts. */
     protected fun audit(sheet: Boolean, decl: FormDecl = FormDecl()): FormRules.Audit {
         val sw = rules.sweep(sheet)
-        val first = rules.audit(sw, decl = decl, oneLineSwitchHelp = fontScale.floatValue <= 1f, exactTiers = fontScale.floatValue <= 1f)
+        val first = rules.audit(sw, decl = decl, oneLineHelp = fontScale.floatValue <= 1f, exactTiers = fontScale.floatValue <= 1f)
         val ph = placeholders(sw)
-        return if (ph.isEmpty()) first else rules.audit(sw, ph, decl, oneLineSwitchHelp = fontScale.floatValue <= 1f, exactTiers = fontScale.floatValue <= 1f)
+        return if (ph.isEmpty()) first else rules.audit(sw, ph, decl, oneLineHelp = fontScale.floatValue <= 1f, exactTiers = fontScale.floatValue <= 1f)
     }
 }

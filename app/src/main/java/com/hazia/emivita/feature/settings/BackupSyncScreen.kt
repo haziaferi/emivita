@@ -1,5 +1,7 @@
 package com.hazia.emivita.feature.settings
 
+import com.hazia.emivita.ui.form.ActionPairLayout
+import com.hazia.emivita.ui.form.ControlLabelGap
 import com.hazia.emivita.ui.form.DialogActionPair
 import com.hazia.emivita.ui.form.FormSecureTextField
 import android.content.Intent
@@ -270,7 +272,7 @@ fun BackupSyncScreen(
         Spacer(Modifier.height(12.dp))
         Row(Modifier.fillMaxWidth().toggleable(value = passwordProtectExport, role = Role.Checkbox) { passwordProtectExport = it }, verticalAlignment = Alignment.CenterVertically) {
             Checkbox(checked = passwordProtectExport, onCheckedChange = null)
-            Text(stringResource(R.string.backup_sync_password_protect_this_backup))
+            Text(stringResource(R.string.backup_sync_password_protect_this_backup), modifier = Modifier.padding(start = ControlLabelGap))
         }
         if (passwordProtectExport) {
             OutlinedTextField(
@@ -460,7 +462,7 @@ fun BackupSyncScreen(
 }
 
 @Composable
-private fun ArchivedMedicinesSection(profileId: Long, medicineRepository: MedicineRepository) {
+internal fun ArchivedMedicinesSection(profileId: Long, medicineRepository: MedicineRepository) {
     val archived by produceState<List<Medicine>>(initialValue = emptyList(), profileId) {
         medicineRepository.observeArchivedForProfile(profileId).collect { value = it }
     }
@@ -479,13 +481,18 @@ private fun ArchivedMedicinesSection(profileId: Long, medicineRepository: Medici
         Text(stringResource(R.string.data_archived_none), style = MaterialTheme.typography.bodyMedium)
     }
     archived.forEach { medicine ->
-        Row(Modifier.fillMaxWidth().padding(vertical = 6.dp), verticalAlignment = Alignment.CenterVertically) {
-            Text(medicine.name, style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f))
-            TextButton(onClick = { scope.launch { medicineRepository.unarchive(medicine.id) } }) {
-                Text(stringResource(R.string.data_archived_restore))
-            }
-            TextButton(onClick = { confirmDelete = medicine }) {
-                Text(stringResource(R.string.data_archived_delete), color = MaterialTheme.colorScheme.error)
+        // The name on its own line, the actions under it (§7 R130, the owner: "Always two lines"):
+        // beside them the name broke into syllables at font 2.0. The actions are a pair, so they
+        // stack when side by side would cut one, as every Salva/Annulla does.
+        Column(Modifier.fillMaxWidth().padding(vertical = 6.dp)) {
+            Text(medicine.name, style = MaterialTheme.typography.bodyLarge)
+            ActionPairLayout(hasDismiss = true, hasTertiary = false) {
+                TextButton(onClick = { scope.launch { medicineRepository.unarchive(medicine.id) } }) {
+                    Text(stringResource(R.string.data_archived_restore))
+                }
+                TextButton(onClick = { confirmDelete = medicine }) {
+                    Text(stringResource(R.string.data_archived_delete), color = MaterialTheme.colorScheme.error)
+                }
             }
         }
     }

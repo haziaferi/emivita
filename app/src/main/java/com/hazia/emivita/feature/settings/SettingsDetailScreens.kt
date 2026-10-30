@@ -8,7 +8,6 @@ import android.net.Uri
 import android.content.pm.PackageManager
 import android.os.PowerManager
 import android.provider.Settings
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -59,13 +58,11 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.ui.semantics.Role
 import com.hazia.emivita.ui.theme.labelRes
 import androidx.compose.runtime.collectAsState
 import com.hazia.emivita.core.data.settings.SwipeAction
-import androidx.compose.material3.RadioButton
 import android.media.RingtoneManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
@@ -85,7 +82,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.ui.semantics.contentDescription
 import com.hazia.emivita.ui.form.FormScaffold
-import com.hazia.emivita.ui.components.rememberDirty
+import com.hazia.emivita.ui.form.FormRadioRow
+import com.hazia.emivita.ui.form.FormSheetScaffold
+import com.hazia.emivita.ui.form.FormSwitchRow
+import com.hazia.emivita.ui.form.FormGroupRow
 import androidx.compose.runtime.SideEffect
 import com.hazia.emivita.ui.form.FormTextField
 import com.hazia.emivita.ui.form.SecondaryControlHeight
@@ -109,203 +109,176 @@ internal fun DetailHeader(title: String, onBack: () -> Unit, actions: (@Composab
     Spacer(Modifier.height(20.dp))
 }
 
-/** Alarms & Snooze (spec §9 item 12) -- moves DEFAULT_SNOOZE_MINUTES from a
- *  hardcoded constant to a persisted setting. Alarm sound/vibration aren't
- *  built yet (no audio-picker work has landed anywhere in this app) -- this
- *  screen is scoped to what's actually wired end-to-end: snooze length. */
+/** What Alarms & Snooze edits, read once and saved together by its Salva (§7 R130, the owner: "One save model"). */
+internal data class AlarmsDraft(
+    val minutes: String,
+    val askEachTime: Boolean,
+    val swipe: SwipeAction,
+    val toneUri: String?,
+    val noSound: Boolean,
+    val noVibration: Boolean,
+    val alarmClock: Boolean,
+) {
+    val minutesValue: Int? get() = minutes.toIntOrNull()?.takeIf { it > 0 }
+}
+
+private suspend fun SettingsRepository.alarmsDraft() = AlarmsDraft(
+    minutes = snoozeDurationMinutes.first().toString(),
+    askEachTime = snoozeAskEachTime.first(),
+    swipe = swipeAction.first(),
+    toneUri = alarmRingtoneUri.first(),
+    noSound = alarmNoSoundWhenSilent.first(),
+    noVibration = alarmNoVibrationWhenSilent.first(),
+    alarmClock = useAlarmClock.first(),
+)
+
+private suspend fun SettingsRepository.save(d: AlarmsDraft) {
+    d.minutesValue?.let { setSnoozeDurationMinutes(it) }
+    setSnoozeAskEachTime(d.askEachTime)
+    setSwipeAction(d.swipe)
+    setAlarmRingtoneUri(d.toneUri)
+    setAlarmNoSoundWhenSilent(d.noSound)
+    setAlarmNoVibrationWhenSilent(d.noVibration)
+    setUseAlarmClock(d.alarmClock)
+}
+
+private enum class AlarmsGroup { SNOOZE, SWIPE, ALARM }
+
+/**
+ * Alarms & Snooze (spec §9 item 12), grouped as the medicine form's Avanzate (§7 R124, R130): one
+ * row per group says its values in one line and opens the group's sheet, which edits a copy that
+ * only its own Salva applies. Nothing is stored until this sheet's Salva; Annulla, the back arrow,
+ * Back and the scrim ask when anything was changed (§7 R126).
+ */
 @Composable
 fun AlarmsSnoozeScreen(settingsRepository: SettingsRepository, onBack: () -> Unit, onSaved: () -> Unit = onBack, onDirty: (Boolean) -> Unit = {}) {
-    var minutesText by remember { mutableStateOf<String?>(null) }
+    val context = LocalContext.current
     val scope = rememberCoroutineScope()
-
+    var loaded by remember { mutableStateOf<AlarmsDraft?>(null) }
+    var draft by remember { mutableStateOf<AlarmsDraft?>(null) }
+    var open by remember { mutableStateOf<AlarmsGroup?>(null) }
     LaunchedEffect(Unit) {
-        minutesText = settingsRepository.snoozeDurationMinutes.first().toString()
+        val d = settingsRepository.alarmsDraft()
+        loaded = d
+        draft = d
     }
-
-    val minutesValue = minutesText?.toIntOrNull()
-    // The snooze length is the one edit Salva saves; its baseline is the stored value once read.
-    val dirty = rememberDirty(minutesText == null, minutesText)
+    val dirty = draft != null && draft != loaded
     SideEffect { onDirty(dirty) }
-    // On the shared form parts (§7 R125). Salva saves the snooze length and leaves, as before;
-    // every switch and choice below still saves the moment it is tapped. Annulla and Back ask
-    // when the length was edited, the host's question (§7 R126).
+
     FormScaffold(
         title = stringResource(R.string.settings_detail_alarms_snooze),
         saveLabel = stringResource(R.string.common_save),
-        saveEnabled = minutesValue != null && minutesValue > 0,
+        saveEnabled = draft?.minutesValue != null,
         onSave = {
-            val value = minutesValue
-            if (value != null) scope.launch {
-                settingsRepository.setSnoozeDurationMinutes(value)
-                onSaved()
-            }
+            draft?.let { d -> scope.launch { settingsRepository.save(d); onSaved() } }
         },
         onCancel = onBack,
         onBack = onBack,
         inSheet = true,
     ) {
-        val current = minutesText
-        if (current == null) {
+        val d = draft
+        if (d == null) {
             Box(Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
             return@FormScaffold
         }
+        val toneTitle = rememberToneTitle(d.toneUri)
+        FormGroupRow(
+            stringResource(R.string.alarms_group_snooze),
+            stringResource(if (d.askEachTime) R.string.alarms_snooze_summary_ask else R.string.alarms_snooze_summary_fixed, d.minutesValue ?: 0),
+        ) { open = AlarmsGroup.SNOOZE }
+        FormGroupRow(stringResource(R.string.settings_swipe_title), stringResource(d.swipe.labelRes())) { open = AlarmsGroup.SWIPE }
+        FormGroupRow(stringResource(R.string.settings_alarm_tier_title), toneTitle) { open = AlarmsGroup.ALARM }
 
-        FormTextField(
-            current, { minutesText = it }, stringResource(R.string.settings_detail_snooze_duration_minutes),
-            keyboardType = KeyboardType.Number,
-            help = stringResource(R.string.settings_detail_how_long_a_snoozed_reminder_waits_before),
-            error = if (minutesValue == null || minutesValue <= 0) stringResource(R.string.form_min_one) else null,
-        )
-
-        Spacer(Modifier.height(8.dp))
-        val askEachTime by settingsRepository.snoozeAskEachTime.collectAsState(initial = false)
-        SettingSwitchRow(
-            title = stringResource(R.string.settings_snooze_ask_each_time),
-            description = stringResource(R.string.settings_snooze_ask_each_time_desc),
-            checked = askEachTime,
-        ) { scope.launch { settingsRepository.setSnoozeAskEachTime(it) } }
-
-        // §9 #25 -- what a swipe records. Saved on tap; one selectable node
-        // per option (Stage B).
-        Spacer(Modifier.height(24.dp))
-        val swipe by settingsRepository.swipeAction.collectAsState(initial = null)
-        Text(stringResource(R.string.settings_swipe_title), style = MaterialTheme.typography.labelLarge)
+        Spacer(Modifier.height(16.dp))
+        FilledTonalButton(onClick = { postTestReminder(context) }, modifier = Modifier.fillMaxWidth().heightIn(min = SecondaryControlHeight)) { Text(stringResource(R.string.settings_test_reminder)) }
         Text(
-            stringResource(R.string.settings_swipe_desc),
+            stringResource(R.string.settings_test_reminder_desc),
             style = MaterialTheme.typography.labelMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
-        Spacer(Modifier.height(4.dp))
-        for (option in SwipeAction.entries) {
-            Row(
-                Modifier.fillMaxWidth().selectable(selected = swipe == option, role = Role.RadioButton) {
-                    scope.launch { settingsRepository.setSwipeAction(option) }
-                }.padding(vertical = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-            ) {
-                RadioButton(selected = swipe == option, onClick = null)
-                Text(stringResource(option.labelRes()))
-            }
-        }
 
-        // §9 #11 / #25 -- hidden names.
-        Spacer(Modifier.height(16.dp))
-        val hideNames by settingsRepository.hideMedicineNames.collectAsState(initial = false)
-        Row(
-            Modifier.fillMaxWidth().toggleable(value = hideNames, role = Role.Switch) { checked ->
-                scope.launch { settingsRepository.setHideMedicineNames(checked) }
-            },
-            horizontalArrangement = Arrangement.SpaceBetween,
-            verticalAlignment = Alignment.CenterVertically,
-        ) {
-            Column(Modifier.weight(1f)) {
-                Text(stringResource(R.string.settings_hide_names), style = MaterialTheme.typography.bodyLarge)
-                Text(
-                    stringResource(R.string.settings_hide_names_desc),
-                    style = MaterialTheme.typography.labelMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                )
-            }
-            Switch(checked = hideNames, onCheckedChange = null)
+        val close = { open = null }
+        when (open) {
+            AlarmsGroup.SNOOZE -> SnoozeSheet(d, close) { draft = it; close() }
+            AlarmsGroup.SWIPE -> SwipeSheet(d, close) { draft = it; close() }
+            AlarmsGroup.ALARM -> AlarmTierSheet(d, close) { draft = it; close() }
+            null -> Unit
         }
+    }
+}
 
-        AlarmSettingsSection(settingsRepository)
+/** The tone's own title, or the system default's. The picker's Uri is a content grant held as a string. */
+@Composable
+private fun rememberToneTitle(toneUri: String?): String {
+    val context = LocalContext.current
+    val fallback = stringResource(R.string.settings_alarm_tone_default)
+    return remember(toneUri) {
+        val uri = toneUri?.toUri() ?: Settings.System.DEFAULT_ALARM_ALERT_URI
+        runCatching { RingtoneManager.getRingtone(context, uri)?.getTitle(context) }.getOrNull()
+    } ?: fallback
+}
+
+@Composable
+private fun SnoozeSheet(entry: AlarmsDraft, close: () -> Unit, apply: (AlarmsDraft) -> Unit) {
+    var d by remember { mutableStateOf(entry) }
+    FormSheetScaffold(stringResource(R.string.alarms_group_snooze), dirty = d != entry, saveEnabled = d.minutesValue != null, onSave = { apply(d) }, close = close) {
+        FormTextField(
+            d.minutes, { d = d.copy(minutes = it) }, stringResource(R.string.settings_detail_snooze_duration_minutes),
+            keyboardType = KeyboardType.Number,
+            help = stringResource(R.string.settings_detail_how_long_a_snoozed_reminder_waits_before),
+            error = if (d.minutesValue == null) stringResource(R.string.form_min_one) else null,
+        )
+        FormSwitchRow(stringResource(R.string.settings_snooze_ask_each_time), stringResource(R.string.settings_snooze_ask_each_time_desc), d.askEachTime) {
+            d = d.copy(askEachTime = it)
+        }
     }
 }
 
 @Composable
-private fun AlarmSettingsSection(settingsRepository: SettingsRepository) {
-    val context = LocalContext.current
-    val scope = rememberCoroutineScope()
-    val toneUri by settingsRepository.alarmRingtoneUri.collectAsState(initial = null)
-    val noSound by settingsRepository.alarmNoSoundWhenSilent.collectAsState(initial = false)
-    val noVibration by settingsRepository.alarmNoVibrationWhenSilent.collectAsState(initial = false)
-    val alarmClock by settingsRepository.useAlarmClock.collectAsState(initial = false)
+private fun SwipeSheet(entry: AlarmsDraft, close: () -> Unit, apply: (AlarmsDraft) -> Unit) {
+    var d by remember { mutableStateOf(entry) }
+    FormSheetScaffold(stringResource(R.string.settings_swipe_title), dirty = d != entry, saveEnabled = true, onSave = { apply(d) }, close = close) {
+        Text(stringResource(R.string.settings_swipe_desc), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(4.dp))
+        for (option in SwipeAction.entries) FormRadioRow(stringResource(option.labelRes()), d.swipe == option) { d = d.copy(swipe = option) }
+    }
+}
 
-    // The system ringtone picker, filtered to alarm tones (medTimer uses the
-    // preferencex picker for the same). The chosen Uri is a content grant we
-    // hold as a string; AlarmActivity falls back to the default if it dies.
+@Composable
+private fun AlarmTierSheet(entry: AlarmsDraft, close: () -> Unit, apply: (AlarmsDraft) -> Unit) {
+    var d by remember { mutableStateOf(entry) }
+    // The system ringtone picker, filtered to alarm tones (medTimer uses the preferencex picker for the
+    // same); AlarmActivity falls back to the default if the chosen tone's grant dies.
     val pickTone = rememberLauncherForActivityResult(ActivityResultContracts.StartActivityForResult()) { result ->
-        if (result.resultCode == android.app.Activity.RESULT_OK) {
+        if (result.resultCode == Activity.RESULT_OK) {
             @Suppress("DEPRECATION")
             val picked: Uri? = result.data?.getParcelableExtra(RingtoneManager.EXTRA_RINGTONE_PICKED_URI)
-            scope.launch { settingsRepository.setAlarmRingtoneUri(picked?.toString()) }
+            d = d.copy(toneUri = picked?.toString())
         }
     }
-    val toneTitle = remember(toneUri) {
-        val uri = toneUri?.let { it.toUri() } ?: Settings.System.DEFAULT_ALARM_ALERT_URI
-        runCatching { RingtoneManager.getRingtone(context, uri)?.getTitle(context) }.getOrNull()
-    }
-
-    Spacer(Modifier.height(24.dp))
-    Text(stringResource(R.string.settings_alarm_tier_title), style = MaterialTheme.typography.labelLarge)
-    Text(
-        stringResource(R.string.settings_alarm_tier_desc),
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-    Spacer(Modifier.height(8.dp))
-    Row(
-        Modifier.fillMaxWidth().clickable(role = Role.Button, onClickLabel = stringResource(R.string.settings_alarm_tone_pick)) {
+    FormSheetScaffold(stringResource(R.string.settings_alarm_tier_title), dirty = d != entry, saveEnabled = true, onSave = { apply(d) }, close = close) {
+        Text(stringResource(R.string.settings_alarm_tier_desc), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Spacer(Modifier.height(4.dp))
+        FormGroupRow(stringResource(R.string.settings_alarm_tone), rememberToneTitle(d.toneUri), stringResource(R.string.settings_alarm_tone_pick)) {
+            val current = d.toneUri?.toUri() ?: Settings.System.DEFAULT_ALARM_ALERT_URI
             val intent = Intent(RingtoneManager.ACTION_RINGTONE_PICKER).apply {
                 putExtra(RingtoneManager.EXTRA_RINGTONE_TYPE, RingtoneManager.TYPE_ALARM)
                 putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_DEFAULT, true)
                 putExtra(RingtoneManager.EXTRA_RINGTONE_SHOW_SILENT, false)
                 putExtra(RingtoneManager.EXTRA_RINGTONE_DEFAULT_URI, Settings.System.DEFAULT_ALARM_ALERT_URI)
-                putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, toneUri?.let { it.toUri() } ?: Settings.System.DEFAULT_ALARM_ALERT_URI)
+                putExtra(RingtoneManager.EXTRA_RINGTONE_EXISTING_URI, current)
             }
             runCatching { pickTone.launch(intent) }
-        }.padding(vertical = 8.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(stringResource(R.string.settings_alarm_tone), style = MaterialTheme.typography.bodyLarge)
-            Text(
-                toneTitle ?: stringResource(R.string.settings_alarm_tone_default),
-                style = MaterialTheme.typography.labelMedium,
-                color = MaterialTheme.colorScheme.onSurfaceVariant,
-            )
         }
-    }
-    SettingSwitchRow(
-        title = stringResource(R.string.settings_alarm_no_sound_when_silent),
-        description = stringResource(R.string.settings_alarm_no_sound_when_silent_desc),
-        checked = noSound,
-    ) { scope.launch { settingsRepository.setAlarmNoSoundWhenSilent(it) } }
-    SettingSwitchRow(
-        title = stringResource(R.string.settings_alarm_no_vibration_when_silent),
-        description = stringResource(R.string.settings_alarm_no_vibration_when_silent_desc),
-        checked = noVibration,
-    ) { scope.launch { settingsRepository.setAlarmNoVibrationWhenSilent(it) } }
-    SettingSwitchRow(
-        title = stringResource(R.string.settings_use_alarm_clock),
-        description = stringResource(R.string.settings_use_alarm_clock_desc),
-        checked = alarmClock,
-    ) { scope.launch { settingsRepository.setUseAlarmClock(it) } }
-
-    Spacer(Modifier.height(16.dp))
-    FilledTonalButton(onClick = { postTestReminder(context) }, modifier = Modifier.fillMaxWidth().heightIn(min = SecondaryControlHeight)) { Text(stringResource(R.string.settings_test_reminder)) }
-    Text(
-        stringResource(R.string.settings_test_reminder_desc),
-        style = MaterialTheme.typography.labelMedium,
-        color = MaterialTheme.colorScheme.onSurfaceVariant,
-    )
-}
-
-/** One toggleable node per switch row (Stage B pattern). */
-@Composable
-private fun SettingSwitchRow(title: String, description: String, checked: Boolean, onChange: (Boolean) -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().toggleable(value = checked, role = Role.Switch, onValueChange = onChange).padding(vertical = 6.dp),
-        horizontalArrangement = Arrangement.SpaceBetween,
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            Text(description, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        FormSwitchRow(stringResource(R.string.settings_alarm_no_sound_when_silent), stringResource(R.string.settings_alarm_no_sound_when_silent_desc), d.noSound) {
+            d = d.copy(noSound = it)
         }
-        Switch(checked = checked, onCheckedChange = null)
+        FormSwitchRow(stringResource(R.string.settings_alarm_no_vibration_when_silent), stringResource(R.string.settings_alarm_no_vibration_when_silent_desc), d.noVibration) {
+            d = d.copy(noVibration = it)
+        }
+        FormSwitchRow(stringResource(R.string.settings_use_alarm_clock), stringResource(R.string.settings_use_alarm_clock_desc), d.alarmClock) {
+            d = d.copy(alarmClock = it)
+        }
     }
 }
 

@@ -1,5 +1,6 @@
 package com.hazia.emivita.feature.reminders
 
+import com.hazia.emivita.ui.form.FormRadioRow
 import com.hazia.emivita.ui.form.DialogActionPair
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Column
@@ -469,8 +470,8 @@ private fun ExpirationAlertFormBody(
         Spacer(Modifier.height(8.dp))
         Text(stringResource(R.string.common_notify), style = MaterialTheme.typography.labelLarge)
         Column {
-            RadioRow(stringResource(R.string.common_once), frequency == ExpirationTriggerFrequency.ONCE) { frequency = ExpirationTriggerFrequency.ONCE }
-            RadioRow(stringResource(R.string.add_reminder_once_a_day), frequency == ExpirationTriggerFrequency.DAILY) { frequency = ExpirationTriggerFrequency.DAILY }
+            FormRadioRow(stringResource(R.string.common_once), frequency == ExpirationTriggerFrequency.ONCE) { frequency = ExpirationTriggerFrequency.ONCE }
+            FormRadioRow(stringResource(R.string.add_reminder_once_a_day), frequency == ExpirationTriggerFrequency.DAILY) { frequency = ExpirationTriggerFrequency.DAILY }
         }
         // See LowStockAlertFormBody's note: alert reminders own a real
         // alarm since spec §7 R37, so they need a time to ring at.

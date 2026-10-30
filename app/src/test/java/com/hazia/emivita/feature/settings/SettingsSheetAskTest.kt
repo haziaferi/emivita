@@ -45,8 +45,12 @@ class SettingsSheetAskTest : MedicineFormTestBase() {
     @Test fun alarms_annulla_and_back_ask_when_the_length_was_edited() {
         alarmsSnooze()
         val stored = snooze()
+        // The length is typed in the Rinvio group and its Salva keeps it in the sheet's draft (§7 R130, "One save model").
+        snoozeGroup()
         typeInto(snoozeField, "${stored + 7}")
-        val typed = { inTop(snoozeField and hasText("${stored + 7}")) }
+        tapNode(top(button(s(R.string.common_save))))
+        waitFor("back on the main sheet") { windows() == 2 }
+        val typed = { inTop(hasText("${stored + 7} min", substring = true)) }
         askedThenKept(annulla, typed)
         askedThenKept(back, typed)
         askedThenDiscarded(annulla)
@@ -88,6 +92,6 @@ class SettingsSheetAskTest : MedicineFormTestBase() {
     /** The Settings list is still on screen: the same row again. */
     private fun alarmsSnoozeAgain() {
         tap(hasText(s(R.string.settings_row_alarms)) and androidx.compose.ui.test.hasClickAction())
-        waitFor("Alarms & snooze") { windows() > 1 && inTop(button(s(R.string.common_save))) && inTop(snoozeField) }
+        waitFor("Alarms & snooze") { windows() > 1 && inTop(button(s(R.string.common_save))) && inTop(hasText(s(R.string.alarms_group_snooze))) }
     }
 }

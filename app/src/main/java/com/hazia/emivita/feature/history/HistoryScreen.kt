@@ -5,8 +5,8 @@ import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
@@ -25,6 +25,9 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.DropdownMenu
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -41,6 +44,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.testTag
+import androidx.compose.ui.unit.Dp
+import com.hazia.emivita.navigation.NavLabel
 import androidx.compose.ui.unit.dp
 import com.hazia.emivita.core.data.dao.DoseEventWithMedicine
 import com.hazia.emivita.core.data.dao.displayName
@@ -102,6 +109,18 @@ private data class HistoryDay(
 // @StringRes rather than a String: this enum is a top-level declaration,
 // not a composable, so stringResource() cannot be called here. The id
 // travels and the call site resolves it (spec §9 #19 Stage A).
+/** Test tag of the History list, whose first item holds the summary and the chart. */
+internal const val HISTORY_LIST_TAG = "history_list"
+
+/**
+ * Whether the adherence chart is drawn above the list: only when [viewport] shows the summary, the
+ * whole chart and the first dose together, their text growing with [fontScale] (§7 R130, the owner:
+ * "Both"); the list scrolls either way. The chart block is about 180 dp of plot plus 130 dp of title,
+ * axis and legend text at font 1.0, the summary about 140 dp, a dated dose row about 100 dp.
+ */
+internal fun historyChartFits(viewport: Dp, fontScale: Float): Boolean =
+    viewport.value >= (180f + 130f * fontScale) + 140f * fontScale + 100f * fontScale
+
 private enum class HistoryViewMode(@StringRes val label: Int) {
     LIST(R.string.history_view_list),
     CALENDAR(R.string.history_view_calendar),
@@ -273,15 +292,17 @@ fun HistoryScreen(
             )
         }
 
-        Row(
-            Modifier.fillMaxWidth().padding(horizontal = 16.dp),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-        ) {
-            HistoryViewMode.entries.forEach { mode ->
-                FilterChip(
+        // One full-width bar of equal segments (§7 R130, the owner: "Full-width segmented"):
+        // three chips side by side broke "Tabella" into syllables at font 2.0.
+        SingleChoiceSegmentedButtonRow(Modifier.fillMaxWidth().padding(horizontal = 16.dp)) {
+            HistoryViewMode.entries.forEachIndexed { i, mode ->
+                SegmentedButton(
                     selected = viewMode == mode,
                     onClick = { viewMode = mode; scope.launch { settingsRepository.setHistoryViewModeName(mode.name) } },
-                    label = { Text(stringResource(mode.label)) },
+                    shape = SegmentedButtonDefaults.itemShape(i, HistoryViewMode.entries.size),
+                    icon = {},
+                    // Capped like the navigation labels (§7 R130): at 2.0 "Calendario" was cut.
+                    label = { NavLabel(stringResource(mode.label)) },
                 )
             }
         }
@@ -298,24 +319,37 @@ fun HistoryScreen(
                         style = MaterialTheme.typography.bodyMedium,
                     )
                 }
-                else -> {
-                    AdherenceSummary(events, now, zone)
+                // Summary, chart and doses scroll as one list, and the chart is left out
+                // when it could not show whole above the first dose (§7 R130, the owner:
+                // "Both"): at font 2.0 a fixed header left the 9 Pro no list at all.
+                else -> BoxWithConstraints(Modifier.fillMaxSize()) {
+                    val fontScale = LocalDensity.current.fontScale
                     val dailyCounts = remember(events, zone, today, now) { dailyAdherenceCounts(events, zone, today, now) }
-                    if (dailyCounts.any { it.total > 0 }) {
-                        AdherenceChart(dailyCounts)
-                        Spacer(Modifier.height(12.dp))
-                    }
-                    LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)) {
+                    val showChart = dailyCounts.any { it.total > 0 } &&
+                        historyChartFits(maxHeight, fontScale)
+                    LazyColumn(
+                        Modifier.testTag(HISTORY_LIST_TAG),
+                        contentPadding = PaddingValues(vertical = 4.dp),
+                    ) {
+                        item(key = "summary") {
+                            AdherenceSummary(events, now, zone)
+                            if (showChart) {
+                                AdherenceChart(dailyCounts)
+                                Spacer(Modifier.height(12.dp))
+                            }
+                        }
                         items(days, key = { it.date.toEpochDay() }) { day ->
-                            DayHeader(day.date, today)
-                            day.entries.forEach { row ->
-                                // The row itself already refuses the click for a
-                                // REFILLED entry; re-testing it here is what let
-                                // this surface and the row disagree (§7 R47).
-                                HistoryEntryRow(row, onClick = { editingId = row.doseEvent.id })
+                            Column(Modifier.padding(horizontal = 16.dp)) {
+                                DayHeader(day.date, today)
+                                day.entries.forEach { row ->
+                                    // The row itself already refuses the click for a
+                                    // REFILLED entry; re-testing it here is what let
+                                    // this surface and the row disagree (§7 R47).
+                                    HistoryEntryRow(row, onClick = { editingId = row.doseEvent.id })
+                                    Spacer(Modifier.height(8.dp))
+                                }
                                 Spacer(Modifier.height(8.dp))
                             }
-                            Spacer(Modifier.height(8.dp))
                         }
                     }
                 }

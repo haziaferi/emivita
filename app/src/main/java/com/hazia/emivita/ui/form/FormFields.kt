@@ -63,11 +63,11 @@ const val FreeTextMaxLines = 6
 
 /**
  * The one field pattern (§7 R124, C3): the title always small inside the frame, one line inside
- * the box, help or error as one line below at the field's text inset. [value] stays the caller's
+ * the box, help or error below at the field's text inset, one line at font 1.0 (§7 R130). [value] stays the caller's
  * String state; a field that can show an error and has no help keeps its line empty ([reserve]),
  * and an empty [label] draws none (§7 R125). [freeText], text that can be long (allergies, an
  * address, notes), is one line when empty and grows a line at a time as it is typed, up to
- * [FreeTextMaxLines], then scrolls inside, its title, help and error still one line (§7 R126).
+ * [FreeTextMaxLines], then scrolls inside, its title still one line (§7 R126).
  */
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,7 +96,8 @@ fun FormTextField(
     LaunchedEffect(state) { snapshotFlow { state.text.toString() }.collect { if (it != current) report(it) } }
     val below = error ?: help
     val support: (@Composable () -> Unit)? = when {
-        below != null -> { { Text(below, maxLines = 1, overflow = TextOverflow.Ellipsis) } }
+        // Help and error show in full: one line at font 1.0, as C3 holds them, more at a large font (§7 R130).
+        below != null -> { { Text(below) } }
         reserve -> { { Text("", maxLines = 1) } }
         else -> null
     }
@@ -296,7 +297,7 @@ fun FieldPair(texts: List<String>, iconDp: Dp = 0.dp, first: @Composable (Modifi
 fun FieldHelpLine(text: String, error: String? = null) {
     Box(Modifier.fillMaxWidth().padding(start = 16.dp, top = 4.dp, end = 16.dp)) {
         Text(
-            error ?: text, style = MaterialTheme.typography.bodySmall, maxLines = 1, overflow = TextOverflow.Ellipsis,
+            error ?: text, style = MaterialTheme.typography.bodySmall,
             color = if (error != null) MaterialTheme.colorScheme.error else MaterialTheme.colorScheme.onSurfaceVariant,
         )
     }

@@ -1,14 +1,12 @@
 package com.hazia.emivita.feature.reminders
 
+import com.hazia.emivita.ui.form.FormRadioRow
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
@@ -20,7 +18,6 @@ import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
@@ -32,8 +29,6 @@ import com.hazia.emivita.core.data.entity.RepeatConfig
 import kotlinx.coroutines.launch
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.ui.semantics.Role
 import com.hazia.emivita.core.format.parseDecimal
 import com.hazia.emivita.core.format.formatDecimalLocalized
 import com.hazia.emivita.ui.components.unsavedChangesGuard
@@ -61,18 +56,6 @@ internal fun ReminderFormScaffold(
         title = title, saveLabel = saveLabel, saveEnabled = saveEnabled, onSave = onSave, onCancel = cancel,
         deleteLabel = stringResource(R.string.reminder_delete), onDelete = onDelete, content = content,
     )
-}
-
-/** One selectable node per option (§9 #19 Stage B): the row carries the role and the state. */
-@Composable
-internal fun RadioRow(label: String, selected: Boolean, onSelect: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(selected = selected, role = Role.RadioButton, onClick = onSelect),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(selected = selected, onClick = null)
-        Text(label)
-    }
 }
 
 /** Snapshot of the "Advanced" section's fields at save time, passed to each
@@ -238,13 +221,13 @@ internal fun LowStockAlertFormBody(
         Spacer(Modifier.height(8.dp))
         Text(stringResource(R.string.common_notify), style = MaterialTheme.typography.labelLarge)
         Column {
-            RadioRow(stringResource(R.string.add_reminder_once_until_restocked), triggerMode == LowStockTriggerMode.ONCE_WHEN_BELOW) {
+            FormRadioRow(stringResource(R.string.add_reminder_once_until_restocked), triggerMode == LowStockTriggerMode.ONCE_WHEN_BELOW) {
                 triggerMode = LowStockTriggerMode.ONCE_WHEN_BELOW
             }
-            RadioRow(stringResource(R.string.add_reminder_once_a_day_while_low), triggerMode == LowStockTriggerMode.DAILY_WHEN_BELOW) {
+            FormRadioRow(stringResource(R.string.add_reminder_once_a_day_while_low), triggerMode == LowStockTriggerMode.DAILY_WHEN_BELOW) {
                 triggerMode = LowStockTriggerMode.DAILY_WHEN_BELOW
             }
-            RadioRow(stringResource(R.string.add_reminder_every_relevant_change_while_low), triggerMode == LowStockTriggerMode.ALWAYS_WHEN_BELOW) {
+            FormRadioRow(stringResource(R.string.add_reminder_every_relevant_change_while_low), triggerMode == LowStockTriggerMode.ALWAYS_WHEN_BELOW) {
                 triggerMode = LowStockTriggerMode.ALWAYS_WHEN_BELOW
             }
         }

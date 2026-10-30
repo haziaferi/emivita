@@ -68,7 +68,13 @@ abstract class MedicineFormTestBase : FormScreenTestBase() {
 
     protected fun alarmsSnooze() {
         settingsRow(R.string.settings_row_alarms)
-        waitFor("Alarms & snooze") { windows() > 1 && inTop(button(s(R.string.common_save))) && inTop(hasText(s(R.string.settings_detail_snooze_duration_minutes))) }
+        waitFor("Alarms & snooze") { windows() > 1 && inTop(button(s(R.string.common_save))) && inTop(hasText(s(R.string.alarms_group_snooze))) }
+    }
+
+    /** Alarms & snooze's Rinvio group, its own sheet over the main one (§7 R130), where the length is typed. */
+    protected fun snoozeGroup() {
+        tap(hasText(s(R.string.alarms_group_snooze)) and hasClickAction())
+        waitFor("the Rinvio sheet") { windows() > 2 && inTop(hasText(s(R.string.settings_detail_snooze_duration_minutes))) }
     }
 
     protected fun weekendMode() {

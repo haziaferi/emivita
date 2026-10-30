@@ -247,7 +247,7 @@ class FormRules(private val dp: Float, private val names: FormNames, private val
         override fun toString() = checks.joinToString("\n")
     }
 
-    fun audit(sw: Swept, placeholders: Map<Int, List<String>> = emptyMap(), decl: FormDecl = FormDecl(), oneLineSwitchHelp: Boolean = true, exactTiers: Boolean = true): Audit {
+    fun audit(sw: Swept, placeholders: Map<Int, List<String>> = emptyMap(), decl: FormDecl = FormDecl(), oneLineHelp: Boolean = true, exactTiers: Boolean = true): Audit {
         val wDp = sw.frames.first().px.width / dp
         val ctls = controls(sw)
         val fields = ctls.filter { it.kind == "field" }
@@ -310,12 +310,13 @@ class FormRules(private val dp: Float, private val names: FormNames, private val
             else if (label.c.center.y >= bt + 0.25f * firstLine) c3 += "'${label.text}' shown full size inside the box (reads as a placeholder)"
             inBox.filter { it.lines > 1 }.forEach { c3 += "'${it.text}' wraps to ${it.lines} lines inside the box" }
             if (!freeText(f)) inside.filter { it.editable && it.lines > 1 }.forEach { c3 += "the value of '${f.label}' wraps to ${it.lines} lines" }
-            inside.filter { !it.editable && it.c.center.y > bb && it.lines > 1 }.forEach { c3 += "help '${it.text}' runs ${it.lines} lines" }
+            // Help and error under the box are one line at font 1.0, where the owner's rule is set, and wrap past it (§7 R130).
+            if (oneLineHelp) inside.filter { !it.editable && it.c.center.y > bb && it.lines > 1 }.forEach { c3 += "help '${it.text}' runs ${it.lines} lines" }
             placeholders[f.node.id]?.forEach { c3 += "placeholder '$it' in '${f.label}' (help inside the box)" }
         }
         // A switch row's help is one line too (§7 R124 C3; §7 R126, found on the 6T in Weekend mode): every
         // text under the row's title, wrapped or cut short. Held at font 1.0, where the owner's rule is set.
-        if (oneLineSwitchHelp) {
+        if (oneLineHelp) {
             for (sr in sw.nodes.filter { it.n.role == Role.Switch && !(sw.navTop != null && !sw.sheet && it.n.unclipped.top >= sw.navTop - 0.5f) }) {
                 val texts = sw.leaves.filter { !it.editable && sr.n.id in it.ancestors }.sortedBy { it.c.top }
                 texts.drop(1).filter { it.lines > 1 || it.cut }
