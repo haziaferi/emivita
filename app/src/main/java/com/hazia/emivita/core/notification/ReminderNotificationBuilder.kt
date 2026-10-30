@@ -1,5 +1,6 @@
 package com.hazia.emivita.core.notification
 
+import com.hazia.emivita.core.data.entity.DoseStatus
 import android.app.PendingIntent
 import android.content.Context
 import android.content.Intent
@@ -36,6 +37,11 @@ const val ACTION_SNOOZE = "com.hazia.emivita.action.SNOOZE"
 const val ACTION_SWIPED = "com.hazia.emivita.action.SWIPED"
 /** The group summary's one action (§9 #25): every listed dose is taken. */
 const val ACTION_TAKE_ALL = "com.hazia.emivita.action.TAKE_ALL"
+// §7 R134: Annulla on the card a Take or Skip from the shade leaves behind.
+const val ACTION_UNDO = "com.hazia.emivita.action.UNDO"
+
+/** How long the answered card stays with its Annulla before it clears itself (§7 R134). */
+const val UNDO_WINDOW_MS = 5_000L
 const val EXTRA_DOSE_EVENT_IDS = "com.hazia.emivita.extra.DOSE_EVENT_IDS"
 const val REMINDER_GROUP_KEY = "com.hazia.emivita.group.REMINDERS"
 const val REMINDER_GROUP_SUMMARY_ID = -3_000_000
@@ -234,6 +240,37 @@ class ReminderNotificationBuilder(
      *  Standard channel, no sound, no actions, gone on tap or when the real
      *  reminder fires. Id in its own negative range so it cannot collide with
      *  a dose (positive) or an alert (negative reminder id). */
+    /**
+     * The answer a notification has just recorded, for [UNDO_WINDOW_MS] with Annulla, then gone (§7 R134; the owner's
+     * pick from the comparison, Did I Take My Meds?'s post-take card): a Take or Skip from the shade leaves a trace that
+     * can be taken back. Silent, under the dose's own id; the name follows hide-names and the lock-screen copy names none.
+     */
+    suspend fun postAnswered(doseEvent: DoseEvent, name: String, status: DoseStatus) {
+        accentArgb = notificationAccentArgb(settingsRepository)
+        val shown = maskedMedicineName(name, settingsRepository.hideMedicineNames.first())
+        val text = answeredText(context.resources, shown, status, doseEvent.resolvedAtEpochMillis ?: System.currentTimeMillis())
+        val undo = actionPendingIntent(ACTION_UNDO, doseEvent.id, requestCodeSalt = 5)
+        val publicVersion = NotificationCompat.Builder(context, ReminderNotificationChannels.CHANNEL_STANDARD)
+            .setSmallIcon(R.drawable.ic_notification_reminder)
+            .setColor(accentArgb)
+            .setContentTitle(context.getString(if (status == DoseStatus.TAKEN) R.string.notif_answered_public_taken else R.string.notif_answered_public_skipped))
+            .addAction(0, context.getString(R.string.common_undo), undo)
+            .build()
+        val notification = NotificationCompat.Builder(context, ReminderNotificationChannels.CHANNEL_STANDARD)
+            .setSmallIcon(R.drawable.ic_notification_reminder)
+            .setColor(accentArgb)
+            .setContentTitle(text)
+            .setCategory(NotificationCompat.CATEGORY_STATUS)
+            .setSilent(true)
+            .setAutoCancel(true)
+            .setTimeoutAfter(UNDO_WINDOW_MS)
+            .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+            .setPublicVersion(publicVersion)
+            .addAction(0, context.getString(R.string.common_undo), undo)
+            .build()
+        postIfPermitted(context, TAG, doseEvent.id.toInt(), notification)
+    }
+
     suspend fun postPreAlarm(reminder: Reminder, medicine: Medicine, doseEpochMillis: Long) {
         accentArgb = notificationAccentArgb(settingsRepository)
         val hideNames = settingsRepository.hideMedicineNames.first()
@@ -357,3 +394,8 @@ fun preAlarmNotificationId(reminderId: Long): Int = -(2_000_000 + reminderId.toI
  *  Android 13, whose notification the shade cannot clear (§7 R80, R109). */
 internal fun reminderCanBeSwiped(sticky: Boolean, ringsInService: Boolean, sdk: Int = Build.VERSION.SDK_INT): Boolean =
     !sticky && !(ringsInService && sdk < Build.VERSION_CODES.TIRAMISU)
+
+/** "Metformina: presa alle 08:02" or "Metformina: saltata": the answered card's and Today's undo bar's one line (§7 R134). */
+fun answeredText(resources: android.content.res.Resources, name: String, status: DoseStatus, atEpochMillis: Long): String =
+    if (status == DoseStatus.TAKEN) resources.getString(R.string.answered_taken, name, LocaleFormats.time(atEpochMillis))
+    else resources.getString(R.string.answered_skipped, name)

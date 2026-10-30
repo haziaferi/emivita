@@ -10,6 +10,7 @@ import com.hazia.emivita.core.di.AppContainer
 import com.hazia.emivita.core.notification.ACTION_SKIP
 import com.hazia.emivita.core.notification.ACTION_SNOOZE
 import com.hazia.emivita.core.notification.ACTION_TAKE
+import com.hazia.emivita.core.notification.ACTION_UNDO
 import com.hazia.emivita.core.notification.EXTRA_DOSE_EVENT_ID
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -60,7 +61,7 @@ class ReminderActionReceiver : BroadcastReceiver() {
             Log.w(TAG, "Received an action with no valid dose event id -- ignoring.")
             return
         }
-        if (action == null || (action != ACTION_TAKE && action != ACTION_SKIP && action != ACTION_SNOOZE && action != ACTION_SWIPED)) {
+        if (action == null || (action != ACTION_TAKE && action != ACTION_SKIP && action != ACTION_SNOOZE && action != ACTION_SWIPED && action != ACTION_UNDO)) {
             Log.w(TAG, "Received an unrecognized action: $action -- ignoring.")
             return
         }
@@ -111,6 +112,7 @@ class ReminderActionReceiver : BroadcastReceiver() {
                 }
                 container.doseEventRepository.resolve(doseEventId, DoseStatus.TAKEN)
                 dismissNotification(context, doseEventId)
+                postAnswered(doseEventId, DoseStatus.TAKEN, container)
             }
 
             ACTION_SKIP -> {
@@ -125,6 +127,16 @@ class ReminderActionReceiver : BroadcastReceiver() {
                 }
                 container.doseEventRepository.resolve(doseEventId, DoseStatus.SKIPPED)
                 dismissNotification(context, doseEventId)
+                postAnswered(doseEventId, DoseStatus.SKIPPED, container)
+            }
+
+            // Annulla on the answered card (§7 R134): back to due, as "Return to due" does, and the reminder shows again.
+            ACTION_UNDO -> {
+                ReminderNotifications.dismiss(context, doseEventId)
+                val reopened = container.doseEventRepository.reopen(doseEventId) ?: return
+                val reminder = reopened.reminderId?.let { container.reminderRepository.getById(it) }
+                val medicine = reopened.medicineId?.let { container.medicineRepository.getById(it) }
+                if (reminder != null && medicine != null) container.notificationBuilder.buildAndPost(reopened, reminder, medicine)
             }
 
             // Swiped away (§9 #25): the setting decides. Snooze is the default
@@ -174,6 +186,15 @@ class ReminderActionReceiver : BroadcastReceiver() {
                 dismissNotification(context, doseEventId)
             }
         }
+    }
+
+    /** The card that says what was recorded and offers Annulla for a few seconds (§7 R134). */
+    private suspend fun postAnswered(doseEventId: Long, status: DoseStatus, container: com.hazia.emivita.core.di.AppContainer) {
+        val event = container.doseEventRepository.getById(doseEventId) ?: return
+        if (event.status != status) return
+        val name = event.medicineId?.let { container.medicineRepository.getById(it)?.name } ?: event.customName ?: return
+        runCatching { container.notificationBuilder.postAnswered(event, name, status) }
+            .onFailure { Log.w(TAG, "Could not post the answered card for dose event $doseEventId", it) }
     }
 
     private fun dismissNotification(context: Context, doseEventId: Long) {

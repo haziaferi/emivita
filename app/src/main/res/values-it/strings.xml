@@ -87,6 +87,11 @@
     <string name="common_skip">Salta</string>
     <string name="common_stock_expiration">Scorta e scadenza</string>
     <string name="common_take">Prendi</string>
+    <string name="common_undo">Annulla</string>
+    <string name="answered_taken">%1$s: presa alle %2$s</string>
+    <string name="answered_skipped">%1$s: saltata</string>
+    <string name="notif_answered_public_taken">Dose segnata come presa</string>
+    <string name="notif_answered_public_skipped">Dose segnata come saltata</string>
     <string name="common_unlock">Sblocca</string>
     <string name="common_window_end">Fine della finestra</string>
     <string name="reminder_window_ends_next_day">Finisce il giorno dopo alle %1$s</string>
