@@ -95,6 +95,11 @@
     <string name="common_skip">Skip</string>
     <string name="common_stock_expiration">Stock &amp; Expiration</string>
     <string name="common_take">Take</string>
+    <string name="common_undo">Undo</string>
+    <string name="answered_taken">%1$s: taken at %2$s</string>
+    <string name="answered_skipped">%1$s: skipped</string>
+    <string name="notif_answered_public_taken">Dose recorded as taken</string>
+    <string name="notif_answered_public_skipped">Dose recorded as skipped</string>
     <string name="common_unlock">Unlock</string>
     <string name="common_window_end">Window end</string>
     <string name="reminder_window_ends_next_day">Ends the next day at %1$s</string>

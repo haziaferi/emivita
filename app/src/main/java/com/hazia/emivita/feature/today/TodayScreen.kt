@@ -1,5 +1,11 @@
 package com.hazia.emivita.feature.today
 
+import com.hazia.emivita.core.notification.answeredText
+import com.hazia.emivita.core.notification.UNDO_WINDOW_MS
+import androidx.compose.material3.SnackbarResult
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHostState
+import androidx.compose.material3.SnackbarHost
 import com.hazia.emivita.ui.form.DialogActionPair
 import com.hazia.emivita.ui.components.AttentionCard
 import com.hazia.emivita.feature.permissions.rememberPermissionState
@@ -170,6 +176,8 @@ internal class TodayDeps(
     val lockedByDefault: Boolean,
     val reminderRepository: ReminderRepository,
     val notificationBuilder: ReminderNotificationBuilder,
+    /** A Take or Skip just recorded on Today, for the undo bar (§7 R134). */
+    val onAnswered: (entry: TimelineEntry, status: DoseStatus, doseEventId: Long) -> Unit = { _, _, _ -> },
 )
 
 private const val TODAY_CONSUMER_ID = "today-screen"
@@ -261,8 +269,29 @@ fun TodayScreen(
     val layout by produceState(initialValue = TodayLayout.TIMELINE) {
         settingsRepository.todayLayout.collectLatest { value = it }
     }
+    // The undo bar (§7 R134): what Take or Skip just recorded, with Annulla for UNDO_WINDOW_MS + 1 s, then gone.
+    val undoBar = remember { SnackbarHostState() }
+    val undoScope = rememberCoroutineScope()
+    val undoResources = LocalResources.current
     val deps = remember(doseEventRepository, lockedByDefault, reminderRepository, notificationBuilder) {
-        TodayDeps(doseEventRepository, lockedByDefault, reminderRepository, notificationBuilder)
+        TodayDeps(doseEventRepository, lockedByDefault, reminderRepository, notificationBuilder) { entry, status, doseEventId ->
+            undoScope.launch {
+                undoBar.currentSnackbarData?.dismiss()
+                val shown = launch { kotlinx.coroutines.delay(UNDO_WINDOW_MS + 1_000L); undoBar.currentSnackbarData?.dismiss() }
+                val result = undoBar.showSnackbar(
+                    answeredText(undoResources, entry.name, status, System.currentTimeMillis()),
+                    actionLabel = undoResources.getString(R.string.common_undo),
+                    duration = SnackbarDuration.Indefinite,
+                )
+                shown.cancel()
+                if (result == SnackbarResult.ActionPerformed) {
+                    val reopened = doseEventRepository.reopen(doseEventId)
+                    val medicine = entry.medicine
+                    val reminder = reopened?.reminderId?.let { reminderRepository.getById(it) }
+                    if (reopened != null && medicine != null && reminder != null) notificationBuilder.buildAndPost(reopened, reminder, medicine)
+                }
+            }
+        }
     }
 
     val nodes = remember(medicinesById, materializedToday, projectionState, startOfToday, startOfTomorrow, remindersById) {
@@ -354,6 +383,8 @@ fun TodayScreen(
                 .padding(16.dp)
                 .semantics { contentDescription = logDoseLabel },
         )
+        // Above the Log dose button, which stays reachable while the bar shows.
+        SnackbarHost(undoBar, Modifier.align(Alignment.BottomCenter).padding(bottom = 80.dp))
     }
 
     if (showLogDose) {
@@ -580,12 +611,15 @@ internal fun EntryHost(
                 slotId?.let { context.startActivity(TakeAmountActivity.intent(context, it)) }
             } else if (id != null) {
                 deps.doseEventRepository.resolve(id, status)
+                deps.onAnswered(entry, status, id)
             } else if (entry.reminderId != null && medicineId != null && status == DoseStatus.TAKEN) {
                 // "Take now" on a projected slot (§9 #26).
                 deps.doseEventRepository.takeProjectedNow(entry.reminderId, medicineId, node.epochMillis, entry.doseAmount)
+                deps.doseEventRepository.materializedId(entry.reminderId, medicineId, node.epochMillis, entry.doseAmount)?.let { deps.onAnswered(entry, status, it) }
             } else if (entry.reminderId != null && medicineId != null) {
                 // Skip ahead, from the upcoming dose's sheet only (§7 R107).
                 deps.doseEventRepository.answerProjected(entry.reminderId, medicineId, node.epochMillis, entry.doseAmount, status)
+                deps.doseEventRepository.materializedId(entry.reminderId, medicineId, node.epochMillis, entry.doseAmount)?.let { deps.onAnswered(entry, status, it) }
             }
         }
     }

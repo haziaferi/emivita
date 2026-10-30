@@ -197,8 +197,13 @@ class ReceiverHarness {
     // ---- notifications ------------------------------------------------------
 
     /** Ids of the notifications currently showing (dose ids are positive;
-     *  the group summary and pre-alarms are negative). */
-    val notificationIds: List<Int> get() = shadowOf(notificationManager).activeNotifications.map { it.id }
+     *  the group summary and pre-alarms are negative), the answered cards left out. */
+    val notificationIds: List<Int> get() = shadowOf(notificationManager).activeNotifications
+        .filter { it.notification.category != android.app.Notification.CATEGORY_STATUS }.map { it.id }
+
+    /** The answered cards a Take or Skip from the shade leaves for a few seconds (§7 R134), by id. */
+    val answeredCards: Map<Int, android.app.Notification> get() = shadowOf(notificationManager).activeNotifications
+        .filter { it.notification.category == android.app.Notification.CATEGORY_STATUS }.associate { it.id to it.notification }
 
     /** What a swipe on the shade does to a notification that has no delete intent. */
     fun dismissFromShade(id: Int) = notificationManager.cancel(id)
