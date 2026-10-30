@@ -174,6 +174,14 @@
     <string name="stock_expiration_unit_e_g_tablet_ml">Unit (e.g. tablet, mL)</string>
     <string name="today_log">Log</string>
     <string name="today_log_dose">Log dose</string>
+    <string name="today_second_dose_taken_title">Already taken today at %1$s</string>
+    <string name="today_second_dose_taken_text">Log another one?</string>
+    <string name="today_second_dose_taken_line">Already taken today at %1$s.</string>
+    <string name="today_second_dose_slot_title">Count it as the %1$s dose?</string>
+    <string name="today_second_dose_slot_text">The %1$s dose of %2$s is still open today: counting this one marks it taken.</string>
+    <string name="today_second_dose_count">Count as that dose</string>
+    <string name="today_second_dose_log_anyway">Log anyway</string>
+    <string name="today_second_dose_log_separately">Log separately</string>
     <string name="today_log_medicine_or_name">Medicine or name</string>
     <string name="today_log_one_off_hint">“%1$s” is not on your list: only this dose is recorded.</string>
     <string name="today_logged_as_taken_just_now">Logged as taken just now.</string>
@@ -360,6 +368,8 @@
     <string name="backup_unreadable_file">Couldn\'t read the selected file.</string>
     <string name="backup_restore_complete">Restore complete.</string>
     <string name="backup_restore_confirm_title">Replace everything with this backup?</string>
+    <string name="backup_restore_settings_too">Also restore the settings in this backup</string>
+    <string name="backup_restore_settings_too_help">Snooze, Weekend mode, swipe, appearance. The lock and the backup folder stay as they are.</string>
     <string name="backup_invalid_file">This file isn\'t a valid Emivita backup.</string>
     <string name="backup_restore_failed">Restore failed: %1$s</string>
     <string name="medical_id_name_helper">Printed at the top of the card</string>
@@ -514,6 +524,8 @@
     <string name="settings_swipe_skip">Record it as skipped</string>
     <string name="settings_hide_names">Hide medicine names in notifications and widgets</string>
     <string name="settings_hide_names_desc">Show only the initial in notifications and widgets.</string>
+    <string name="settings_block_screenshots">Block screenshots and the Recents preview</string>
+    <string name="settings_block_screenshots_desc">Emivita stays blank in screenshots, screen sharing and the recent apps.</string>
     <string name="settings_alarm_tier_title">Alarm tier</string>
     <string name="settings_alarm_tier_desc">Applies to medicines set to the Alarm tier: the full-screen alarm that rings until answered.</string>
     <string name="settings_alarm_tone">Alarm sound</string>

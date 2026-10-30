@@ -144,6 +144,26 @@ internal data class TimelineNode(
     val entries: List<TimelineEntry>,
 )
 
+/** Today's open slot of a medicine: the scheduled dose a logged one could count as. */
+internal data class OpenSlot(val reminderId: Long, val epochMillis: Long, val doseAmount: Double)
+
+/** What Log dose knows before logging a scheduled medicine: when it was taken today, and the slot still open. */
+internal data class SecondDoseCheck(val takenTodayAt: Long?, val openSlot: OpenSlot?)
+
+/**
+ * The second-dose check (§7 R133, the owner: "Warn + 'count as'"): null when today's timeline has nothing to say
+ * about [medicineId]; otherwise its latest Taken time today and the open slot nearest [now], due or still to come.
+ * It warns and offers, never refuses (§7 R65).
+ */
+internal fun secondDoseCheck(medicineId: Long, nodes: List<TimelineNode>, now: Long): SecondDoseCheck? {
+    val mine = flatten(nodes).filter { it.second.medicine?.id == medicineId }
+    val taken = mine.filter { it.second.status == TimelineStatus.TAKEN }.maxOfOrNull { it.second.resolvedAtEpochMillis ?: it.first.epochMillis }
+    val open = mine.filter { (it.second.status == TimelineStatus.UPCOMING || it.second.status == TimelineStatus.PENDING) && it.second.reminderId != null && !it.second.estimated }
+        .minByOrNull { kotlin.math.abs(it.first.epochMillis - now) }
+        ?.let { (node, e) -> OpenSlot(checkNotNull(e.reminderId), node.epochMillis, e.doseAmount) }
+    return if (taken == null && open == null) null else SecondDoseCheck(taken, open)
+}
+
 /** What every layout's rows need to act on an entry (§9 #37). */
 internal class TodayDeps(
     val doseEventRepository: DoseEventRepository,
@@ -344,6 +364,7 @@ fun TodayScreen(
             onDismiss = { showLogDose = false },
             onLogged = { showLogDose = false },
             preselected = logDosePreselected,
+            todayNodes = nodes,
         )
     }
 }
@@ -778,6 +799,7 @@ private fun LogDoseDialog(
     onDismiss: () -> Unit,
     onLogged: () -> Unit,
     preselected: Medicine? = null,
+    todayNodes: List<TimelineNode> = emptyList(),
 ) {
     val resources = LocalResources.current
     var medicines by remember { mutableStateOf<List<MedicineWithTags>?>(null) }
@@ -841,6 +863,66 @@ private fun LogDoseDialog(
                 saveError = resources.getString(R.string.error_could_not_log_dose, e.message ?: resources.getString(R.string.error_unknown))
             }
         }
+    }
+
+    // A scheduled medicine already taken today, or with today's dose still open, is asked about first (§7 R133).
+    var secondDose by remember { mutableStateOf<SecondDoseCheck?>(null) }
+    fun logOrAsk() {
+        val medicine = selected
+        val at = atEpochMillis
+        val today = at == null || Instant.ofEpochMilli(at).atZone(zone).toLocalDate() == Instant.now().atZone(zone).toLocalDate()
+        val check = if (medicine != null && !medicine.asNeeded && today) secondDoseCheck(medicine.id, todayNodes, at ?: System.currentTimeMillis()) else null
+        if (check != null) secondDose = check else log()
+    }
+    secondDose?.let { check ->
+        val medicine = selected
+        val open = check.openSlot
+        val takenAt = check.takenTodayAt?.let { LocaleFormats.time(it, zone) }
+        AlertDialog(
+            onDismissRequest = { secondDose = null },
+            title = {
+                Text(
+                    if (open != null) stringResource(R.string.today_second_dose_slot_title, LocaleFormats.time(open.epochMillis, zone))
+                    else stringResource(R.string.today_second_dose_taken_title, takenAt.orEmpty()),
+                )
+            },
+            text = {
+                Column {
+                    if (open != null && takenAt != null) Text(stringResource(R.string.today_second_dose_taken_line, takenAt))
+                    Text(
+                        if (open != null) stringResource(R.string.today_second_dose_slot_text, LocaleFormats.time(open.epochMillis, zone), medicine?.name.orEmpty())
+                        else stringResource(R.string.today_second_dose_taken_text),
+                    )
+                }
+            },
+            confirmButton = {
+                if (open != null && medicine != null) DialogActionPair(
+                    stringResource(R.string.today_second_dose_count),
+                    onConfirm = {
+                        secondDose = null
+                        val amount = parseDecimal(doseAmount) ?: open.doseAmount
+                        saving = true
+                        scope.launch {
+                            try {
+                                doseEventRepository.answerProjected(open.reminderId, medicine.id, open.epochMillis, amount, DoseStatus.TAKEN, atEpochMillis ?: System.currentTimeMillis())
+                                onLogged()
+                            } catch (e: Exception) {
+                                saving = false
+                                saveError = resources.getString(R.string.error_could_not_log_dose, e.message ?: resources.getString(R.string.error_unknown))
+                            }
+                        }
+                    },
+                    onDismiss = { secondDose = null },
+                    tertiary = stringResource(R.string.today_second_dose_log_separately),
+                    onTertiary = { secondDose = null; log() },
+                    tertiaryDestructive = false,
+                ) else DialogActionPair(
+                    stringResource(R.string.today_second_dose_log_anyway),
+                    onConfirm = { secondDose = null; log() },
+                    onDismiss = { secondDose = null },
+                )
+            },
+        )
     }
 
     if (confirmOverCeiling) {
@@ -968,7 +1050,7 @@ private fun LogDoseDialog(
             DialogActionPair(
                 stringResource(R.string.common_confirm),
                 confirmEnabled = (selected != null || oneOffName != null) && parseDecimal(doseAmount) != null && !saving && (!backdate || atDay != null),
-                onConfirm = { if (headroom?.atCeiling == true) confirmOverCeiling = true else log() },
+                onConfirm = { if (headroom?.atCeiling == true) confirmOverCeiling = true else logOrAsk() },
                 onDismiss = onDismiss,
             )
         },

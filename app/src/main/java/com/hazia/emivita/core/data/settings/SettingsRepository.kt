@@ -20,6 +20,13 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.serialization.json.JsonArray
+import kotlinx.serialization.json.JsonElement
+import kotlinx.serialization.json.JsonPrimitive
+import kotlinx.serialization.json.boolean
+import kotlinx.serialization.json.int
+import kotlinx.serialization.json.jsonArray
+import kotlinx.serialization.json.jsonPrimitive
 import java.time.LocalTime
 import java.time.format.DateTimeFormatter
 import androidx.datastore.preferences.core.longPreferencesKey
@@ -112,6 +119,7 @@ class SettingsRepository(context: Context) {
         val START_PAGE = stringPreferencesKey("start_page")
         val TODAY_LAYOUT = stringPreferencesKey("today_layout")
         val HIDE_MEDICINE_NAMES = booleanPreferencesKey("hide_medicine_names")
+        val BLOCK_SCREENSHOTS = booleanPreferencesKey("block_screenshots")
         // §9 #25 alarm settings (medTimer's AlarmSettingsFragment, HomeMedkit HM-21).
         val ALARM_RINGTONE_URI = stringPreferencesKey("alarm_ringtone_uri")           // null = system default alarm
         val ALARM_NO_SOUND_WHEN_SILENT = booleanPreferencesKey("alarm_no_sound_when_silent")
@@ -124,6 +132,74 @@ class SettingsRepository(context: Context) {
         // launch, boot, an alarm firing. The Missed back-fill covers what lies
         // between this and now, so a pause-and-resume while alive is not a gap.
         val APP_LAST_SEEN_EPOCH_MILLIS = longPreferencesKey("app_last_seen_epoch_millis")
+    }
+
+    private enum class Kind { BOOL, INT, STRING, SET }
+
+    /**
+     * The settings a backup carries (§7 R133, medTimer E-13): how doses ring, look and sort. A restore onto a new
+     * phone without them lost Weekend mode and the swipe choice, which changes when doses ring.
+     */
+    private val travelling: Map<Preferences.Key<*>, Kind> = mapOf(
+        Keys.PALETTE to Kind.STRING, Keys.THEME_MODE to Kind.STRING, Keys.SNOOZE_DURATION_MINUTES to Kind.INT,
+        Keys.WEEKEND_MODE_ENABLED to Kind.BOOL, Keys.WEEKEND_DAYS to Kind.SET, Keys.WEEKEND_START_TIME to Kind.STRING,
+        Keys.WEEKEND_END_TIME to Kind.STRING, Keys.LOCK_REMINDERS_UNTIL_TAKEN_BY_DEFAULT to Kind.BOOL,
+        Keys.HISTORY_VIEW_MODE to Kind.STRING, Keys.MEDICINES_SORT to Kind.STRING, Keys.MEDICINES_HIDE_EMPTY to Kind.BOOL,
+        Keys.MEDICINES_TAG_FILTER to Kind.SET, Keys.PAUSED_BY_PAUSE_ALL to Kind.SET, Keys.SWIPE_ACTION to Kind.STRING,
+        Keys.TIME_FORMAT to Kind.STRING, Keys.START_PAGE to Kind.STRING, Keys.TODAY_LAYOUT to Kind.STRING,
+        Keys.HIDE_MEDICINE_NAMES to Kind.BOOL, Keys.BLOCK_SCREENSHOTS to Kind.BOOL, Keys.ALARM_NO_SOUND_WHEN_SILENT to Kind.BOOL,
+        Keys.ALARM_NO_VIBRATION_WHEN_SILENT to Kind.BOOL, Keys.USE_ALARM_CLOCK to Kind.BOOL, Keys.SNOOZE_ASK_EACH_TIME to Kind.BOOL,
+    )
+
+    /** The phone's own, never in a backup: the lock, grants and one-time prompts, the folder, timestamps, the ringtone's content address. */
+    private val phoneOnly: Set<Preferences.Key<*>> = setOf(
+        Keys.AUTO_SYNC_FOLDER_URI, Keys.BIOMETRIC_LOCK_ENABLED, Keys.NOTIFICATION_PERMISSION_REQUESTED, Keys.PERMISSION_SETUP_SHOWN,
+        Keys.PERMISSION_CARD_DISMISSED_FOR, Keys.LAST_BACKUP_EPOCH_MILLIS, Keys.LAST_WEEKLY_BACKUP_EPOCH_MILLIS,
+        Keys.DISCLAIMER_ACCEPTED, Keys.ALARM_RINGTONE_URI, Keys.APP_LAST_SEEN_EPOCH_MILLIS,
+    )
+
+    /** Keys in neither list: a new setting must be placed before it ships (`SettingsBackupTest`). */
+    internal fun unclassifiedKeys(): List<String> = Keys::class.java.declaredFields
+        .filter { Preferences.Key::class.java.isAssignableFrom(it.type) }
+        .map { it.isAccessible = true; it.get(Keys) as Preferences.Key<*> }
+        .filter { it !in travelling && it !in phoneOnly }
+        .map { it.name }
+
+    /** The travelling settings that are set, as JSON values keyed by their stored names. */
+    suspend fun exportForBackup(): Map<String, JsonElement> {
+        val prefs = dataStore.data.first()
+        return travelling.keys.mapNotNull { key ->
+            when (val v = prefs[key]) {
+                null -> null
+                is Boolean -> key.name to JsonPrimitive(v)
+                is Int -> key.name to JsonPrimitive(v)
+                is String -> key.name to JsonPrimitive(v)
+                is Set<*> -> key.name to JsonArray(v.map { JsonPrimitive(it.toString()) })
+                else -> null
+            }
+        }.toMap()
+    }
+
+    /**
+     * Replaces the travelling settings with a backup's (§7 R133): what the file sets is written, what it leaves out
+     * goes back to its default, as a restore replaces every row; a value of the wrong type is skipped, not thrown.
+     */
+    @Suppress("UNCHECKED_CAST")
+    suspend fun restoreFromBackup(values: Map<String, JsonElement>) {
+        dataStore.edit { prefs ->
+            for ((key, kind) in travelling) {
+                val v = values[key.name]
+                if (v == null) { prefs.remove(key); continue }
+                runCatching {
+                    when (kind) {
+                        Kind.BOOL -> prefs[key as Preferences.Key<Boolean>] = v.jsonPrimitive.boolean
+                        Kind.INT -> prefs[key as Preferences.Key<Int>] = v.jsonPrimitive.int
+                        Kind.STRING -> prefs[key as Preferences.Key<String>] = v.jsonPrimitive.content
+                        Kind.SET -> prefs[key as Preferences.Key<Set<String>>] = v.jsonArray.map { it.jsonPrimitive.content }.toSet()
+                    }
+                }
+            }
+        }
     }
 
     // A name from R56's six maps to its nearest of the four (§7 R76) so an
@@ -270,6 +346,12 @@ class SettingsRepository(context: Context) {
     val hideMedicineNames: Flow<Boolean> = dataStore.data.map { prefs -> prefs[Keys.HIDE_MEDICINE_NAMES] ?: false }
     suspend fun setHideMedicineNames(hide: Boolean) {
         dataStore.edit { it[Keys.HIDE_MEDICINE_NAMES] = hide }
+    }
+
+    /** Blank the app in screenshots, screen sharing and Recents (§7 R133, medTimer E-34). Off unless the owner turns it on. */
+    val blockScreenshots: Flow<Boolean> = dataStore.data.map { prefs -> prefs[Keys.BLOCK_SCREENSHOTS] ?: false }
+    suspend fun setBlockScreenshots(block: Boolean) {
+        dataStore.edit { it[Keys.BLOCK_SCREENSHOTS] = block }
     }
 
     /** The Alarm tier's ringtone as a Uri string; null = the system's default

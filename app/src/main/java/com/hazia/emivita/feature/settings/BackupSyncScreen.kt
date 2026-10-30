@@ -14,6 +14,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
@@ -169,6 +170,8 @@ fun BackupSyncScreen(
 
     // ---- Manual restore (a) ------------------------------------------------
     var restoreStatus by remember { mutableStateOf<String?>(null) }
+    // The restore question's box, off each time it is asked (§7 R133); read by attemptRestore below.
+    var restoreSettingsToo by remember { mutableStateOf(false) }
     var pendingRestoreUri by remember { mutableStateOf<Uri?>(null) }
     var showRestorePasswordDialog by remember { mutableStateOf(false) }
     var restorePasswordInput by remember { mutableStateOf("") }
@@ -196,7 +199,7 @@ fun BackupSyncScreen(
                             return
                         }
                         is BackupDecodeResult.Ok -> {
-                            backupRepository.restoreSnapshot(decoded.data)
+                            backupRepository.restoreSnapshot(decoded.data, withSettings = restoreSettingsToo)
                             showRestorePasswordDialog = false
                             restorePasswordInput = ""
                             restoreStatus = resources.getString(R.string.backup_restore_complete)
@@ -228,7 +231,7 @@ fun BackupSyncScreen(
     // a restore replaces every row, and an unencrypted file used to go straight in.
     var confirmRestoreUri by remember { mutableStateOf<Uri?>(null) }
     val openDocumentLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) confirmRestoreUri = uri
+        if (uri != null) { restoreSettingsToo = false; confirmRestoreUri = uri }
     }
 
     // ---- Auto-sync folder (b) ----------------------------------------------
@@ -376,7 +379,23 @@ fun BackupSyncScreen(
         AlertDialog(
             onDismissRequest = { confirmRestoreUri = null },
             title = { Text(stringResource(R.string.backup_restore_confirm_title)) },
-            text = { Text(stringResource(R.string.backup_sync_replaces_everything_currently_on_this_device)) },
+            text = {
+                Column {
+                    Text(stringResource(R.string.backup_sync_replaces_everything_currently_on_this_device))
+                    Spacer(Modifier.height(12.dp))
+                    // Off unless ticked: the current settings are replaced only when the person says so (§7 R133).
+                    Row(
+                        Modifier.fillMaxWidth().heightIn(min = 48.dp).toggleable(value = restoreSettingsToo, role = Role.Checkbox) { restoreSettingsToo = it },
+                        verticalAlignment = Alignment.CenterVertically,
+                    ) {
+                        Checkbox(checked = restoreSettingsToo, onCheckedChange = null)
+                        Column(Modifier.padding(start = ControlLabelGap)) {
+                            Text(stringResource(R.string.backup_restore_settings_too))
+                            Text(stringResource(R.string.backup_restore_settings_too_help), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
+                    }
+                }
+            },
             confirmButton = {
                 DialogActionPair(stringResource(R.string.common_confirm), onDismiss = { confirmRestoreUri = null }, onConfirm = {
                     confirmRestoreUri = null

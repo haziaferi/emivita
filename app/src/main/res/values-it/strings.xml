@@ -166,6 +166,14 @@
     <string name="stock_expiration_unit_e_g_tablet_ml">Unità (es. compressa, ml)</string>
     <string name="today_log">Registra</string>
     <string name="today_log_dose">Registra dose</string>
+    <string name="today_second_dose_taken_title">Già presa oggi alle %1$s</string>
+    <string name="today_second_dose_taken_text">Registrarne un’altra?</string>
+    <string name="today_second_dose_taken_line">Già presa oggi alle %1$s.</string>
+    <string name="today_second_dose_slot_title">Conta come la dose delle %1$s?</string>
+    <string name="today_second_dose_slot_text">La dose delle %1$s di %2$s è ancora da prendere: contare questa la segna come presa.</string>
+    <string name="today_second_dose_count">Conta come quella</string>
+    <string name="today_second_dose_log_anyway">Registra comunque</string>
+    <string name="today_second_dose_log_separately">Registra a parte</string>
     <string name="today_log_medicine_or_name">Farmaco o nome</string>
     <string name="today_log_one_off_hint">«%1$s» non è nell’elenco: si registra solo questa dose.</string>
     <string name="today_logged_as_taken_just_now">Registrata come presa adesso.</string>
@@ -334,6 +342,8 @@
     <string name="backup_unreadable_file">Impossibile leggere il file selezionato.</string>
     <string name="backup_restore_complete">Ripristino completato.</string>
     <string name="backup_restore_confirm_title">Sostituire tutto con questo backup?</string>
+    <string name="backup_restore_settings_too">Ripristina anche le impostazioni del backup</string>
+    <string name="backup_restore_settings_too_help">Rinvio, Modalità weekend, scorrimento, aspetto. Il blocco e la cartella di backup restano come sono.</string>
     <string name="backup_invalid_file">Questo file non è un backup Emivita valido.</string>
     <string name="backup_restore_failed">Ripristino non riuscito: %1$s</string>
     <string name="medical_id_name_helper">Stampato in cima alla scheda</string>
@@ -474,6 +484,8 @@
     <string name="settings_swipe_skip">Registralo come saltato</string>
     <string name="settings_hide_names">Nascondi i nomi dei farmaci nelle notifiche e nei widget</string>
     <string name="settings_hide_names_desc">Nelle notifiche e nei widget mostra solo l’iniziale.</string>
+    <string name="settings_block_screenshots">Blocca gli screenshot e l’anteprima nelle app recenti</string>
+    <string name="settings_block_screenshots_desc">Emivita resta vuota negli screenshot, nella condivisione dello schermo e nelle app recenti.</string>
     <string name="settings_alarm_tier_title">Livello Sveglia</string>
     <string name="settings_alarm_tier_desc">Vale per i farmaci impostati sul livello Sveglia: la sveglia a schermo intero che suona finché non rispondi.</string>
     <string name="settings_alarm_tone">Suono della sveglia</string>

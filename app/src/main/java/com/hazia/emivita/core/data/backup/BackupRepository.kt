@@ -30,6 +30,8 @@ class BackupRepository(
     private val medicineNoteDao: MedicineNoteDao,
     private val schedulingCoordinator: SchedulingCoordinator,
     private val occurrenceProjectionCache: OccurrenceProjectionCache,
+    /** The settings a snapshot carries (§7 R133); null in tests that build the repository without them. */
+    private val settingsRepository: com.hazia.emivita.core.data.settings.SettingsRepository? = null,
 ) {
     suspend fun exportSnapshot(nowEpochMillis: Long): BackupData = BackupData(
         exportedAtEpochMillis = nowEpochMillis,
@@ -41,6 +43,7 @@ class BackupRepository(
         reminders = reminderDao.getAllOnce(),
         doseEvents = doseEventDao.getAllOnce(),
         medicineNotes = medicineNoteDao.getAllOnce(),
+        settings = settingsRepository?.exportForBackup(),
     )
 
     /** Every table, in dependency order -- the restore's first half, and the
@@ -77,7 +80,7 @@ class BackupRepository(
      *  then inserts in the reverse order via REPLACE so every restored row
      *  keeps its original id -- the cross-references (medicineId, reminderId,
      *  parentReminderId, ...) only stay correct if ids round-trip exactly. */
-    suspend fun restoreSnapshot(data: BackupData) {
+    suspend fun restoreSnapshot(data: BackupData, withSettings: Boolean = false) {
         database.withTransaction {
             deleteEverything()
 
@@ -97,6 +100,8 @@ class BackupRepository(
         // reminder needs its alarm re-armed against the restored data (the old
         // in-memory alarms, if any, pointed at rows that may no longer exist
         // with the same schedule).
+        // The settings only when the person asked, before the re-arm so a restored Weekend mode applies to it (§7 R133).
+        if (withSettings) data.settings?.let { settingsRepository?.restoreFromBackup(it) }
         schedulingCoordinator.rescheduleAll()
         occurrenceProjectionCache.invalidate()
     }
