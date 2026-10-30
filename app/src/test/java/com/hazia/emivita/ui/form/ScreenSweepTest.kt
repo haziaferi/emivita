@@ -180,9 +180,7 @@ open class ScreenSweepTest : FormScreenTestBase() {
      * Stops whose defect at a large font waits on the owner's choice of fix, each with its ledger row. Anything else
      * fails; and a listed stop that comes back whole fails too, so the entry is taken out with the fix.
      */
-    private val ownerOpenAtLargeFont = mapOf(
-        "history_table" to "§7 R131: every cell cut at font 2.0; scroll sideways, wrap, or fewer columns is the owner's call",
-    )
+    private val ownerOpenAtLargeFont = emptyMap<String, String>() // R131's history_table closed by R132
 
     private fun gate(found: Map<String, List<String>>) {
         println("SWEEP fs${fontScale.floatValue} w${res.configuration.screenWidthDp}: " + found.entries.joinToString("; ") { "${it.key}=${it.value}" })
