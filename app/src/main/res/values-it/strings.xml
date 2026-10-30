@@ -463,6 +463,10 @@
     <string name="notif_public_title">Promemoria farmaco</string>
     <string name="notif_public_text">C’è una dose da prendere. Sblocca per vedere quale.</string>
     <string name="notif_left_after_dose">Dopo questa dose restano %1$s %2$s</string>
+    <!-- Alarms and Snooze as grouped rows (SPEC section 7 R130) -->
+    <string name="alarms_group_snooze">Rinvio</string>
+    <string name="alarms_snooze_summary_fixed">%1$d min, durata fissa</string>
+    <string name="alarms_snooze_summary_ask">%1$d min, chiede ogni volta</string>
     <string name="settings_swipe_title">Quando scorro via un promemoria</string>
     <string name="settings_swipe_desc">Scorrere via non è una risposta, a meno che tu non lo decida.</string>
     <string name="settings_swipe_nothing">Niente: resta da prendere in Oggi</string>
@@ -506,7 +510,7 @@
     <string name="dose_edit_delete_title">Eliminare questa registrazione?</string>
     <string name="dose_edit_delete_confirm_text">Sparisce dallo Storico e dalle esportazioni; una dose presa torna nella confezione.</string>
     <string name="add_reminder_instructions">Istruzioni</string>
-    <string name="add_reminder_instructions_hint">A stomaco pieno · Non con il ferro · Prima di dormire</string>
+    <string name="add_reminder_instructions_hint">A stomaco pieno · Non con il ferro</string>
     <string name="add_reminder_course">Un numero fisso di dosi</string>
     <string name="add_reminder_course_desc">Si ferma da solo dopo l’ultima dose</string>
     <string name="add_reminder_doses_remaining">Dosi rimanenti</string>

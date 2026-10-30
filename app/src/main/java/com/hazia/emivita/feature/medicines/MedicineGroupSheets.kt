@@ -1,35 +1,27 @@
 package com.hazia.emivita.feature.medicines
 
+import com.hazia.emivita.ui.form.FormRadioRow
 import android.app.Activity.RESULT_OK
 import android.content.ActivityNotFoundException
 import android.content.Intent
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.annotation.StringRes
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
-import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.selection.selectable
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.dp
 import com.hazia.emivita.R
 import com.hazia.emivita.core.data.entity.NotificationPriority
@@ -76,20 +68,6 @@ internal fun channelDescriptionFor(priority: NotificationPriority): Int = when (
     NotificationPriority.ALARM -> R.string.channel_alarm_desc
 }
 
-@Composable
-internal fun ChoiceRow(selected: Boolean, title: String, description: String?, onSelect: () -> Unit) {
-    Row(
-        Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(selected = selected, role = Role.RadioButton, onClick = onSelect).padding(vertical = 4.dp),
-        verticalAlignment = Alignment.CenterVertically,
-    ) {
-        RadioButton(selected = selected, onClick = null)
-        Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge)
-            if (description != null) Text(description, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-        }
-    }
-}
-
 /**
  * Notifica (§7 R125): the medicine's channel tier (§7 R59, the only place it is set) and the lock
  * until taken. The sheet edits a draft; its Salva hands it to [apply], Annulla or Back drops it.
@@ -104,13 +82,13 @@ internal fun MedicineNotificationSheet(priority: NotificationPriority, lock: Boo
     ) {
         Text(stringResource(R.string.add_medicine_notification_priority), style = MaterialTheme.typography.labelLarge)
         for (option in NotificationPriority.entries) {
-            ChoiceRow(p == option, stringResource(ReminderNotificationChannels.tierNameFor(option)), stringResource(channelDescriptionFor(option))) { p = option }
+            FormRadioRow(stringResource(ReminderNotificationChannels.tierNameFor(option)), p == option, stringResource(channelDescriptionFor(option))) { p = option }
         }
         Spacer(Modifier.height(12.dp))
         Text(stringResource(R.string.add_medicine_lock_reminders_until_taken), style = MaterialTheme.typography.labelLarge)
         // One selectable node per option (§9 #19 Stage B).
         for ((value, label) in listOf(null to R.string.add_medicine_use_global_default, true to R.string.add_medicine_always_lock, false to R.string.add_medicine_never_lock)) {
-            ChoiceRow(l == value, stringResource(label), null) { l = value }
+            FormRadioRow(stringResource(label), l == value) { l = value }
         }
     }
 }

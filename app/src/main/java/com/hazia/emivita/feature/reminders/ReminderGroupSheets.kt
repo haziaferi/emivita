@@ -20,7 +20,7 @@ import androidx.compose.runtime.staticCompositionLocalOf
 import com.hazia.emivita.R
 import com.hazia.emivita.core.data.entity.NotificationPriority
 import com.hazia.emivita.core.notification.ReminderNotificationChannels
-import com.hazia.emivita.feature.medicines.ChoiceRow
+import com.hazia.emivita.ui.form.FormRadioRow
 import com.hazia.emivita.feature.medicines.channelDescriptionFor
 import com.hazia.emivita.ui.form.GridActionCell
 import com.hazia.emivita.ui.form.SpanGrid
@@ -77,7 +77,7 @@ internal fun groupSummary(g: ReminderGroup, s: AdvancedReminderFieldsState): Str
 
 @Composable
 internal fun ReminderGroupRow(g: ReminderGroup, state: AdvancedReminderFieldsState, onClick: () -> Unit) =
-    FormGroupRow(stringResource(g.title), groupSummary(g, state), onClick)
+    FormGroupRow(stringResource(g.title), groupSummary(g, state), onClick = onClick)
 
 /**
  * A group's settings in a sheet (§7 R124): the sheet edits a draft, its Salva applies the draft
@@ -158,13 +158,13 @@ private fun NotificationGroup(s: AdvancedReminderFieldsState) {
     if (medicine != null && higher.isNotEmpty()) {
         Spacer(Modifier.height(12.dp))
         Text(stringResource(R.string.add_reminder_importance), style = MaterialTheme.typography.labelLarge)
-        ChoiceRow(
-            s.importance.let { it == null || it <= medicine },
+        FormRadioRow(
             stringResource(R.string.add_reminder_importance_same, stringResource(ReminderNotificationChannels.tierNameFor(medicine))),
+            s.importance.let { it == null || it <= medicine },
             stringResource(channelDescriptionFor(medicine)),
         ) { s.importance = null }
         for (tier in higher) {
-            ChoiceRow(s.importance == tier, stringResource(ReminderNotificationChannels.tierNameFor(tier)), stringResource(channelDescriptionFor(tier))) { s.importance = tier }
+            FormRadioRow(stringResource(ReminderNotificationChannels.tierNameFor(tier)), s.importance == tier, stringResource(channelDescriptionFor(tier))) { s.importance = tier }
         }
     }
 }

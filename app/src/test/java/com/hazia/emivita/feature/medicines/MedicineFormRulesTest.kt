@@ -60,7 +60,10 @@ class MedicineFormRulesTest : MedicineFormTestBase() {
     private fun quick(fs: Float) { at(fs); quickAdd(); named(); gate("quick-add", fs, audit(sheet = true)) }
     private fun stockScreen(fs: Float) { at(fs); stock(); gate("stock", fs, audit(sheet = false, decl = stockDecl)) }
     private fun medical(fs: Float) { at(fs); medicalId(); gate("medical id", fs, audit(sheet = false, decl = medicalDecl)) }
-    private fun alarms(fs: Float) { at(fs); alarmsSnooze(); gate("alarms & snooze", fs, audit(sheet = true)) }
+    private fun alarms(fs: Float) {
+        at(fs); alarmsSnooze(); gate("alarms & snooze", fs, audit(sheet = true))
+        snoozeGroup(); gate("alarms & snooze › rinvio", fs, audit(sheet = true))
+    }
     private fun weekend(fs: Float) { at(fs); weekendMode(); gate("weekend mode", fs, audit(sheet = true)) }
 
     /** §7 R127 (C-31): the tags sheet over the edit form, one field and its bin per tag. */

@@ -1,5 +1,7 @@
 package com.hazia.emivita.feature.settings
 
+import androidx.compose.runtime.collectAsState
+import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -62,7 +64,7 @@ import androidx.compose.ui.semantics.Role
  *  to a tap is [RowKind]'s concern, not this enum's -- only the NAVIGATE rows
  *  correspond to an actual EmivitaRoute. */
 enum class SettingsDestination {
-    NotificationsAlerts, AlarmsSnooze, WeekendMode, Appearance, PrivacySecurity, DataBackup, MedicalId,
+    NotificationsAlerts, AlarmsSnooze, WeekendMode, Appearance, PrivacySecurity, HideNames, DataBackup, MedicalId,
 }
 
 /** How a row responds to a tap -- optimizes navigation depth to match each
@@ -138,6 +140,14 @@ private val settingsGroups = listOf(
                 R.string.settings_row_biometric_desc,
                 RowKind.TOGGLE,
             ),
+            // Moved here from Alarms & Snooze (§7 R130): it says who can read the notifications.
+            SettingsRow(
+                SettingsDestination.HideNames,
+                Icons.Filled.VisibilityOff,
+                R.string.settings_hide_names,
+                R.string.settings_hide_names_desc,
+                RowKind.TOGGLE,
+            ),
         ),
     ),
     SettingsGroup(
@@ -183,6 +193,7 @@ fun SettingsScreen(settingsRepository: SettingsRepository, onOpenDetail: (Settin
     LaunchedEffect(Unit) {
         biometricEnabled = settingsRepository.biometricLockEnabled.first()
     }
+    val hideNames by settingsRepository.hideMedicineNames.collectAsState(initial = false)
 
     // Saveable (§7 R83 (a), found on the phone): a plain remember closed the
     // sheet on a rotation or a process death, and its saved fields with it.
@@ -217,7 +228,13 @@ fun SettingsScreen(settingsRepository: SettingsRepository, onOpenDetail: (Settin
                         when (row.kind) {
                             RowKind.NAVIGATE -> SettingsRowItem(row, onClick = { onOpenDetail(row.destination) })
                             RowKind.SHEET -> SettingsRowItem(row, onClick = { activeSheet = row.destination })
-                            RowKind.TOGGLE -> SettingsToggleRowItem(
+                            RowKind.TOGGLE -> if (row.destination == SettingsDestination.HideNames) SettingsToggleRowItem(
+                                row = row,
+                                checked = hideNames,
+                                enabled = true,
+                                description = stringResource(row.description),
+                                onToggle = { checked -> scope.launch { settingsRepository.setHideMedicineNames(checked) } },
+                            ) else SettingsToggleRowItem(
                                 row = row,
                                 checked = biometricEnabled,
                                 enabled = availability == BiometricAvailability.AVAILABLE || availability == BiometricAvailability.CREDENTIAL_ONLY,

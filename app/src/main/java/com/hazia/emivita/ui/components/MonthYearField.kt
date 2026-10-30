@@ -1,7 +1,10 @@
 package com.hazia.emivita.ui.components
 
+import com.hazia.emivita.ui.form.ControlLabelGap
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
@@ -76,6 +79,7 @@ fun MonthYearField(label: String, epochDay: Long?, modifier: Modifier = Modifier
                                 Modifier.fillMaxWidth().selectable(selected = month == m, role = Role.RadioButton) { month = m }.padding(vertical = 2.dp),
                             ) {
                                 RadioButton(selected = month == m, onClick = null)
+                                Spacer(Modifier.width(ControlLabelGap))
                                 Text(java.time.Month.of(m).getDisplayName(TextStyle.SHORT, locale))
                             }
                         }
@@ -86,6 +90,7 @@ fun MonthYearField(label: String, epochDay: Long?, modifier: Modifier = Modifier
                                 Modifier.fillMaxWidth().selectable(selected = year == y, role = Role.RadioButton) { year = y }.padding(vertical = 2.dp),
                             ) {
                                 RadioButton(selected = year == y, onClick = null)
+                                Spacer(Modifier.width(ControlLabelGap))
                                 Text(y.toString())
                             }
                         }

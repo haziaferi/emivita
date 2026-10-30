@@ -503,6 +503,10 @@
     <string name="notif_public_title">Medication reminder</string>
     <string name="notif_public_text">A dose is due. Unlock to see which.</string>
     <string name="notif_left_after_dose">%1$s %2$s left after this dose</string>
+    <!-- Alarms and Snooze as grouped rows (SPEC section 7 R130) -->
+    <string name="alarms_group_snooze">Snooze</string>
+    <string name="alarms_snooze_summary_fixed">%1$d min, fixed length</string>
+    <string name="alarms_snooze_summary_ask">%1$d min, asks each time</string>
     <string name="settings_swipe_title">When I swipe a reminder away</string>
     <string name="settings_swipe_desc">A swipe is not an answer unless you say it is.</string>
     <string name="settings_swipe_nothing">Nothing — it stays due on Today</string>
@@ -550,7 +554,7 @@
     <string name="dose_edit_delete_title">Delete this record?</string>
     <string name="dose_edit_delete_confirm_text">It leaves History and the exports; a taken dose goes back into the bottle.</string>
     <string name="add_reminder_instructions">Instructions</string>
-    <string name="add_reminder_instructions_hint">With food · Not with the iron · Before bed</string>
+    <string name="add_reminder_instructions_hint">With food · Not with the iron</string>
     <string name="add_reminder_course">A set number of doses</string>
     <string name="add_reminder_course_desc">Stops on its own after the last dose</string>
     <string name="add_reminder_doses_remaining">Doses remaining</string>

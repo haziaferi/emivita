@@ -1,6 +1,10 @@
 package com.hazia.emivita.ui.form
 
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.material3.RadioButton
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -40,7 +44,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.hazia.emivita.R
 import kotlinx.coroutines.launch
@@ -95,7 +98,7 @@ fun FormScaffold(
                 Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
                     IconButton(onClick = onBack, modifier = Modifier.size(48.dp)) { Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back)) }
                     Spacer(Modifier.width(4.dp))
-                    Text(title, style = MaterialTheme.typography.headlineSmall, maxLines = 1, overflow = TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+                    Text(title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
                 }
             }
             Spacer(Modifier.height(16.dp))
@@ -138,22 +141,52 @@ fun FormSheetScaffold(title: String, dirty: Boolean, saveEnabled: Boolean, onSav
     }
 }
 
-/** A grouped settings row: its title, its current value in one line, a chevron; it opens the group's sheet. */
+/**
+ * A grouped settings row: its title, its current value, a chevron; it opens the group's sheet ([onClickLabel]
+ * is what TalkBack says the tap does). Title and value are one line each at font 1.0 and wrap at a larger
+ * font rather than end in an ellipsis (§7 R130, the owner: "wrap at large fonts").
+ */
 @Composable
-fun FormGroupRow(title: String, summary: String, onClick: () -> Unit) {
+fun FormGroupRow(title: String, summary: String, onClickLabel: String? = null, onClick: () -> Unit) {
     Row(
-        Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(role = Role.Button, onClick = onClick).padding(vertical = 6.dp),
+        Modifier.fillMaxWidth().heightIn(min = 56.dp).clickable(role = Role.Button, onClickLabel = onClickLabel, onClick = onClick).padding(vertical = 6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         Column(Modifier.weight(1f)) {
-            Text(title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
-            Text(summary, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            Text(title, style = MaterialTheme.typography.bodyLarge)
+            Text(summary, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
         }
         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null)
     }
 }
 
-/** A switch row: the row is the one toggleable node, its help one line under the title. */
+/**
+ * A choice row: the row is the one selectable node (§9 #19 Stage B) and at least 48 dp; the radio is
+ * display-only, [ControlLabelGap] before its label and centred on the label's first line, so a label
+ * that wraps at a large font keeps its radio beside its start (§7 R130). [description] sits under it.
+ */
+@Composable
+fun FormRadioRow(label: String, selected: Boolean, description: String? = null, onSelect: () -> Unit) {
+    val style = MaterialTheme.typography.bodyLarge
+    val firstLine = with(LocalDensity.current) { style.lineHeight.toDp() }
+    Row(
+        Modifier.fillMaxWidth().heightIn(min = 48.dp).selectable(selected = selected, role = Role.RadioButton, onClick = onSelect)
+            .padding(vertical = (48.dp - firstLine).coerceAtLeast(12.dp) / 2),
+        verticalAlignment = Alignment.Top,
+    ) {
+        Box(Modifier.height(firstLine), contentAlignment = Alignment.Center) { RadioButton(selected = selected, onClick = null) }
+        Spacer(Modifier.width(ControlLabelGap))
+        Column(Modifier.weight(1f)) {
+            Text(label, style = style)
+            if (description != null) Text(description, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
+    }
+}
+
+/** The space between a display-only radio or checkbox and its label, as every such row has it (§7 R130). */
+val ControlLabelGap = 8.dp
+
+/** A switch row: the row is the one toggleable node, its help under the title, one line at font 1.0 and wrapping at a larger font (§7 R130). */
 @Composable
 fun FormSwitchRow(title: String, help: String?, checked: Boolean, onChange: (Boolean) -> Unit) {
     Row(
@@ -164,7 +197,7 @@ fun FormSwitchRow(title: String, help: String?, checked: Boolean, onChange: (Boo
         Column(Modifier.weight(1f)) {
             Text(title, style = MaterialTheme.typography.bodyMedium)
             if (help != null) {
-                Text(help, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, overflow = TextOverflow.Ellipsis)
+                Text(help, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
         Switch(checked = checked, onCheckedChange = null)

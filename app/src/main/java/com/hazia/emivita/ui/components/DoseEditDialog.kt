@@ -2,13 +2,12 @@ package com.hazia.emivita.ui.components
 
 import com.hazia.emivita.ui.form.FormTextField
 import com.hazia.emivita.ui.form.DialogActionPair
+import com.hazia.emivita.ui.form.FormRadioRow
 import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.RadioButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -19,7 +18,6 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.hazia.emivita.core.data.entity.DoseStatus
@@ -29,8 +27,6 @@ import java.time.Instant
 import java.time.ZoneId
 import androidx.compose.ui.res.stringResource
 import com.hazia.emivita.R
-import androidx.compose.foundation.selection.selectable
-import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.platform.LocalResources
 import com.hazia.emivita.core.format.parseDecimal
 import com.hazia.emivita.core.format.formatDecimalLocalized
@@ -110,26 +106,9 @@ fun DoseEditDialog(
                     Spacer(Modifier.height(12.dp))
                 }
                 Text(stringResource(R.string.dose_edit_status), style = MaterialTheme.typography.labelLarge)
-                Row(
-                    // One selectable node per option (§9 #19 Stage B): the row carries
-                    // the role and the state, the RadioButton is display-only, and the
-                    // label is read as the option's name rather than as a second control.
-                    Modifier.selectable(selected = status == DoseStatus.TAKEN, role = Role.RadioButton) { status = DoseStatus.TAKEN },
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    RadioButton(selected = status == DoseStatus.TAKEN, onClick = null)
-                    Text(stringResource(R.string.dose_edit_taken))
-                }
-                Row(
-                    // One selectable node per option (§9 #19 Stage B): the row carries
-                    // the role and the state, the RadioButton is display-only, and the
-                    // label is read as the option's name rather than as a second control.
-                    Modifier.selectable(selected = status == DoseStatus.SKIPPED, role = Role.RadioButton) { status = DoseStatus.SKIPPED },
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    RadioButton(selected = status == DoseStatus.SKIPPED, onClick = null)
-                    Text(stringResource(R.string.dose_edit_skipped))
-                }
+                // One selectable node per option (§9 #19 Stage B), 48 dp, the radio apart from its label (§7 R130).
+                FormRadioRow(stringResource(R.string.dose_edit_taken), status == DoseStatus.TAKEN) { status = DoseStatus.TAKEN }
+                FormRadioRow(stringResource(R.string.dose_edit_skipped), status == DoseStatus.SKIPPED) { status = DoseStatus.SKIPPED }
                 Spacer(Modifier.height(12.dp))
                 TimeOfDayField(stringResource(R.string.dose_edit_recorded_time), hour, minute) { h, m -> hour = h; minute = m }
                 Spacer(Modifier.height(12.dp))

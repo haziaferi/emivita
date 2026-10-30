@@ -62,13 +62,13 @@ _reminders that ring on time and a record that survives: the grants and channels
 | Screen | In the code | SPEC | Status | Overlaps |
 |---|---|---|---|---|
 | Notifications & alerts | `route:NotificationsAlertsSettings`, `setting:NotificationsAlerts`, `card:NotificationsBlockedCard`, `card:BatteryOptimizationCard` | §9 #25, R83, R88 | shipped | Permission setup (first launch) and the missing-permissions card, Reminder notifications and their actions |
-| Alarms & Snooze (sheet) | `setting:AlarmsSnooze` | §9 #12 | shipped | Snooze for… (from a notification) |
+| Alarms & Snooze (sheet) | `setting:AlarmsSnooze`, `sheet:SnoozeSheet`, `sheet:SwipeSheet`, `sheet:AlarmTierSheet` | §9 #12, R130 | shipped | Snooze for… (from a notification) |
 | Permission setup (first launch) and the missing-permissions card | `sheet:PermissionSetupSheet`, `card:MissingPermissionsCard`, `card:FullScreenAlarmAccessCard` | §9 #38, R83, R88, R102 | shipped; open: say what is missing and open Notifications & alerts, not grant in place (§7 R102) | Notifications & alerts |
 | 'A reminder did not fire' card | `card:MissedAlarmCard` | §9 #29, R102 | shipped; open: say what is missing and open Notifications & alerts, not grant in place (§7 R102) | Notifications & alerts |
 | Data & Backup (backup, restore, auto-sync, purge) | `route:DataBackupSettings`, `setting:DataBackup`, `dialog:PurgeConfirmDialog`, `dialog:BackupPasswordDialog` | §9 #9, §9 #29, R83 | shipped | Export history (CSV, PDF): range and medicines, 'No backup yet' card |
 | 'No backup yet' card | `card:NoBackupCard` | §9 #38, R83 | shipped | Data & Backup (backup, restore, auto-sync, purge) |
 | Database set aside (unreadable, or its key lost) | `dialog:DatabaseRecoveredDialog` | §9 #32, R83 | shipped | Data & Backup (backup, restore, auto-sync, purge) |
-| Privacy & security (app lock) | `setting:PrivacySecurity` | §9 #11 | shipped |  |
+| Privacy & security (app lock, hidden names) | `setting:PrivacySecurity`, `setting:HideNames` | §9 #11, R130 | shipped |  |
 
 ## P5 Making it mine
 
