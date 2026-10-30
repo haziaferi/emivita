@@ -484,4 +484,9 @@ configurations.all {
 // not keep (§7 R104): the tick test's timeout names its case only there.
 tasks.withType<Test>().configureEach {
     testLogging { exceptionFormat = org.gradle.api.tasks.testing.logging.TestExceptionFormat.FULL }
+    // The screen sweep (§7 R131) draws every scrolled frame of every screen at 1080 px wide; on Gradle's default
+    // 512 MB the test JVM died mid-run, twice, with no report.
+    maxHeapSize = "1536m"
+    // Pass the measurement switch and folder through to the tests (ScreenSweepTest, EMIVITA_MEASURE=1).
+    System.getProperty("measure.out")?.let { systemProperty("measure.out", it) }
 }

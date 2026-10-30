@@ -66,6 +66,9 @@ jobs:
         run: python3 tools/code_health.py --selftest && python3 tools/code_health.py --check
       - name: Strings review
         run: python3 tools/strings_review.py --check
+      # The borrowed screen axes' hand-computed cases (R131); the scores themselves need a measured sweep.
+      - name: Borrowed axes self-test
+        run: python3 tools/borrowed_axes.py --selftest
 
       # JDK 21 to match gradle/gradle-daemon-jvm.properties (toolchainVersion=21)
       # and app/build.gradle.kts's jvmToolchain(21). Without it Gradle would try

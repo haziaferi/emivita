@@ -1,5 +1,6 @@
 package com.hazia.emivita.feature.settings
 
+import com.hazia.emivita.navigation.NavLabel
 import com.hazia.emivita.ui.components.AttentionCard
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -10,6 +11,8 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.padding
@@ -331,7 +334,8 @@ fun AppearanceScreen(settingsRepository: SettingsRepository, onBack: () -> Unit)
                 FilterChip(
                     selected = startPage == page,
                     onClick = { scope.launch { settingsRepository.setStartPage(page) } },
-                    label = { Text(stringResource(when (page) { StartPage.TODAY -> R.string.nav_today; StartPage.MEDICINES -> R.string.nav_medicines; StartPage.HISTORY -> R.string.nav_history })) },
+                    // The tabs' own names, capped as the navigation bar caps them (§7 R129): at font 2.0 "Storico" broke (§7 R131).
+                    label = { NavLabel(stringResource(when (page) { StartPage.TODAY -> R.string.nav_today; StartPage.MEDICINES -> R.string.nav_medicines; StartPage.HISTORY -> R.string.nav_history })) },
                 )
             }
         }
@@ -363,7 +367,8 @@ fun AppearanceScreen(settingsRepository: SettingsRepository, onBack: () -> Unit)
 private fun <T> OptionGrid(options: List<T>, card: @Composable RowScope.(T) -> Unit) {
     Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
         options.chunked(2).forEach { pair ->
-            Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            // A label that wraps makes its row's cards one height, the tallest (§7 R131).
+            Row(Modifier.height(IntrinsicSize.Min), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                 pair.forEach { card(it) }
                 if (pair.size < 2) Spacer(Modifier.weight(1f))
             }
@@ -579,6 +584,7 @@ private fun OptionCard(selected: Boolean, onClick: () -> Unit, label: String, mo
         color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = modifier
             .fillMaxWidth()
+            .fillMaxHeight()
             .border(
                 width = if (selected) 2.dp else 1.dp,
                 color = if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.outlineVariant,
@@ -593,7 +599,8 @@ private fun OptionCard(selected: Boolean, onClick: () -> Unit, label: String, mo
             Column {
                 preview()
                 Spacer(Modifier.height(8.dp))
-                Text(label, style = MaterialTheme.typography.labelMedium, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis)
+                // Wraps rather than ends in "…" (§7 R130's rule): at 360 dp "Prossima dose in evidenza" was cut at font 1.0 (§7 R131).
+                Text(label, style = MaterialTheme.typography.labelMedium)
             }
             if (selected) {
                 Icon(

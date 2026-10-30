@@ -1,5 +1,7 @@
 package com.hazia.emivita.feature.today
 
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -205,7 +207,16 @@ internal fun CompactRow(node: TimelineNode, entry: TimelineEntry, canSkip: Boole
         Row(verticalAlignment = Alignment.CenterVertically) {
             StateDisc(discStateOf(listOf(entry.status)), size = 28.dp)
             Spacer(Modifier.width(10.dp))
-            Text(nodeTimeLabel(node), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, modifier = Modifier.width(48.dp))
+            // The time's column fits "00:00" at the phone's font, never under 48 dp, so every row keeps one column and a
+            // time never breaks: at font 2.0 a fixed 48 dp put "08:00" on two lines (§7 R131).
+            val timeLabel = nodeTimeLabel(node)
+            val timeStyle = MaterialTheme.typography.labelMedium
+            val measurer = rememberTextMeasurer()
+            val timeWidth = with(LocalDensity.current) {
+                maxOf(48.dp, measurer.measure("00:00", timeStyle, maxLines = 1, softWrap = false).size.width.toDp() + 4.dp,
+                    measurer.measure(timeLabel, timeStyle, maxLines = 1, softWrap = false).size.width.toDp())
+            }
+            Text(timeLabel, style = timeStyle, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1, softWrap = false, modifier = Modifier.width(timeWidth))
             Column(Modifier.weight(1f)) {
                 Text(entry.name, style = MaterialTheme.typography.titleSmall, maxLines = 1, overflow = TextOverflow.Ellipsis)
                 EntrySummary(entry)
