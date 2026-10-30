@@ -1,5 +1,6 @@
 package com.hazia.emivita.feature.alarm
 
+import com.hazia.emivita.core.security.followScreenshotBlock
 import com.hazia.emivita.ui.form.FormTextField
 import android.os.Bundle
 import androidx.activity.ComponentActivity
@@ -43,6 +44,7 @@ class SnoozePickerActivity : ComponentActivity() {
     override fun attachBaseContext(newBase: Context) = super.attachBaseContext(AppLocale.wrap(newBase))
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        followScreenshotBlock((application as EmivitaApplication).container.settingsRepository.blockScreenshots)
         val doseEventId = intent.getLongExtra(EXTRA_DOSE_EVENT_ID, -1L)
         if (doseEventId < 0) { finish(); return }
         val container = (application as EmivitaApplication).container

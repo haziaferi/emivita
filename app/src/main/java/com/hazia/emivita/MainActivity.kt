@@ -8,6 +8,7 @@ import androidx.fragment.app.FragmentActivity
 import com.hazia.emivita.navigation.EmivitaApp
 import android.content.Context
 import com.hazia.emivita.core.locale.AppLocale
+import com.hazia.emivita.core.security.followScreenshotBlock
 
 // FragmentActivity, not ComponentActivity -- androidx.biometric.BiometricPrompt
 // (spec §9 #11) needs a FragmentActivity/Fragment host to attach its dialog
@@ -28,6 +29,7 @@ class MainActivity : FragmentActivity() {
 
         val container = (application as EmivitaApplication).container
         container.rescheduleOnLaunch()
+        followScreenshotBlock(container.settingsRepository.blockScreenshots)
 
         setContent {
             EmivitaApp(container)

@@ -102,4 +102,7 @@ data class BackupData(
      *  version stays 1 because an older build can read a file that carries
      *  this (`ignoreUnknownKeys`), which is what a version bump would deny. */
     val medicineNotes: List<MedicineNote> = emptyList(),
+    /** Since §7 R133: the travelling settings (`SettingsRepository.exportForBackup`). Additive and defaulted, as
+     *  medicineNotes was, so the version stays and an older build reads the file; null in a file from before it. */
+    val settings: Map<String, kotlinx.serialization.json.JsonElement>? = null,
 )

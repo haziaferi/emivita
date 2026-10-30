@@ -68,7 +68,7 @@ _reminders that ring on time and a record that survives: the grants and channels
 | Data & Backup (backup, restore, auto-sync, purge) | `route:DataBackupSettings`, `setting:DataBackup`, `dialog:PurgeConfirmDialog`, `dialog:BackupPasswordDialog` | §9 #9, §9 #29, R83 | shipped | Export history (CSV, PDF): range and medicines, 'No backup yet' card |
 | 'No backup yet' card | `card:NoBackupCard` | §9 #38, R83 | shipped | Data & Backup (backup, restore, auto-sync, purge) |
 | Database set aside (unreadable, or its key lost) | `dialog:DatabaseRecoveredDialog` | §9 #32, R83 | shipped | Data & Backup (backup, restore, auto-sync, purge) |
-| Privacy & security (app lock, hidden names) | `setting:PrivacySecurity`, `setting:HideNames` | §9 #11, R130 | shipped |  |
+| Privacy & security (app lock, hidden names, screenshot block) | `setting:PrivacySecurity`, `setting:HideNames`, `setting:BlockScreenshots` | §9 #11, R130, R133 | shipped |  |
 
 ## P5 Making it mine
 

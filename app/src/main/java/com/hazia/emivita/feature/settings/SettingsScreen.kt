@@ -2,6 +2,7 @@ package com.hazia.emivita.feature.settings
 
 import androidx.compose.runtime.collectAsState
 import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.NoPhotography
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -63,7 +64,7 @@ import androidx.compose.ui.semantics.Role
  *  to a tap is [RowKind]'s concern, not this enum's -- only the NAVIGATE rows
  *  correspond to an actual EmivitaRoute. */
 enum class SettingsDestination {
-    NotificationsAlerts, AlarmsSnooze, WeekendMode, Appearance, PrivacySecurity, HideNames, DataBackup, MedicalId,
+    NotificationsAlerts, AlarmsSnooze, WeekendMode, Appearance, PrivacySecurity, HideNames, BlockScreenshots, DataBackup, MedicalId,
 }
 
 /** How a row responds to a tap -- optimizes navigation depth to match each
@@ -147,6 +148,14 @@ private val settingsGroups = listOf(
                 R.string.settings_hide_names_desc,
                 RowKind.TOGGLE,
             ),
+            // §7 R133 (medTimer E-34): off by default, the owner's choice.
+            SettingsRow(
+                SettingsDestination.BlockScreenshots,
+                Icons.Filled.NoPhotography,
+                R.string.settings_block_screenshots,
+                R.string.settings_block_screenshots_desc,
+                RowKind.TOGGLE,
+            ),
         ),
     ),
     SettingsGroup(
@@ -193,6 +202,7 @@ fun SettingsScreen(settingsRepository: SettingsRepository, onOpenDetail: (Settin
         biometricEnabled = settingsRepository.biometricLockEnabled.first()
     }
     val hideNames by settingsRepository.hideMedicineNames.collectAsState(initial = false)
+    val blockScreenshots by settingsRepository.blockScreenshots.collectAsState(initial = false)
 
     // Saveable (§7 R83 (a), found on the phone): a plain remember closed the
     // sheet on a rotation or a process death, and its saved fields with it.
@@ -233,6 +243,12 @@ fun SettingsScreen(settingsRepository: SettingsRepository, onOpenDetail: (Settin
                                 enabled = true,
                                 description = stringResource(row.description),
                                 onToggle = { checked -> scope.launch { settingsRepository.setHideMedicineNames(checked) } },
+                            ) else if (row.destination == SettingsDestination.BlockScreenshots) SettingsToggleRowItem(
+                                row = row,
+                                checked = blockScreenshots,
+                                enabled = true,
+                                description = stringResource(row.description),
+                                onToggle = { checked -> scope.launch { settingsRepository.setBlockScreenshots(checked) } },
                             ) else SettingsToggleRowItem(
                                 row = row,
                                 checked = biometricEnabled,

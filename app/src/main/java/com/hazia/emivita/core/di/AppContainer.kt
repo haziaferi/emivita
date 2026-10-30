@@ -268,6 +268,7 @@ class AppContainer(
             medicineNoteDao = database.medicineNoteDao(),
             schedulingCoordinator = schedulingCoordinator,
             occurrenceProjectionCache = occurrenceProjectionCache,
+            settingsRepository = settingsRepository,
         )
     }
 

@@ -40,7 +40,7 @@
     {"id": "backup", "name": "Data & Backup (backup, restore, auto-sync, purge)", "purpose": "P4", "code": ["route:DataBackupSettings", "setting:DataBackup", "dialog:PurgeConfirmDialog", "dialog:BackupPasswordDialog"], "spec": ["§9 #9", "§9 #29", "R83"], "status": "shipped", "overlaps": ["export", "no_backup"]},
     {"id": "no_backup", "name": "'No backup yet' card", "purpose": "P4", "code": ["card:NoBackupCard"], "spec": ["§9 #38", "R83"], "status": "shipped", "overlaps": ["backup"]},
     {"id": "recovered", "name": "Database set aside (unreadable, or its key lost)", "purpose": "P4", "code": ["dialog:DatabaseRecoveredDialog"], "spec": ["§9 #32", "R83"], "status": "shipped", "overlaps": ["backup"]},
-    {"id": "privacy", "name": "Privacy & security (app lock, hidden names)", "purpose": "P4", "code": ["setting:PrivacySecurity", "setting:HideNames"], "spec": ["§9 #11", "R130"], "status": "shipped", "overlaps": []},
+    {"id": "privacy", "name": "Privacy & security (app lock, hidden names, screenshot block)", "purpose": "P4", "code": ["setting:PrivacySecurity", "setting:HideNames", "setting:BlockScreenshots"], "spec": ["§9 #11", "R130", "R133"], "status": "shipped", "overlaps": []},
 
     {"id": "appearance", "name": "Appearance (palette, Today layout, language, time format)", "purpose": "P5", "code": ["route:AppearanceSettings", "setting:Appearance"], "spec": ["§9 #28", "§9 #36", "§9 #37"], "status": "shipped", "overlaps": ["today"]},
 

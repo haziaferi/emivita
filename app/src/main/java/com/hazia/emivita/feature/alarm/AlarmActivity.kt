@@ -1,5 +1,6 @@
 package com.hazia.emivita.feature.alarm
 
+import com.hazia.emivita.core.security.followScreenshotBlock
 import android.app.KeyguardManager
 import android.content.Context
 import android.os.Bundle
@@ -66,6 +67,7 @@ class AlarmActivity : ComponentActivity() {
     // (unlocked), and it keeps going when this screen is left unanswered.
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        followScreenshotBlock((application as EmivitaApplication).container.settingsRepository.blockScreenshots)
         setShowWhenLocked(true)
         setTurnScreenOn(true)
         (getSystemService(Context.KEYGUARD_SERVICE) as? KeyguardManager)?.requestDismissKeyguard(this, null)

@@ -1,5 +1,6 @@
 package com.hazia.emivita.feature.alarm
 
+import com.hazia.emivita.core.security.followScreenshotBlock
 import com.hazia.emivita.ui.form.FormTextField
 import com.hazia.emivita.ui.form.DialogActionPair
 import android.content.Context
@@ -44,6 +45,7 @@ class TakeAmountActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        followScreenshotBlock((application as EmivitaApplication).container.settingsRepository.blockScreenshots)
         load(intent)
     }
 
