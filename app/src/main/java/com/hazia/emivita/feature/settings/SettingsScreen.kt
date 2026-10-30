@@ -46,7 +46,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.hazia.emivita.core.data.settings.SettingsRepository
 import com.hazia.emivita.core.security.BiometricAuthenticator
@@ -309,12 +308,11 @@ private fun SettingsRowItem(row: SettingsRow, onClick: () -> Unit) {
         Spacer(Modifier.width(12.dp))
         Column(modifier = Modifier.weight(1f)) {
             Text(stringResource(row.title), style = MaterialTheme.typography.bodyLarge)
+            // Wraps at a large font rather than end in "…" (§7 R131, the sweep at font 2.0).
             Text(
                 stringResource(row.description),
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 1,
-                overflow = TextOverflow.Ellipsis,
             )
         }
         Icon(
@@ -353,8 +351,6 @@ private fun SettingsToggleRowItem(
                 description,
                 style = MaterialTheme.typography.labelMedium,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
-                maxLines = 2,
-                overflow = TextOverflow.Ellipsis,
             )
         }
         Switch(checked = checked, onCheckedChange = null, enabled = enabled)

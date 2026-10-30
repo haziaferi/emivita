@@ -101,9 +101,9 @@ internal fun DetailHeader(title: String, onBack: () -> Unit, actions: (@Composab
             Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = stringResource(R.string.common_back))
         }
         Spacer(Modifier.width(4.dp))
-        // One line, ellipsised, so a long medicine name never pushes the
-        // actions off the row (§9 #34; the medicine detail uses this too).
-        Text(title, style = MaterialTheme.typography.headlineSmall, maxLines = 1, overflow = androidx.compose.ui.text.style.TextOverflow.Ellipsis, modifier = Modifier.weight(1f))
+        // The title takes what the actions leave, so a long medicine name never pushes them off the row
+        // (§9 #34; the medicine detail uses this too), and wraps there rather than end in "…" (§7 R131).
+        Text(title, style = MaterialTheme.typography.headlineSmall, modifier = Modifier.weight(1f))
         if (actions != null) actions()
     }
     Spacer(Modifier.height(20.dp))
