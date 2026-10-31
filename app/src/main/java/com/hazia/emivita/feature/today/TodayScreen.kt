@@ -404,10 +404,8 @@ fun TodayScreen(
 
 /** One as-needed medicine (§9 #26; Pill Time PT-02): name, how long since
  *  the last dose in the platform's own relative words, and Log. A medicine
- *  with no reminder wears the same row with Add reminder as [action] (§7 R114).
- *  The action has its own line under the name, as Prendi ora does on the
- *  timeline (§7 R136): beside it, "Aggiungi promemoria" left the name a few
- *  letters at 360 dp, and none at font 2.0. */
+ *  with no reminder wears the same row with Add reminder as [action] (§7 R114),
+ *  on its own line under the name as Prendi ora is on the timeline (§7 R136). */
 @Composable
 internal fun AsNeededRow(
     medicine: Medicine,
