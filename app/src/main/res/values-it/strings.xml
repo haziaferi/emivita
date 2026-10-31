@@ -829,4 +829,27 @@
     <string name="tag_name_taken">Un altro tag ha questo nome</string>
     <string name="medicines_all_paused">Tutti i promemoria sono in pausa</string>
     <string name="medicines_resume">Riattiva</string>
+    <!-- R135: la riga di avanzamento di Oggi e le cifre della pagina del farmaco. -->
+    <plurals name="doses_taken_of">
+        <item quantity="one">%1$d di %2$d presa</item>
+        <item quantity="many">%1$d di %2$d prese</item>
+        <item quantity="other">%1$d di %2$d prese</item>
+    </plurals>
+    <plurals name="today_progress_due">
+        <item quantity="one">%d da prendere ora</item>
+        <item quantity="many">%d da prendere ora</item>
+        <item quantity="other">%d da prendere ora</item>
+    </plurals>
+    <string name="today_progress_next">prossima alle %1$s</string>
+    <string name="today_progress_done">nient’altro per oggi</string>
+    <string name="today_progress_line">%1$s · %2$s</string>
+    <plurals name="widget_progress_today">
+        <item quantity="one">%1$d di %2$d presa oggi</item>
+        <item quantity="many">%1$d di %2$d prese oggi</item>
+        <item quantity="other">%1$d di %2$d prese oggi</item>
+    </plurals>
+    <string name="medicine_figures_window">Ultimi %1$d giorni</string>
+    <string name="medicine_figures_last_today">Ultima presa oggi alle %1$s</string>
+    <string name="medicine_figures_last_yesterday">Ultima presa ieri alle %1$s</string>
+    <string name="medicine_figures_last_date">Ultima presa il %1$s alle %2$s</string>
 </resources>

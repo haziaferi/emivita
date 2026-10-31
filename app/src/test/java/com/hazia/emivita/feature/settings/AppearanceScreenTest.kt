@@ -5,6 +5,7 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.assertIsDisplayed
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasText
+import androidx.compose.ui.test.isSelected
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithContentDescription
 import androidx.compose.ui.test.onNodeWithText
@@ -70,6 +71,8 @@ class AppearanceScreenTest {
         // land is a sharing violation on Windows.)
         compose.onNodeWithText("Theme").performScrollTo().performClick()
         compose.waitUntil(5_000) { compose.onAllNodes(hasText("Dark · Sabbia")).fetchSemanticsNodes().isNotEmpty() }
+        // The layout's own write lands on its own: the header says nothing about it (§7 R135's gate read the old one).
+        compose.waitUntil(5_000) { compose.onAllNodes(hasContentDescription("Compact") and isSelected()).fetchSemanticsNodes().isNotEmpty() }
         compose.waitForIdle()
 
         assertEquals(MedPalette.SABBIA, runBlocking(Dispatchers.IO) { settings.palette.first() })

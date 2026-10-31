@@ -23,8 +23,10 @@ import com.hazia.emivita.core.scheduling.SchedulingEngine
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
-import kotlinx.coroutines.cancel
+import kotlinx.coroutines.cancelAndJoin
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.withTimeoutOrNull
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.combine
@@ -60,7 +62,8 @@ class AppContainer(
     // background work (currently just OccurrenceProjectionCache's reactive
     // watcher + debounced recompute loop) -- never cancelled, matching the
     // rest of this container's "lives as long as the process" singletons.
-    private val applicationScope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+    private val applicationJob = SupervisorJob()
+    private val applicationScope = CoroutineScope(applicationJob + Dispatchers.Default)
 
     // `by lazy` on purpose: EmivitaDatabase.getInstance() does Keystore access
     // and SQLCipher keying -- neither fast nor guaranteed synchronous-safe --
@@ -78,7 +81,9 @@ class AppContainer(
      *  exception. Production never calls this -- the process ends instead. */
     @androidx.annotation.VisibleForTesting
     internal fun shutdown() {
-        applicationScope.cancel()
+        // Cancelled work may still be inside a Room transaction: let it leave before the connection closes, or its
+        // "connection is closed" is reported against whichever test starts next (§7 R135's CI run).
+        runBlocking { withTimeoutOrNull(5_000L) { applicationJob.cancelAndJoin() } }
         if (databaseLazy.isInitialized()) runCatching { database.close() }
     }
 
