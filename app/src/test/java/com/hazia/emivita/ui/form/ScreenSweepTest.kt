@@ -6,6 +6,8 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getAllSemanticsNodes
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasContentDescription
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import com.hazia.emivita.R
@@ -22,6 +24,8 @@ import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
 import org.junit.Assume
 import org.junit.Test
+import org.robolectric.RuntimeEnvironment
+import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import java.io.File
 
@@ -206,11 +210,12 @@ open class ScreenSweepTest : FormScreenTestBase() {
 
     // One test per area, so each one's state is let go before the next.
 
-    private fun start(page: StartPage) {
+    private fun start(page: StartPage): Long {
         Assume.assumeTrue("measuring only", !measureOnly || measureDir != null)
         fontScale.floatValue = res.configuration.fontScale
-        seed()
+        val med = seed()
         host { EmivitaNavHost(startPage = page) }
+        return med
     }
 
     /**
@@ -253,6 +258,28 @@ open class ScreenSweepTest : FormScreenTestBase() {
         // Its reminder, which a fixed summary above the list held out of reach at font 2.0 (§7 R137).
         found["medicine_detail"] = defects("medicine_detail", expect = s(ReminderType.FIXED_TIME.labelRes()))
         gate(found)
+    }
+
+    /**
+     * The Medicines list under everything that stacks above it: the search field, the tag chips and the all-paused
+     * line, with the no-scanner note shown. The plain list passes vacuously, since two medicines never scroll. The
+     * note above the list left it 350 dp of 724 at font 2.0 (§7 R138); as a snackbar it takes none.
+     */
+    @Test fun medicines_with_every_bar() {
+        val first = start(StartPage.MEDICINES)
+        val names = listOf("Levotiroxina", "Atorvastatina", "Ramipril", "Omeprazolo", "Vitamina D", "Bisoprololo")
+        runBlocking {
+            val meds = h.container.medicineRepository
+            names.forEachIndexed { i, name -> meds.addTag(h.medicine(name, stock = if (i == 0) 0.0 else 30.0, unit = "compresse"), listOf("Mattina", "Sera", "Cuore")[i % 3]) }
+            h.container.reminderRepository.setAllDosingEnabled(first, false)
+        }
+        waitFor("the Medicines list") { inTop(hasText(s(R.string.medicines_all_paused))) }
+        // No scanner app resolves, as on a phone without one: the launch throws and the note shows.
+        shadowOf(RuntimeEnvironment.getApplication()).checkActivities(true)
+        tap(hasContentDescription(s(R.string.medicines_scan_to_find)))
+        tap(hasContentDescription(s(R.string.medicines_search)) and hasClickAction())
+        waitFor("the search field") { inTop(hasText(s(R.string.common_no_barcode_scanner_app_installed_e_g_binary))) && inTop(hasSetTextAction()) }
+        gate(linkedMapOf("medicines_with_every_bar" to defects("medicines_with_every_bar", expect = names.last())))
     }
 
     @Test fun history_in_every_view() {

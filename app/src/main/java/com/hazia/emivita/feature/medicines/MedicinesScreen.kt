@@ -41,6 +41,9 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.RadioButton
+import androidx.compose.material3.SnackbarDuration
+import androidx.compose.material3.SnackbarHost
+import androidx.compose.material3.SnackbarHostState
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -88,6 +91,7 @@ import androidx.compose.material.icons.filled.FilterList
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.Badge
+import androidx.compose.ui.platform.LocalResources
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.ui.semantics.heading
@@ -182,7 +186,10 @@ fun MedicinesScreen(
             }
         }
     }
-    var scanUnavailable by remember { mutableStateOf(false) }
+    // No scanner app is news about one tap, not a state of the list (§7 R138, the owner: "Make it a snackbar"):
+    // kept above the list, its three lines at font 2.0 left the medicines under half the window.
+    val scanBar = remember { SnackbarHostState() }
+    val scanResources = LocalResources.current
     var showSortMenu by remember { mutableStateOf(false) }
 
     // Local order while a drag is in flight; persisted on drop. Keyed on the
@@ -229,9 +236,14 @@ fun MedicinesScreen(
                         onClick = {
                             try {
                                 scanLauncher.launch(Intent("com.google.zxing.client.android.SCAN"))
-                                scanUnavailable = false
                             } catch (_: ActivityNotFoundException) {
-                                scanUnavailable = true
+                                scope.launch {
+                                    scanBar.currentSnackbarData?.dismiss()
+                                    scanBar.showSnackbar(
+                                        scanResources.getString(R.string.common_no_barcode_scanner_app_installed_e_g_binary),
+                                        duration = SnackbarDuration.Long,
+                                    )
+                                }
                             }
                         },
                     ) {
@@ -239,14 +251,6 @@ fun MedicinesScreen(
                     }
                     // Pause or resume every medicine's reminders (§7 R127, C-29 V2).
                     PauseAllMenu(withReminders, reminderRepository, settingsRepository)
-            }
-            if (scanUnavailable) {
-                Text(
-                    stringResource(R.string.common_no_barcode_scanner_app_installed_e_g_binary),
-                    style = MaterialTheme.typography.labelSmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(16.dp),
-                )
             }
             MedicinesFilterBar(
                 searching = searching,
@@ -347,6 +351,8 @@ fun MedicinesScreen(
         FloatingActionButton(onClick = { adding = true }, modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp)) {
             Icon(Icons.Filled.Add, contentDescription = stringResource(R.string.medicines_add_medicine))
         }
+        // Above the add button, as Today's undo bar is.
+        SnackbarHost(scanBar, Modifier.align(Alignment.BottomCenter).padding(bottom = 80.dp))
     }
 
     val pendingCode = notFoundCode
