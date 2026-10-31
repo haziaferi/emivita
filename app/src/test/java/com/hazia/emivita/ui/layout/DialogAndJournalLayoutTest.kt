@@ -4,6 +4,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.semantics.testTag
+import androidx.compose.ui.test.hasSetTextAction
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.isRoot
 import androidx.compose.ui.test.junit4.createComposeRule
@@ -72,6 +73,11 @@ class DialogAndJournalLayoutTest {
         val hint = compose.nodesInside(journal, hasText("How is it going?", substring = true)).single().boundsInRoot
         val second = compose.nodesInside(journal, hasText("Second note", substring = true)).single().boundsInRoot
         val first = compose.nodesInside(journal, hasText("First note")).single().boundsInRoot
+        // Add on a line of its own (§7 R137): beside the field it left the field a sliver at font 1.8 on the 9 Pro.
+        val field = compose.nodesInside(journal, hasSetTextAction()).single().boundsInRoot
+        val add = compose.nodesInside(journal, hasText("Add")).single().boundsInRoot
+        assertStacked("Add under the field", field, add)
+        assertEquals("the field takes the journal's width inside its padding", journal.width - compose.dp(32f), field.width, 0.5f)
         assertStacked("the newest note under the field", hint, second)
         assertStacked("the older note under the newer", second, first)
         for (node in compose.nodesInside(journal, hasText("", substring = true))) {

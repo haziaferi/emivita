@@ -37,6 +37,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.ui.platform.LocalResources
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -162,74 +163,82 @@ fun MedicineDetailScreen(
                     }
                 },
             )
-            val currentMedicine = medicine
-            if (currentMedicine != null) {
-                MedicineFigures(currentMedicine, doseEventRepository)
-                Row(
-                    Modifier.padding(16.dp),
-                    verticalAlignment = Alignment.CenterVertically,
-                ) {
-                    MedicineTile(currentMedicine, size = 48.dp)
-                    Spacer(Modifier.width(12.dp))
+            // Everything under the header scrolls as one (§7 R137): fixed above the list, the figures, the journal and the
+            // rest left the reminders 29 dp at font 1.8 on the 9 Pro and none at 2.0. One item, always first, as on Today.
+            // 96 dp beneath the last row: the FAB's 56 dp plus its margins, so the last reminder's switch is never under it.
+            LazyColumn(contentPadding = PaddingValues(bottom = 96.dp)) {
+                item(key = "summary") {
                     Column {
-                        Text(currentMedicine.name, style = MaterialTheme.typography.titleLarge)
-                        currentMedicine.strength?.takeIf { it.isNotBlank() }?.let {
-                            Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        val currentMedicine = medicine
+                        if (currentMedicine != null) {
+                            MedicineFigures(currentMedicine, doseEventRepository)
+                            Row(
+                                Modifier.padding(16.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                            ) {
+                                MedicineTile(currentMedicine, size = 48.dp)
+                                Spacer(Modifier.width(12.dp))
+                                Column {
+                                    Text(currentMedicine.name, style = MaterialTheme.typography.titleLarge)
+                                    currentMedicine.strength?.takeIf { it.isNotBlank() }?.let {
+                                        Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                    currentMedicine.indication?.let {
+                                        Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                            currentMedicine.notes?.let {
+                                Text(
+                                    it,
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
+                                )
+                            }
+                            currentMedicine.rxNumber?.takeIf { it.isNotBlank() }?.let {
+                                // Selectable so it can be read out to the pharmacy or copied.
+                                SelectionContainer {
+                                    Text(
+                                        stringResource(R.string.medicine_detail_rx, it),
+                                        style = MaterialTheme.typography.labelSmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                        modifier = Modifier.padding(horizontal = 16.dp),
+                                    )
+                                }
+                            }
+                            currentMedicine.storageNote?.let {
+                                Text(
+                                    stringResource(R.string.medicine_detail_storage, it),
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(horizontal = 16.dp),
+                                )
+                            }
+                            Spacer(Modifier.height(16.dp))
                         }
-                        currentMedicine.indication?.let {
-                            Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                }
-                currentMedicine.notes?.let {
-                    Text(
-                        it,
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp, vertical = 4.dp),
-                    )
-                }
-                currentMedicine.rxNumber?.takeIf { it.isNotBlank() }?.let {
-                    // Selectable so it can be read out to the pharmacy or copied.
-                    SelectionContainer {
+
+                        NotesJournal(medicineId, medicineRepository)
+
                         Text(
-                            stringResource(R.string.medicine_detail_rx, it),
-                            style = MaterialTheme.typography.labelSmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            stringResource(R.string.medicine_detail_reminders),
+                            style = MaterialTheme.typography.labelLarge,
                             modifier = Modifier.padding(horizontal = 16.dp),
                         )
+                        if (reminders.isEmpty()) {
+                            Text(
+                                stringResource(R.string.medicine_detail_no_reminders_yet_tap_to_add_one),
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                modifier = Modifier.padding(16.dp),
+                            )
+                        } else {
+                            Spacer(Modifier.height(16.dp))
+                        }
                     }
                 }
-                currentMedicine.storageNote?.let {
-                    Text(
-                        stringResource(R.string.medicine_detail_storage, it),
-                        style = MaterialTheme.typography.labelSmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                        modifier = Modifier.padding(horizontal = 16.dp),
-                    )
-                }
-                Spacer(Modifier.height(16.dp))
-            }
-
-            NotesJournal(medicineId, medicineRepository)
-
-            Text(
-                stringResource(R.string.medicine_detail_reminders),
-                style = MaterialTheme.typography.labelLarge,
-                modifier = Modifier.padding(horizontal = 16.dp),
-            )
-            if (reminders.isEmpty()) {
-                Text(
-                    stringResource(R.string.medicine_detail_no_reminders_yet_tap_to_add_one),
-                    style = MaterialTheme.typography.bodyMedium,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    modifier = Modifier.padding(16.dp),
-                )
-            } else {
-                // 96 dp beneath the last row: the FAB's 56 dp plus its margins,
-                // so the last reminder's switch is never under it.
-                LazyColumn(contentPadding = PaddingValues(start = 16.dp, top = 16.dp, end = 16.dp, bottom = 96.dp)) {
-                    items(reminders, key = { it.id }) { reminder ->
+                items(reminders, key = { it.id }) { reminder ->
+                    Box(Modifier.padding(horizontal = 16.dp)) {
                         ReminderRow(
                             reminder = reminder,
                             doseUnit = medicine?.doseUnit,
@@ -345,25 +354,26 @@ internal fun NotesJournal(medicineId: Long, medicineRepository: MedicineReposito
         medicineRepository.observeNotes(medicineId).collect { value = it }
     }
     val scope = rememberCoroutineScope()
-    var draft by remember { mutableStateOf("") }
+    // Saveable: the journal is a row of the page's list (§7 R137), and a plain remember lost a half-typed note scrolled off.
+    var draft by rememberSaveable { mutableStateOf("") }
     var editing by remember { mutableStateOf<MedicineNote?>(null) }
-    var showAll by remember { mutableStateOf(false) }
+    var showAll by rememberSaveable { mutableStateOf(false) }
 
     Column(Modifier.padding(horizontal = 16.dp)) {
         Text(stringResource(R.string.medicine_detail_journal), style = MaterialTheme.typography.labelLarge)
-        Row(verticalAlignment = Alignment.CenterVertically) {
-            androidx.compose.material3.OutlinedTextField(
-                value = draft,
-                onValueChange = { draft = it },
-                placeholder = { Text(stringResource(R.string.medicine_detail_journal_hint)) },
-                maxLines = com.hazia.emivita.ui.form.FreeTextMaxLines,
-                modifier = Modifier.weight(1f),
-            )
-            TextButton(
-                enabled = draft.isNotBlank(),
-                onClick = { scope.launch { medicineRepository.addNote(medicineId, draft); draft = "" } },
-            ) { Text(stringResource(R.string.medicine_detail_journal_add)) }
-        }
+        // Add on its own line, end-aligned (§7 R137): beside the field it left the field a sliver at font 1.8.
+        androidx.compose.material3.OutlinedTextField(
+            value = draft,
+            onValueChange = { draft = it },
+            placeholder = { Text(stringResource(R.string.medicine_detail_journal_hint)) },
+            maxLines = com.hazia.emivita.ui.form.FreeTextMaxLines,
+            modifier = Modifier.fillMaxWidth(),
+        )
+        TextButton(
+            enabled = draft.isNotBlank(),
+            onClick = { scope.launch { medicineRepository.addNote(medicineId, draft); draft = "" } },
+            modifier = Modifier.align(Alignment.End),
+        ) { Text(stringResource(R.string.medicine_detail_journal_add)) }
         val shown = if (showAll) notes else notes.take(3)
         shown.forEach { note ->
             Surface(

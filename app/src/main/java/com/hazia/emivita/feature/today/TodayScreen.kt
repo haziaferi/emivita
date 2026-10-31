@@ -302,68 +302,79 @@ fun TodayScreen(
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             TabHeader(stringResource(R.string.today_today))
-            heldProgress.of(nodes, projectionState.settled)?.let { TodayProgressLine(it) }
-            missedAlarm?.let { plannedAt ->
-                MissedAlarmCard(plannedAt, onOpen = onOpenNotificationSettings, onDismiss = { AlarmWatchdog.dismissNotice(context) })
-            }
-            TodayNoticeCards(settingsRepository, hasMedicines = !medicinesById.isNullOrEmpty(), onOpenDataAndBackup = onOpenDataAndBackup)
 
-            when {
-                medicinesById == null || materializedToday == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                    CircularProgressIndicator()
-                }
-                nodes.isEmpty() && asNeeded.isEmpty() && standing.noReminder.isEmpty() -> Box(Modifier.fillMaxSize().padding(24.dp), contentAlignment = Alignment.Center) {
-                    Text(
-                        stringResource(R.string.today_nothing_scheduled_yet_add_a_medicine_and_a),
-                        style = MaterialTheme.typography.bodyMedium,
-                    )
-                }
-                else -> LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)) {
-                    todayItems(layout, nodes, deps, zone)
-                    // As-needed medicines (§9 #26): a standing row each, with
-                    // the time since the last dose and a Log chip. They have no
-                    // slot on the timeline, so they sit beneath it.
-                    if (asNeeded.isNotEmpty()) {
-                        item(key = "as-needed-header") {
-                            Text(
-                                stringResource(R.string.today_as_needed),
-                                style = MaterialTheme.typography.labelLarge,
-                                modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
-                            )
+            // Everything under the title scrolls as one (§7 R137): fixed above the list, the progress line and a notice
+            // card left the doses a 124 dp strip at font 2.0. One item, always first, so a card that comes or goes
+            // resizes it in place instead of landing above the row the list is anchored on.
+            LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)) {
+                item(key = "notices") {
+                    Column {
+                        heldProgress.of(nodes, projectionState.settled)?.let { TodayProgressLine(it) }
+                        missedAlarm?.let { plannedAt ->
+                            MissedAlarmCard(plannedAt, onOpen = onOpenNotificationSettings, onDismiss = { AlarmWatchdog.dismissNotice(context) })
                         }
-                        items(asNeeded, key = { "as-needed-" + it.id }) { medicine ->
-                            AsNeededRow(
-                                medicine = medicine,
-                                doseEventRepository = doseEventRepository,
-                                // Re-fetches "last taken" after a log today.
-                                refreshKey = materializedToday.size,
-                                onLog = { logDosePreselected = medicine; showLogDose = true },
+                        TodayNoticeCards(settingsRepository, hasMedicines = !medicinesById.isNullOrEmpty(), onOpenDataAndBackup = onOpenDataAndBackup)
+                    }
+                }
+                when {
+                    medicinesById == null || materializedToday == null -> item(key = "loading") {
+                        Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                    }
+                    nodes.isEmpty() && asNeeded.isEmpty() && standing.noReminder.isEmpty() -> item(key = "empty") {
+                        Box(Modifier.fillParentMaxSize().padding(8.dp), contentAlignment = Alignment.Center) {
+                            Text(
+                                stringResource(R.string.today_nothing_scheduled_yet_add_a_medicine_and_a),
+                                style = MaterialTheme.typography.bodyMedium,
                             )
-                            Spacer(Modifier.height(8.dp))
                         }
                     }
-                    // A medicine with no reminder yet (§7 R114): its own
-                    // section, so a half-made one is not taken for as-needed.
-                    if (standing.noReminder.isNotEmpty()) {
-                        item(key = "no-reminder-header") {
-                            Text(
-                                stringResource(R.string.today_no_reminder),
-                                style = MaterialTheme.typography.labelLarge,
-                                modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
-                            )
+                    else -> {
+                        todayItems(layout, nodes, deps, zone)
+                        // As-needed medicines (§9 #26): a standing row each, with
+                        // the time since the last dose and a Log chip. They have no
+                        // slot on the timeline, so they sit beneath it.
+                        if (asNeeded.isNotEmpty()) {
+                            item(key = "as-needed-header") {
+                                Text(
+                                    stringResource(R.string.today_as_needed),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
+                                )
+                            }
+                            items(asNeeded, key = { "as-needed-" + it.id }) { medicine ->
+                                AsNeededRow(
+                                    medicine = medicine,
+                                    doseEventRepository = doseEventRepository,
+                                    // Re-fetches "last taken" after a log today.
+                                    refreshKey = materializedToday.size,
+                                    onLog = { logDosePreselected = medicine; showLogDose = true },
+                                )
+                                Spacer(Modifier.height(8.dp))
+                            }
                         }
-                        items(standing.noReminder, key = { "no-reminder-" + it.id }) { medicine ->
-                            AsNeededRow(
-                                medicine = medicine,
-                                doseEventRepository = doseEventRepository,
-                                refreshKey = materializedToday.size,
-                                onLog = { onAddReminder(medicine.id) },
-                                action = R.string.common_add_reminder,
-                            )
-                            Spacer(Modifier.height(8.dp))
+                        // A medicine with no reminder yet (§7 R114): its own
+                        // section, so a half-made one is not taken for as-needed.
+                        if (standing.noReminder.isNotEmpty()) {
+                            item(key = "no-reminder-header") {
+                                Text(
+                                    stringResource(R.string.today_no_reminder),
+                                    style = MaterialTheme.typography.labelLarge,
+                                    modifier = Modifier.padding(top = 8.dp, bottom = 8.dp),
+                                )
+                            }
+                            items(standing.noReminder, key = { "no-reminder-" + it.id }) { medicine ->
+                                AsNeededRow(
+                                    medicine = medicine,
+                                    doseEventRepository = doseEventRepository,
+                                    refreshKey = materializedToday.size,
+                                    onLog = { onAddReminder(medicine.id) },
+                                    action = R.string.common_add_reminder,
+                                )
+                                Spacer(Modifier.height(8.dp))
+                            }
                         }
+                        item(key = "fab-space") { Spacer(Modifier.height(72.dp)) }
                     }
-                    item(key = "fab-space") { Spacer(Modifier.height(72.dp)) }
                 }
             }
         }
@@ -404,7 +415,8 @@ fun TodayScreen(
 
 /** One as-needed medicine (§9 #26; Pill Time PT-02): name, how long since
  *  the last dose in the platform's own relative words, and Log. A medicine
- *  with no reminder wears the same row with Add reminder as [action] (§7 R114). */
+ *  with no reminder wears the same row with Add reminder as [action] (§7 R114),
+ *  on its own line under the name as Prendi ora is on the timeline (§7 R136). */
 @Composable
 internal fun AsNeededRow(
     medicine: Medicine,
@@ -425,18 +437,22 @@ internal fun AsNeededRow(
         color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
     ) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            MedicineTile(medicine)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(medicine.name, style = MaterialTheme.typography.titleMedium)
-                Text(lastLine, style = MaterialTheme.typography.doseCritical, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                MedicineTile(medicine)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(medicine.name, style = MaterialTheme.typography.titleMedium)
+                    Text(lastLine, style = MaterialTheme.typography.doseCritical, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
-            AssistChip(
-                onClick = onLog,
-                label = { Text(stringResource(action)) },
-                leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
-            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                AssistChip(
+                    onClick = onLog,
+                    label = { Text(stringResource(action)) },
+                    leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                )
+            }
         }
     }
 }
@@ -1098,7 +1114,7 @@ private fun LogDoseDialog(
  *  and a dismiss. One merged node plus its two buttons. */
 @Composable
 internal fun MissedAlarmCard(plannedAtEpochMillis: Long, onOpen: () -> Unit, onDismiss: () -> Unit) {
-    AttentionCard(stringResource(R.string.missed_alarm_title), modifier = Modifier.padding(horizontal = 16.dp).padding(bottom = 8.dp)) {
+    AttentionCard(stringResource(R.string.missed_alarm_title), modifier = Modifier.padding(bottom = 8.dp)) {
         Text(
             stringResource(R.string.missed_alarm_body, LocaleFormats.monthDayTime(plannedAtEpochMillis)),
             style = MaterialTheme.typography.labelMedium,
@@ -1139,7 +1155,7 @@ internal fun NoBackupCard(onBackUp: () -> Unit) {
     Surface(
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
     ) {
         Column(Modifier.padding(14.dp)) {
             Text(stringResource(R.string.backup_none_title), style = MaterialTheme.typography.titleMedium)

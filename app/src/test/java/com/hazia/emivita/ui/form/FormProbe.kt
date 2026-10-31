@@ -53,10 +53,14 @@ data class ProbeNode(
     val on: Boolean?,
     /** Its text ends in an ellipsis, or is taller than the room it was given and clipped (§7 R126, R129): drawn short of itself. */
     val cut: Boolean = false,
+    /** A line ends between two letters or digits: a word drawn in two pieces (§7 R136), whatever else the label holds. */
+    val brokenWord: Boolean = false,
 ) {
     val visible get() = bounds.width > 0f && bounds.height > 0f
     val isText get() = !text.isNullOrBlank()
     val isControl get() = clickable || editable
+    /** A text laid out at no width at all: it has lines and height but nothing drawn, so "visible" skips it (§7 R136). */
+    val squeezed get() = isText && unclipped.width < 1f && unclipped.height > 0f
     fun fullyVisible() = visible && abs(bounds.left - unclipped.left) <= 0.5f && abs(bounds.top - unclipped.top) <= 0.5f &&
         abs(bounds.right - unclipped.right) <= 0.5f && abs(bounds.bottom - unclipped.bottom) <= 0.5f
     val label get() = text ?: description ?: "#$id"
@@ -150,6 +154,15 @@ object FormProbe {
         return ProbeFrame(Pixels(bmp.width, bmp.height, a), top, merged, leaves)
     }
 
+    /** Some line but the last ends inside a word: the character before the break and the one after are both letters or digits. */
+    fun breaksAWord(layout: TextLayoutResult): Boolean {
+        val text = layout.layoutInput.text.text
+        return (0 until layout.lineCount - 1).any { i ->
+            val end = layout.getLineEnd(i)
+            end in 1 until text.length && text[end - 1].isLetterOrDigit() && text[end].isLetterOrDigit()
+        }
+    }
+
     private fun collect(root: SemanticsNode, dx: Float, dy: Float): List<ProbeNode> {
         val origin = root.positionInWindow - root.positionInRoot
         val out = mutableListOf<ProbeNode>()
@@ -177,6 +190,7 @@ object FormProbe {
                 error = SemanticsProperties.Error in c,
                 on = c.getOrNull(SemanticsProperties.ToggleableState)?.let { it == androidx.compose.ui.state.ToggleableState.On },
                 cut = layout != null && layout.lineCount > 0 && (layout.isLineEllipsized(layout.lineCount - 1) || layout.didOverflowHeight),
+                brokenWord = layout != null && breaksAWord(layout),
             )
             n.children.forEach { walk(it, anc + n.id) }
         }

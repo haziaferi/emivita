@@ -404,7 +404,8 @@ internal fun LanguageAndTimeSection(
         horizontalArrangement = Arrangement.SpaceBetween,
         verticalAlignment = Alignment.CenterVertically,
     ) {
-        Text(languageDisplayName(languageTag, systemLabel), style = MaterialTheme.typography.bodyLarge)
+        // The name wraps and Cambia keeps its width: unweighted, the name took the row and broke "Cam/bia" at font 2.0 (§7 R137).
+        Text(languageDisplayName(languageTag, systemLabel), style = MaterialTheme.typography.bodyLarge, modifier = Modifier.weight(1f).padding(end = 8.dp))
         Text(stringResource(R.string.settings_language_change), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
     }
 
