@@ -6,12 +6,15 @@ import androidx.compose.ui.semantics.SemanticsActions
 import androidx.compose.ui.semantics.SemanticsProperties
 import androidx.compose.ui.semantics.getAllSemanticsNodes
 import androidx.compose.ui.test.hasClickAction
+import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import com.hazia.emivita.R
 import com.hazia.emivita.core.data.config.ReminderConfig
 import com.hazia.emivita.core.data.entity.DoseStatus
 import com.hazia.emivita.core.data.settings.StartPage
 import com.hazia.emivita.core.data.settings.TodayLayout
+import com.hazia.emivita.feature.medicines.MEDICINE_FIGURES_TAG
+import com.hazia.emivita.feature.today.TODAY_PROGRESS_TAG
 import com.hazia.emivita.navigation.EmivitaNavHost
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
@@ -198,6 +201,8 @@ open class ScreenSweepTest : FormScreenTestBase() {
             if (found.isEmpty()) start(StartPage.TODAY)
             // At font 2.0 the no-backup card can hold the doses below the fold: the sweep scrolls to them.
             waitFor("Today, $layout") { inTop(hasText(s(R.string.nav_today)) and hasClickAction()) }
+            // The progress line (§7 R135) waits for a whole projection pass: sweep it, not the frame before it.
+            waitFor("Today's progress line") { inTop(hasTestTag(TODAY_PROGRESS_TAG)) }
             settle()
             found["today_$layout"] = defects("today_$layout", expect = "Metformina")
         }
@@ -209,6 +214,8 @@ open class ScreenSweepTest : FormScreenTestBase() {
         waitFor("the Medicines list") { inTop(hasText("Paracetamolo 1000 mg")) }
         val found = linkedMapOf("medicines" to defects("medicines"))
         tap(hasText("Metformina") and hasClickAction())
+        // The figures (§7 R135) load after the page: the seed's nine Taken days give them something to draw.
+        waitFor("the medicine's figures") { inTop(hasTestTag(MEDICINE_FIGURES_TAG)) }
         found["medicine_detail"] = defects("medicine_detail")
         gate(found)
     }

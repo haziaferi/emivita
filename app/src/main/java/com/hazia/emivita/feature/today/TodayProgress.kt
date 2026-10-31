@@ -44,6 +44,17 @@ internal fun todayProgress(nodes: List<TimelineNode>, settled: Boolean = true): 
     )
 }
 
+/**
+ * The count Today shows: read from a whole pass, and held while the next one runs. Every Take starts a pass that
+ * publishes medicine by medicine, and a line that hid for each of them shifted the page twice per answer.
+ */
+internal class HeldProgress {
+    private var last: TodayProgress? = null
+
+    fun of(nodes: List<TimelineNode>, settled: Boolean): TodayProgress? =
+        if (settled) todayProgress(nodes).also { last = it } else last
+}
+
 /** "1 di 3 prese · prossima alle 20:45" under Today's title (§7 R135, the owner's pick). */
 @Composable
 internal fun TodayProgressLine(progress: TodayProgress) {

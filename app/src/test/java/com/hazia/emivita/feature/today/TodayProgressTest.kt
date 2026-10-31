@@ -40,6 +40,18 @@ class TodayProgressTest {
         assertNull("'1 of 1, nothing left' would be read from a pass not yet done", todayProgress(nodes, settled = false))
     }
 
+    @Test fun `a pass in progress keeps the last whole count, so the line does not blink`() {
+        val held = HeldProgress()
+        assertNull("nothing whole yet", held.of(emptyList(), settled = false))
+        val before = listOf(TimelineNode(800, listOf(entry(TimelineStatus.TAKEN))), TimelineNode(2045, listOf(entry(TimelineStatus.UPCOMING))))
+        val whole = held.of(before, settled = true)
+        assertEquals(TodayProgress(taken = 1, planned = 2, dueNow = 0, nextAt = 2045), whole)
+        // Mid-pass: the 20:45 slot's medicine is not reached yet, so it is missing from the nodes.
+        assertEquals(whole, held.of(listOf(TimelineNode(800, listOf(entry(TimelineStatus.TAKEN)))), settled = false))
+        val after = listOf(TimelineNode(800, listOf(entry(TimelineStatus.TAKEN))), TimelineNode(2045, listOf(entry(TimelineStatus.TAKEN))))
+        assertEquals(TodayProgress(taken = 2, planned = 2, dueNow = 0, nextAt = null), held.of(after, settled = true))
+    }
+
     @Test fun `nothing planned draws no line`() {
         assertNull(todayProgress(emptyList()))
         assertNull(todayProgress(listOf(TimelineNode(800, listOf(entry(TimelineStatus.TAKEN, reminderId = null))))))

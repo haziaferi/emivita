@@ -297,11 +297,12 @@ fun TodayScreen(
     val nodes = remember(medicinesById, materializedToday, projectionState, startOfToday, startOfTomorrow, remindersById) {
         buildTimeline(medicinesById, materializedToday, projectionState, startOfToday, startOfTomorrow, remindersById)
     }
+    val heldProgress = remember { HeldProgress() }
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             TabHeader(stringResource(R.string.today_today))
-            todayProgress(nodes, projectionState.settled)?.let { TodayProgressLine(it) }
+            heldProgress.of(nodes, projectionState.settled)?.let { TodayProgressLine(it) }
             missedAlarm?.let { plannedAt ->
                 MissedAlarmCard(plannedAt, onOpen = onOpenNotificationSettings, onDismiss = { AlarmWatchdog.dismissNotice(context) })
             }
