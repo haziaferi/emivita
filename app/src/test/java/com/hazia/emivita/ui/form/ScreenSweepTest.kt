@@ -10,7 +10,9 @@ import androidx.compose.ui.test.hasTestTag
 import androidx.compose.ui.test.hasText
 import com.hazia.emivita.R
 import com.hazia.emivita.core.data.config.ReminderConfig
+import com.hazia.emivita.core.data.config.ReminderType
 import com.hazia.emivita.core.data.entity.DoseStatus
+import com.hazia.emivita.core.format.labelRes
 import com.hazia.emivita.core.data.settings.StartPage
 import com.hazia.emivita.core.data.settings.TodayLayout
 import com.hazia.emivita.feature.medicines.MEDICINE_FIGURES_TAG
@@ -22,7 +24,6 @@ import org.junit.Assume
 import org.junit.Test
 import org.robolectric.annotation.Config
 import java.io.File
-import kotlin.math.abs
 
 /**
  * Every top-level screen on the narrowest phone, at font 1.0 and 2.0 (§7 R131, the owner's standing rule of
@@ -72,12 +73,31 @@ open class ScreenSweepTest : FormScreenTestBase() {
     }
 
     /**
+     * Where the scroll's children sit: what moves when it scrolls. Not its axis value, which a lazy list counts in items
+     * and holds at 0 while one tall first item scrolls by (§7 R137): the sweep stopped on the first frame of a page
+     * whose summary is one item and never saw the reminders under it.
+     */
+    private fun placed() = scroller()?.children?.map { it.id to it.boundsInWindow.top }
+
+    /** Scrolled by [dy]: whether anything moved. */
+    private fun moved(dy: Float): Boolean {
+        val before = placed() ?: return false
+        scrollBy(dy)
+        return placed() != before
+    }
+
+    private fun toTop() {
+        val h = scroller()?.size?.height ?: return
+        repeat(40) { if (!moved(-h.toFloat())) return }
+    }
+
+    /**
      * Every text leaf the screen shows, whole, from the top of its scroll to the end, above the navigation bar. Unlike
      * [FormRules.sweep] it keeps no frames: at 360 dp xxhdpi a frame is about 20 MB and a long screen ran 512 MB out.
      * When measuring, [tag] names the stop's files.
      */
     private fun sweepTexts(tag: String): List<ProbeNode> {
-        scroller()?.let { val v = it.config[SemanticsProperties.VerticalScrollAxisRange].value(); if (v > 0f) scrollBy(-v - 10f) }
+        toTop()
         val seen = HashSet<Int>()
         val out = mutableListOf<ProbeNode>()
         val dir = measureDir
@@ -98,15 +118,14 @@ open class ScreenSweepTest : FormScreenTestBase() {
                 for (n in f.leaves) if (n.isText && n.fullyVisible()) record += nodeJson("leaf", n, offset, sc?.id, frame)
             }
             for (l in f.leaves) {
+                // Squeezed to no width, a text is never "fully visible": take it here, or it passes as clean (§7 R136).
+                if (l.squeezed && l.id !in seen) { seen += l.id; out += l; continue }
                 if (!l.isText || !l.fullyVisible() || l.id in seen || (navTop != null && l.unclipped.top >= navTop - 0.5f)) continue
                 seen += l.id; out += l
             }
             val n = sc ?: return done()
             val r = n.config[SemanticsProperties.VerticalScrollAxisRange]
-            if (r.value() >= r.maxValue() - 0.5f) return done()
-            scrollBy(n.size.height * 0.6f)
-            val after = scroller()?.config?.get(SemanticsProperties.VerticalScrollAxisRange)?.value() ?: return done()
-            if (abs(after - r.value()) < 0.5f) return done()
+            if (r.value() >= r.maxValue() - 0.5f || !moved(n.size.height * 0.6f)) return done()
         }
         return done()
     }
@@ -140,14 +159,29 @@ open class ScreenSweepTest : FormScreenTestBase() {
         )
     }
 
-    /** A cut text, or a text with no space in it drawn on more than one line: a word broken in two. [expect] must be on the screen somewhere. */
+    /**
+     * A screen that scrolls gives its scroll at least half the window above the navigation bar (§7 R137). A fixed block
+     * over a list left Today's doses a 124 dp strip at font 2.0 on the 9 Pro and the medicine page's reminders none,
+     * and the text rules saw neither: a list with no room draws no text to flag.
+     */
+    private fun cramped(): String? {
+        val f = FormProbe.frame()
+        val bottom = f.merged.filter { it.role == Role.Tab }.minOfOrNull { it.unclipped.top } ?: f.px.height.toFloat()
+        val sc = scroller() ?: return null
+        if (sc.config[SemanticsProperties.VerticalScrollAxisRange].maxValue() <= 0f) return null
+        val room = minOf(sc.boundsInWindow.bottom, bottom) - sc.boundsInWindow.top
+        return if (room >= bottom * 0.5f) null else "scroll has ${(room / dp).toInt()} dp of ${(bottom / dp).toInt()}"
+    }
+
+    /** A cut text, or a word broken in two: by the line layout (§7 R136), or, for a label with no layout, one word on more than one line. [expect] must be on the screen somewhere. */
     private fun defects(tag: String, expect: String? = null): List<String> {
         // A layout switch lands through DataStore on its own thread: sweep again until the expected text is drawn.
         var leaves = sweepTexts(tag)
         var tries = 0
         while (expect != null && leaves.none { expect in it.label } && tries++ < 20) { Thread.sleep(100); settle(); leaves = sweepTexts(tag) }
         val missing = if (expect != null && leaves.none { expect in it.label }) listOf("'$expect' never shown") else emptyList()
-        return missing + leaves.filter { it.cut || (it.lines > 1 && ' ' !in it.label.trim()) }.map { "'${it.label}' lines=${it.lines} cut=${it.cut}" }
+        return missing + listOfNotNull(cramped()) + leaves.filter { it.cut || it.brokenWord || it.squeezed || (it.lines > 1 && ' ' !in it.label.trim()) }
+            .map { "'${it.label}' lines=${it.lines} cut=${it.cut} broken=${it.brokenWord} squeezed=${it.squeezed}" }
     }
 
     private fun goTab(label: Int, wait: String, cond: () -> Boolean) {
@@ -216,7 +250,8 @@ open class ScreenSweepTest : FormScreenTestBase() {
         tap(hasText("Metformina") and hasClickAction())
         // The figures (§7 R135) load after the page: the seed's nine Taken days give them something to draw.
         waitFor("the medicine's figures") { inTop(hasTestTag(MEDICINE_FIGURES_TAG)) }
-        found["medicine_detail"] = defects("medicine_detail")
+        // Its reminder, which a fixed summary above the list held out of reach at font 2.0 (§7 R137).
+        found["medicine_detail"] = defects("medicine_detail", expect = s(ReminderType.FIXED_TIME.labelRes()))
         gate(found)
     }
 

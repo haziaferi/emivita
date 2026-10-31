@@ -255,7 +255,7 @@ internal fun MissingPermissionsCard(state: PermissionState, onFix: (ReminderPerm
     Surface(
         shape = RoundedCornerShape(12.dp),
         color = MaterialTheme.colorScheme.surfaceContainer,
-        modifier = Modifier.fillMaxWidth().padding(horizontal = 16.dp).padding(bottom = 8.dp),
+        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
     ) {
         Column(Modifier.padding(14.dp)) {
             Text(stringResource(R.string.permission_card_title), style = MaterialTheme.typography.titleMedium)
