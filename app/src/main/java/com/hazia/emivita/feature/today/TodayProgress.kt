@@ -71,6 +71,6 @@ internal fun TodayProgressLine(progress: TodayProgress) {
         stringResource(R.string.today_progress_line, count, tail),
         style = MaterialTheme.typography.titleMedium,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 8.dp).testTag(TODAY_PROGRESS_TAG),
+        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp).testTag(TODAY_PROGRESS_TAG),
     )
 }
