@@ -98,6 +98,8 @@ open class ScreenSweepTest : FormScreenTestBase() {
                 for (n in f.leaves) if (n.isText && n.fullyVisible()) record += nodeJson("leaf", n, offset, sc?.id, frame)
             }
             for (l in f.leaves) {
+                // Squeezed to no width, a text is never "fully visible": take it here, or it passes as clean (§7 R136).
+                if (l.squeezed && l.id !in seen) { seen += l.id; out += l; continue }
                 if (!l.isText || !l.fullyVisible() || l.id in seen || (navTop != null && l.unclipped.top >= navTop - 0.5f)) continue
                 seen += l.id; out += l
             }
@@ -140,14 +142,15 @@ open class ScreenSweepTest : FormScreenTestBase() {
         )
     }
 
-    /** A cut text, or a text with no space in it drawn on more than one line: a word broken in two. [expect] must be on the screen somewhere. */
+    /** A cut text, or a word broken in two: by the line layout (§7 R136), or, for a label with no layout, one word on more than one line. [expect] must be on the screen somewhere. */
     private fun defects(tag: String, expect: String? = null): List<String> {
         // A layout switch lands through DataStore on its own thread: sweep again until the expected text is drawn.
         var leaves = sweepTexts(tag)
         var tries = 0
         while (expect != null && leaves.none { expect in it.label } && tries++ < 20) { Thread.sleep(100); settle(); leaves = sweepTexts(tag) }
         val missing = if (expect != null && leaves.none { expect in it.label }) listOf("'$expect' never shown") else emptyList()
-        return missing + leaves.filter { it.cut || (it.lines > 1 && ' ' !in it.label.trim()) }.map { "'${it.label}' lines=${it.lines} cut=${it.cut}" }
+        return missing + leaves.filter { it.cut || it.brokenWord || it.squeezed || (it.lines > 1 && ' ' !in it.label.trim()) }
+            .map { "'${it.label}' lines=${it.lines} cut=${it.cut} broken=${it.brokenWord} squeezed=${it.squeezed}" }
     }
 
     private fun goTab(label: Int, wait: String, cond: () -> Boolean) {

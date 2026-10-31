@@ -404,7 +404,10 @@ fun TodayScreen(
 
 /** One as-needed medicine (§9 #26; Pill Time PT-02): name, how long since
  *  the last dose in the platform's own relative words, and Log. A medicine
- *  with no reminder wears the same row with Add reminder as [action] (§7 R114). */
+ *  with no reminder wears the same row with Add reminder as [action] (§7 R114).
+ *  The action has its own line under the name, as Prendi ora does on the
+ *  timeline (§7 R136): beside it, "Aggiungi promemoria" left the name a few
+ *  letters at 360 dp, and none at font 2.0. */
 @Composable
 internal fun AsNeededRow(
     medicine: Medicine,
@@ -425,18 +428,22 @@ internal fun AsNeededRow(
         color = MaterialTheme.colorScheme.surfaceContainer,
         modifier = Modifier.fillMaxWidth().semantics(mergeDescendants = true) {},
     ) {
-        Row(Modifier.padding(14.dp), verticalAlignment = Alignment.CenterVertically) {
-            MedicineTile(medicine)
-            Spacer(Modifier.width(12.dp))
-            Column(Modifier.weight(1f)) {
-                Text(medicine.name, style = MaterialTheme.typography.titleMedium)
-                Text(lastLine, style = MaterialTheme.typography.doseCritical, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        Column(Modifier.padding(14.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically) {
+                MedicineTile(medicine)
+                Spacer(Modifier.width(12.dp))
+                Column(Modifier.weight(1f)) {
+                    Text(medicine.name, style = MaterialTheme.typography.titleMedium)
+                    Text(lastLine, style = MaterialTheme.typography.doseCritical, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                }
             }
-            AssistChip(
-                onClick = onLog,
-                label = { Text(stringResource(action)) },
-                leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
-            )
+            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.End) {
+                AssistChip(
+                    onClick = onLog,
+                    label = { Text(stringResource(action)) },
+                    leadingIcon = { Icon(Icons.Filled.Add, contentDescription = null) },
+                )
+            }
         }
     }
 }
