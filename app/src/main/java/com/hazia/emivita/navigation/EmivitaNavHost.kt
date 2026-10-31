@@ -224,6 +224,7 @@ fun EmivitaNavHost(startPage: StartPage = StartPage.TODAY, openDataAndBackupOnSt
                     medicineId = route.medicineId,
                     medicineRepository = container.medicineRepository,
                     reminderRepository = container.reminderRepository,
+                    doseEventRepository = container.doseEventRepository,
                     onAddReminder = { navController.navigate(EmivitaRoute.AddReminder(route.medicineId)) },
                     onEditMedicine = { navController.navigate(EmivitaRoute.EditMedicine(route.medicineId)) },
                     onEditReminder = { reminderId -> navController.navigate(EmivitaRoute.EditReminder(reminderId)) },

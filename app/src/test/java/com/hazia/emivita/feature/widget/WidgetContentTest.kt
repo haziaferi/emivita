@@ -18,6 +18,7 @@ import com.hazia.emivita.core.format.LocaleFormats
 import com.hazia.emivita.core.format.maskedMedicineName
 import com.hazia.emivita.core.scheduling.receivers.ReceiverHarness
 import com.hazia.emivita.core.scheduling.receivers.TestEmivitaApplication
+import com.hazia.emivita.feature.today.settled
 import kotlinx.coroutines.runBlocking
 import org.junit.After
 import org.junit.Assert.assertEquals
@@ -67,7 +68,8 @@ class WidgetContentTest {
         }
         c.occurrenceProjectionCache.requestWindow(CONSUMER, 2)
         val deadline = System.nanoTime() + 10_000_000_000L
-        while (c.occurrenceProjectionCache.state.value.occurrences.filter { it.epochMillis >= now }.distinctBy { it.reminderId }.size < names.size) {
+        // A whole pass, too: the count line (§7 R135) waits for one.
+        while (c.occurrenceProjectionCache.state.value.let { st -> !st.settled || st.occurrences.filter { it.epochMillis >= now }.distinctBy { it.reminderId }.size < names.size }) {
             check(System.nanoTime() < deadline) { "the projection never held the twelve reminders" }
             shadowOf(Looper.getMainLooper()).idle()
             Thread.sleep(50)
@@ -125,6 +127,18 @@ class WidgetContentTest {
         val data = runBlocking { loadNextDoses(c, now) }
         val texts = texts(render(WIDTH_4, 2 * ROW - PAD) { NextRemindersContent(data) })
         val line = context.getString(R.string.widget_last_taken, "Metformina", LocaleFormats.time(takenAt))
+        val at = texts.indexOfFirst { it.text == line }
+        assertTrue("no line '$line' in ${texts.map { it.text }}", at >= 0)
+        assertTrue("the line sits above the rows", texts.drop(at + 1).any { t -> names.any { t.text == it } })
+    }
+
+    @Test
+    fun `the count line says today's planned doses, above the rows`() {
+        val data = runBlocking { loadNextDoses(c, now) }
+        val p = checkNotNull(data.progress) { "no count for today" }
+        assertTrue("twelve daily reminders plan something today: $p", p.planned >= 1)
+        val line = context.resources.getQuantityString(R.plurals.widget_progress_today, p.planned, p.taken, p.planned)
+        val texts = texts(render(WIDTH_4, 2 * ROW - PAD) { NextRemindersContent(data) })
         val at = texts.indexOfFirst { it.text == line }
         assertTrue("no line '$line' in ${texts.map { it.text }}", at >= 0)
         assertTrue("the line sits above the rows", texts.drop(at + 1).any { t -> names.any { t.text == it } })

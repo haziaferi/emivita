@@ -301,6 +301,7 @@ fun TodayScreen(
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
             TabHeader(stringResource(R.string.today_today))
+            todayProgress(nodes, projectionState.settled)?.let { TodayProgressLine(it) }
             missedAlarm?.let { plannedAt ->
                 MissedAlarmCard(plannedAt, onOpen = onOpenNotificationSettings, onDismiss = { AlarmWatchdog.dismissNotice(context) })
             }

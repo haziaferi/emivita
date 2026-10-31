@@ -40,6 +40,12 @@ import com.hazia.emivita.core.di.AppContainer
 import com.hazia.emivita.feature.alarm.TakeAmountActivity
 import com.hazia.emivita.core.format.LocaleFormats
 import com.hazia.emivita.core.format.maskedMedicineName
+import com.hazia.emivita.feature.today.TodayProgress
+import com.hazia.emivita.feature.today.buildTimeline
+import com.hazia.emivita.feature.today.settled
+import com.hazia.emivita.feature.today.todayProgress
+import java.time.Instant
+import java.time.ZoneId
 import kotlinx.coroutines.flow.first
 
 /** How far back the last answered dose is looked for, and how far ahead a dose answered early may sit. */
@@ -58,8 +64,8 @@ internal data class NextReminderRow(
 /** A dose answered Taken or Skipped: the line above the upcoming rows (§7 R108, census E-40). */
 internal data class AnsweredDose(val medicineName: String, val status: DoseStatus, val atEpochMillis: Long)
 
-/** What the Next-doses widget draws: the upcoming rows, as many as a tall widget can show, and the last answer. */
-internal data class NextDosesData(val rows: List<NextReminderRow>, val last: AnsweredDose?)
+/** What the Next-doses widget draws: the upcoming rows, as many as a tall widget can show, the last answer, and today's count (§7 R135). */
+internal data class NextDosesData(val rows: List<NextReminderRow>, val last: AnsweredDose?, val progress: TodayProgress? = null)
 
 /**
  * Home-screen widget for spec §9 #7 -- reads [com.hazia.emivita.core.scheduling.OccurrenceProjectionCache]'s
@@ -115,7 +121,20 @@ internal suspend fun loadNextDoses(container: AppContainer, now: Long): NextDose
             estimated = occurrence.estimated,
         )
     }
-    return NextDosesData(rows, lastAnsweredDose(container, now, hide))
+    return NextDosesData(rows, lastAnsweredDose(container, now, hide), todayProgressOfAll(container, now))
+}
+
+/** Today's planned doses of every profile, as the rows are, counted as Today's line counts them (§7 R135). */
+private suspend fun todayProgressOfAll(container: AppContainer, now: Long, zone: ZoneId = ZoneId.systemDefault()): TodayProgress? {
+    val today = Instant.ofEpochMilli(now).atZone(zone).toLocalDate()
+    val start = today.atStartOfDay(zone).toInstant().toEpochMilli()
+    val end = today.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+    val state = container.occurrenceProjectionCache.state.value
+    val materialized = container.profileRepository.observeAll().first()
+        .flatMap { container.doseEventRepository.getInRangeOnce(it.id, start, end, null) }
+    val medicines = state.occurrences.filter { it.epochMillis in start until end }.map { it.medicineId }.distinct()
+        .mapNotNull { container.medicineRepository.getById(it) }.associateBy { it.id }
+    return todayProgress(buildTimeline(medicines, materialized, state, start, end), state.settled)
 }
 
 /**
@@ -142,6 +161,7 @@ internal fun NextRemindersContent(data: NextDosesData) {
         context.getString(res, last.medicineName, LocaleFormats.time(last.atEpochMillis))
     }
     val take = context.getString(R.string.common_take)
+    val progressText = data.progress?.let { context.resources.getQuantityString(R.plurals.widget_progress_today, it.planned, it.taken, it.planned) }
     Column(
         modifier = GlanceModifier
             .fillMaxSize()
@@ -154,6 +174,15 @@ internal fun NextRemindersContent(data: NextDosesData) {
             style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = GlanceTheme.colors.onBackground),
         )
         Spacer(modifier = GlanceModifier.height(4.dp))
+        val progressLines = progressText?.let { metrics.lines(it, 11f, metrics.rowTextWidth(null)) } ?: 0
+        if (progressText != null) {
+            Text(
+                progressText,
+                modifier = GlanceModifier.padding(bottom = 2.dp),
+                style = TextStyle(fontSize = 11.sp, color = GlanceTheme.colors.onSurfaceVariant),
+                maxLines = progressLines,
+            )
+        }
         val lastLines = lastText?.let { metrics.lines(it, 11f, metrics.rowTextWidth(null)) } ?: 0
         if (lastText != null) {
             Text(
@@ -169,7 +198,9 @@ internal fun NextRemindersContent(data: NextDosesData) {
                 style = TextStyle(fontSize = 13.sp, color = GlanceTheme.colors.onSurfaceVariant),
             )
         } else {
-            val above = metrics.headerDp(header) + (lastText?.let { metrics.textDp(it, 11f, metrics.rowTextWidth(null)) + 2f } ?: 0f)
+            val above = metrics.headerDp(header) +
+                (progressText?.let { metrics.textDp(it, 11f, metrics.rowTextWidth(null)) + 2f } ?: 0f) +
+                (lastText?.let { metrics.textDp(it, 11f, metrics.rowTextWidth(null)) + 2f } ?: 0f)
             val heights = data.rows.mapIndexed { index, row -> metrics.rowDp(row.medicineName, rowTime(row), if (index == 0) take else null) }
             WidgetRows(data.rows.take(metrics.rowsThatFit(above, heights))) { index, row ->
                 NextReminderRowItem(row, metrics, showTakeAction = index == 0)

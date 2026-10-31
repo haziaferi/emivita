@@ -46,6 +46,7 @@ import androidx.compose.ui.unit.dp
 import com.hazia.emivita.core.data.config.ReminderType
 import com.hazia.emivita.core.data.entity.Medicine
 import com.hazia.emivita.core.data.entity.Reminder
+import com.hazia.emivita.core.data.repository.DoseEventRepository
 import com.hazia.emivita.core.data.repository.MedicineRepository
 import com.hazia.emivita.core.data.repository.ReminderRepository
 import kotlinx.coroutines.launch
@@ -74,6 +75,7 @@ fun MedicineDetailScreen(
     medicineId: Long,
     medicineRepository: MedicineRepository,
     reminderRepository: ReminderRepository,
+    doseEventRepository: DoseEventRepository,
     onAddReminder: () -> Unit,
     onEditMedicine: () -> Unit,
     onEditReminder: (reminderId: Long) -> Unit,
@@ -162,6 +164,7 @@ fun MedicineDetailScreen(
             )
             val currentMedicine = medicine
             if (currentMedicine != null) {
+                MedicineFigures(currentMedicine, doseEventRepository)
                 Row(
                     Modifier.padding(16.dp),
                     verticalAlignment = Alignment.CenterVertically,
