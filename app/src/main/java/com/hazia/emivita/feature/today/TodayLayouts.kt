@@ -5,7 +5,10 @@ import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -161,22 +164,23 @@ private fun BandHeader(band: DayBand) {
 
 @Composable
 private fun EntrySummary(entry: TimelineEntry) {
+    // Wraps rather than ending in an ellipsis (§7 R139): held to one line, "Da prendere – 1 dose" was cut at font 2.0.
     Text(
         stringResource(R.string.today_entry_summary, stringResource(statusLabelRes(entry)), formatDoseWithUnit(entry.doseAmount, entry.medicine?.doseUnit, LocalResources.current)),
         style = MaterialTheme.typography.labelSmall,
         color = MaterialTheme.colorScheme.onSurfaceVariant,
-        maxLines = 1, overflow = TextOverflow.Ellipsis,
     )
 }
 
+/** Salta wraps under Prendi rather than taking a sliver beside it (§7 R139), as on the timeline. */
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 private fun EntryActions(entry: TimelineEntry, canSkip: Boolean, onResolve: (DoseStatus) -> Unit) {
-    Row(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp), horizontalArrangement = Arrangement.End) {
+    FlowRow(Modifier.fillMaxWidth().padding(top = 8.dp, bottom = 4.dp), horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End)) {
         when (entry.status) {
             TimelineStatus.PENDING -> {
                 TonalActionChip(onClick = { onResolve(DoseStatus.TAKEN) }, label = stringResource(R.string.common_take), icon = Icons.Filled.Check)
                 if (canSkip) {
-                    Spacer(Modifier.width(6.dp))
                     AssistChip(onClick = { onResolve(DoseStatus.SKIPPED) }, label = { Text(stringResource(R.string.common_skip)) }, leadingIcon = { Icon(Icons.Filled.Close, contentDescription = null) })
                 }
             }
@@ -257,17 +261,45 @@ internal fun HeroCard(node: TimelineNode?, entry: TimelineEntry?, canSkip: Boole
                 MedicineTile(entry.medicine, size = 44.dp)
             }
             Spacer(Modifier.height(12.dp))
+            HeroActions(entry, canSkip, onResolve)
+        }
+    }
+}
+
+/**
+ * Prendi and Salta as two equal halves while both labels fit one, stacked at full width when not (§7 R139): halved at
+ * font 2.0, "Prendi" broke over two lines. Each needs its label, the button's 24 dp sides and, for Prendi, the icon.
+ */
+@Composable
+private fun HeroActions(entry: TimelineEntry, canSkip: Boolean, onResolve: (DoseStatus) -> Unit) {
+    val takeLabel = stringResource(if (entry.status == TimelineStatus.PENDING) R.string.common_take else R.string.today_take_now)
+    val skipLabel = stringResource(R.string.common_skip)
+    val showSkip = entry.status == TimelineStatus.PENDING && canSkip
+    val labelStyle = MaterialTheme.typography.labelLarge
+    val measurer = rememberTextMeasurer()
+    val density = LocalDensity.current
+    val take: @Composable (Modifier) -> Unit = { m ->
+        Button(onClick = { onResolve(DoseStatus.TAKEN) }, modifier = m) {
+            Icon(Icons.Filled.Check, contentDescription = null)
+            Spacer(Modifier.width(6.dp))
+            Text(takeLabel)
+        }
+    }
+    val skip: @Composable (Modifier) -> Unit = { m ->
+        OutlinedButton(onClick = { onResolve(DoseStatus.SKIPPED) }, modifier = m) { Text(skipLabel) }
+    }
+    BoxWithConstraints(Modifier.fillMaxWidth()) {
+        fun width(text: String) = with(density) { measurer.measure(text, labelStyle, maxLines = 1, softWrap = false).size.width.toDp() }
+        val half = (maxWidth - 8.dp) / 2
+        if (!showSkip || (width(takeLabel) + 78.dp <= half && width(skipLabel) + 48.dp <= half)) {
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Button(onClick = { onResolve(DoseStatus.TAKEN) }, modifier = Modifier.weight(1f)) {
-                    Icon(Icons.Filled.Check, contentDescription = null)
-                    Spacer(Modifier.width(6.dp))
-                    Text(stringResource(if (entry.status == TimelineStatus.PENDING) R.string.common_take else R.string.today_take_now))
-                }
-                if (entry.status == TimelineStatus.PENDING && canSkip) {
-                    OutlinedButton(onClick = { onResolve(DoseStatus.SKIPPED) }, modifier = Modifier.weight(1f)) {
-                        Text(stringResource(R.string.common_skip))
-                    }
-                }
+                take(Modifier.weight(1f))
+                if (showSkip) skip(Modifier.weight(1f))
+            }
+        } else {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                take(Modifier.fillMaxWidth())
+                skip(Modifier.fillMaxWidth())
             }
         }
     }
