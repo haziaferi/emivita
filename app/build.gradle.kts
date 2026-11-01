@@ -348,7 +348,7 @@ dependencies {
     // in-memory database precisely because this native library won't load under
     // Robolectric), so a bump here is only ever really verified by opening an
     // existing database on a real device.
-    implementation("net.zetetic:sqlcipher-android:4.19.1")
+    implementation("net.zetetic:sqlcipher-android:4.20.0")
     implementation("androidx.sqlite:sqlite:2.6.2")
     // Plain (non-SQLCipher) framework SQLite open helper -- migration tests
     // (spec §7 R11) build their "before" fixture with this rather than the
@@ -357,7 +357,7 @@ dependencies {
     testImplementation("androidx.sqlite:sqlite-framework:2.6.2")
 
     // DataStore (preferences: theme choice, active profile, feature toggles)
-    implementation("androidx.datastore:datastore-preferences:1.1.1")
+    implementation("androidx.datastore:datastore-preferences:1.3.0")
 
     // NOTE: no WorkManager dependency here on purpose (R5, spec section 9 item 0
     // housekeeping note). The auto-backup/stock-recompute work this was originally
@@ -391,7 +391,7 @@ dependencies {
     // conflict with section 1's de-googled constraint -- not adopted in any batch.
 
     // JSON backup/restore
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.12.0")
     // AES-256 password-protected zip read/write (spec §9 #9) -- same shape as
     // Catima's (open-source) optional password-protected export/import, the
     // standard library for this on Android/Kotlin.
@@ -424,7 +424,7 @@ dependencies {
     }
 
     // Coroutines
-    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.11.0")
+    implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.12.0")
 
     implementation("androidx.core:core-ktx:1.19.1")
     implementation("androidx.core:core-splashscreen:1.2.0")
@@ -441,14 +441,14 @@ dependencies {
     androidTestImplementation("androidx.test:runner:1.6.2")
     androidTestImplementation("androidx.test:rules:1.6.1")
     androidTestImplementation("androidx.test:core:1.6.1")
-    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
+    androidTestImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.12.0")
     testImplementation("org.robolectric:robolectric:4.17")
     // ApplicationProvider.getApplicationContext() for Robolectric-backed Room
     // repository tests (spec §7 R3 -- resolve()/tag-dedupe race-prone logic).
     testImplementation("androidx.test:core:1.6.1")
     testImplementation("io.mockk:mockk:1.14.11")
     testImplementation("app.cash.turbine:turbine:1.2.1")
-    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0")
+    testImplementation("org.jetbrains.kotlinx:kotlinx-coroutines-test:1.12.0")
     // Compose UI tests live in the UNIT test source set, driven by Robolectric,
     // not in an androidTest source set. That is deliberate and is the opposite
     // of what this comment used to advise (spec §7 R47).
@@ -476,7 +476,7 @@ dependencies {
 }
 configurations.all {
     resolutionStrategy {
-        force("org.jetbrains.kotlinx:kotlinx-serialization-core:1.11.0")
+        force("org.jetbrains.kotlinx:kotlinx-serialization-core:1.12.0")
     }
 }
 
