@@ -1,5 +1,6 @@
 package com.hazia.emivita.navigation
 
+import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationBar
@@ -113,7 +114,9 @@ fun EmivitaNavHost(startPage: StartPage = StartPage.TODAY, openDataAndBackupOnSt
                 StartPage.MEDICINES -> EmivitaRoute.Medicines
                 StartPage.HISTORY -> EmivitaRoute.History
             },
-            modifier = Modifier.padding(innerPadding),
+            // Consumed as well as applied (§7 R139), so a screen's imePadding counts the keyboard from above the bar, not
+            // from the screen's foot: the medicine page lost its journal's Aggiungi to the bar's height twice over.
+            modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding),
         ) {
             composable<EmivitaRoute.Today> {
                 TodayScreen(
