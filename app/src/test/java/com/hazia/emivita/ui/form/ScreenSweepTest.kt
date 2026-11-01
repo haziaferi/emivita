@@ -20,6 +20,7 @@ import com.hazia.emivita.core.data.settings.TodayLayout
 import com.hazia.emivita.feature.medicines.MEDICINE_FIGURES_TAG
 import com.hazia.emivita.feature.today.TODAY_PROGRESS_TAG
 import com.hazia.emivita.navigation.EmivitaNavHost
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertTrue
 import org.junit.Assume
@@ -62,6 +63,14 @@ open class ScreenSweepTest : FormScreenTestBase() {
             }
         }
         h.medicine("Paracetamolo 1000 mg", stock = 4.0, unit = "compresse")
+        // A dose the alarm has already posted, so Today draws Prendi and Salta (§7 R139): the hour-ahead dose shows only
+        // Prendi ora, and at font 2.0 the pair broke "S/al/ta" on the phone while every stop here passed.
+        val levo = h.medicine("Levotiroxina", stock = 30.0, unit = "compresse")
+        val posted = java.time.LocalDate.now().atStartOfDay(java.time.ZoneId.systemDefault()).toInstant().toEpochMilli()
+            .let { maxOf(it, now - 30 * 60 * 1000L) } / 60_000L * 60_000L
+        val at = java.time.Instant.ofEpochMilli(posted).atZone(java.time.ZoneId.systemDefault())
+        val levoRem = h.reminder(levo, ReminderConfig.FixedTime(hour = at.hour, minute = at.minute, dose = 1.0))
+        runBlocking { h.container.doseEventRepository.materializeIfAbsent(levoRem, levo, posted, 1.0) }
         return med
     }
 
@@ -178,12 +187,13 @@ open class ScreenSweepTest : FormScreenTestBase() {
     }
 
     /** A cut text, or a word broken in two: by the line layout (§7 R136), or, for a label with no layout, one word on more than one line. [expect] must be on the screen somewhere. */
-    private fun defects(tag: String, expect: String? = null): List<String> {
-        // A layout switch lands through DataStore on its own thread: sweep again until the expected text is drawn.
+    private fun defects(tag: String, vararg expect: String): List<String> {
+        // A layout switch lands through DataStore on its own thread: sweep again until the expected texts are drawn.
         var leaves = sweepTexts(tag)
+        fun absent() = expect.filter { e -> leaves.none { e in it.label } }
         var tries = 0
-        while (expect != null && leaves.none { expect in it.label } && tries++ < 20) { Thread.sleep(100); settle(); leaves = sweepTexts(tag) }
-        val missing = if (expect != null && leaves.none { expect in it.label }) listOf("'$expect' never shown") else emptyList()
+        while (absent().isNotEmpty() && tries++ < 20) { Thread.sleep(100); settle(); leaves = sweepTexts(tag) }
+        val missing = absent().map { "'$it' never shown" }
         return missing + listOfNotNull(cramped()) + leaves.filter { it.cut || it.brokenWord || it.squeezed || (it.lines > 1 && ' ' !in it.label.trim()) }
             .map { "'${it.label}' lines=${it.lines} cut=${it.cut} broken=${it.brokenWord} squeezed=${it.squeezed}" }
     }
@@ -210,12 +220,11 @@ open class ScreenSweepTest : FormScreenTestBase() {
 
     // One test per area, so each one's state is let go before the next.
 
-    private fun start(page: StartPage): Long {
+    private fun start(page: StartPage) {
         Assume.assumeTrue("measuring only", !measureOnly || measureDir != null)
         fontScale.floatValue = res.configuration.fontScale
-        val med = seed()
+        seed()
         host { EmivitaNavHost(startPage = page) }
-        return med
     }
 
     /**
@@ -240,10 +249,13 @@ open class ScreenSweepTest : FormScreenTestBase() {
             if (found.isEmpty()) start(StartPage.TODAY)
             // At font 2.0 the no-backup card can hold the doses below the fold: the sweep scrolls to them.
             waitFor("Today, $layout") { inTop(hasText(s(R.string.nav_today)) and hasClickAction()) }
-            // The progress line (§7 R135) waits for a whole projection pass: sweep it, not the frame before it.
-            waitFor("Today's progress line") { inTop(hasTestTag(TODAY_PROGRESS_TAG)) }
+            // The progress line (§7 R135) waits for a whole projection pass: sweep it, not the frame before it. From the
+            // top, since the last layout's sweep left the list at its end, where the first item is not composed.
+            waitFor("Today's progress line") { toTop(); inTop(hasTestTag(TODAY_PROGRESS_TAG)) }
             settle()
-            found["today_$layout"] = defects("today_$layout", expect = "Metformina")
+            // Compact shows a row's actions once the row is opened.
+            if (layout == TodayLayout.COMPACT) tap(hasText("Levotiroxina") and hasClickAction())
+            found["today_$layout"] = defects("today_$layout", "Metformina", s(R.string.common_skip))
         }
         gate(found)
     }
@@ -256,7 +268,7 @@ open class ScreenSweepTest : FormScreenTestBase() {
         // The figures (§7 R135) load after the page: the seed's nine Taken days give them something to draw.
         waitFor("the medicine's figures") { inTop(hasTestTag(MEDICINE_FIGURES_TAG)) }
         // Its reminder, which a fixed summary above the list held out of reach at font 2.0 (§7 R137).
-        found["medicine_detail"] = defects("medicine_detail", expect = s(ReminderType.FIXED_TIME.labelRes()))
+        found["medicine_detail"] = defects("medicine_detail", s(ReminderType.FIXED_TIME.labelRes()))
         gate(found)
     }
 
@@ -266,12 +278,13 @@ open class ScreenSweepTest : FormScreenTestBase() {
      * note above the list left it 350 dp of 724 at font 2.0 (§7 R138); as a snackbar it takes none.
      */
     @Test fun medicines_with_every_bar() {
-        val first = start(StartPage.MEDICINES)
-        val names = listOf("Levotiroxina", "Atorvastatina", "Ramipril", "Omeprazolo", "Vitamina D", "Bisoprololo")
+        start(StartPage.MEDICINES)
+        val names = listOf("Lansoprazolo", "Atorvastatina", "Ramipril", "Omeprazolo", "Vitamina D", "Bisoprololo")
         runBlocking {
             val meds = h.container.medicineRepository
             names.forEachIndexed { i, name -> meds.addTag(h.medicine(name, stock = if (i == 0) 0.0 else 30.0, unit = "compresse"), listOf("Mattina", "Sera", "Cuore")[i % 3]) }
-            h.container.reminderRepository.setAllDosingEnabled(first, false)
+            // Every dosing reminder off, the seed's too, so the all-paused line shows.
+            meds.observeForProfile(h.profileId).first().forEach { h.container.reminderRepository.setAllDosingEnabled(it.medicine.id, false) }
         }
         waitFor("the Medicines list") { inTop(hasText(s(R.string.medicines_all_paused))) }
         // No scanner app resolves, as on a phone without one: the launch throws and the note shows.
@@ -279,13 +292,13 @@ open class ScreenSweepTest : FormScreenTestBase() {
         tap(hasContentDescription(s(R.string.medicines_scan_to_find)))
         tap(hasContentDescription(s(R.string.medicines_search)) and hasClickAction())
         waitFor("the search field") { inTop(hasText(s(R.string.common_no_barcode_scanner_app_installed_e_g_binary))) && inTop(hasSetTextAction()) }
-        gate(linkedMapOf("medicines_with_every_bar" to defects("medicines_with_every_bar", expect = names.last())))
+        gate(linkedMapOf("medicines_with_every_bar" to defects("medicines_with_every_bar", names.last())))
     }
 
     @Test fun history_in_every_view() {
         start(StartPage.HISTORY)
         waitFor("History") { inTop(hasText(s(R.string.history_view_calendar))) }
-        val found = linkedMapOf("history_list" to defects("history_list", expect = "Metformina"))
+        val found = linkedMapOf("history_list" to defects("history_list", "Metformina"))
         for ((view, tag) in listOf(R.string.history_view_calendar to "history_calendar", R.string.history_view_table to "history_table")) {
             tap(hasText(s(view)) and hasClickAction())
             found[tag] = defects(tag)

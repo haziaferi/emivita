@@ -16,12 +16,17 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.ui.layout.onSizeChanged
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -307,9 +312,15 @@ fun TodayScreen(
             // Everything under the title scrolls as one (§7 R137): fixed above the list, the progress line and a notice
             // card left the doses a 124 dp strip at font 2.0. One item, always first, so a card that comes or goes
             // resizes it in place instead of landing above the row the list is anchored on.
-            LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)) {
+            // The loading and empty states centre in what the cards leave, clear of Registra dose (§7 R139): a whole
+            // screen below the cards put the empty text's last line under the button.
+            var listHeight by remember { mutableIntStateOf(0) }
+            var noticesHeight by remember { mutableIntStateOf(0) }
+            val leftover = with(LocalDensity.current) { maxOf((listHeight - noticesHeight).toDp() - 8.dp, 0.dp) }
+            val belowNotices = Modifier.fillMaxWidth().heightIn(min = leftover).padding(start = 8.dp, end = 8.dp, bottom = 72.dp)
+            LazyColumn(Modifier.fillMaxSize().onSizeChanged { listHeight = it.height }, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)) {
                 item(key = "notices") {
-                    Column {
+                    Column(Modifier.onSizeChanged { noticesHeight = it.height }) {
                         // Read here, so the minute's tick recomposes this item only.
                         val now = rememberNowEpochMillis()
                         heldProgress.of(nodes, projectionState.settled, now)?.let { TodayProgressLine(it) }
@@ -321,10 +332,10 @@ fun TodayScreen(
                 }
                 when {
                     medicinesById == null || materializedToday == null -> item(key = "loading") {
-                        Box(Modifier.fillParentMaxSize(), contentAlignment = Alignment.Center) { CircularProgressIndicator() }
+                        Box(belowNotices, contentAlignment = Alignment.Center) { CircularProgressIndicator() }
                     }
                     nodes.isEmpty() && asNeeded.isEmpty() && standing.noReminder.isEmpty() -> item(key = "empty") {
-                        Box(Modifier.fillParentMaxSize().padding(8.dp), contentAlignment = Alignment.Center) {
+                        Box(belowNotices, contentAlignment = Alignment.Center) {
                             Text(
                                 stringResource(R.string.today_nothing_scheduled_yet_add_a_medicine_and_a),
                                 style = MaterialTheme.typography.bodyMedium,
@@ -696,6 +707,7 @@ private fun repostReopened(medicine: Medicine, deps: TodayDeps): suspend (com.ha
     if (reminder != null) deps.notificationBuilder.buildAndPost(reopened, reminder, medicine)
 }
 
+@OptIn(ExperimentalLayoutApi::class)
 @Composable
 internal fun TimelineEntryRow(
     entry: TimelineEntry,
@@ -787,9 +799,11 @@ internal fun TimelineEntryRow(
             MedicineTile(entry.medicine)
         }
             when (entry.status) {
-                TimelineStatus.PENDING -> Row(
+                // Salta goes under Prendi when the two do not fit (§7 R139): side by side at font 2.0 it kept a
+                // sliver and broke "S/al/ta".
+                TimelineStatus.PENDING -> FlowRow(
                     Modifier.fillMaxWidth().padding(top = 10.dp),
-                    horizontalArrangement = Arrangement.End,
+                    horizontalArrangement = Arrangement.spacedBy(6.dp, Alignment.End),
                 ) {
                     TonalActionChip(
                         onClick = { onResolve(DoseStatus.TAKEN) },
@@ -802,7 +816,6 @@ internal fun TimelineEntryRow(
                     // nothing, and "Take" is the only answer the lock allows
                     // anyway. AlarmActivity does the same.
                     if (canSkip) {
-                        Spacer(Modifier.width(6.dp))
                         AssistChip(
                             onClick = { onResolve(DoseStatus.SKIPPED) },
                             label = { Text(stringResource(R.string.common_skip)) },

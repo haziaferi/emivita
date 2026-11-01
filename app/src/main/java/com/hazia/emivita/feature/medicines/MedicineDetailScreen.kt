@@ -5,6 +5,14 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.ime
+import androidx.compose.ui.focus.onFocusChanged
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -166,7 +174,12 @@ fun MedicineDetailScreen(
             // Everything under the header scrolls as one (§7 R137): fixed above the list, the figures, the journal and the
             // rest left the reminders 29 dp at font 1.8 on the 9 Pro and none at 2.0. One item, always first, as on Today.
             // 96 dp beneath the last row: the FAB's 56 dp plus its margins, so the last reminder's switch is never under it.
-            LazyColumn(contentPadding = PaddingValues(bottom = 96.dp)) {
+            LazyColumn(
+                // The keyboard's height comes off the list (§7 R139): edge to edge, nothing else shrinks it, and at font 2.0
+                // under the figures the journal's field and Aggiungi sat behind the keyboard.
+                Modifier.imePadding(),
+                contentPadding = PaddingValues(bottom = 96.dp),
+            ) {
                 item(key = "summary") {
                     Column {
                         val currentMedicine = medicine
@@ -358,6 +371,12 @@ internal fun NotesJournal(medicineId: Long, medicineRepository: MedicineReposito
     var draft by rememberSaveable { mutableStateOf("") }
     var editing by remember { mutableStateOf<MedicineNote?>(null) }
     var showAll by rememberSaveable { mutableStateOf(false) }
+    // Aggiungi follows the keyboard up with the field (§7 R139): focus scrolls only the field into view, and at font 2.0
+    // Aggiungi stayed under the keyboard. Keyed on the keyboard's height, so it settles once the keyboard has.
+    val addInView = remember { BringIntoViewRequester() }
+    var typing by remember { mutableStateOf(false) }
+    val keyboard = WindowInsets.ime.getBottom(LocalDensity.current)
+    LaunchedEffect(typing, keyboard) { if (typing && keyboard > 0) addInView.bringIntoView() }
 
     Column(Modifier.padding(horizontal = 16.dp)) {
         Text(stringResource(R.string.medicine_detail_journal), style = MaterialTheme.typography.labelLarge)
@@ -367,12 +386,12 @@ internal fun NotesJournal(medicineId: Long, medicineRepository: MedicineReposito
             onValueChange = { draft = it },
             placeholder = { Text(stringResource(R.string.medicine_detail_journal_hint)) },
             maxLines = com.hazia.emivita.ui.form.FreeTextMaxLines,
-            modifier = Modifier.fillMaxWidth(),
+            modifier = Modifier.fillMaxWidth().onFocusChanged { typing = it.isFocused },
         )
         TextButton(
             enabled = draft.isNotBlank(),
             onClick = { scope.launch { medicineRepository.addNote(medicineId, draft); draft = "" } },
-            modifier = Modifier.align(Alignment.End),
+            modifier = Modifier.align(Alignment.End).bringIntoViewRequester(addInView),
         ) { Text(stringResource(R.string.medicine_detail_journal_add)) }
         val shown = if (showAll) notes else notes.take(3)
         shown.forEach { note ->
