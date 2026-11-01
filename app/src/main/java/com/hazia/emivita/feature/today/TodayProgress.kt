@@ -28,22 +28,29 @@ internal val ProjectionState.settled: Boolean get() = computedAtEpochMillis > 0L
 /**
  * Only the doses a reminder planned count, as in History's figures (§7 R111): a logged extra or a one-off is on
  * the timeline but not in the plan. Null when today plans nothing, or while the projection is not [settled], so
- * the line is not drawn. A projected slot at or before [now] is one its alarm has not posted yet, and is due (§7 R140).
+ * the line is not drawn. What is due at [now] is [heldAsDue]'s, the rule the rows read too.
  */
 internal fun todayProgress(nodes: List<TimelineNode>, settled: Boolean = true, now: Long = Long.MIN_VALUE): TodayProgress? {
     if (!settled) return null
-    val planned = flatten(nodes).filter { it.second.reminderId != null }
+    val planned = flatten(heldAsDue(nodes, now)).filter { it.second.reminderId != null }
     if (planned.isEmpty()) return null
-    val (held, ahead) = planned.filter { it.second.status == TimelineStatus.UPCOMING }
-        .partition { !it.second.estimated && it.first.epochMillis <= now }
-    val next = ahead.minByOrNull { it.first.epochMillis }
+    val next = planned.filter { it.second.status == TimelineStatus.UPCOMING }.minByOrNull { it.first.epochMillis }
     return TodayProgress(
         taken = planned.count { it.second.status == TimelineStatus.TAKEN },
         planned = planned.size,
-        dueNow = planned.count { it.second.status == TimelineStatus.PENDING } + held.size,
+        dueNow = planned.count { it.second.status == TimelineStatus.PENDING },
         nextAt = next?.first?.epochMillis,
         nextEstimated = next?.second?.estimated == true,
     )
+}
+
+/**
+ * The timeline at [now]: a projected slot at or before it is one its alarm has not posted yet (§7 R140), and it is due
+ * like a posted one, with Take and Skip on its row (§7 R142, the owner's pick A). An estimate stays one to come.
+ */
+internal fun heldAsDue(nodes: List<TimelineNode>, now: Long): List<TimelineNode> = nodes.map { node ->
+    if (node.epochMillis > now) node
+    else node.copy(entries = node.entries.map { if (it.status == TimelineStatus.UPCOMING && !it.estimated) it.copy(status = TimelineStatus.PENDING) else it })
 }
 
 /**

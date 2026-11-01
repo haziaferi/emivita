@@ -1,13 +1,18 @@
 package com.hazia.emivita.feature.today
 
 import android.os.Looper
+import androidx.compose.ui.test.hasStateDescription
+import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
+import androidx.compose.ui.test.performClick
 import com.hazia.emivita.core.data.config.ReminderConfig
+import com.hazia.emivita.core.data.entity.DoseStatus
 import com.hazia.emivita.core.scheduling.receivers.ReceiverHarness
 import com.hazia.emivita.core.scheduling.receivers.TestEmivitaApplication
 import com.hazia.emivita.core.scheduling.receivers.closedAfterCompose
 import com.hazia.emivita.ui.theme.EmivitaTheme
+import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
 import org.junit.Rule
@@ -106,6 +111,51 @@ class TodayDeferredAlarmTest {
         eventually { compose.onNodeWithText("Metformin").assertExists() }
         eventually { compose.onNodeWithText("1 due now", substring = true).assertExists() }
         assertTrue("no dose was posted: the alarm has not fired", h.doseEvents(reminderId).isEmpty())
+    }
+
+    /** A reminder at [slot] whose alarm was armed for it and has not fired: the phone is holding it. */
+    private fun heldReminder(name: String, slot: LocalDateTime): Long {
+        val reminderId = h.reminder(h.medicine(name), ReminderConfig.FixedTime(slot.hour, slot.minute, 1.0))
+        h.container.alarmScheduler.schedule(reminderId, slot.atZone(zone).toInstant().toEpochMilli())
+        return reminderId
+    }
+
+    private fun showTodayAfterAPass() {
+        val since = System.currentTimeMillis()
+        h.container.occurrenceProjectionCache.invalidate()
+        passSettledSince(since)
+        showToday()
+    }
+
+    @Test
+    fun `a held slot's row is a due one, and Skip answers that slot before its alarm arrives`() {
+        // §7 R142, the owner's pick A: the line counted it as due while its row read "Upcoming" with Take now only.
+        val slot = slotMinutesAgo(3)
+        val reminderId = heldReminder("Metformin", slot)
+        showTodayAfterAPass()
+        eventually { compose.onNode(hasText("Metformin") and hasStateDescription("Due")).assertExists() }
+        compose.onNodeWithText("Skip").performClick()
+        eventually {
+            val answered = h.doseEvents(reminderId).single()
+            assertEquals(DoseStatus.SKIPPED, answered.status)
+            assertEquals(slot.atZone(zone).toInstant().toEpochMilli(), answered.scheduledEpochMillis)
+        }
+    }
+
+    @Test
+    fun `two held slots at one time offer Take all, as two due doses do`() {
+        val slot = slotMinutesAgo(3)
+        val metformin = heldReminder("Metformin", slot)
+        val ramipril = heldReminder("Ramipril", slot)
+        showTodayAfterAPass()
+        eventually { compose.onNodeWithText("Take all (2)").assertExists() }
+        compose.onNodeWithText("Take all (2)").performClick()
+        settle()
+        compose.onNodeWithText("Take 2 doses").performClick()
+        eventually {
+            assertEquals(listOf(DoseStatus.TAKEN), h.doseEvents(metformin).map { it.status })
+            assertEquals(listOf(DoseStatus.TAKEN), h.doseEvents(ramipril).map { it.status })
+        }
     }
 
     @Test

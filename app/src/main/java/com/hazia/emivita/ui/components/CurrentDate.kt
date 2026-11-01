@@ -1,6 +1,7 @@
 package com.hazia.emivita.ui.components
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.State
 import androidx.compose.runtime.produceState
 import kotlinx.coroutines.delay
 import java.time.Duration
@@ -42,10 +43,14 @@ fun rememberCurrentDate(zone: ZoneId, nowEpochMillis: () -> Long = System::curre
  *  rule at (§7 R121), so a dose left unanswered past its day's midnight counts
  *  as missed without leaving the screen. */
 @Composable
-fun rememberNowEpochMillis(periodMillis: Long = 60_000L): Long =
+fun rememberNowEpochMillis(periodMillis: Long = 60_000L): Long = rememberNowState(periodMillis).value
+
+/** The same clock as a state, for a `derivedStateOf` that recomposes its readers only when what it derives changes. */
+@Composable
+fun rememberNowState(periodMillis: Long = 60_000L): State<Long> =
     produceState(initialValue = System.currentTimeMillis(), periodMillis) {
         while (true) {
             delay(periodMillis - System.currentTimeMillis() % periodMillis)
             value = System.currentTimeMillis()
         }
-    }.value
+    }
