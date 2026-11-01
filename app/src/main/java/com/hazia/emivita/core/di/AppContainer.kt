@@ -151,6 +151,7 @@ class AppContainer(
             answeredSlots = { from, to ->
                 database.doseEventDao().getAnsweredSlots(from, to).mapTo(HashSet()) { it.reminderId to it.scheduledEpochMillis }
             },
+            armedSlots = { AlarmWatchdog.plannedSlots(appContext) },
         )
     }
 

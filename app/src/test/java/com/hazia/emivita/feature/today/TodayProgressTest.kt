@@ -25,6 +25,16 @@ class TodayProgressTest {
         assertEquals(TodayProgress(taken = 0, planned = 2, dueNow = 1, nextAt = 2045), todayProgress(nodes))
     }
 
+    @Test fun `a projected slot already past is due, not next, an estimate excepted (R140)`() {
+        val nodes = listOf(
+            TimelineNode(5, listOf(entry(TimelineStatus.UPCOMING))),
+            TimelineNode(6, listOf(entry(TimelineStatus.UPCOMING, estimated = true))),
+            TimelineNode(2045, listOf(entry(TimelineStatus.UPCOMING))),
+        )
+        assertEquals(TodayProgress(taken = 0, planned = 3, dueNow = 1, nextAt = 6, nextEstimated = true), todayProgress(nodes, now = 7))
+        assertEquals("before its time it is next", TodayProgress(taken = 0, planned = 3, dueNow = 0, nextAt = 5), todayProgress(nodes, now = 4))
+    }
+
     @Test fun `every dose answered leaves no next`() {
         val nodes = listOf(TimelineNode(800, listOf(entry(TimelineStatus.TAKEN))), TimelineNode(2045, listOf(entry(TimelineStatus.SKIPPED))))
         assertEquals(TodayProgress(taken = 1, planned = 2, dueNow = 0, nextAt = null), todayProgress(nodes))

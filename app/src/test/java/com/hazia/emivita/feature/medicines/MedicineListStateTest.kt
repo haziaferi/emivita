@@ -52,6 +52,16 @@ class MedicineListStateTest {
     }
 
     @Test
+    fun `a projected slot already past is one the phone is holding, and due (R140)`() {
+        val m = medicine(1)
+        val held = ProjectedOccurrence(reminderId = 9, medicineId = 1, epochMillis = at(8), doseAmount = 1.0)
+        assertEquals(TodayStatus.DUE, state(m, projected = listOf(held)).today)
+        val yesterday = held.copy(epochMillis = dayStart - 60_000L)
+        assertEquals("yesterday's is not today's", TodayStatus.NONE, state(m, projected = listOf(yesterday)).today)
+        assertEquals("an estimate is not held", TodayStatus.NONE, state(m, projected = listOf(held.copy(estimated = true))).today)
+    }
+
+    @Test
     fun `a PRN dose does not count as today's scheduled answer`() {
         val prn = DoseEvent(reminderId = null, medicineId = 1, scheduledEpochMillis = at(9), doseAmount = 1.0, status = DoseStatus.TAKEN, createdAtEpochMillis = 0)
         assertEquals(TodayStatus.NONE, state(medicine(1), events = listOf(prn)).today)

@@ -96,6 +96,7 @@ class OccurrenceProjectionCacheTest {
         // Before [clock]: tests pass the clock as a trailing lambda.
         onPublished: () -> Unit = {},
         answeredSlots: Set<Pair<Long, Long>> = emptySet(),
+        armedSlots: Map<Long, Long> = emptyMap(),
         clock: () -> Long = { now },
     ): OccurrenceProjectionCache {
         val medicineDao = mockk<MedicineDao>()
@@ -121,6 +122,7 @@ class OccurrenceProjectionCacheTest {
             dispatcher = UnconfinedTestDispatcher(testScheduler),
             onPublished = onPublished,
             answeredSlots = { _, _ -> answeredSlots },
+            armedSlots = { armedSlots },
         )
     }
 
@@ -158,6 +160,21 @@ class OccurrenceProjectionCacheTest {
         advanceUntilIdle()
         assertFalse(answered.state.value.occurrences.any { it.epochMillis == first.epochMillis })
         assertEquals(LocalDate.parse("2026-06-11"), answered.state.value.stockRunOutDates[1L])
+    }
+
+    @Test
+    fun `a slot past its time whose alarm is still armed is projected, one moved on is not`() = runTest {
+        // §7 R140 (W4): OxygenOS held a 00:05 alarm to 00:11, and a pass in between walked from now.
+        val eight = LocalDateTime.parse("2026-06-01T08:00").atZone(zone).toInstant().toEpochMilli()
+        val sevenPast = eight + 7 * 60_000L
+        val medicines = listOf(medicineWithDailyDose(stockQuantity = 10.0, doseAmount = 1.0))
+        val held = buildCache(medicines, armedSlots = mapOf(1L to eight)) { sevenPast }
+        val movedOn = buildCache(medicines, armedSlots = mapOf(1L to eight + 24 * 60 * 60_000L)) { sevenPast }
+        advanceUntilIdle()
+        assertEquals(eight, held.state.value.occurrences.first().epochMillis)
+        assertEquals("the held dose is still owed by the stock", LocalDate.parse("2026-06-10"), held.state.value.stockRunOutDates[1L])
+        assertFalse(movedOn.state.value.occurrences.any { it.epochMillis == eight })
+        assertEquals(LocalDate.parse("2026-06-11"), movedOn.state.value.stockRunOutDates[1L])
     }
 
     // ---- Window arithmetic --------------------------------------------------

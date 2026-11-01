@@ -48,8 +48,15 @@ object AlarmWatchdog {
         prefs(context).edit { putLong(KEY_LAST_FIRED, nowEpochMillis) }
     }
 
-    fun earliestPlanned(context: Context): Long? =
-        plannedSet(context).mapNotNull { it.substringAfter(':').toLongOrNull() }.minOrNull()
+    fun earliestPlanned(context: Context): Long? = plannedSlots(context).values.minOrNull()
+
+    /** Each reminder's armed regular slot, by reminder id: one the OS is still holding is past and not yet fired. */
+    fun plannedSlots(context: Context): Map<Long, Long> =
+        plannedSet(context).mapNotNull { entry ->
+            val reminderId = entry.substringBefore(':').toLongOrNull()
+            val at = entry.substringAfter(':').toLongOrNull()
+            if (reminderId != null && at != null) reminderId to at else null
+        }.toMap()
 
     /** Runs before the launch reschedule repairs anything. Returns the missed
      *  instant when there is one, and remembers it for the Today card. */

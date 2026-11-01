@@ -134,7 +134,7 @@ private suspend fun todayProgressOfAll(container: AppContainer, now: Long, zone:
         .flatMap { container.doseEventRepository.getInRangeOnce(it.id, start, end, null) }
     val medicines = state.occurrences.filter { it.epochMillis in start until end }.map { it.medicineId }.distinct()
         .mapNotNull { container.medicineRepository.getById(it) }.associateBy { it.id }
-    return todayProgress(buildTimeline(medicines, materialized, state, start, end), state.settled)
+    return todayProgress(buildTimeline(medicines, materialized, state, start, end), state.settled, now)
 }
 
 /**

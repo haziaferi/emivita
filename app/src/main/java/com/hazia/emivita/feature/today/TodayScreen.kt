@@ -73,6 +73,7 @@ import com.hazia.emivita.core.scheduling.ProjectedOccurrence
 import com.hazia.emivita.core.scheduling.ProjectionState
 import com.hazia.emivita.ui.components.DoseEditDialog
 import com.hazia.emivita.ui.components.rememberCurrentDate
+import com.hazia.emivita.ui.components.rememberNowEpochMillis
 import com.hazia.emivita.core.format.formatDoseWithUnit
 import com.hazia.emivita.ui.theme.doseCritical
 import kotlinx.coroutines.flow.collectLatest
@@ -309,7 +310,9 @@ fun TodayScreen(
             LazyColumn(contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)) {
                 item(key = "notices") {
                     Column {
-                        heldProgress.of(nodes, projectionState.settled)?.let { TodayProgressLine(it) }
+                        // Read here, so the minute's tick recomposes this item only.
+                        val now = rememberNowEpochMillis()
+                        heldProgress.of(nodes, projectionState.settled, now)?.let { TodayProgressLine(it) }
                         missedAlarm?.let { plannedAt ->
                             MissedAlarmCard(plannedAt, onOpen = onOpenNotificationSettings, onDismiss = { AlarmWatchdog.dismissNotice(context) })
                         }

@@ -108,6 +108,10 @@ class OccurrenceProjectionCache(
     // (reminderId, slot) pairs already Taken or Skipped in the window; their
     // projected slots are dropped (§7 R104, census A-38). Tests leave it empty.
     private val answeredSlots: suspend (Long, Long) -> Set<Pair<Long, Long>> = { _, _ -> emptySet() },
+    // reminderId -> the regular slot its alarm is armed for (AlarmWatchdog's
+    // record). One already past is a dose the OS is holding (§7 R140, W4): the
+    // walk starts there instead of at now. Tests leave it empty.
+    private val armedSlots: () -> Map<Long, Long> = { emptyMap() },
 ) {
     // Read on every use, never captured (§7 R60 B F-4). These are lazy
     // singletons in AppContainer; a `ZoneId.systemDefault()` default parameter
@@ -211,7 +215,11 @@ class OccurrenceProjectionCache(
             )
             if (!inProgress) onPublished()
         }
-        val answered = answeredSlots(start, toEpochMillis)
+        // Armed but past: OxygenOS held a 00:05 alarm to 00:11, and a pass from
+        // now dropped the dose from Today for those six minutes (§7 R140).
+        val heldSlots = armedSlots().filterValues { it < start }
+        fun walkFrom(reminder: Reminder) = heldSlots[reminder.id] ?: start
+        val answered = answeredSlots(minOf(start, heldSlots.values.minOrNull() ?: start), toEpochMillis)
         for (entry in medicines) {
 
             // Two passes per medicine (§9 #31, A-24): first every dose reminder
@@ -235,7 +243,7 @@ class OccurrenceProjectionCache(
                 if (reminder.type !in schedulingEngine.doseProducingTypes) continue
                 if (overBudget(reminder)) break
                 visited++
-                val forReminder = schedulingEngine.occurrencesFor(reminder, start, toEpochMillis, weekendMode = weekendMode)
+                val forReminder = schedulingEngine.occurrencesFor(reminder, walkFrom(reminder), toEpochMillis, weekendMode = weekendMode)
                 projectedByReminder[reminder.id] = forReminder.map { it.epochMillis }
                 forReminder.forEach { occurrence ->
                     if ((reminder.id to occurrence.epochMillis) in answered) return@forEach
@@ -248,7 +256,7 @@ class OccurrenceProjectionCache(
                 if (overBudget(child)) break
                 visited++
                 val parentSlots = child.parentReminderId?.let { projectedByReminder[it] } ?: emptyList()
-                val real = schedulingEngine.occurrencesFor(child, start, toEpochMillis, weekendMode = weekendMode).firstOrNull()
+                val real = schedulingEngine.occurrencesFor(child, walkFrom(child), toEpochMillis, weekendMode = weekendMode).firstOrNull()
                 if (real != null) medicineOccurrences += ProjectedOccurrence(child.id, entry.medicine.id, real.epochMillis, real.doseAmount)
                 val delayMillis = config.delayMinutes * 60_000L
                 parentSlots
