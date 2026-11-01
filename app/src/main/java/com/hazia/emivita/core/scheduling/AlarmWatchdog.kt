@@ -58,6 +58,13 @@ object AlarmWatchdog {
             if (reminderId != null && at != null) reminderId to at else null
         }.toMap()
 
+    /** The armed slots inside the last minute that no alarm has fired since: the alarm path's own, which the
+     *  back-fill leaves to it ([MissedDoseBackfiller.GRACE_MILLIS]) and the launch re-arm must not move (§7 R141). */
+    fun heldSlots(context: Context, nowEpochMillis: Long): Map<Long, Long> {
+        val lastFired = prefs(context).getLong(KEY_LAST_FIRED, -1L)
+        return plannedSlots(context).filterValues { it in (nowEpochMillis - MissedDoseBackfiller.GRACE_MILLIS) until nowEpochMillis && lastFired < it }
+    }
+
     /** Runs before the launch reschedule repairs anything. Returns the missed
      *  instant when there is one, and remembers it for the Today card. */
     fun checkOnLaunch(context: Context, nowEpochMillis: Long = System.currentTimeMillis(), uptimeMillis: Long = SystemClock.elapsedRealtime()): Long? {

@@ -245,7 +245,10 @@ class AppContainer(
     }
 
     val schedulingCoordinator: SchedulingCoordinator by lazy {
-        RealSchedulingCoordinator(database.reminderDao(), schedulingEngine, alarmScheduler, occurrenceProjectionCache)
+        RealSchedulingCoordinator(
+            database.reminderDao(), schedulingEngine, alarmScheduler, occurrenceProjectionCache,
+            heldSlots = { now -> AlarmWatchdog.heldSlots(appContext, now) },
+        )
     }
 
     val notificationBuilder: ReminderNotificationBuilder by lazy {

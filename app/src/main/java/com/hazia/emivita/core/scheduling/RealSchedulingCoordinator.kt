@@ -26,6 +26,8 @@ class RealSchedulingCoordinator(
     private val alarmScheduler: AlarmScheduler,
     private val occurrenceProjectionCache: OccurrenceProjectionCache,
     private val nowEpochMillis: () -> Long = System::currentTimeMillis,
+    // reminderId -> an armed slot of the last minute no alarm has fired yet (AlarmWatchdog.heldSlots).
+    private val heldSlots: (Long) -> Map<Long, Long> = { emptyMap() },
 ) : SchedulingCoordinator {
 
     override suspend fun onDoseResolved(reminderId: Long) {
@@ -88,8 +90,16 @@ class RealSchedulingCoordinator(
         // nothing on screen to say so. Failing one is visible as a reminder
         // that does not fire; failing the tail is indistinguishable from the
         // app working.
+
+        // A slot of the last minute the OS is still holding is armed again as it
+        // is, and delivered at once (§7 R141): moved to tomorrow, it fell between
+        // this and the back-fill's grace, and its dose got no row.
+        val held = heldSlots(now)
         reminderDao.getAllEnabled().forEach { reminder ->
-            runCatching { scheduleOrCancel(reminder, now) }
+            runCatching {
+                val slot = held[reminder.id]
+                if (slot != null) alarmScheduler.schedule(reminder.id, slot) else scheduleOrCancel(reminder, now)
+            }
                 .onFailure { Log.e(TAG, "Could not reschedule reminder ${reminder.id} -- continuing with the rest.", it) }
         }
     }

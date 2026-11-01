@@ -30,6 +30,16 @@ class AlarmWatchdogTest {
     }
 
     @Test
+    fun `held slots -- armed, inside the last minute, and not fired since (R141)`() {
+        AlarmWatchdog.recordPlanned(context, 11, 100 * min)
+        AlarmWatchdog.recordPlanned(context, 12, 98 * min)
+        AlarmWatchdog.recordPlanned(context, 13, 101 * min)
+        assertEquals("only the one inside the minute, not the older or the one ahead", mapOf(11L to 100 * min), AlarmWatchdog.heldSlots(context, 100 * min + 30_000))
+        AlarmWatchdog.recordFired(context, 100 * min + 5_000)
+        assertEquals("a fire since the slot clears it", emptyMap<Long, Long>(), AlarmWatchdog.heldSlots(context, 100 * min + 30_000))
+    }
+
+    @Test
     fun `the store keeps one planned instant per reminder, the earliest wins, cancel removes, a fire clears the notice`() {
         AlarmWatchdog.recordPlanned(context, 1, 500 * min)
         AlarmWatchdog.recordPlanned(context, 2, 300 * min)
