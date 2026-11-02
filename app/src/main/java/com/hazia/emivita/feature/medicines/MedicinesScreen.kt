@@ -83,6 +83,7 @@ import com.hazia.emivita.core.data.settings.SettingsRepository
 import com.hazia.emivita.core.format.LocaleFormats
 import com.hazia.emivita.core.scheduling.OccurrenceProjectionCache
 import com.hazia.emivita.ui.components.rememberCurrentDate
+import com.hazia.emivita.ui.components.rememberNowEpochMillis
 import kotlinx.coroutines.launch
 import java.time.ZoneId
 import androidx.compose.material.icons.filled.Search
@@ -149,8 +150,9 @@ fun MedicinesScreen(
     // A swiped card's delete is the medicine page's: an archive, restorable (§7 R127, D-03).
     val archive: suspend (Medicine) -> Unit = { medicineRepository.archive(it) }
 
-    val entries = remember(withReminders, tagsByMedicine, todayEvents, projection, today, sort, hideEmpty, query, selectedTags, locale) {
-        val now = System.currentTimeMillis()
+    // The minute's clock, so a card whose slot the OS is holding turns due with no pass to prompt it (§7 R143).
+    val now = rememberNowEpochMillis()
+    val entries = remember(withReminders, tagsByMedicine, todayEvents, projection, today, now, sort, hideEmpty, query, selectedTags, locale) {
         val built = withReminders.map { mw ->
             MedicineListEntry(
                 medicine = mw.medicine,

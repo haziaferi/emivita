@@ -33,6 +33,8 @@ class BootRescheduleReceiver : BroadcastReceiver() {
         val pendingResult = goAsync()
         CoroutineScope(Dispatchers.IO + SupervisorJob()).launch {
             try {
+                // Before the re-arm: what passed while the phone was off was missed, not held (§7 R143).
+                if (intent.action == Intent.ACTION_BOOT_COMPLETED) AlarmWatchdog.recordBoot(context)
                 container.schedulingCoordinator.rescheduleAll()
                 // The future is re-armed; now the past (§9 #25, #26): slots that
                 // passed while the phone was off become Missed rows, and the

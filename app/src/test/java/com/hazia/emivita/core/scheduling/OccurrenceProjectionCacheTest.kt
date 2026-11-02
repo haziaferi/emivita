@@ -96,6 +96,9 @@ class OccurrenceProjectionCacheTest {
         // Before [clock]: tests pass the clock as a trailing lambda.
         onPublished: () -> Unit = {},
         answeredSlots: Set<Pair<Long, Long>> = emptySet(),
+        armedSlots: Map<Long, Long> = emptyMap(),
+        // By default every armed slot already past: these tests write no dose rows.
+        heldSlots: Map<Long, Long>? = null,
         clock: () -> Long = { now },
     ): OccurrenceProjectionCache {
         val medicineDao = mockk<MedicineDao>()
@@ -121,6 +124,8 @@ class OccurrenceProjectionCacheTest {
             dispatcher = UnconfinedTestDispatcher(testScheduler),
             onPublished = onPublished,
             answeredSlots = { _, _ -> answeredSlots },
+            armedSlots = { armedSlots },
+            heldSlots = { at -> heldSlots ?: armedSlots.filterValues { it < at } },
         )
     }
 
@@ -158,6 +163,40 @@ class OccurrenceProjectionCacheTest {
         advanceUntilIdle()
         assertFalse(answered.state.value.occurrences.any { it.epochMillis == first.epochMillis })
         assertEquals(LocalDate.parse("2026-06-11"), answered.state.value.stockRunOutDates[1L])
+    }
+
+    @Test
+    fun `a slot past its time whose alarm is still armed is projected, one moved on is not`() = runTest {
+        // §7 R140 (W4): OxygenOS held a 00:05 alarm to 00:11, and a pass in between walked from now.
+        val eight = LocalDateTime.parse("2026-06-01T08:00").atZone(zone).toInstant().toEpochMilli()
+        val sevenPast = eight + 7 * 60_000L
+        val medicines = listOf(medicineWithDailyDose(stockQuantity = 10.0, doseAmount = 1.0))
+        val held = buildCache(medicines, armedSlots = mapOf(1L to eight)) { sevenPast }
+        val movedOn = buildCache(medicines, armedSlots = mapOf(1L to eight + 24 * 60 * 60_000L)) { sevenPast }
+        advanceUntilIdle()
+        assertEquals(eight, held.state.value.occurrences.first().epochMillis)
+        assertEquals("the held dose is still owed by the stock", LocalDate.parse("2026-06-10"), held.state.value.stockRunOutDates[1L])
+        assertFalse(movedOn.state.value.occurrences.any { it.epochMillis == eight })
+        assertEquals(LocalDate.parse("2026-06-11"), movedOn.state.value.stockRunOutDates[1L])
+    }
+
+    @Test
+    fun `a held slot comes back from the past alone, not the slots walked on from it`() = runTest {
+        // §7 R143 (C1 of the PR #62 review): the walk from a held 08:00 projected 09:00 and 10:00 as well, and past
+        // they read as held, though no alarm is armed for either.
+        val eight = LocalDateTime.parse("2026-06-01T08:00").atZone(zone).toInstant().toEpochMilli()
+        val hour = 60 * 60_000L
+        val hourly = medicineWithDailyDose(stockQuantity = 100.0, doseAmount = 1.0).let { m ->
+            m.copy(reminders = listOf(m.reminders.single().copy(
+                type = ReminderType.REPEATING_INTERVAL,
+                configJson = encodeReminderConfig(ReminderConfig.RepeatingInterval(60, 1.0, IntervalStartBehavior.ON_REMINDED, eight)),
+            )))
+        }
+        val cache = buildCache(listOf(hourly), armedSlots = mapOf(1L to eight)) { eight + 2 * hour + 30 * 60_000L }
+        advanceUntilIdle()
+        val occurrences = cache.state.value.occurrences
+        assertEquals(listOf(eight, eight + 3 * hour), occurrences.take(2).map { it.epochMillis })
+        assertEquals("only the armed slot is armed", listOf(true, false), occurrences.take(2).map { it.armed })
     }
 
     // ---- Window arithmetic --------------------------------------------------

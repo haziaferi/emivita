@@ -5,7 +5,6 @@ import android.content.Context
 import android.content.Intent
 import android.util.Log
 import com.hazia.emivita.EmivitaApplication
-import com.hazia.emivita.core.data.config.IntervalStartBehavior
 import com.hazia.emivita.core.data.config.ReminderConfig
 import com.hazia.emivita.core.data.config.decodeReminderConfig
 import com.hazia.emivita.core.data.entity.DoseEvent
@@ -150,7 +149,7 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
         // get rescheduled now that this reminder's anchor (its most recent
         // materialized event) just changed. ON_RESOLVED children are the
         // other trigger point, in RealSchedulingCoordinator.onDoseResolved.
-        cascadeRescheduleOnRemindedChildren(reminderId, container)
+        container.schedulingCoordinator.onDoseMaterialized(reminderId)
     }
 
     /**
@@ -274,20 +273,6 @@ class ReminderAlarmReceiver : BroadcastReceiver() {
                 originalScheduledEpochMillis = scheduledEpochMillis,
                 fireAtEpochMillis = System.currentTimeMillis() + repeatConfig.delayMinutes * 60_000L,
             )
-        }
-    }
-
-    private suspend fun cascadeRescheduleOnRemindedChildren(
-        reminderId: Long,
-        container: AppContainer,
-    ) {
-        val children = container.reminderRepository.getChildrenOf(reminderId)
-        for (child in children) {
-            if (!child.enabled) continue
-            val childConfig = decodeReminderConfig(child.configJson)
-            if (childConfig is ReminderConfig.LinkedFollowing && childConfig.startBehavior == IntervalStartBehavior.ON_REMINDED) {
-                container.schedulingCoordinator.onReminderChanged(child.id, System.currentTimeMillis())
-            }
         }
     }
 

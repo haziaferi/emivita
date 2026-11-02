@@ -54,6 +54,7 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -78,6 +79,7 @@ import com.hazia.emivita.core.scheduling.ProjectedOccurrence
 import com.hazia.emivita.core.scheduling.ProjectionState
 import com.hazia.emivita.ui.components.DoseEditDialog
 import com.hazia.emivita.ui.components.rememberCurrentDate
+import com.hazia.emivita.ui.components.rememberNowState
 import com.hazia.emivita.core.format.formatDoseWithUnit
 import com.hazia.emivita.ui.theme.doseCritical
 import kotlinx.coroutines.flow.collectLatest
@@ -125,10 +127,9 @@ internal data class TimelineEntry(
     val medicine: Medicine?,
     val doseAmount: Double,
     val status: TimelineStatus,
-    // Non-null only for an already-materialized event -- the only ones
-    // resolve() can act on. A projected-but-not-yet-fired occurrence has no
-    // DoseEvent row yet (ReminderAlarmReceiver only materializes one when its
-    // alarm actually fires), so it's shown but not actionable here.
+    // Non-null only for an already-materialized event. A projected occurrence
+    // has no DoseEvent row until its alarm fires, or until Take or Skip on its
+    // row writes one first (§9 #26, §7 R142).
     val doseEventId: Long?,
     // Only meaningful (and only ever read) for TAKEN/SKIPPED -- the edit
     // dialog's starting time for editRecordedTime (spec §9 #3).
@@ -148,6 +149,8 @@ internal data class TimelineEntry(
     val asksAmount: Boolean = false,
     /** The medicine's name, or a one-off dose's own (§7 R111). */
     val name: String = medicine?.name.orEmpty(),
+    /** A projected slot its alarm is armed for: due once past ([heldAsDue], §7 R143). */
+    val armed: Boolean = false,
 )
 
 internal data class TimelineNode(
@@ -200,9 +203,9 @@ private const val TODAY_WINDOW_DAYS = 2L
  * It reads [OccurrenceProjectionCache] (spec §9 #4), registering a window on
  * entry and releasing it on exit, and merges two sources per node: today's
  * materialized [com.hazia.emivita.core.data.entity.DoseEvent] rows
- * ([DoseEventRepository.observeInRange]), which are actionable (Take/Skip),
- * and the cache's not-yet-materialized occurrences, shown but not actionable
- * because there is no DoseEvent row to resolve() until the alarm fires.
+ * ([DoseEventRepository.observeInRange]), and the cache's not-yet-materialized
+ * occurrences, whose Take now, or Take and Skip once held (§7 R142), write
+ * their row first.
  */
 @Composable
 fun TodayScreen(
@@ -216,6 +219,7 @@ fun TodayScreen(
     onOpenNotificationSettings: () -> Unit = {},
     onOpenDataAndBackup: () -> Unit = {},
     onAddReminder: (medicineId: Long) -> Unit = {},
+    nowEpochMillis: () -> Long = System::currentTimeMillis,
 ) {
     var showLogDose by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -302,6 +306,10 @@ fun TodayScreen(
     val nodes = remember(medicinesById, materializedToday, projectionState, startOfToday, startOfTomorrow, remindersById) {
         buildTimeline(medicinesById, materializedToday, projectionState, startOfToday, startOfTomorrow, remindersById)
     }
+    // The rows as the line counts them (§7 R142): derived from the minute's tick, so they recompose when a held
+    // slot turns due, not every minute.
+    val clock = rememberNowState(nowEpochMillis = nowEpochMillis)
+    val rows by remember(nodes) { derivedStateOf { heldAsDue(nodes, clock.value) } }
     val heldProgress = remember { HeldProgress() }
 
     Box(Modifier.fillMaxSize()) {
@@ -320,7 +328,9 @@ fun TodayScreen(
             LazyColumn(Modifier.fillMaxSize().onSizeChanged { listHeight = it.height }, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)) {
                 item(key = "notices") {
                     Column(Modifier.onSizeChanged { noticesHeight = it.height }) {
-                        heldProgress.of(nodes, projectionState.settled)?.let { TodayProgressLine(it) }
+                        // Read here, so the minute's tick recomposes this item only: the rows' clock, so they agree.
+                        val now = clock.value
+                        heldProgress.of(nodes, projectionState.settled, now)?.let { TodayProgressLine(it) }
                         missedAlarm?.let { plannedAt ->
                             MissedAlarmCard(plannedAt, onOpen = onOpenNotificationSettings, onDismiss = { AlarmWatchdog.dismissNotice(context) })
                         }
@@ -340,7 +350,7 @@ fun TodayScreen(
                         }
                     }
                     else -> {
-                        todayItems(layout, nodes, deps, zone)
+                        todayItems(layout, rows, deps, zone)
                         // As-needed medicines (§9 #26): a standing row each, with
                         // the time since the last dose and a Log chip. They have no
                         // slot on the timeline, so they sit beneath it.
@@ -528,6 +538,7 @@ internal fun buildTimeline(
                 estimated = occurrence.estimated,
                 afterEpochMillis = occurrence.afterEpochMillis,
                 afterMinutes = occurrence.afterEpochMillis?.let { ((occurrence.epochMillis - it) / 60_000L).toInt() },
+                armed = occurrence.armed,
             )
         }
 
@@ -565,14 +576,14 @@ internal fun TimelineNodeItem(node: TimelineNode, deps: TodayDeps) {
 
 /**
  * "Take all (n)" on a time with two or more doses due (§7 R107, census D-20),
- * confirmed in [TakeGroupSheet]. Each dose goes through [DoseEventRepository.resolve]
- * one at a time, as its own Take chip would send it, and NonCancellable keeps the
- * run whole when the first answers shrink the group and recompose this away.
+ * confirmed in [TakeGroupSheet]. Each dose is taken one at a time, as its own Take chip
+ * would take it, and NonCancellable keeps the run whole when the first answers shrink
+ * the group and recompose this away.
  */
 @Composable
 private fun TakeAllChip(node: TimelineNode, time: String, deps: TodayDeps) {
     val scope = rememberCoroutineScope()
-    val pending = node.entries.filter { it.status == TimelineStatus.PENDING && it.doseEventId != null }
+    val pending = node.entries.filter { it.status == TimelineStatus.PENDING }
     // A dose whose reminder asks the amount stays due (§7 R110): it is the
     // person's to answer with a number, which "Take all" cannot ask for.
     val (leftOut, due) = pending.partition { it.asksAmount }
@@ -588,8 +599,17 @@ private fun TakeAllChip(node: TimelineNode, time: String, deps: TodayDeps) {
             leftOut = leftOut,
             onConfirm = {
                 confirmAll = false
-                val ids = due.mapNotNull { it.doseEventId }
-                scope.launch { withContext(NonCancellable) { ids.forEach { deps.doseEventRepository.resolve(it, DoseStatus.TAKEN) } } }
+                scope.launch {
+                    withContext(NonCancellable) {
+                        due.forEach { entry ->
+                            val id = entry.doseEventId
+                            val medicineId = entry.medicine?.id
+                            // A held slot (§7 R142) has no row until its alarm posts one.
+                            if (id != null) deps.doseEventRepository.resolve(id, DoseStatus.TAKEN)
+                            else if (entry.reminderId != null && medicineId != null) deps.doseEventRepository.takeProjectedNow(entry.reminderId, medicineId, node.epochMillis, entry.doseAmount)
+                        }
+                    }
+                }
             },
             onDismiss = { confirmAll = false },
         )
@@ -642,11 +662,11 @@ internal fun EntryHost(
                 deps.doseEventRepository.resolve(id, status)
                 deps.onAnswered(entry, status, id)
             } else if (entry.reminderId != null && medicineId != null && status == DoseStatus.TAKEN) {
-                // "Take now" on a projected slot (§9 #26).
+                // "Take now" on a projected slot (§9 #26), or Take on a held one (§7 R142).
                 deps.doseEventRepository.takeProjectedNow(entry.reminderId, medicineId, node.epochMillis, entry.doseAmount)
                 deps.doseEventRepository.materializedId(entry.reminderId, medicineId, node.epochMillis, entry.doseAmount)?.let { deps.onAnswered(entry, status, it) }
             } else if (entry.reminderId != null && medicineId != null) {
-                // Skip ahead, from the upcoming dose's sheet only (§7 R107).
+                // Skip ahead from the upcoming dose's sheet (§7 R107), or Skip on a held slot's row (§7 R142).
                 deps.doseEventRepository.answerProjected(entry.reminderId, medicineId, node.epochMillis, entry.doseAmount, status)
                 deps.doseEventRepository.materializedId(entry.reminderId, medicineId, node.epochMillis, entry.doseAmount)?.let { deps.onAnswered(entry, status, it) }
             }

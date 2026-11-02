@@ -408,9 +408,13 @@ class DoseEventRepository(
 
     /** The slot's dose row, materialised first if it is still only projected:
      *  what a Take that asks the amount opens the amount screen on (§7 R113). */
-    suspend fun materializedId(reminderId: Long, medicineId: Long, scheduledEpochMillis: Long, doseAmount: Double): Long? =
-        materializeIfAbsent(reminderId, medicineId, scheduledEpochMillis, doseAmount)
-            ?: doseEventDao.findByReminderAndTime(reminderId, scheduledEpochMillis)?.id
+    suspend fun materializedId(reminderId: Long, medicineId: Long, scheduledEpochMillis: Long, doseAmount: Double): Long? {
+        val written = materializeIfAbsent(reminderId, medicineId, scheduledEpochMillis, doseAmount)
+        // Written ahead of its alarm, which a held slot's may never ring: its
+        // follow-ups anchor on this row now (§7 R143).
+        if (written != null) schedulingCoordinator.onDoseMaterialized(reminderId)
+        return written ?: doseEventDao.findByReminderAndTime(reminderId, scheduledEpochMillis)?.id
+    }
 
     /** PRN / ad-hoc dose logging (spec §3, §9 #2) -- a manually-logged dose not
      *  tied to any scheduled occurrence: reminderId = null, logged retrospectively

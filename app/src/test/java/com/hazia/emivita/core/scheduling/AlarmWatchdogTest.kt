@@ -2,6 +2,7 @@ package com.hazia.emivita.core.scheduling
 
 import android.content.Context
 import androidx.test.core.app.ApplicationProvider
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
 import org.junit.Test
@@ -27,6 +28,23 @@ class AlarmWatchdogTest {
         assertNull("inside AlarmManager's slack", AlarmWatchdog.verdict(100 * min, null, 100 * min + 30_000, up))
         assertNull("the receiver has not had its turn since boot", AlarmWatchdog.verdict(100 * min, null, 102 * min, uptimeMillis = 2 * min))
         assertNull("it fired, late", AlarmWatchdog.verdict(100 * min, lastFired = 101 * min, nowEpochMillis = 102 * min, uptimeMillis = up))
+    }
+
+    @Test
+    fun `held slots -- armed, past, since the last restart, within the day, and with no dose yet (R143)`() = runBlocking {
+        val day = 24 * 60 * min
+        val now = 2 * day
+        AlarmWatchdog.recordPlanned(context, 11, now - min)
+        AlarmWatchdog.recordPlanned(context, 12, now - 30 * min)
+        AlarmWatchdog.recordPlanned(context, 13, now + min)
+        AlarmWatchdog.recordPlanned(context, 14, now - day - min)
+        val noDose: suspend (Long, Long) -> Boolean = { _, _ -> false }
+        assertEquals("the past ones within the day, not the one ahead or the older", mapOf(11L to now - min, 12L to now - 30 * min), AlarmWatchdog.heldSlots(context, now, noDose))
+        AlarmWatchdog.recordFired(context, now - 10_000)
+        assertEquals("another alarm ringing since does not hide them (R141 read it as theirs)", setOf(11L, 12L), AlarmWatchdog.heldSlots(context, now, noDose).keys)
+        assertEquals("a slot whose dose has its row rang", setOf(12L), AlarmWatchdog.heldSlots(context, now) { reminderId, _ -> reminderId == 11L }.keys)
+        AlarmWatchdog.recordBoot(context, now - 10 * min)
+        assertEquals("one from before the restart was missed, not held", setOf(11L), AlarmWatchdog.heldSlots(context, now, noDose).keys)
     }
 
     @Test
