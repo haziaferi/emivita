@@ -174,6 +174,15 @@ class AlarmScheduler(private val context: Context) {
         alarmManager.cancel(buildPendingIntent(nagRequestCode(doseEventId), reminderId, null, isNag = true))
     }
 
+    /** Cancels a dose's nag and snooze re-fires, for a dose no longer due here (§7 R145): a medicine archived or
+     *  deleted left them armed, to fire into nothing. A PendingIntent matches without its extras, so the
+     *  reminder id is not needed. */
+    fun cancelRefires(doseEventId: Long) {
+        alarmManager.cancel(buildPendingIntent(nagRequestCode(doseEventId), 0L, null, isNag = true))
+        alarmManager.cancel(buildPendingIntent(snoozeRequestCode(doseEventId), 0L, null, isNag = false))
+        SnoozeLedger.forget(context, doseEventId)
+    }
+
     private fun setAlarm(
         requestCode: Int,
         reminderId: Long,

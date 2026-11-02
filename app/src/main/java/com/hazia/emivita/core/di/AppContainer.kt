@@ -266,7 +266,7 @@ class AppContainer(
     // answer, handed to the repositories so every surface gets them (§7 R113).
     private val doseNotificationDismisser = DoseNotificationDismisser { ids ->
         if (ids.isEmpty()) return@DoseNotificationDismisser
-        ids.forEach { ReminderNotifications.dismiss(appContext, it) }
+        ids.forEach { ReminderNotifications.dismiss(appContext, it); alarmScheduler.cancelRefires(it) }
         notificationBuilder.updateGroupSummary(dismissed = ids)
     }
 

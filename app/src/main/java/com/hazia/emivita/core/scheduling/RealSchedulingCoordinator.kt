@@ -66,10 +66,9 @@ class RealSchedulingCoordinator(
 
     override suspend fun onReminderRemoved(reminderId: Long) {
         alarmScheduler.cancel(reminderId)
-        // Snooze and nag slots are per dose event (§7 R60) and this path has
-        // no dose-event access; a pending one fires into ReminderAlarmReceiver,
-        // which finds no enabled reminder and returns. One spurious wake-up
-        // at most, no notification.
+        // Snooze and nag slots are per dose event (§7 R60) and this path has no dose-event access: the
+        // repositories cancel them with the doses' notifications (§7 R145). One that slips by finds no enabled
+        // reminder in ReminderAlarmReceiver and returns.
         occurrenceProjectionCache.invalidate()
     }
 
