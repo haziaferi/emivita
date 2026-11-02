@@ -40,6 +40,11 @@ data class ProjectedOccurrence(
     val estimated: Boolean = false,
     /** For an estimate, the parent slot it follows. */
     val afterEpochMillis: Long? = null,
+    /** Its alarm is armed for this slot and will post it (§7 R143): once past, the
+     *  OS is holding it, and it is due. Not for an estimate, a reminder that
+     *  answers itself, or the slot an interval counted from the answer projects
+     *  while the open dose waits, which no alarm is armed for. */
+    val armed: Boolean = false,
 )
 
 data class ProjectionState(
@@ -109,9 +114,13 @@ class OccurrenceProjectionCache(
     // projected slots are dropped (§7 R104, census A-38). Tests leave it empty.
     private val answeredSlots: suspend (Long, Long) -> Set<Pair<Long, Long>> = { _, _ -> emptySet() },
     // reminderId -> the regular slot its alarm is armed for (AlarmWatchdog's
-    // record). One already past is a dose the OS is holding (§7 R140, W4): the
-    // walk starts there instead of at now. Tests leave it empty.
+    // record): the one slot of a reminder that can be held (§7 R143). Tests
+    // leave it empty.
     private val armedSlots: () -> Map<Long, Long> = { emptyMap() },
+    // reminderId -> an armed slot already past with no dose yet: one the OS is
+    // holding (§7 R140, W4), which the walk starts at instead of now. Tests
+    // leave it empty.
+    private val heldSlots: suspend (Long) -> Map<Long, Long> = { emptyMap() },
 ) {
     // Read on every use, never captured (§7 R60 B F-4). These are lazy
     // singletons in AppContainer; a `ZoneId.systemDefault()` default parameter
@@ -216,9 +225,16 @@ class OccurrenceProjectionCache(
             if (!inProgress) onPublished()
         }
         // Armed but past: OxygenOS held a 00:05 alarm to 00:11, and a pass from
-        // now dropped the dose from Today for those six minutes (§7 R140).
-        val heldSlots = armedSlots().filterValues { it < start }
+        // now dropped the dose from Today for those six minutes (§7 R140). That
+        // slot alone comes back from the past (§7 R143): an interval counted
+        // from the answer keeps its record on the slot that rang, and a walk on
+        // from there took every interval since for one more dose held.
+        val armed = armedSlots()
+        val heldSlots = heldSlots(start)
         fun walkFrom(reminder: Reminder) = heldSlots[reminder.id] ?: start
+        fun inPass(reminder: Reminder, at: Long) = at >= start || at == heldSlots[reminder.id]
+        // A reminder that answers itself records its dose taken when the alarm rings: never due, so never held.
+        fun armedAt(reminder: Reminder, at: Long) = !reminder.autoResolve && armed[reminder.id] == at
         val answered = answeredSlots(minOf(start, heldSlots.values.minOrNull() ?: start), toEpochMillis)
         for (entry in medicines) {
 
@@ -244,10 +260,13 @@ class OccurrenceProjectionCache(
                 if (overBudget(reminder)) break
                 visited++
                 val forReminder = schedulingEngine.occurrencesFor(reminder, walkFrom(reminder), toEpochMillis, weekendMode = weekendMode)
+                    .filter { inPass(reminder, it.epochMillis) }
                 projectedByReminder[reminder.id] = forReminder.map { it.epochMillis }
                 forReminder.forEach { occurrence ->
                     if ((reminder.id to occurrence.epochMillis) in answered) return@forEach
-                    medicineOccurrences += ProjectedOccurrence(reminder.id, entry.medicine.id, occurrence.epochMillis, occurrence.doseAmount)
+                    medicineOccurrences += ProjectedOccurrence(
+                        reminder.id, entry.medicine.id, occurrence.epochMillis, occurrence.doseAmount, armed = armedAt(reminder, occurrence.epochMillis),
+                    )
                 }
             }
             for (child in linked) {
@@ -257,7 +276,7 @@ class OccurrenceProjectionCache(
                 visited++
                 val parentSlots = child.parentReminderId?.let { projectedByReminder[it] } ?: emptyList()
                 val real = schedulingEngine.occurrencesFor(child, walkFrom(child), toEpochMillis, weekendMode = weekendMode).firstOrNull()
-                if (real != null) medicineOccurrences += ProjectedOccurrence(child.id, entry.medicine.id, real.epochMillis, real.doseAmount)
+                if (real != null) medicineOccurrences += ProjectedOccurrence(child.id, entry.medicine.id, real.epochMillis, real.doseAmount, armed = armedAt(child, real.epochMillis))
                 val delayMillis = config.delayMinutes * 60_000L
                 parentSlots
                     .filter { slot -> real == null || slot + delayMillis > real.epochMillis }

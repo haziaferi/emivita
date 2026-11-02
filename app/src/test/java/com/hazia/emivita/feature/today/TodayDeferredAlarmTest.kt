@@ -1,17 +1,21 @@
 package com.hazia.emivita.feature.today
 
 import android.os.Looper
+import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasStateDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
 import androidx.compose.ui.test.performClick
+import com.hazia.emivita.core.data.config.IntervalStartBehavior
 import com.hazia.emivita.core.data.config.ReminderConfig
+import com.hazia.emivita.core.data.config.ReminderType
 import com.hazia.emivita.core.data.entity.DoseStatus
 import com.hazia.emivita.core.scheduling.receivers.ReceiverHarness
 import com.hazia.emivita.core.scheduling.receivers.TestEmivitaApplication
 import com.hazia.emivita.core.scheduling.receivers.closedAfterCompose
 import com.hazia.emivita.ui.theme.EmivitaTheme
+import kotlinx.coroutines.runBlocking
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertTrue
 import org.junit.Assume.assumeTrue
@@ -23,7 +27,6 @@ import org.robolectric.RobolectricTestRunner
 import org.robolectric.Shadows.shadowOf
 import org.robolectric.annotation.Config
 import org.robolectric.annotation.SQLiteMode
-import java.time.LocalDate
 import java.time.LocalDateTime
 import java.time.ZoneId
 
@@ -47,14 +50,23 @@ class TodayDeferredAlarmTest {
 
     private val zone: ZoneId = ZoneId.systemDefault()
 
-    /** Today's minute [minutesAgo] back; skipped just after midnight, when it would be yesterday's. */
+    /** Today's minute [minutesAgo] back, or today's first minute when that would be yesterday's, so no hour skips the test. */
     private fun slotMinutesAgo(minutesAgo: Long): LocalDateTime {
-        val at = LocalDateTime.now(zone).minusMinutes(minutesAgo).withSecond(0).withNano(0)
-        assumeTrue("the slot would fall yesterday", at.toLocalDate() == LocalDate.now(zone))
+        val now = LocalDateTime.now(zone)
+        return maxOf(now.minusMinutes(minutesAgo), now.toLocalDate().atStartOfDay()).withSecond(0).withNano(0)
+    }
+
+    /** The minute [minutesAgo] back, for a test that needs today from then to [aheadMinutes] on; skipped when either end is not today. */
+    private fun spanOfToday(minutesAgo: Long, aheadMinutes: Long = 0): LocalDateTime {
+        val now = LocalDateTime.now(zone)
+        val at = now.minusMinutes(minutesAgo).withSecond(0).withNano(0)
+        assumeTrue("the span would leave today", at.toLocalDate() == now.toLocalDate() && now.plusMinutes(aheadMinutes).toLocalDate() == now.toLocalDate())
         return at
     }
 
-    private fun showToday() {
+    private fun epochOf(at: LocalDateTime) = at.atZone(zone).toInstant().toEpochMilli()
+
+    private fun showToday(nowEpochMillis: () -> Long = System::currentTimeMillis) {
         val c = h.container
         compose.mainClock.autoAdvance = false
         compose.setContent {
@@ -67,6 +79,7 @@ class TodayDeferredAlarmTest {
                     settingsRepository = c.settingsRepository,
                     reminderRepository = c.reminderRepository,
                     notificationBuilder = c.notificationBuilder,
+                    nowEpochMillis = nowEpochMillis,
                 )
             }
         }
@@ -120,11 +133,80 @@ class TodayDeferredAlarmTest {
         return reminderId
     }
 
-    private fun showTodayAfterAPass() {
+    private fun showTodayAfterAPass(nowEpochMillis: () -> Long = System::currentTimeMillis) {
         val since = System.currentTimeMillis()
         h.container.occurrenceProjectionCache.invalidate()
         passSettledSince(since)
-        showToday()
+        showToday(nowEpochMillis)
+    }
+
+    private fun due(name: String) = hasText(name) and hasStateDescription("Due")
+
+    /** An interval counted from the answer (every [minutes] "when taken or skipped"), whose alarm for [fired] has rung
+     *  and left its dose unanswered: it is not armed again until that dose is answered. */
+    private fun firedWhenTakenReminder(name: String, fired: LocalDateTime, minutes: Int): Long {
+        val at = epochOf(fired)
+        val reminderId = h.reminder(h.medicine(name), ReminderConfig.RepeatingInterval(minutes, 1.0, IntervalStartBehavior.ON_RESOLVED, at))
+        h.container.alarmScheduler.schedule(reminderId, at)
+        h.fire(h.regularAlarms(reminderId).single { h.scheduledAtOf(it) == at })
+        return reminderId
+    }
+
+    @Test
+    fun `a "when taken" dose left unanswered is due once, not again at each interval since`() {
+        // §7 R143 (C1 of the PR #62 review): the alarm stays armed for the slot that rang, the pass walked on from it
+        // taking the open dose as answered there, and the slot an interval later read as a second dose due, with
+        // Take and Skip on a dose no alarm would post.
+        val fired = spanOfToday(35)
+        firedWhenTakenReminder("Metformin", fired, minutes = 30)
+        showTodayAfterAPass()
+        eventually { compose.onNode(due("Metformin")).assertExists() }
+        settle()
+        compose.onAllNodes(due("Metformin")).assertCountEquals(1)
+        compose.onNodeWithText("1 due now", substring = true).assertExists()
+    }
+
+    @Test
+    fun `a "when taken" slot still ahead at the last pass does not turn due when its time comes`() {
+        // §7 R143: no alarm is armed for it while the open dose waits, so passing its time leaves it a guess; the
+        // minute's tick read it as one the phone is holding.
+        val fired = spanOfToday(1, aheadMinutes = 12)
+        firedWhenTakenReminder("Metformin", fired, minutes = 10)
+        showTodayAfterAPass { System.currentTimeMillis() + 12 * 60_000L }
+        eventually { compose.onNode(due("Metformin")).assertExists() }
+        settle()
+        compose.onAllNodes(due("Metformin")).assertCountEquals(1)
+    }
+
+    @Test
+    fun `an armed slot turns due while Today stays open`() {
+        // §7 R142's claim, enforced once the rows' clock could be set: the minute's tick turns the row.
+        val slot = LocalDateTime.now(zone).plusMinutes(2).withSecond(0).withNano(0)
+        spanOfToday(0, aheadMinutes = 3)
+        h.reminder(h.medicine("Metformin"), ReminderConfig.FixedTime(slot.hour, slot.minute, 1.0))
+        var clock = System.currentTimeMillis()
+        showTodayAfterAPass { clock }
+        eventually { compose.onNode(hasText("Metformin") and hasStateDescription("Upcoming")).assertExists() }
+        clock = epochOf(slot) + 30_000L
+        compose.mainClock.advanceTimeBy(61_000)
+        eventually { compose.onNode(due("Metformin")).assertExists() }
+    }
+
+    @Test
+    fun `a held slot of a reminder that answers itself does not read due`() {
+        // M7 of the review: an autoResolve reminder (another person's medicine, tracked silently) records its dose
+        // taken when the alarm arrives, so it is never due, and its held slot is not either.
+        val slot = slotMinutesAgo(3)
+        val reminderId = runBlocking {
+            h.container.reminderRepository.create(
+                medicineId = h.medicine("Metformin"), groupId = null, type = ReminderType.FIXED_TIME,
+                config = ReminderConfig.FixedTime(slot.hour, slot.minute, 1.0), autoResolve = true,
+            )
+        }
+        h.container.alarmScheduler.schedule(reminderId, epochOf(slot))
+        showTodayAfterAPass()
+        eventually { compose.onNode(hasText("Metformin") and hasStateDescription("Upcoming")).assertExists() }
+        compose.onNodeWithText("due now", substring = true).assertDoesNotExist()
     }
 
     @Test

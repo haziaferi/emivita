@@ -151,7 +151,10 @@ internal fun groupByBand(nodes: List<TimelineNode>, zone: ZoneId): Map<DayBand, 
 internal fun nextDose(pairs: List<Pair<TimelineNode, TimelineEntry>>): Pair<TimelineNode, TimelineEntry>? =
     pairs.firstOrNull { it.second.status == TimelineStatus.PENDING } ?: pairs.firstOrNull { it.second.status == TimelineStatus.UPCOMING }
 
-private fun entryKey(node: TimelineNode, entry: TimelineEntry) = "${node.epochMillis}-${entry.medicine?.id}-${entry.reminderId}-${entry.doseEventId}"
+// A reminder's slot keeps its key when its alarm writes the row (one row per slot, the unique index), so a row the
+// person opened stays open; a one-off dose has only its row to tell it by.
+private fun entryKey(node: TimelineNode, entry: TimelineEntry) =
+    "${node.epochMillis}-${entry.medicine?.id}-${entry.reminderId}-${if (entry.reminderId != null) "slot" else entry.doseEventId}"
 
 @Composable
 private fun BandHeader(band: DayBand) {

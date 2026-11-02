@@ -62,9 +62,9 @@ fun cardStateFor(
     val projectedToday = projected.any {
         it.medicineId == medicine.id && it.epochMillis >= nowEpochMillis && it.epochMillis in todayStartEpochMillis until todayEndEpochMillis
     }
-    // A projected slot already past is one the OS is holding, not yet posted (§7 R140): due, as on Today.
+    // A projected slot already past that its alarm is armed for is one the OS is holding (§7 R140, R143): due, as on Today.
     val heldToday = projected.any {
-        it.medicineId == medicine.id && !it.estimated && it.epochMillis < nowEpochMillis && it.epochMillis >= todayStartEpochMillis
+        it.medicineId == medicine.id && it.armed && !it.estimated && it.epochMillis <= nowEpochMillis && it.epochMillis >= todayStartEpochMillis
     }
     val todayStatus = when {
         mine.any { it.status == DoseStatus.PENDING } || heldToday -> TodayStatus.DUE

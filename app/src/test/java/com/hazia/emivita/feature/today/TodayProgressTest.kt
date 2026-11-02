@@ -7,8 +7,8 @@ import org.junit.Test
 /** What Today's progress line counts (§7 R135): the planned doses only, due before next, nothing when nothing is planned. */
 class TodayProgressTest {
 
-    private fun entry(status: TimelineStatus, reminderId: Long? = 1L, estimated: Boolean = false) =
-        TimelineEntry(medicine = null, doseAmount = 1.0, status = status, doseEventId = null, resolvedAtEpochMillis = null, reminderId = reminderId, estimated = estimated)
+    private fun entry(status: TimelineStatus, reminderId: Long? = 1L, estimated: Boolean = false, armed: Boolean = false) =
+        TimelineEntry(medicine = null, doseAmount = 1.0, status = status, doseEventId = null, resolvedAtEpochMillis = null, reminderId = reminderId, estimated = estimated, armed = armed)
 
     @Test fun `counts the planned doses and names the next one`() {
         val nodes = listOf(
@@ -27,12 +27,18 @@ class TodayProgressTest {
 
     @Test fun `a projected slot already past is due, not next, an estimate excepted (R140)`() {
         val nodes = listOf(
-            TimelineNode(5, listOf(entry(TimelineStatus.UPCOMING))),
-            TimelineNode(6, listOf(entry(TimelineStatus.UPCOMING, estimated = true))),
+            TimelineNode(5, listOf(entry(TimelineStatus.UPCOMING, armed = true))),
+            TimelineNode(6, listOf(entry(TimelineStatus.UPCOMING, estimated = true, armed = true))),
             TimelineNode(2045, listOf(entry(TimelineStatus.UPCOMING))),
         )
         assertEquals(TodayProgress(taken = 0, planned = 3, dueNow = 1, nextAt = 6, nextEstimated = true), todayProgress(nodes, now = 7))
         assertEquals("before its time it is next", TodayProgress(taken = 0, planned = 3, dueNow = 0, nextAt = 5), todayProgress(nodes, now = 4))
+    }
+
+    @Test fun `a past slot no alarm is armed for stays to come (R143)`() {
+        // The walk's guess at an interval counted from the answer, while the open dose waits.
+        val nodes = listOf(TimelineNode(5, listOf(entry(TimelineStatus.UPCOMING))))
+        assertEquals(TodayProgress(taken = 0, planned = 1, dueNow = 0, nextAt = 5), todayProgress(nodes, now = 7))
     }
 
     @Test fun `every dose answered leaves no next`() {

@@ -152,7 +152,14 @@ class AppContainer(
                 database.doseEventDao().getAnsweredSlots(from, to).mapTo(HashSet()) { it.reminderId to it.scheduledEpochMillis }
             },
             armedSlots = { AlarmWatchdog.plannedSlots(appContext) },
+            heldSlots = heldSlots,
         )
+    }
+
+    // One rule for the projection and the re-arm alike (§7 R143): an armed slot
+    // already past whose dose has no row yet is one the OS is still holding.
+    private val heldSlots: suspend (Long) -> Map<Long, Long> = { now ->
+        AlarmWatchdog.heldSlots(appContext, now) { reminderId, at -> database.doseEventDao().findByReminderAndTime(reminderId, at) != null }
     }
 
     // The widgets follow the data, as medTimer's do (§7 R104, census E-37),
@@ -247,7 +254,7 @@ class AppContainer(
     val schedulingCoordinator: SchedulingCoordinator by lazy {
         RealSchedulingCoordinator(
             database.reminderDao(), schedulingEngine, alarmScheduler, occurrenceProjectionCache,
-            heldSlots = { now -> AlarmWatchdog.heldSlots(appContext, now) },
+            heldSlots = heldSlots,
         )
     }
 

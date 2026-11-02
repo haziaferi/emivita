@@ -3,6 +3,7 @@ package com.hazia.emivita.core.scheduling
 import android.content.Context
 import android.os.SystemClock
 import androidx.core.content.edit
+import com.hazia.emivita.core.notification.UnansweredDoseReposter
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 
@@ -24,6 +25,7 @@ object AlarmWatchdog {
     private const val PREFS = "alarm_watchdog"
     private const val KEY_PLANNED = "planned"        // "reminderId:epochMillis" set
     private const val KEY_LAST_FIRED = "last_fired"
+    private const val KEY_BOOTED = "booted"
     private const val KEY_NOTICE = "missed_notice"
     const val SLACK_MILLIS = 60_000L
     const val MIN_UPTIME_MILLIS = 5L * 60_000L
@@ -50,7 +52,7 @@ object AlarmWatchdog {
 
     fun earliestPlanned(context: Context): Long? = plannedSlots(context).values.minOrNull()
 
-    /** Each reminder's armed regular slot, by reminder id: one the OS is still holding is past and not yet fired. */
+    /** Each reminder's armed regular slot, by reminder id. One already past may have rung ([heldSlots] tells). */
     fun plannedSlots(context: Context): Map<Long, Long> =
         plannedSet(context).mapNotNull { entry ->
             val reminderId = entry.substringBefore(':').toLongOrNull()
@@ -58,11 +60,16 @@ object AlarmWatchdog {
             if (reminderId != null && at != null) reminderId to at else null
         }.toMap()
 
-    /** The armed slots inside the last minute that no alarm has fired since: the alarm path's own, which the
-     *  back-fill leaves to it ([MissedDoseBackfiller.GRACE_MILLIS]) and the launch re-arm must not move (§7 R141). */
-    fun heldSlots(context: Context, nowEpochMillis: Long): Map<Long, Long> {
-        val lastFired = prefs(context).getLong(KEY_LAST_FIRED, -1L)
-        return plannedSlots(context).filterValues { it in (nowEpochMillis - MissedDoseBackfiller.GRACE_MILLIS) until nowEpochMillis && lastFired < it }
+    /** A restart drops every alarm: a slot from before it was missed, not held, and the back-fill writes it. */
+    fun recordBoot(context: Context, nowEpochMillis: Long = System.currentTimeMillis()) {
+        prefs(context).edit { putLong(KEY_BOOTED, nowEpochMillis) }
+    }
+
+    /** The armed slots the OS is still holding (§7 R140, R143): past, after the last restart, within the re-post's
+     *  day (older ones count as missed), and with no dose row yet, since a slot that rang has one ([hasDose]). */
+    suspend fun heldSlots(context: Context, nowEpochMillis: Long, hasDose: suspend (reminderId: Long, atEpochMillis: Long) -> Boolean): Map<Long, Long> {
+        val from = maxOf(prefs(context).getLong(KEY_BOOTED, Long.MIN_VALUE), nowEpochMillis - UnansweredDoseReposter.LOOKBACK_MILLIS)
+        return plannedSlots(context).filter { (reminderId, at) -> at in from until nowEpochMillis && !hasDose(reminderId, at) }
     }
 
     /** Runs before the launch reschedule repairs anything. Returns the missed

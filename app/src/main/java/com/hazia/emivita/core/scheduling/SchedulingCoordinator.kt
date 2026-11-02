@@ -46,6 +46,11 @@ interface SchedulingCoordinator {
      *  by dose event since §7 R60: a reminder can have two outstanding doses. */
     suspend fun cancelNag(reminderId: Long, doseEventId: Long)
 
+    /** A dose row of [reminderId] was just written, by its alarm or by a Take
+     *  or Skip ahead of it (§7 R143): its "when reminded" follow-ups anchor on
+     *  that row. Default no-op so the test fakes need not care. */
+    suspend fun onDoseMaterialized(reminderId: Long) {}
+
     /** A pending dose moved to a chosen time (§9 #26; medTimer's RESCHEDULE):
      *  re-notify at that instant through the snooze slot. Default no-op so
      *  the test fakes need not care. */

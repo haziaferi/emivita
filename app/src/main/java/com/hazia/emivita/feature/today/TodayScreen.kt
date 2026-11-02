@@ -79,7 +79,6 @@ import com.hazia.emivita.core.scheduling.ProjectedOccurrence
 import com.hazia.emivita.core.scheduling.ProjectionState
 import com.hazia.emivita.ui.components.DoseEditDialog
 import com.hazia.emivita.ui.components.rememberCurrentDate
-import com.hazia.emivita.ui.components.rememberNowEpochMillis
 import com.hazia.emivita.ui.components.rememberNowState
 import com.hazia.emivita.core.format.formatDoseWithUnit
 import com.hazia.emivita.ui.theme.doseCritical
@@ -128,10 +127,9 @@ internal data class TimelineEntry(
     val medicine: Medicine?,
     val doseAmount: Double,
     val status: TimelineStatus,
-    // Non-null only for an already-materialized event -- the only ones
-    // resolve() can act on. A projected-but-not-yet-fired occurrence has no
-    // DoseEvent row yet (ReminderAlarmReceiver only materializes one when its
-    // alarm actually fires), so it's shown but not actionable here.
+    // Non-null only for an already-materialized event. A projected occurrence
+    // has no DoseEvent row until its alarm fires, or until Take or Skip on its
+    // row writes one first (§9 #26, §7 R142).
     val doseEventId: Long?,
     // Only meaningful (and only ever read) for TAKEN/SKIPPED -- the edit
     // dialog's starting time for editRecordedTime (spec §9 #3).
@@ -151,6 +149,8 @@ internal data class TimelineEntry(
     val asksAmount: Boolean = false,
     /** The medicine's name, or a one-off dose's own (§7 R111). */
     val name: String = medicine?.name.orEmpty(),
+    /** A projected slot its alarm is armed for: due once past ([heldAsDue], §7 R143). */
+    val armed: Boolean = false,
 )
 
 internal data class TimelineNode(
@@ -203,9 +203,9 @@ private const val TODAY_WINDOW_DAYS = 2L
  * It reads [OccurrenceProjectionCache] (spec §9 #4), registering a window on
  * entry and releasing it on exit, and merges two sources per node: today's
  * materialized [com.hazia.emivita.core.data.entity.DoseEvent] rows
- * ([DoseEventRepository.observeInRange]), which are actionable (Take/Skip),
- * and the cache's not-yet-materialized occurrences, shown but not actionable
- * because there is no DoseEvent row to resolve() until the alarm fires.
+ * ([DoseEventRepository.observeInRange]), and the cache's not-yet-materialized
+ * occurrences, whose Take now, or Take and Skip once held (§7 R142), write
+ * their row first.
  */
 @Composable
 fun TodayScreen(
@@ -219,6 +219,7 @@ fun TodayScreen(
     onOpenNotificationSettings: () -> Unit = {},
     onOpenDataAndBackup: () -> Unit = {},
     onAddReminder: (medicineId: Long) -> Unit = {},
+    nowEpochMillis: () -> Long = System::currentTimeMillis,
 ) {
     var showLogDose by remember { mutableStateOf(false) }
     val context = LocalContext.current
@@ -307,7 +308,7 @@ fun TodayScreen(
     }
     // The rows as the line counts them (§7 R142): derived from the minute's tick, so they recompose when a held
     // slot turns due, not every minute.
-    val clock = rememberNowState()
+    val clock = rememberNowState(nowEpochMillis = nowEpochMillis)
     val rows by remember(nodes) { derivedStateOf { heldAsDue(nodes, clock.value) } }
     val heldProgress = remember { HeldProgress() }
 
@@ -327,8 +328,8 @@ fun TodayScreen(
             LazyColumn(Modifier.fillMaxSize().onSizeChanged { listHeight = it.height }, contentPadding = PaddingValues(horizontal = 16.dp, vertical = 4.dp)) {
                 item(key = "notices") {
                     Column(Modifier.onSizeChanged { noticesHeight = it.height }) {
-                        // Read here, so the minute's tick recomposes this item only.
-                        val now = rememberNowEpochMillis()
+                        // Read here, so the minute's tick recomposes this item only: the rows' clock, so they agree.
+                        val now = clock.value
                         heldProgress.of(nodes, projectionState.settled, now)?.let { TodayProgressLine(it) }
                         missedAlarm?.let { plannedAt ->
                             MissedAlarmCard(plannedAt, onOpen = onOpenNotificationSettings, onDismiss = { AlarmWatchdog.dismissNotice(context) })
@@ -537,6 +538,7 @@ internal fun buildTimeline(
                 estimated = occurrence.estimated,
                 afterEpochMillis = occurrence.afterEpochMillis,
                 afterMinutes = occurrence.afterEpochMillis?.let { ((occurrence.epochMillis - it) / 60_000L).toInt() },
+                armed = occurrence.armed,
             )
         }
 

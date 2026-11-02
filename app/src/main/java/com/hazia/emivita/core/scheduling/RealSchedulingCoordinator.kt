@@ -26,8 +26,8 @@ class RealSchedulingCoordinator(
     private val alarmScheduler: AlarmScheduler,
     private val occurrenceProjectionCache: OccurrenceProjectionCache,
     private val nowEpochMillis: () -> Long = System::currentTimeMillis,
-    // reminderId -> an armed slot of the last minute no alarm has fired yet (AlarmWatchdog.heldSlots).
-    private val heldSlots: (Long) -> Map<Long, Long> = { emptyMap() },
+    // reminderId -> an armed slot the OS is still holding at the given instant (AlarmWatchdog.heldSlots).
+    private val heldSlots: suspend (Long) -> Map<Long, Long> = { emptyMap() },
 ) : SchedulingCoordinator {
 
     override suspend fun onDoseResolved(reminderId: Long) {
@@ -49,6 +49,20 @@ class RealSchedulingCoordinator(
 
     override suspend fun onReminderChanged(reminderId: Long, notBeforeEpochMillis: Long) =
         rescheduleOne(reminderId, notBeforeEpochMillis)
+
+    // LinkedFollowing cascade, the "when reminded" side (spec §3/§9 #14): one
+    // level down, the direct children anchored on this reminder's most recent
+    // dose row. The alarm that writes that row runs it, and so does a Take or
+    // Skip that writes it first, since that alarm may never ring (§7 R143).
+    override suspend fun onDoseMaterialized(reminderId: Long) {
+        reminderDao.getChildrenOf(reminderId).forEach { child ->
+            if (!child.enabled) return@forEach
+            val childConfig = decodeReminderConfig(child.configJson)
+            if (childConfig is ReminderConfig.LinkedFollowing && childConfig.startBehavior == IntervalStartBehavior.ON_REMINDED) {
+                rescheduleOne(child.id, System.currentTimeMillis())
+            }
+        }
+    }
 
     override suspend fun onReminderRemoved(reminderId: Long) {
         alarmScheduler.cancel(reminderId)
@@ -90,16 +104,8 @@ class RealSchedulingCoordinator(
         // nothing on screen to say so. Failing one is visible as a reminder
         // that does not fire; failing the tail is indistinguishable from the
         // app working.
-
-        // A slot of the last minute the OS is still holding is armed again as it
-        // is, and delivered at once (§7 R141): moved to tomorrow, it fell between
-        // this and the back-fill's grace, and its dose got no row.
-        val held = heldSlots(now)
         reminderDao.getAllEnabled().forEach { reminder ->
-            runCatching {
-                val slot = held[reminder.id]
-                if (slot != null) alarmScheduler.schedule(reminder.id, slot) else scheduleOrCancel(reminder, now)
-            }
+            runCatching { scheduleOrCancel(reminder, now) }
                 .onFailure { Log.e(TAG, "Could not reschedule reminder ${reminder.id} -- continuing with the rest.", it) }
         }
     }
@@ -124,7 +130,15 @@ class RealSchedulingCoordinator(
         // still materialises for its own slot.
         val floor = maxOf(notBeforeEpochMillis, nowEpochMillis())
         val next = schedulingEngine.nextOccurrenceFor(reminder, floor)
-        if (next != null) {
+        // A slot the OS is still holding is armed again as it is, and delivered at
+        // once (§7 R141, R143): a later slot in its place left the dose no row, no
+        // notification and no follow-up, after a launch, an edit or another answer
+        // alike. Only while the reminder still has a next slot at all: an ended or
+        // paused one lets its held dose go.
+        val held = if (next != null && reminder.type in schedulingEngine.doseProducingTypes) heldSlots(nowEpochMillis())[reminder.id] else null
+        if (held != null) {
+            alarmScheduler.schedule(reminder.id, held)
+        } else if (next != null) {
             alarmScheduler.schedule(reminder.id, next.epochMillis)
             // The pre-alarm rides on the regular slot's answer (§9 #25): armed
             // only when its own instant is still ahead, so a reminder edited

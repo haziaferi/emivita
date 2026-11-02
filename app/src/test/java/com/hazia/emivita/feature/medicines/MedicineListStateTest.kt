@@ -52,9 +52,18 @@ class MedicineListStateTest {
     }
 
     @Test
+    fun `a projected slot already past with no alarm armed for it is not due (R143)`() {
+        // An interval counted from the answer projects its next slot while no alarm is armed for it: past, it is
+        // overdue in the walk's guess, not one the phone is holding.
+        val m = medicine(1)
+        val guessed = ProjectedOccurrence(reminderId = 9, medicineId = 1, epochMillis = at(8), doseAmount = 1.0)
+        assertEquals(TodayStatus.NONE, state(m, projected = listOf(guessed)).today)
+    }
+
+    @Test
     fun `a projected slot already past is one the phone is holding, and due (R140)`() {
         val m = medicine(1)
-        val held = ProjectedOccurrence(reminderId = 9, medicineId = 1, epochMillis = at(8), doseAmount = 1.0)
+        val held = ProjectedOccurrence(reminderId = 9, medicineId = 1, epochMillis = at(8), doseAmount = 1.0, armed = true)
         assertEquals(TodayStatus.DUE, state(m, projected = listOf(held)).today)
         val yesterday = held.copy(epochMillis = dayStart - 60_000L)
         assertEquals("yesterday's is not today's", TodayStatus.NONE, state(m, projected = listOf(yesterday)).today)

@@ -47,10 +47,10 @@ fun rememberNowEpochMillis(periodMillis: Long = 60_000L): Long = rememberNowStat
 
 /** The same clock as a state, for a `derivedStateOf` that recomposes its readers only when what it derives changes. */
 @Composable
-fun rememberNowState(periodMillis: Long = 60_000L): State<Long> =
-    produceState(initialValue = System.currentTimeMillis(), periodMillis) {
+fun rememberNowState(periodMillis: Long = 60_000L, nowEpochMillis: () -> Long = System::currentTimeMillis): State<Long> =
+    produceState(initialValue = nowEpochMillis(), periodMillis) {
         while (true) {
-            delay(periodMillis - System.currentTimeMillis() % periodMillis)
-            value = System.currentTimeMillis()
+            delay(periodMillis - nowEpochMillis() % periodMillis)
+            value = nowEpochMillis()
         }
     }
