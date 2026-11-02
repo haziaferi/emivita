@@ -2,6 +2,7 @@ package com.hazia.emivita.core.notification
 
 import android.content.Context
 import androidx.core.app.NotificationManagerCompat
+import com.hazia.emivita.EmivitaApplication
 import com.hazia.emivita.core.alarm.AlarmRingService
 
 /** The one way a reminder's notification goes away (§7 R80): cancels it and
@@ -12,6 +13,8 @@ object ReminderNotifications {
     fun dismiss(context: Context, doseEventId: Long) {
         AlarmRingService.stop(context, doseEventId)
         NotificationManagerCompat.from(context).cancel(doseEventId.toInt())
+        // The summary with it (§7 R145): a snooze or a move left Take all over the dose it took away.
+        (context.applicationContext as? EmivitaApplication)?.container?.notificationBuilder?.updateGroupSummary(dismissed = listOf(doseEventId))
     }
 }
 

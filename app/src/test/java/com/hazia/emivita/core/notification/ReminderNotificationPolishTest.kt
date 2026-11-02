@@ -181,6 +181,29 @@ class ReminderNotificationPolishTest {
         assertEquals("both going: no summary", null, shadowOf(nm).getNotification(REMINDER_GROUP_SUMMARY_ID))
     }
 
+    /** Take all answers one dose at a time, each with its own refresh (§7 R145, the review of R144): the second
+     *  refresh is told only of the second dose, while the shade may still list the first. */
+    @Test
+    fun `a refresh remembers the doses an earlier refresh was told were going`() = runTest {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        post(hideNames = false, tracked = false, eventId = 41L)
+        post(hideNames = false, tracked = false, eventId = 42L)
+        val settings = mockk<SettingsRepository>().also {
+            every { it.hideMedicineNames } returns flowOf(false)
+            every { it.palette } returns flowOf(DEFAULT_PALETTE)
+            every { it.snoozeAskEachTime } returns flowOf(false)
+            every { it.swipeAction } returns flowOf(SwipeAction.NOTHING)
+        }
+        val builder = ReminderNotificationBuilder(context, mockk(relaxed = true), settings)
+        builder.updateGroupSummary(dismissed = listOf(41L))
+        builder.updateGroupSummary(dismissed = listOf(42L))
+        assertEquals("both gone, one refresh each: no summary", null, shadowOf(nm).getNotification(REMINDER_GROUP_SUMMARY_ID))
+        // A dose posted again (an undo) counts again: buildAndPost takes it off the list.
+        RecentlyDismissed.posted(41)
+        assertTrue("posted again, 41 is not going", 41 !in RecentlyDismissed.going(emptyList()))
+        assertTrue("42 still is", 42 in RecentlyDismissed.going(emptyList()))
+    }
+
     @Test
     fun `with ask-each-time on, the Snooze action opens the picker instead of snoozing`() = runTest {
         val n = post(hideNames = false, tracked = false, eventId = 21L, askEachTime = true)

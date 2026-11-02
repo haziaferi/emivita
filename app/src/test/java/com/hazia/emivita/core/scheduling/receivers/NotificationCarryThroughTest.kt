@@ -9,6 +9,7 @@ import com.hazia.emivita.core.notification.ACTION_SKIP
 import com.hazia.emivita.core.notification.ACTION_SNOOZE
 import com.hazia.emivita.core.notification.ACTION_TAKE
 import com.hazia.emivita.core.notification.EXTRA_DOSE_EVENT_ID
+import com.hazia.emivita.core.notification.ReminderNotifications
 import com.hazia.emivita.feature.alarm.TakeAmountActivity
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -143,6 +144,21 @@ class NotificationCarryThroughTest {
         val s = shown(repeat = nagging)
         runBlocking { h.container.medicineRepository.deletePermanently(h.medicineRow(s.medicineId)) }
         assertEquals(emptyList<Any>(), h.nagAlarms(s.reminderId))
+    }
+
+    /** A snooze from the picker or the alarm screen, and a move or a soft delete from the dose's dialog, take
+     *  the card away by [ReminderNotifications.dismiss] alone: the summary kept counting it and its Take all
+     *  still took the snoozed or moved dose (§7 R145, the review of R144). */
+    @Test
+    fun `a card taken away directly leaves the summary counting only what still shows`() {
+        val a = shown("Atorvastatin")
+        val b = shown("Ramipril")
+        val summaryTitle = { h.summary()?.extras?.getString(android.app.Notification.EXTRA_TITLE) }
+        assertEquals("2 doses due", summaryTitle())
+        ReminderNotifications.dismiss(h.context, a.doseId)
+        assertEquals(listOf(b.doseId.toInt()), h.notificationIds.filter { it > 0 })
+        assertEquals("1 dose due", summaryTitle())
+        assertEquals("no Take all over one dose", 0, h.summary()?.actions?.size ?: 0)
     }
 
     @Test

@@ -73,6 +73,7 @@ class ReminderNotificationBuilder(
         // doseEvent.id.toInt(): same Long->Int caveat as AlarmScheduler's
         // reminderId.toInt() -- practically safe for a personal app's data volume.
         val notificationId = doseEvent.id.toInt()
+        RecentlyDismissed.posted(notificationId)
         val hideNames = settingsRepository.hideMedicineNames.first()
         val title = maskedMedicineName(medicine.name, hideNames)
         val ringsInService = priority == NotificationPriority.ALARM && notificationsPermitted(context) && !ReminderNotificationChannels.isBlocked(context, priority)
@@ -179,8 +180,8 @@ class ReminderNotificationBuilder(
     fun updateGroupSummary(dismissed: Collection<Long> = emptyList()) {
         val nm = androidx.core.app.NotificationManagerCompat.from(context)
         // [dismissed] were cancelled a moment ago and the shade may still list them (§7 R144): counted, they
-        // brought the summary back over a medicine deleted for good.
-        val going = dismissed.map { it.toInt() }.toSet()
+        // brought the summary back over a medicine deleted for good. Those of an earlier refresh count too (R145).
+        val going = RecentlyDismissed.going(dismissed.map { it.toInt() })
         val showingNotifications = nm.activeNotifications
             .filter { it.id > 0 && it.id !in going && it.notification.group == REMINDER_GROUP_KEY }
             .sortedBy { it.id }
@@ -402,3 +403,23 @@ internal fun reminderCanBeSwiped(sticky: Boolean, ringsInService: Boolean, sdk: 
 fun answeredText(resources: android.content.res.Resources, name: String, status: DoseStatus, atEpochMillis: Long): String =
     if (status == DoseStatus.TAKEN) resources.getString(R.string.answered_taken, name, LocaleFormats.time(atEpochMillis))
     else resources.getString(R.string.answered_skipped, name)
+
+/** The dose cards cancelled in the last few seconds (§7 R145): the shade lists a card for a moment after its
+ *  cancel, and Take all answers one dose at a time, so a refresh must also leave out what earlier ones were told
+ *  was going. Posting a card again (an undo) takes it off the list. */
+internal object RecentlyDismissed {
+    private const val WINDOW_MILLIS = 10_000L
+    private val at = HashMap<Int, Long>()
+
+    @Synchronized
+    fun going(now: Collection<Int>, nowMillis: Long = android.os.SystemClock.elapsedRealtime()): Set<Int> {
+        now.forEach { at[it] = nowMillis }
+        at.values.removeAll { nowMillis - it > WINDOW_MILLIS }
+        return at.keys.toSet()
+    }
+
+    @Synchronized
+    fun posted(id: Int) {
+        at.remove(id)
+    }
+}
