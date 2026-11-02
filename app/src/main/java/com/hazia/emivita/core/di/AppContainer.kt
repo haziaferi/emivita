@@ -262,12 +262,11 @@ class AppContainer(
         ReminderNotificationBuilder(appContext, database.doseGroupDao(), settingsRepository)
     }
 
-    // The same two steps AlarmActivity and the action receiver take after an
-    // answer, handed to the repositories so every surface gets them (§7 R113).
+    // The step AlarmActivity and the action receiver take after an answer, handed to the repositories so every
+    // surface gets it (§7 R113), and the dose's nag and snooze cancelled with its card (§7 R145).
     private val doseNotificationDismisser = DoseNotificationDismisser { ids ->
         if (ids.isEmpty()) return@DoseNotificationDismisser
-        ids.forEach { ReminderNotifications.dismiss(appContext, it) }
-        notificationBuilder.updateGroupSummary()
+        ids.forEach { ReminderNotifications.dismiss(appContext, it); alarmScheduler.cancelRefires(it) }
     }
 
     // ---- Backup/restore + auto-sync (spec §9 #9) -----------------------------

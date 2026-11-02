@@ -163,6 +163,9 @@ class MedicineRepository(
             for (r in reminders) if (r.enabled) reminderDao.update(r.copy(enabled = false))
         }
         for (r in reminders) schedulingCoordinator.onReminderRemoved(r.id)
+        // Out of Today, so out of the shade too (§7 R145): its due cards stayed, answerable, after the archive.
+        // Read once the alarms are off, so a dose that fired during the archive goes as well.
+        notifications.dismiss(doseEventDao.pendingIds(null, medicine.id))
         occurrenceProjectionCache.invalidate()
         autoSyncManager.notifyChanged()
     }

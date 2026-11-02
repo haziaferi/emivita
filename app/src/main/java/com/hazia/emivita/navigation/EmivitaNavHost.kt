@@ -15,7 +15,10 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.navigation.NavDestination.Companion.hasRoute
-import androidx.navigation.NavDestination.Companion.hierarchy
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavHostController
 import androidx.navigation.compose.NavHost
@@ -73,15 +76,17 @@ fun EmivitaNavHost(startPage: StartPage = StartPage.TODAY, openDataAndBackupOnSt
             val attention by produceState(initialValue = 0, profileId, today) {
                 container.medicineRepository.observeWithRemindersForProfile(profileId).collect { value = stockAttentionCount(it, today) }
             }
+            // The graph is flat, so a pushed page (the medicine page, Appearance) is no tab's child: the bar keeps
+            // the tab it was pushed from lit (§7 R144). A tab's own page sets it, and so does a tap on the bar.
+            var tab by rememberSaveable { mutableIntStateOf(bottomNavItems.indexOfFirst { it.route == startRoute(startPage) }) }
+            val onTab = bottomNavItems.indexOfFirst { item -> currentDestination?.hasRoute(item.route::class) == true }
+            LaunchedEffect(onTab) { if (onTab >= 0) tab = onTab }
             NavigationBar {
-                bottomNavItems.forEach { item ->
-                    val selected = currentDestination?.hierarchy?.any {
-                        it.hasRoute(item.route::class)
-                    } == true
-
+                bottomNavItems.forEachIndexed { index, item ->
                     NavigationBarItem(
-                        selected = selected,
+                        selected = index == (if (onTab >= 0) onTab else tab),
                         onClick = {
+                            tab = index
                             navController.navigate(item.route) {
                                 popUpTo(navController.graph.findStartDestination().id) {
                                     saveState = true
@@ -109,11 +114,7 @@ fun EmivitaNavHost(startPage: StartPage = StartPage.TODAY, openDataAndBackupOnSt
             navController = navController,
             // Read once by EmivitaApp before this composes (§9 #29, HM-33): the
             // graph is built with the chosen root and never re-rooted.
-            startDestination = when (startPage) {
-                StartPage.TODAY -> EmivitaRoute.Today
-                StartPage.MEDICINES -> EmivitaRoute.Medicines
-                StartPage.HISTORY -> EmivitaRoute.History
-            },
+            startDestination = startRoute(startPage),
             // Consumed as well as applied (§7 R139), so a screen's imePadding counts the keyboard from above the bar, not
             // from the screen's foot: the medicine page lost its journal's Aggiungi to the bar's height twice over.
             modifier = Modifier.padding(innerPadding).consumeWindowInsets(innerPadding),
@@ -284,6 +285,12 @@ fun EmivitaNavHost(startPage: StartPage = StartPage.TODAY, openDataAndBackupOnSt
             }
         }
     }
+}
+
+private fun startRoute(startPage: StartPage): EmivitaRoute = when (startPage) {
+    StartPage.TODAY -> EmivitaRoute.Today
+    StartPage.MEDICINES -> EmivitaRoute.Medicines
+    StartPage.HISTORY -> EmivitaRoute.History
 }
 
 /** How far a navigation label grows with the font: past it the label stops, so it stays on one line (§7 R129, the owner: "Cap their size"); 1.2 is the most "Impostazioni" takes whole at 360 dp. */

@@ -78,7 +78,6 @@ class TakeAmountActivity : ComponentActivity() {
                         lifecycleScope.launch {
                             container.doseEventRepository.takeWithAmount(doseEventId, amount)
                             ReminderNotifications.dismiss(this@TakeAmountActivity, doseEventId)
-                            container.notificationBuilder.updateGroupSummary()
                             finish()
                         }
                     }, onDismiss = { finish() })

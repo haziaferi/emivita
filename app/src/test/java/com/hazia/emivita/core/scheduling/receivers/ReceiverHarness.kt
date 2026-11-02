@@ -205,6 +205,10 @@ class ReceiverHarness {
     val answeredCards: Map<Int, android.app.Notification> get() = shadowOf(notificationManager).activeNotifications
         .filter { it.notification.category == android.app.Notification.CATEGORY_STATUS }.associate { it.id to it.notification }
 
+    /** The reminders' group summary, if one is showing. */
+    fun summary(): android.app.Notification? = shadowOf(notificationManager).activeNotifications
+        .firstOrNull { it.id == com.hazia.emivita.core.notification.REMINDER_GROUP_SUMMARY_ID }?.notification
+
     /** What a swipe on the shade does to a notification that has no delete intent. */
     fun dismissFromShade(id: Int) = notificationManager.cancel(id)
 }

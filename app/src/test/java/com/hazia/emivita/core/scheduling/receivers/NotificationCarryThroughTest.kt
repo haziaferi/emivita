@@ -4,10 +4,12 @@ import android.app.Application
 import com.hazia.emivita.core.data.config.ReminderConfig
 import com.hazia.emivita.core.data.entity.DoseEvent
 import com.hazia.emivita.core.data.entity.DoseStatus
+import com.hazia.emivita.core.data.entity.RepeatConfig
 import com.hazia.emivita.core.notification.ACTION_SKIP
 import com.hazia.emivita.core.notification.ACTION_SNOOZE
 import com.hazia.emivita.core.notification.ACTION_TAKE
 import com.hazia.emivita.core.notification.EXTRA_DOSE_EVENT_ID
+import com.hazia.emivita.core.notification.ReminderNotifications
 import com.hazia.emivita.feature.alarm.TakeAmountActivity
 import kotlinx.coroutines.runBlocking
 import org.junit.After
@@ -41,9 +43,9 @@ class NotificationCarryThroughTest {
     private data class Shown(val medicineId: Long, val reminderId: Long, val doseId: Long)
 
     /** A medicine, a daily 09:00 reminder, its first fire: one dose showing. */
-    private fun shown(name: String = "Ibuprofen", sticky: Boolean = false, asksAmount: Boolean = false): Shown {
+    private fun shown(name: String = "Ibuprofen", sticky: Boolean = false, asksAmount: Boolean = false, repeat: RepeatConfig? = null): Shown {
         val medicineId = h.medicine(name)
-        val reminderId = h.reminder(medicineId, ReminderConfig.FixedTime(hour = 9, minute = 0, dose = 1.0), sticky = sticky, variableAmount = asksAmount)
+        val reminderId = h.reminder(medicineId, ReminderConfig.FixedTime(hour = 9, minute = 0, dose = 1.0), repeat = repeat, sticky = sticky, variableAmount = asksAmount)
         h.fire(h.regularAlarms(reminderId).single())
         val doseId = h.doseEvents(reminderId).single().id
         assertTrue("the dose's notification is showing", doseId.toInt() in h.notificationIds)
@@ -114,6 +116,57 @@ class NotificationCarryThroughTest {
         val kept = shown("Ramipril", sticky = true)
         runBlocking { h.container.medicineRepository.deletePermanently(h.medicineRow(gone.medicineId)) }
         assertEquals(listOf(kept.doseId.toInt()), h.notificationIds.filter { it > 0 })
+    }
+
+    // ---- §7 R145, the R144 walk: what an archive or a delete left behind ------
+
+    @Test
+    fun `archiving a medicine removes its due notification and leaves the other`() {
+        val gone = shown("Atorvastatin")
+        val kept = shown("Ramipril")
+        runBlocking { h.container.medicineRepository.archive(h.medicineRow(gone.medicineId)) }
+        assertEquals(listOf(kept.doseId.toInt()), h.notificationIds.filter { it > 0 })
+        assertEquals("the dose stays in the record", DoseStatus.PENDING, h.doseEvent(gone.doseId).status)
+    }
+
+    private val nagging = RepeatConfig(delayMinutes = 5, maxRepeats = 3)
+
+    @Test
+    fun `archiving a medicine takes its due dose's repeat alarm with it`() {
+        val s = shown(repeat = nagging)
+        assertEquals("the repeat is armed", 1, h.nagAlarms(s.reminderId).size)
+        runBlocking { h.container.medicineRepository.archive(h.medicineRow(s.medicineId)) }
+        assertEquals(emptyList<Any>(), h.nagAlarms(s.reminderId))
+    }
+
+    @Test
+    fun `deleting a medicine for good takes its due dose's repeat alarm with it`() {
+        val s = shown(repeat = nagging)
+        runBlocking { h.container.medicineRepository.deletePermanently(h.medicineRow(s.medicineId)) }
+        assertEquals(emptyList<Any>(), h.nagAlarms(s.reminderId))
+    }
+
+    /** A snooze from the picker or the alarm screen, and a move or a soft delete from the dose's dialog, take
+     *  the card away by [ReminderNotifications.dismiss] alone: the summary kept counting it and its Take all
+     *  still took the snoozed or moved dose (§7 R145, the review of R144). */
+    @Test
+    fun `a card taken away directly leaves the summary counting only what still shows`() {
+        val a = shown("Atorvastatin")
+        val b = shown("Ramipril")
+        val summaryTitle = { h.summary()?.extras?.getString(android.app.Notification.EXTRA_TITLE) }
+        assertEquals("2 doses due", summaryTitle())
+        ReminderNotifications.dismiss(h.context, a.doseId)
+        assertEquals(listOf(b.doseId.toInt()), h.notificationIds.filter { it > 0 })
+        assertEquals("1 dose due", summaryTitle())
+        assertEquals("no Take all over one dose", 0, h.summary()?.actions?.size ?: 0)
+    }
+
+    @Test
+    fun `deleting a reminder takes its due dose's repeat alarm with it`() {
+        val s = shown(repeat = nagging)
+        val reminder = runBlocking { checkNotNull(h.container.reminderRepository.getById(s.reminderId)) }
+        runBlocking { h.container.reminderRepository.delete(reminder) }
+        assertEquals(emptyList<Any>(), h.nagAlarms(s.reminderId))
     }
 
     // ---- a stale Take on a reminder that now asks the amount ----------------

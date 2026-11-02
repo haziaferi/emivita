@@ -198,8 +198,7 @@ class ReminderActionReceiver : BroadcastReceiver() {
     }
 
     private fun dismissNotification(context: Context, doseEventId: Long) {
+        // The summary's "Take all" must list only what is still showing: dismiss refreshes it.
         ReminderNotifications.dismiss(context, doseEventId)
-        // The summary's "Take all" must list only what is still showing.
-        (context.applicationContext as? EmivitaApplication)?.container?.notificationBuilder?.updateGroupSummary()
     }
 }
