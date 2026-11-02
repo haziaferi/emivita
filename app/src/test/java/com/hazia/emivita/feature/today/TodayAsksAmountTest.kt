@@ -59,7 +59,9 @@ class TodayAsksAmountTest {
     private fun eventually(seconds: Int = 10, check: () -> Unit) {
         val deadline = System.nanoTime() + seconds * 1_000_000_000L
         while (true) {
-            try { check(); return } catch (e: AssertionError) { if (System.nanoTime() > deadline) throw e }
+            try { check(); return } catch (e: Throwable) {
+                if (e !is AssertionError && e !is NoSuchElementException || System.nanoTime() > deadline) throw e
+            }
             Thread.sleep(50)
             compose.waitForIdle()
         }
