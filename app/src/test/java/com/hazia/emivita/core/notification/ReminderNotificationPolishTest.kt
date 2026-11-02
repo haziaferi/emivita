@@ -157,6 +157,30 @@ class ReminderNotificationPolishTest {
         assertEquals(null, shadowOf(nm).getNotification(REMINDER_GROUP_SUMMARY_ID))
     }
 
+    /** §7 R144, the walk: a medicine deleted for good left "2 dosi da prendere" in the shade. A cancel reaches
+     *  the shade later than the refresh that follows it, so the refresh still saw the doses and posted the summary
+     *  again; the doses it was told are going must not count. Robolectric cancels at once, so the test refreshes
+     *  with both still showing, as the 9 Pro does. */
+    @Test
+    fun `a refresh right after a dismissal does not count the doses being dismissed`() = runTest {
+        val nm = context.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        post(hideNames = false, tracked = false, eventId = 31L)
+        post(hideNames = false, tracked = false, eventId = 32L)
+        assertEquals("2 doses due", shadowOf(nm).getNotification(REMINDER_GROUP_SUMMARY_ID)?.extras?.getString(Notification.EXTRA_TITLE))
+        val settings = mockk<SettingsRepository>().also {
+            every { it.hideMedicineNames } returns flowOf(false)
+            every { it.palette } returns flowOf(DEFAULT_PALETTE)
+            every { it.snoozeAskEachTime } returns flowOf(false)
+            every { it.swipeAction } returns flowOf(SwipeAction.NOTHING)
+        }
+        val builder = ReminderNotificationBuilder(context, mockk(relaxed = true), settings)
+        builder.updateGroupSummary(dismissed = listOf(31L))
+        val one = shadowOf(nm).getNotification(REMINDER_GROUP_SUMMARY_ID)
+        assertEquals("one of two going: the summary counts the other", "1 dose due", one?.extras?.getString(Notification.EXTRA_TITLE))
+        builder.updateGroupSummary(dismissed = listOf(31L, 32L))
+        assertEquals("both going: no summary", null, shadowOf(nm).getNotification(REMINDER_GROUP_SUMMARY_ID))
+    }
+
     @Test
     fun `with ask-each-time on, the Snooze action opens the picker instead of snoozing`() = runTest {
         val n = post(hideNames = false, tracked = false, eventId = 21L, askEachTime = true)

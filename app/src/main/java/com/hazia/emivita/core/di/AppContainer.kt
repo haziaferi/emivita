@@ -267,7 +267,7 @@ class AppContainer(
     private val doseNotificationDismisser = DoseNotificationDismisser { ids ->
         if (ids.isEmpty()) return@DoseNotificationDismisser
         ids.forEach { ReminderNotifications.dismiss(appContext, it) }
-        notificationBuilder.updateGroupSummary()
+        notificationBuilder.updateGroupSummary(dismissed = ids)
     }
 
     // ---- Backup/restore + auto-sync (spec §9 #9) -----------------------------

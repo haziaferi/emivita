@@ -176,10 +176,13 @@ class ReminderNotificationBuilder(
      *  Two or more -> a summary, with "Take all" over exactly those ids whose
      *  reminder does not ask the amount, when two or more remain (§7 R110);
      *  fewer showing -> no summary. Called after every post and dismissal. */
-    fun updateGroupSummary() {
+    fun updateGroupSummary(dismissed: Collection<Long> = emptyList()) {
         val nm = androidx.core.app.NotificationManagerCompat.from(context)
+        // [dismissed] were cancelled a moment ago and the shade may still list them (§7 R144): counted, they
+        // brought the summary back over a medicine deleted for good.
+        val going = dismissed.map { it.toInt() }.toSet()
         val showingNotifications = nm.activeNotifications
-            .filter { it.id > 0 && it.notification.group == REMINDER_GROUP_KEY }
+            .filter { it.id > 0 && it.id !in going && it.notification.group == REMINDER_GROUP_KEY }
             .sortedBy { it.id }
         val showing = showingNotifications.map { it.id.toLong() }
         // Cancelling a group's summary cancels every child still in the group,
