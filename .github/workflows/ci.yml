@@ -47,7 +47,7 @@ jobs:
       # gradle-wrapper.jar is the one binary in the tree; this checks it
       # against Gradle's published checksums before anything runs it.
       - name: Validate the Gradle wrapper
-        uses: gradle/actions/wrapper-validation@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        uses: gradle/actions/wrapper-validation@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
 
       # Every screen the code can show has a place on docs/purpose-map.md, and
       # every SPEC reference there resolves (§7 R86). Standard library only.
@@ -90,7 +90,7 @@ jobs:
           packages: platform-tools
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
 
       # The lint gate itself lives in app/build.gradle.kts (abortOnError +
       # warningsAsErrors against lint-baseline.xml), so this fails on any
@@ -134,7 +134,7 @@ jobs:
           packages: platform-tools
 
       - name: Set up Gradle
-        uses: gradle/actions/setup-gradle@3f5f9adaf7d9fecd50b5935e54106014257a94e6 # v6.4.0
+        uses: gradle/actions/setup-gradle@8da46b539cd8fe6ab27ca75128919a18d757604c # v6.4.1
 
       - name: Assemble release
         run: ./gradlew :app:assembleRelease --stacktrace
