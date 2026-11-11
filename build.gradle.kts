@@ -41,7 +41,7 @@ plugins {
     // 1.12, Navigation 2.10 and core-ktx 1.19 required AGP 9.1 and compileSdk
     // 37). AGP 9 compiles Kotlin itself and registers the `kotlin` extension,
     // so org.jetbrains.kotlin.android is gone: applying it on top fails.
-    id("com.android.application") version "9.4.1" apply false
+    id("com.android.application") version "9.5.0" apply false
     id("org.jetbrains.kotlin.plugin.compose") version "2.4.21" apply false
     id("com.google.devtools.ksp") version "2.3.12" apply false
 }
