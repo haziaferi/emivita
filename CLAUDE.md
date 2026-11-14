@@ -18,15 +18,8 @@ grep -E "^e: |BUILD " build.log
 ls -la app/build/test-results/testDebugUnitTest/*.xml | tail -3
 ```
 
-- **Never put the build on the left of a pipe** when its exit code is what
-  you are checking. `./gradlew … | tail` reports *tail's* status, and so does
-  the `$?` after it, and so does a background task's "exit code 0" summary.
-- **Clear `app/build/test-results` before quoting test counts.** It persists
-  across runs, so a failed compile writes no new XML and parsing the directory
-  returns the *previous* run's numbers. Print the newest file's mtime beside
-  the counts.
-- `grep` the log explicitly. "No visible errors" is not an assertion of
-  success.
+Exit codes, stale `app/build/test-results` and reading the log: see Shared
+Android/Gradle rules below.
 
 R8 runs only on release, so the triad cannot see what it strips. Glance keys
 placed widgets by class name and R8 merges the two widgets without the keep
@@ -108,7 +101,7 @@ rm -rf app/build/outputs/androidTest-results
 ```
 
 Results land in `app/build/outputs/androidTest-results/connected/`. Same
-rule as above: clear the directory first, read the real exit code. The suite
+rules as for the build: clear the directory first, read the real exit code. The suite
 installs a debug build over whatever is on the phone and writes (then deletes)
 its own rows in the real database — check what is installed before running it
 on a device that is not the test device.
@@ -179,8 +172,6 @@ en-XA on the device (`isPseudoLocalesEnabled`) is the complement.
   `MedPalette.displayName()` (Italian names, pinned to SPEC Appendix A), `CardLabels.ENGLISH`
   (test-pinned), `"Me"` (a stored sentinel), `MedicineIconOption.key`
   (persisted). Each says why at its declaration.
-- Lint will demand real dashes, ellipses and `<plurals>` the moment text
-  lands in XML. Fix them; never baseline them.
 - `LiveControlBesideLabelGateTest` fails the build on a `Switch`, `Checkbox`
   or `RadioButton` that is its own tap target beside a label. Accepted
   shapes: the container carries the tap target (`toggleable`, `selectable`,
@@ -220,14 +211,37 @@ trees are under `Downloads/xapps/` beside `Downloads/medTimer-main/`.
 
 ## Editing files
 
-- Line endings are enforced by `.gitattributes`; do not fight it. If a patch
-  script writes files, open them in binary mode or pass `newline=""` — Python's
-  text mode on Windows turns a three-line edit into a 990-line diff (§7 R57).
-- XML comments never use `--` in the body (§10). Kotlin comments are fine.
+- Line endings are enforced by `.gitattributes`; do not fight it. A text-mode
+  rewrite once turned a three-line edit into a 990-line diff (§7 R57); the
+  binary-mode rule is in the shared block below.
+- XML comments: §10; the rule is in the shared block below.
 - Prefer editing a file to regenerating it. Rewriting `Color.kt` wholesale is
   what silently dropped `NeutralMedicineAccent` and its 14 call sites; the
   palette objects are the one part of it the tool regenerates, and
   `NeutralMedicineAccent` sits below them for exactly that reason.
+
+<!-- BEGIN shared:android-gradle-rules (generated from the owner's shared rules; edit the source, not this copy) -->
+## Shared Android/Gradle rules
+
+These hold in every Android/Gradle project here; the commands above say how they apply to this one.
+
+- **Never put the build on the left of a pipe** when its exit code is what you are reading.
+  `./gradlew … | tail` reports tail's status, and so does `$?` after it, and so does a background
+  task's own "exit code 0". Redirect and print the code: `> build.log 2>&1; echo "EXIT=$?"`, then
+  `grep` the log: "no visible errors" is not an assertion of success.
+- **Clear `build/test-results` before quoting a test count**, and `build/outputs/androidTest-results`
+  before an instrumented run. Both survive a failed compile, so parsing them hands back the previous
+  run's numbers. Count from the XML, not Gradle's summary (a cached `UP-TO-DATE` test task reports a
+  pass without running anything), and print the newest file's mtime beside the count.
+- **Lint demands real dashes, ellipses and `<plurals>`** the moment text lands in XML: write them that
+  way first, with a quantity string at the call site rather than a formatted count. Fix what lint
+  reports; do not baseline new findings.
+- **XML comments never carry a double hyphen in the body.** Kotlin comments are unaffected.
+- **A script that rewrites a file opens it in binary mode or passes `newline=""`.** Python's text mode
+  on Windows rewrites every line ending, so a three-line edit becomes a whole-file diff.
+- **Scripts with regexes, backslashes or non-ASCII go in a file** (write it with the editor tool, then
+  run it), never into `python - <<'EOF'`: a doubled backslash arrives as one, and `\b` as 0x08.
+<!-- END shared:android-gradle-rules -->
 
 ## Before saying something is done
 
