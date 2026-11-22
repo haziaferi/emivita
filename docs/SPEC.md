@@ -20,11 +20,11 @@ Migration: this file is being migrated topic by topic from `SPEC-legacy.md` (R15
 | D-R152 | Constraint check before shipping | 2. Working agreements |
 | D-R153 | Verifying a build | 2. Working agreements |
 | D-R154 | Double hyphens in XML comments | 2. Working agreements |
-| D-R155 | How changes land | 2. Working agreements |
-| D-R156 | Public repository | 2. Working agreements |
+| O-R155 | How changes land | 2. Working agreements |
+| O-R156 | Public repository | 2. Working agreements |
 | D-R157 | Comment length | 2. Working agreements |
-| D-R158 | Standing practices | 2. Working agreements |
-| D-R159 | Adopting from the reference app | 2. Working agreements |
+| O-R158 | Standing practices | 2. Working agreements |
+| O-R159 | Adopting from the reference app | 2. Working agreements |
 | D-R160 | A permission needs its request path | 3. Engineering rules |
 | D-R161 | Permissions against the merged manifest | 3. Engineering rules |
 | D-R162 | One write per edit | 3. Engineering rules |
@@ -153,7 +153,7 @@ Emivita reminds one person to take their medicines and keeps the record of what 
 | Harvest catalogues, comparisons of other apps, scores | outside the repository, under `_work/` |
 | Retired wording | git |
 
-**Acceptance:** `speccheck` on `docs/SPEC.md` reports no BLOCK or ASK finding, and `findings-ledger.md` is unchanged since the commit that moved it.
+**Acceptance:** `python tools/speccheck.py docs/SPEC.md`, a step of the "Build, test, lint" check, reports no BLOCK or ASK finding, and `findings-ledger.md` is unchanged since the commit that moved it.
 
 **Not:** Appending each finding as a ledger row in the spec: replaced 2026-11-22 by the owner's choice. A separate Emivita document for a finding: the drift R149 records.
 
@@ -197,9 +197,11 @@ Emivita reminds one person to take their medicines and keeps the record of what 
 
 **Since:** 2026-09-01 · unrecorded · migrated
 
-### D-R155 · How changes land
+### O-R155 · How changes land
 
 **Rule:** `master` takes changes only by pull request, merged when the four checks below are green. No force-push, no deletion, no bypass.
+
+**Why:** `master` is what gets installed on the phone, and CI finds what no local run can: its first runs failed on three things every local gate had passed (`findings-ledger.md` row 86).
 
 **Values:**
 
@@ -214,17 +216,19 @@ Emivita reminds one person to take their medicines and keeps the record of what 
 
 **Acceptance:** `gh api repos/haziaferi/emivita/rulesets/24953901` lists the four required checks, `deletion` and `non_fast_forward`, and an empty `bypass_actors`.
 
-**Since:** 2026-10-13 · owner · migrated
+**Since:** 2026-11-22 · owner · migrated
 
-### D-R156 · Public repository
+### O-R156 · Public repository
 
 **Rule:** The repository is public under GPL-3.0, and security reports go through GitHub's private vulnerability reporting, so no contact is published. No personal information appears in any file or in git metadata: commits carry `haziaferi` and the GitHub no-reply address.
+
+**Why:** Public, CI and CodeQL run on the free plan, and Scorecard can read the repository without a personal access token; the owner chose that over adding a token (`findings-ledger.md` row 86).
 
 **Evidence:** `LICENSE` and `SECURITY.md` exist; the history was rewritten with `git filter-repo` on 2026-10-13 and the pre-rewrite history kept outside the repository (`findings-ledger.md` row 86).
 
 **Acceptance:** `git log --format='%an %ae %cn %ce'` lists only `haziaferi` and the no-reply address, and a scan of the tracked files finds no personal name, email or contact.
 
-**Since:** 2026-10-13 · owner · migrated
+**Since:** 2026-11-22 · owner · migrated
 
 ### D-R157 · Comment length
 
@@ -236,26 +240,30 @@ Emivita reminds one person to take their medicines and keeps the record of what 
 
 **Since:** 2026-10-12 · owner · migrated
 
-### D-R158 · Standing practices
+### O-R158 · Standing practices
 
 **Rule:** The four practices below apply to every batch, in the owner's words.
 
+**Why:** Each row's reason is in its last column.
+
 **Values:**
 
-| Practice | What it means |
-|---|---|
-| Render sheets before every ask | a choice about layout, wording or colour is shown as rendered options before the owner is asked |
-| Gate 2.0 + 360 dp in CI | `ScreenSweepTest` walks every screen at 360 dp, font 1.0 and 2.0, and fails on cut or broken text |
-| One walk per batch | each batch gets one walk on the phone, not one per change |
-| Incremental harvests | ideas are harvested from the owner's projects that resemble Emivita most, reading only what changed since the last index |
+| Practice | What it means | Why |
+|---|---|---|
+| Render sheets before every ask | a choice about layout, wording or colour is shown as rendered options before the owner is asked | the owner decides everything visible, and judges it from a render, not a description |
+| Gate 2.0 + 360 dp in CI | `ScreenSweepTest` walks every screen at 360 dp, font 1.0 and 2.0, and fails on cut or broken text | font 2.0 broke screens twice before the gate existed (`findings-ledger.md` rows 130 and 131) |
+| One walk per batch | each batch gets one walk on the phone, not one per change | the owner's time on the phone is the scarcest input (R177) |
+| Incremental harvests | ideas are harvested from the owner's projects that resemble Emivita most, reading only what changed since the last index | a full harvest re-reads hundreds of files for the same axes |
 
 **Acceptance:** `ScreenSweepTest` runs in the "Build, test, lint" check; the other three rows are practices with nothing to run.
 
-**Since:** 2026-10-30 · owner · own words
+**Since:** 2026-11-22 · owner · own words
 
-### D-R159 · Adopting from the reference app
+### O-R159 · Adopting from the reference app
 
 **Rule:** A feature the reference app has is adopted as it is, unless scoring on axes the owner picks shows a variant is better. The axes are asked before anything is scored, and the axes below are the owner's picks.
+
+**Why:** The reference app's features are a solid basis, in the owner's words (`findings-ledger.md` row 102); a variant has to earn its place by a score, not by being new.
 
 **Values:**
 
@@ -271,7 +279,7 @@ Emivita reminds one person to take their medicines and keeps the record of what 
 
 **Acceptance:** none: a working practice, applied before a feature is scored.
 
-**Since:** 2026-10-30 · owner · migrated
+**Since:** 2026-11-22 · owner · migrated
 
 ## 3. Engineering rules
 
@@ -337,15 +345,15 @@ Each rule below was paid for by a defect; its Evidence names the findings ledger
 
 ### D-R165 · Tests run off UTC
 
-**Rule:** Scheduling tests run in a zone with an offset, `Europe/Rome`, never in UTC alone.
+**Rule:** Every unit test runs with `Europe/Rome` as the default zone, on a developer machine and on CI's UTC runner alike. A test may set another zone of its own, never UTC alone.
 
 **Why:** A suite that runs only in UTC cannot catch an offset bug.
 
-**Evidence:** `findings-ledger.md` row 24. Not checked: of the 21 test files under `core/scheduling`, 4 set `Europe/Rome`; whether the rest run in the zone some other way was not read.
+**Evidence:** `findings-ledger.md` row 24. On 2026-11-22, 4 of the 21 scheduling test files set `Europe/Rome` and 3 read the system zone, which CI runs as UTC; `app/build.gradle.kts` sets `user.timezone` for every `Test` task since.
 
-**Acceptance:** Every scheduling test either sets `Europe/Rome` or a non-UTC zone of its own.
+**Acceptance:** `app/build.gradle.kts` sets `systemProperty("user.timezone", "Europe/Rome")` on every `Test` task, and the "Build, test, lint" check passes with it.
 
-**Since:** 2026-09-06 · builder · migrated
+**Since:** 2026-11-22 · owner · migrated
 
 ### D-R166 · Agreement is not evidence
 
@@ -521,11 +529,11 @@ Each rule below was paid for by a defect; its Evidence names the findings ledger
 
 **Why:** A walk over a renamed or missing directory yields nothing and the gate goes green over code it never opened; a check that reported zero and one that ran on nothing look the same.
 
-**Evidence:** `findings-ledger.md` row 82. Checked 2026-11-22: `HardcodedUiTextGateTest` has both; `DialogPairGateTest` has the lower bound only; `LiveControlBesideLabelGateTest` has the self-test only; `AlphaTintGateTest` has neither.
+**Evidence:** `findings-ledger.md` row 82. On 2026-11-22 `DialogPairGateTest` lacked the self-test and `AlphaTintGateTest` lacked both; both gained them that day, so all four gates (`HardcodedUiTextGateTest`, `LiveControlBesideLabelGateTest`, `DialogPairGateTest`, `AlphaTintGateTest`) hold both.
 
-**Acceptance:** Each `*GateTest` under `app/src/test` holds a lower-bound assertion on its source count and a self-test.
+**Acceptance:** Each `*GateTest` under `app/src/test` holds a lower-bound assertion on its source count and a `theGateItselfCanFail` test.
 
-**Since:** 2026-10-12 · builder · migrated
+**Since:** 2026-11-22 · owner · migrated
 
 ### D-R181 · A test crosses the defect's boundary
 
@@ -543,17 +551,17 @@ Each rule below was paid for by a defect; its Evidence names the findings ledger
 
 - R147 · Jobs and how often: `DoseStatus` declares no missed value, and creating a medicine asks for its name, dose unit and icon.
 - R148 · Platform constraints: The merged release manifest declares no `INTERNET` permission; `releaseRuntimeClasspath` holds no `com.google.android.gms` or `com.google.firebase` artifact; `app/build.gradle.kts` has the minSdk, targetSdk, toolchain and identity of the table.
-- R150 · Findings and evidence: `speccheck` on `docs/SPEC.md` reports no BLOCK or ASK finding, and `findings-ledger.md` is unchanged since the commit that moved it.
+- R150 · Findings and evidence: `python tools/speccheck.py docs/SPEC.md`, a step of the "Build, test, lint" check, reports no BLOCK or ASK finding, and `findings-ledger.md` is unchanged since the commit that moved it.
 - R152 · Constraint check before shipping: The checks in R148's Acceptance pass on the batch's merge commit.
 - R154 · Double hyphens in XML comments: `python tools/strings_review.py --check` passes, and the merged manifest builds.
 - R155 · How changes land: `gh api repos/haziaferi/emivita/rulesets/24953901` lists the four required checks, `deletion` and `non_fast_forward`, and an empty `bypass_actors`.
 - R156 · Public repository: `git log --format='%an %ae %cn %ce'` lists only `haziaferi` and the no-reply address, and a scan of the tracked files finds no personal name, email or contact.
 - R157 · Comment length: `python tools/code_health.py --selftest` and `python tools/code_health.py --check` exit 0.
 - R158 · Standing practices: `ScreenSweepTest` runs in the "Build, test, lint" check; the other three rows are practices with nothing to run.
-- R165 · Tests run off UTC: Every scheduling test either sets `Europe/Rome` or a non-UTC zone of its own.
+- R165 · Tests run off UTC: `app/build.gradle.kts` sets `systemProperty("user.timezone", "Europe/Rome")` on every `Test` task, and the "Build, test, lint" check passes with it.
 - R173 · Lint is a gate: `app/build.gradle.kts` keeps `abortOnError` and `warningsAsErrors` true, and the "Build, test, lint" check runs `lintDebug`.
 - R174 · One project, one build: `app/build.gradle.kts` sets no `applicationIdSuffix`.
-- R180 · A gate proves it scanned: Each `*GateTest` under `app/src/test` holds a lower-bound assertion on its source count and a self-test.
+- R180 · A gate proves it scanned: Each `*GateTest` under `app/src/test` holds a lower-bound assertion on its source count and a `theGateItselfCanFail` test.
 
 ## Out of scope
 

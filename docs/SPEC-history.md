@@ -40,3 +40,10 @@ Not a source of current rules: `SPEC.md` is. One line per change, newest at the 
 - 2026-11-22 · R150 · added · findings as rule changes, ledger frozen at row 146 · owner
 - 2026-11-22 · spec · migrated · pass 1 of the topic migration from the old SPEC.md · owner · 82dabce
 - 2026-11-22 · R147 · kind · Q → D: answered with name, unit, icon once; taken or skipped daily; missed derived · owner
+- 2026-11-22 · R155 · kind · D → O: reason recorded, CI finds what local runs cannot · owner
+- 2026-11-22 · R156 · kind · D → O: reason recorded, public so CI and Scorecard run without a token · owner
+- 2026-11-22 · R158 · kind · D → O: a reason for each practice · owner
+- 2026-11-22 · R159 · kind · D → O: reason recorded, the reference app's features are a solid basis · owner
+- 2026-11-22 · R165 · changed · scheduling tests only → every unit test in Europe/Rome, CI included · owner
+- 2026-11-22 · R180 · changed · DialogPairGateTest and AlphaTintGateTest gain the missing checks · owner
+- 2026-11-22 · R150 · changed · speccheck vendored to tools/ and run in CI · owner

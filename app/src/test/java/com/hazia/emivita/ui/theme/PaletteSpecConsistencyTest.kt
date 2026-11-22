@@ -65,7 +65,7 @@ class PaletteSpecConsistencyTest {
 
     /** Parses Appendix A into palette-name -> role -> (light, dark). */
     private fun appendixA(): Map<String, Map<String, Pair<String, String>>> {
-        // Appendix A stays in the legacy file until the palette pass moves it (SPEC:R150).
+        // Appendix A stays in the legacy file until the palette pass moves it (SPEC:R149).
         val spec = repoFile("docs/SPEC-legacy.md").readText()
         val from = spec.indexOf("## Appendix A —")
         val to = spec.indexOf("\n## ", from + 1)

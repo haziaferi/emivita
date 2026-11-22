@@ -187,7 +187,7 @@ def kotlin():
     return "\n".join(lines)
 
 def check():
-    # Appendix A stays in the legacy file until the palette pass moves it (SPEC R150).
+    # Appendix A stays in the legacy file until the palette pass moves it (SPEC R149).
     spec = io.open(ROOT / "docs" / "SPEC-legacy.md", encoding="utf-8").read()
     a = spec.index("## Appendix A —"); b = spec.index("\n## ", a + 1)
     section = spec[a:b]
