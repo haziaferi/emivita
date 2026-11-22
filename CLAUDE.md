@@ -1,12 +1,20 @@
 # Emivita — operating notes
 
-`docs/SPEC.md` is the source of truth for this project: §7 is the finding
-ledger, §7.1 the rules distilled from it, §10 the working agreements. This
-file exists only because §10 is 185 KB into that document and nothing loads
-it. **It carries commands, not reasoning** — where the two ever disagree,
-SPEC.md wins and this file is the one that is wrong.
+`docs/SPEC.md` is the source of truth for this project (SPEC R149): one rule
+per subject with a permanent number, the working agreements in its section 2
+and the engineering rules in section 3. `docs/SPEC-history.md` has one line per
+change. Sections not yet migrated stay in `docs/SPEC-legacy.md`, authoritative
+until a pass moves them (R150). The old findings ledger is frozen evidence in
+`docs/spec-evidence/findings-ledger.md`; a `§7 Rn` citation in the code means
+its row n, and `docs/spec-evidence/identifier-map.md` resolves every other old
+`§` citation. **This file carries commands, not reasoning** — where the two
+ever disagree, SPEC.md wins and this file is the one that is wrong.
 
-## Verifying a build (§10, §7 R57)
+Changing the spec: follow the project-spec-writer skill (rewrite the rule,
+add one history line, run its `speccheck`; new code cites `SPEC:Rnn`). A
+finding is a rule change plus a history line, never a new ledger row (R150).
+
+## Verifying a build (SPEC R153, ledger R57)
 
 Three consecutive green builds were reported here over a compile that was
 failing. Both signals agreed because they shared a cause.
@@ -195,7 +203,7 @@ python tools/strings_review.py --sheet /tmp/it_sheet.md
 
 ## The reference app (§5, §7 R60, Appendix E)
 
-medTimer v1.24.6 (MIT) is the reference. `docs/SPEC.md` Appendix E is the
+medTimer v1.24.6 (MIT) is the reference. `docs/spec-evidence/appendix-e-medtimer-diff.md` is the
 285-row code-level diff, with the ranked adoption list in E.4 and the
 `import-as-is` candidates in E.1 — a copy needs `THIRD_PARTY_NOTICES.md`
 with the MIT notice, created at the first copy. Thirty of medTimer's
@@ -203,7 +211,7 @@ scheduler tests run against Emivita's engine in
 `app/src/test/.../core/scheduling/medtimer/`; when scheduling changes,
 they say whether parity or a documented divergence moved.
 
-Appendix F is the same exercise against the rest of the field (HomeMedkit,
+Appendix F (`docs/spec-evidence/appendix-f-cross-app-diff.md`) is the same exercise against the rest of the field (HomeMedkit,
 MediTrak, Did I Take My Meds?, Daily Pill, Pill Time, Dosage, the Medisafe /
 MyTherapy listings) — **all GPL: ideas only, never code**. F.5 is the
 re-ranked adoption list; §9 #24–#26 are the owner's picks from it. The
@@ -214,7 +222,7 @@ trees are under `Downloads/xapps/` beside `Downloads/medTimer-main/`.
 - Line endings are enforced by `.gitattributes`; do not fight it. A text-mode
   rewrite once turned a three-line edit into a 990-line diff (§7 R57); the
   binary-mode rule is in the shared block below.
-- XML comments: §10; the rule is in the shared block below.
+- XML comments: SPEC R154; the rule is in the shared block below.
 - Prefer editing a file to regenerating it. Rewriting `Color.kt` wholesale is
   what silently dropped `NeutralMedicineAccent` and its 14 call sites; the
   palette objects are the one part of it the tool regenerates, and
@@ -246,9 +254,9 @@ These hold in every Android/Gradle project here; the commands above say how they
 ## Before saying something is done
 
 - A claim about behaviour is either enforced by a test or labelled unverified
-  (§7.1 rule 5). `PaletteSpecConsistencyTest` is the pattern: it asserts the
+  (SPEC R164). `PaletteSpecConsistencyTest` is the pattern: it asserts the
   spec's own tables against what the app resolves.
-- Findings, audits and rationale go in `docs/SPEC.md` — §7's ledger for the
-  finding, an appendix for the reasoning. Not in a new markdown file (§10).
-- The §7 ledger is append-only. Mark a superseded row via its
-  `Superseded by` column; never edit what a row originally said.
+- A finding changes the rule it concerns and adds one line to
+  `docs/SPEC-history.md`; long evidence goes in its own file under
+  `docs/spec-evidence/` (R150). No other new markdown file.
+- The findings ledger is frozen at row 146: never add or edit a row.

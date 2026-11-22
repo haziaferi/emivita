@@ -5,7 +5,7 @@ Each palette is three agreed colours per register -- ground, text, primary --
 taken from a named visual-craft lexicon pair the owner chose, and everything
 else is derived from those three by the same rules for all four, so the
 palettes differ only where their seeds do. This file is the one place the
-values are typed; `docs/SPEC.md` Appendix A and `ui/theme/Color.kt`'s palette
+values are typed; `docs/SPEC-legacy.md` Appendix A and `ui/theme/Color.kt`'s palette
 objects are both printed from it, and `--check` fails when Appendix A's tables
 have drifted from what it prints (PaletteSpecConsistencyTest pins the Kotlin
 side to the same tables, closing the loop).
@@ -187,8 +187,9 @@ def kotlin():
     return "\n".join(lines)
 
 def check():
-    spec = io.open(ROOT / "docs" / "SPEC.md", encoding="utf-8").read()
-    a = spec.index("## Appendix A —"); b = spec.index("## Appendix B —")
+    # Appendix A stays in the legacy file until the palette pass moves it (SPEC R150).
+    spec = io.open(ROOT / "docs" / "SPEC-legacy.md", encoding="utf-8").read()
+    a = spec.index("## Appendix A —"); b = spec.index("\n## ", a + 1)
     section = spec[a:b]
     want = tables()
     # Compare every table row and heading the generator prints, in order.

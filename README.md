@@ -106,15 +106,18 @@ shell from scratch, which is already done here.
 ## License and security reports
 
 Emivita is free software under the GNU General Public License, version 3
-(`LICENSE`). Ideas from the GPL apps in SPEC Appendix F were taken as
+(`LICENSE`). Ideas from the GPL apps in `docs/spec-evidence/appendix-f-cross-app-diff.md` were taken as
 inspiration, never code. Report a vulnerability privately, not in an issue:
 see `SECURITY.md`.
 
 ## Project status
 
-Not tracked here, on purpose. `docs/SPEC.md` is the source of truth: §9's
-checkmarks answer "is X built?", §7 is the audit-findings ledger, and §8
-carries the few notes §9's one-line entries can't.
+Not tracked here, on purpose. `docs/SPEC.md` is the source of truth, with
+`docs/SPEC-history.md` beside it, and `docs/SPEC-legacy.md` holds the sections
+not yet migrated to it (SPEC R149): there §9's checkmarks answer "is X built?"
+and §8 carries the few notes §9's one-line entries can't. The audit-findings
+ledger is frozen as evidence in `docs/spec-evidence/findings-ledger.md`;
+`docs/spec-evidence/identifier-map.md` resolves an old `§n` or `Rn` citation.
 
 This file used to carry a ~110-line status narrative alongside those. It was
 a second copy of state `docs/SPEC.md` already owned, and it drifted the way
