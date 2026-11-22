@@ -12,7 +12,7 @@ Migration: this file is being migrated topic by topic from `SPEC-legacy.md` (R15
 
 | ID | Name | Section |
 |---|---|---|
-| Q-R147 | Jobs and how often | 1. Purpose and jobs |
+| D-R147 | Jobs and how often | 1. Purpose and jobs |
 | O-R148 | Platform constraints | 1. Purpose and jobs |
 | D-R149 | Source of truth | 2. Working agreements |
 | D-R150 | Findings and evidence | 2. Working agreements |
@@ -65,15 +65,24 @@ Migration: this file is being migrated topic by topic from `SPEC-legacy.md` (R15
 
 Emivita reminds one person to take their medicines and keeps the record of what was taken, skipped or missed, so the record can be trusted and shown to a clinician. It is a structural revisit of the reference app: its scheduling, notification and backup logic is a source to port from, its Fragment and XML interface is not.
 
-### Q-R147 · Jobs and how often
+### D-R147 · Jobs and how often
 
-**Rule:** Which jobs does the app serve, and how often is each done?
+**Rule:** Emivita is a reminder and tracker app for medication. A medicine's name, dose unit and icon are entered once, when it is first created; each of its doses is then answered as taken or skipped, every day or several times a day, and a dose left unanswered after its reminders stop counts as missed.
 
-**Default:** none proposed: `SPEC-legacy.md` names the four tabs (Today, Medicines, History, Settings) but never states the jobs behind them or their frequency, and the order of every default should follow that frequency.
+**Values:**
 
-**Why:** The jobs and their frequency decide what opens first and what each screen puts at the top; no rule records them.
+| Job | How often |
+|---|---|
+| Answer a dose: taken or skipped | every day, or several times a day |
+| Create a medicine: name, dose unit, icon | once per medicine |
 
-**Since:** 2026-11-22 · builder · own words
+**Evidence:** `DoseStatus` (`DoseEvent.kt:15`) has no missed value: missed is derived from an unanswered dose, never recorded; checked 2026-11-22.
+
+**Acceptance:** `DoseStatus` declares no missed value, and creating a medicine asks for its name, dose unit and icon.
+
+**Not:** Logging a dose as missed by hand: missed stays what an unanswered dose becomes.
+
+**Since:** 2026-11-22 · owner · agreed rewording
 
 ### O-R148 · Platform constraints
 
@@ -532,6 +541,7 @@ Each rule below was paid for by a defect; its Evidence names the findings ledger
 
 ## Acceptance list
 
+- R147 · Jobs and how often: `DoseStatus` declares no missed value, and creating a medicine asks for its name, dose unit and icon.
 - R148 · Platform constraints: The merged release manifest declares no `INTERNET` permission; `releaseRuntimeClasspath` holds no `com.google.android.gms` or `com.google.firebase` artifact; `app/build.gradle.kts` has the minSdk, targetSdk, toolchain and identity of the table.
 - R150 · Findings and evidence: `speccheck` on `docs/SPEC.md` reports no BLOCK or ASK finding, and `findings-ledger.md` is unchanged since the commit that moved it.
 - R152 · Constraint check before shipping: The checks in R148's Acceptance pass on the batch's merge commit.

@@ -39,3 +39,4 @@ Not a source of current rules: `SPEC.md` is. One line per change, newest at the 
 - 2026-11-22 · R149 · added · source of truth, files and their roles · owner
 - 2026-11-22 · R150 · added · findings as rule changes, ledger frozen at row 146 · owner
 - 2026-11-22 · spec · migrated · pass 1 of the topic migration from the old SPEC.md · owner · 82dabce
+- 2026-11-22 · R147 · kind · Q → D: answered with name, unit, icon once; taken or skipped daily; missed derived · owner
