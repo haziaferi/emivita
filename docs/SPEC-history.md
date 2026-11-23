@@ -47,3 +47,4 @@ Not a source of current rules: `SPEC.md` is. One line per change, newest at the 
 - 2026-11-22 · R165 · changed · scheduling tests only → every unit test in Europe/Rome, CI included · owner
 - 2026-11-22 · R180 · changed · DialogPairGateTest and AlphaTintGateTest gain the missing checks · owner
 - 2026-11-22 · R150 · changed · speccheck vendored to tools/ and run in CI · owner
+- 2026-11-23 · R183 · added · merge method per PR: squash default, rebase for clean commits, merge commit only to sync · owner

@@ -40,7 +40,14 @@ in `proguard-rules.pro` (§7 R69); the gate reads the DEX, and CI runs it:
 The repository is public and CI runs (§7 R86). `master` takes changes only
 by pull request, merged when "Build, test, lint", "Release build, R8 gate",
 "Analyze (java-kotlin)" and "Dependency review" are green: work on a branch, push it, open the
-PR, and let the owner merge. Commits use this repository's local git
+PR, and let the owner merge.
+
+How changes land (SPEC R183): pick the merge method per PR. Squash by default for
+feature and fix PRs (`gh pr merge N --squash`); rebase-merge (`--rebase`) when each
+commit was deliberately kept clean and self-contained; a merge commit (`--merge`)
+only for syncing branches, never for feature work.
+
+Commits use this repository's local git
 identity (`haziaferi`, the GitHub no-reply address); never put a personal
 name, email or contact in a file or in commit metadata. Workflows are still
 checked locally before a push (§7 R74): every `uses:` pinned to a commit SHA

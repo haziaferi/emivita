@@ -21,6 +21,7 @@ Migration: this file is being migrated topic by topic from `SPEC-legacy.md` (R15
 | D-R153 | Verifying a build | 2. Working agreements |
 | D-R154 | Double hyphens in XML comments | 2. Working agreements |
 | O-R155 | How changes land | 2. Working agreements |
+| D-R183 | Merge method | 2. Working agreements |
 | O-R156 | Public repository | 2. Working agreements |
 | D-R157 | Comment length | 2. Working agreements |
 | O-R158 | Standing practices | 2. Working agreements |
@@ -217,6 +218,26 @@ Emivita reminds one person to take their medicines and keeps the record of what 
 **Acceptance:** `gh api repos/haziaferi/emivita/rulesets/24953901` lists the four required checks, `deletion` and `non_fast_forward`, and an empty `bypass_actors`.
 
 **Since:** 2026-11-22 · owner · migrated
+
+### D-R183 · Merge method
+
+**Rule:** Each pull request is merged with the method its row below names, chosen per pull request when it is merged (R155).
+
+**Values:**
+
+| Pull request | Method | `gh pr merge` flag |
+|---|---|---|
+| A feature or a fix | squash, the default | `--squash` |
+| One whose commits were kept clean and self-contained on purpose | rebase | `--rebase` |
+| Syncing one branch into another | merge commit, never for feature work | `--merge` |
+
+**Evidence:** Ruleset 24953901 allows all three methods; checked 2026-11-22.
+
+**Acceptance:** none: chosen per pull request at merge time; the merged commit's shape on `master` shows which was used.
+
+**Not:** A merge commit for every pull request, the method used up to pull request 67.
+
+**Since:** 2026-11-23 · owner · own words
 
 ### O-R156 · Public repository
 
