@@ -106,7 +106,7 @@ class PaletteSpecConsistencyTest {
                     val want = if (dark) pair.second else pair.first
                     assertEquals(
                         "${palette.displayName()} ${if (dark) "dark" else "light"} `$role`: " +
-                            "docs/SPEC.md Appendix A says $want, the app resolves ${actual.getValue(role)} " +
+                            "docs/SPEC-legacy.md Appendix A says $want, the app resolves ${actual.getValue(role)} " +
                             "-- one of the two was edited without the other",
                         want, actual.getValue(role),
                     )

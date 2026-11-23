@@ -42,7 +42,7 @@ by pull request, merged when "Build, test, lint", "Release build, R8 gate",
 "Analyze (java-kotlin)" and "Dependency review" are green: work on a branch, push it, open the
 PR, and let the owner merge.
 
-How changes land (SPEC R183): pick the merge method per PR. Squash by default for
+How changes land (SPEC R155, R183): pick the merge method per PR. Squash by default for
 feature and fix PRs (`gh pr merge N --squash`); rebase-merge (`--rebase`) when each
 commit was deliberately kept clean and self-contained; a merge commit (`--merge`)
 only for syncing branches, never for feature work.

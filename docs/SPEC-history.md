@@ -48,3 +48,8 @@ Not a source of current rules: `SPEC.md` is. One line per change, newest at the 
 - 2026-11-22 · R180 · changed · DialogPairGateTest and AlphaTintGateTest gain the missing checks · owner
 - 2026-11-22 · R150 · changed · speccheck vendored to tools/ and run in CI · owner
 - 2026-11-23 · R183 · added · merge method per PR: squash default, rebase for clean commits, merge commit only to sync · owner
+- 2026-11-23 · R147 · changed · missed per ledger row 121 (skipped, or unanswered past midnight); icon optional in the quick sheet · owner
+- 2026-11-23 · R149 · changed · ledger rulings stay in force until lifted; tools/speccheck.py is a vendored copy · owner
+- 2026-11-23 · R150 · changed · history lines carry no commit; only ledger table rows are frozen · owner
+- 2026-11-23 · R156 · changed · 24 web merges with a personal address found; history rewrite decided · owner
+- 2026-11-23 · R165 · changed · DayRulesTest off UTC; export tests may pass UTC · owner

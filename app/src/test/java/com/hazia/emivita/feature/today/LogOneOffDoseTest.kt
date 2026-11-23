@@ -132,7 +132,10 @@ class LogOneOffDoseTest {
         showToday()
         // Its 23:59 slot is open all day, so once Today has loaded, Log dose asks whether this dose counts as
         // that one (the second-dose check). Waiting for the row makes the question certain instead of a race.
-        eventually { compose.onNode(hasText("Metformin") and hasStateDescription("Upcoming")).assertExists() }
+        // Due in the one minute after 23:59, Upcoming the rest of the day.
+        eventually {
+            compose.onNode(hasText("Metformin") and (hasStateDescription("Upcoming") or hasStateDescription("Due"))).assertExists()
+        }
         logTyped("metformin")
         compose.onAllNodes(hasText("is not on your list", substring = true)).assertCountEquals(0)
         compose.onNode(hasText("Confirm") and hasClickAction()).performClick()

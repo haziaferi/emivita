@@ -68,22 +68,22 @@ Emivita reminds one person to take their medicines and keeps the record of what 
 
 ### D-R147 · Jobs and how often
 
-**Rule:** Emivita is a reminder and tracker app for medication. A medicine's name, dose unit and icon are entered once, when it is first created; each of its doses is then answered as taken or skipped, every day or several times a day, and a dose left unanswered after its reminders stop counts as missed.
+**Rule:** Emivita is a reminder and tracker app for medication. A medicine is created once, in the quick sheet: its name, dose and unit, and optionally its icon. Each dose is then answered as taken or skipped, every day or several times a day; a skipped dose, or one still unanswered after the midnight that ends its day, counts as missed in the figures, while on screen an unanswered dose reads "Due".
 
 **Values:**
 
 | Job | How often |
 |---|---|
 | Answer a dose: taken or skipped | every day, or several times a day |
-| Create a medicine: name, dose unit, icon | once per medicine |
+| Create a medicine: name, dose, unit, optional icon | once per medicine |
 
-**Evidence:** `DoseStatus` (`DoseEvent.kt:15`) has no missed value: missed is derived from an unanswered dose, never recorded; checked 2026-11-22.
+**Evidence:** `DoseEvent.isMissedInFiguresAt` (`DoseEvent.kt:121`) counts a skipped dose, and a pending one past the midnight ending its day, as missed; `DoseStatus` has no missed value (`findings-ledger.md` row 121, the owner's rule of 2026-10-23). Not checked: the quick sheet does not yet offer the icon (`QuickAddMedicineSheet.kt:169` sets the default); it is built in its own batch, its layout rendered for the owner first (R158).
 
-**Acceptance:** `DoseStatus` declares no missed value, and creating a medicine asks for its name, dose unit and icon.
+**Acceptance:** `MissedRuleTest` passes, and the quick sheet offers an optional icon that falls back to `MedicineIcons.default`.
 
-**Not:** Logging a dose as missed by hand: missed stays what an unanswered dose becomes.
+**Not:** Missed once a dose's last reminder has passed (ledger row 119): the owner replaced it on 2026-10-23 with the midnight rule. Logging a dose as missed by hand: missed stays what an unanswered or skipped dose counts as.
 
-**Since:** 2026-11-22 · owner · agreed rewording
+**Since:** 2026-11-23 · owner · agreed rewording
 
 ### O-R148 · Platform constraints
 
@@ -127,6 +127,8 @@ Emivita reminds one person to take their medicines and keeps the record of what 
 | `docs/SPEC-history.md` | one line per change to a rule; never a source of rules |
 | `docs/SPEC-legacy.md` | the sections not yet migrated, authoritative for them until they move (R150) |
 | `docs/spec-evidence/*.md` | evidence that rules cite: the findings ledger, the reviews and the reference-app diffs |
+| `docs/spec-evidence/findings-ledger.md` | evidence; a ruling recorded only in one of its rows stays in force until the pass for its subject lifts it into a rule |
+| `tools/speccheck.py` | a vendored copy of the project-spec-writer checker, replaced whole, never edited here |
 | `docs/purpose-map.md` | a view generated from `docs/purpose-map.json`, checked in CI; loses to `SPEC.md` |
 | `CLAUDE.md` | commands only, for agents; loses to `SPEC.md` |
 | `README.md` | setup and orientation; loses to `SPEC.md` |
@@ -136,7 +138,7 @@ Emivita reminds one person to take their medicines and keeps the record of what 
 
 **Not:** Keeping decisions in separate Emivita documents: five such files once drifted apart, two lived outside the repository and one was cited by name after it was deleted (`git show 4536736:docs/retired/` holds them).
 
-**Since:** 2026-11-22 · owner · migrated
+**Since:** 2026-11-23 · owner · migrated
 
 ### D-R150 · Findings and evidence
 
@@ -149,16 +151,16 @@ Emivita reminds one person to take their medicines and keeps the record of what 
 | Kind of material | Where it goes |
 |---|---|
 | A decision or a corrected one | the rule's own fields, rewritten |
-| The change itself | one `SPEC-history.md` line, with the commit |
-| Long evidence: an audit, a measurement, a diff of another app | a file in `docs/spec-evidence/` |
-| Harvest catalogues, comparisons of other apps, scores | outside the repository, under `_work/` |
+| The change itself | one `SPEC-history.md` line |
+| Long evidence a rule cites: an audit, a measurement, a code-level diff of another app | a file in `docs/spec-evidence/` |
+| Harvest catalogues, axis catalogues and their scores, which no rule cites | outside the repository, under `_work/` |
 | Retired wording | git |
 
-**Acceptance:** `python tools/speccheck.py docs/SPEC.md`, a step of the "Build, test, lint" check, reports no BLOCK or ASK finding, and `findings-ledger.md` is unchanged since the commit that moved it.
+**Acceptance:** `python tools/speccheck.py docs/SPEC.md`, a step of the "Build, test, lint" check, reports no BLOCK or ASK finding, and the table rows of `findings-ledger.md` are unchanged since the commit that moved them.
 
 **Not:** Appending each finding as a ledger row in the spec: replaced 2026-11-22 by the owner's choice. A separate Emivita document for a finding: the drift R149 records.
 
-**Since:** 2026-11-22 · owner · agreed rewording
+**Since:** 2026-11-23 · owner · agreed rewording
 
 ### D-R151 · Spec first
 
@@ -245,11 +247,11 @@ Emivita reminds one person to take their medicines and keeps the record of what 
 
 **Why:** Public, CI and CodeQL run on the free plan, and Scorecard can read the repository without a personal access token; the owner chose that over adding a token (`findings-ledger.md` row 86).
 
-**Evidence:** `LICENSE` and `SECURITY.md` exist; the history was rewritten with `git filter-repo` on 2026-10-13 and the pre-rewrite history kept outside the repository (`findings-ledger.md` row 86).
+**Evidence:** `LICENSE` and `SECURITY.md` exist; the history was rewritten with `git filter-repo` on 2026-10-13 and the pre-rewrite history kept outside the repository (`findings-ledger.md` row 86). Checked 2026-11-23: 24 merge commits made in GitHub's web interface (pull requests 9 to 38, 2026-10-14 to 21) carry a personal address as author; the owner decided that day to rewrite them to the no-reply address and to keep the account's email private, so web merges use the no-reply address.
 
-**Acceptance:** `git log --format='%an %ae %cn %ce'` lists only `haziaferi` and the no-reply address, and a scan of the tracked files finds no personal name, email or contact.
+**Acceptance:** `git log --format='%ae %ce'` lists only the owner's no-reply address, `noreply@github.com` as committer of web merges, and Dependabot's no-reply address; a scan of the tracked files finds no personal name, email or contact.
 
-**Since:** 2026-11-22 · owner · migrated
+**Since:** 2026-11-23 · owner · migrated
 
 ### D-R157 · Comment length
 
@@ -366,15 +368,15 @@ Each rule below was paid for by a defect; its Evidence names the findings ledger
 
 ### D-R165 · Tests run off UTC
 
-**Rule:** Every unit test runs with `Europe/Rome` as the default zone, on a developer machine and on CI's UTC runner alike. A test may set another zone of its own, never UTC alone.
+**Rule:** Every unit test runs with `Europe/Rome` as the default zone, on a developer machine and on CI's UTC runner alike. A scheduling test may set another zone of its own, never UTC; an export or formatting test may pass UTC to the function it checks.
 
 **Why:** A suite that runs only in UTC cannot catch an offset bug.
 
-**Evidence:** `findings-ledger.md` row 24. On 2026-11-22, 4 of the 21 scheduling test files set `Europe/Rome` and 3 read the system zone, which CI runs as UTC; `app/build.gradle.kts` sets `user.timezone` for every `Test` task since.
+**Evidence:** `findings-ledger.md` row 24. On 2026-11-22, 4 of the 21 scheduling test files set `Europe/Rome`, 3 read the system zone, which CI runs as UTC, and `DayRulesTest` pinned UTC; `app/build.gradle.kts` sets `user.timezone` for every `Test` task, and `DayRulesTest` runs in `Europe/Rome`, since 2026-11-23. `OneOffDoseTest`, `ReminderDeleteKeepsDosesTest` and `MedicineP2BehaviourTest` pass UTC to an export or a calendar intent, as the rule allows.
 
-**Acceptance:** `app/build.gradle.kts` sets `systemProperty("user.timezone", "Europe/Rome")` on every `Test` task, and the "Build, test, lint" check passes with it.
+**Acceptance:** `app/build.gradle.kts` sets `systemProperty("user.timezone", "Europe/Rome")` on every `Test` task, no test under `core/scheduling` uses `ZoneOffset.UTC`, and the "Build, test, lint" check passes.
 
-**Since:** 2026-11-22 · owner · migrated
+**Since:** 2026-11-23 · owner · migrated
 
 ### D-R166 · Agreement is not evidence
 
@@ -570,16 +572,16 @@ Each rule below was paid for by a defect; its Evidence names the findings ledger
 
 ## Acceptance list
 
-- R147 · Jobs and how often: `DoseStatus` declares no missed value, and creating a medicine asks for its name, dose unit and icon.
+- R147 · Jobs and how often: `MissedRuleTest` passes, and the quick sheet offers an optional icon that falls back to `MedicineIcons.default`.
 - R148 · Platform constraints: The merged release manifest declares no `INTERNET` permission; `releaseRuntimeClasspath` holds no `com.google.android.gms` or `com.google.firebase` artifact; `app/build.gradle.kts` has the minSdk, targetSdk, toolchain and identity of the table.
-- R150 · Findings and evidence: `python tools/speccheck.py docs/SPEC.md`, a step of the "Build, test, lint" check, reports no BLOCK or ASK finding, and `findings-ledger.md` is unchanged since the commit that moved it.
+- R150 · Findings and evidence: `python tools/speccheck.py docs/SPEC.md`, a step of the "Build, test, lint" check, reports no BLOCK or ASK finding, and the table rows of `findings-ledger.md` are unchanged since the commit that moved them.
 - R152 · Constraint check before shipping: The checks in R148's Acceptance pass on the batch's merge commit.
 - R154 · Double hyphens in XML comments: `python tools/strings_review.py --check` passes, and the merged manifest builds.
 - R155 · How changes land: `gh api repos/haziaferi/emivita/rulesets/24953901` lists the four required checks, `deletion` and `non_fast_forward`, and an empty `bypass_actors`.
-- R156 · Public repository: `git log --format='%an %ae %cn %ce'` lists only `haziaferi` and the no-reply address, and a scan of the tracked files finds no personal name, email or contact.
+- R156 · Public repository: `git log --format='%ae %ce'` lists only the owner's no-reply address, `noreply@github.com` as committer of web merges, and Dependabot's no-reply address; a scan of the tracked files finds no personal name, email or contact.
 - R157 · Comment length: `python tools/code_health.py --selftest` and `python tools/code_health.py --check` exit 0.
 - R158 · Standing practices: `ScreenSweepTest` runs in the "Build, test, lint" check; the other three rows are practices with nothing to run.
-- R165 · Tests run off UTC: `app/build.gradle.kts` sets `systemProperty("user.timezone", "Europe/Rome")` on every `Test` task, and the "Build, test, lint" check passes with it.
+- R165 · Tests run off UTC: `app/build.gradle.kts` sets `systemProperty("user.timezone", "Europe/Rome")` on every `Test` task, no test under `core/scheduling` uses `ZoneOffset.UTC`, and the "Build, test, lint" check passes.
 - R173 · Lint is a gate: `app/build.gradle.kts` keeps `abortOnError` and `warningsAsErrors` true, and the "Build, test, lint" check runs `lintDebug`.
 - R174 · One project, one build: `app/build.gradle.kts` sets no `applicationIdSuffix`.
 - R180 · A gate proves it scanned: Each `*GateTest` under `app/src/test` holds a lower-bound assertion on its source count and a `theGateItselfCanFail` test.

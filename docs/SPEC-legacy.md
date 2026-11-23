@@ -11,7 +11,7 @@ Moved: the source-of-truth statement and "Where everything went" to `SPEC.md` R1
 
 ## 1. Purpose & constraints (moved)
 
-Moved to `SPEC.md`: R147, R148, R152, R182.
+Moved to `SPEC.md`: R148, R152, R182; the first paragraph to the background of its section 1.
 
 ---
 
@@ -1525,7 +1525,7 @@ non-events, nothing left to discuss.)
 
 ## 10. Working agreements (moved)
 
-Moved to `SPEC.md`: R149 to R159.
+Moved to `SPEC.md`: R150 to R154.
 
 ---
 

@@ -1,6 +1,6 @@
 # Emivita findings ledger (frozen)
 
-Evidence, not rules. Moved verbatim from `docs/SPEC.md` section 7 on 2026-11-22 and closed at R146 (the owner's choice in the SPEC migration): no row is added or edited. The rules these rows produced are in `docs/SPEC.md`, which cites rows here as "findings ledger Rn". Section references inside the rows (§n, §9 #n, Appendix X) are to the SPEC as it stood when each row was written; `docs/spec-evidence/identifier-map.md` resolves them.
+Evidence, moved verbatim from `docs/SPEC.md` section 7 on 2026-11-22 and closed at R146 (the owner's choice in the SPEC migration): no row is added or edited. Many rows hold rulings; each migration pass lifts the ones on its subjects into `docs/SPEC.md`, which then cites the row here as "`findings-ledger.md` row n". Until its pass, a ruling recorded only in a row here stays in force (SPEC R149). Section references inside the rows (§n, §9 #n, Appendix X) are to the SPEC as it stood when each row was written; `docs/spec-evidence/identifier-map.md` resolves them.
 
 ## The ledger as it stood
 

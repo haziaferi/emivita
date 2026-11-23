@@ -1,5 +1,5 @@
 # Vendored from dev-engineering-suite 1.21.0, skills/project-spec-writer/scripts/speccheck.py
-# (same author). Replace the whole file to update it; never edit it here (SPEC R150).
+# (same author). Replace the whole file to update it; never edit it here (SPEC R149).
 r"""speccheck: check a SPEC.md (and the SPEC-history.md beside it) against project-spec-writer's format.
 
 Every finding is BLOCK, ASK or REPORT; the exit code is the worst one (2, 1, 0).

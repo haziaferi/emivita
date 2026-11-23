@@ -490,5 +490,6 @@ tasks.withType<Test>().configureEach {
     // Pass the measurement switch and folder through to the tests (ScreenSweepTest, EMIVITA_MEASURE=1).
     System.getProperty("measure.out")?.let { systemProperty("measure.out", it) }
     // SPEC:R165 a zone with an offset and DST everywhere, CI's UTC runner included: UTC alone hides offset bugs.
+    // A scheduling test may pin a zone of its own, never UTC.
     systemProperty("user.timezone", "Europe/Rome")
 }

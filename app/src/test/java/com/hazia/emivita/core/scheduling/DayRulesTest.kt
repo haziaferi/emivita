@@ -10,7 +10,7 @@ import org.junit.Assert.assertNull
 import org.junit.Test
 import java.time.Instant
 import java.time.LocalDate
-import java.time.ZoneOffset
+import java.time.ZoneId
 
 /**
  * The day rules that combine (§7 R127, A-10 + A-13 V2): the scoring rig's three hand cases
@@ -18,11 +18,12 @@ import java.time.ZoneOffset
  * out by hand, plus the stored shape.
  */
 class DayRulesTest {
-    private val zone = ZoneOffset.UTC
+    // SPEC:R165 a zone with an offset, never UTC alone.
+    private val zone: ZoneId = ZoneId.of("Europe/Rome")
 
     /** Friday 23 October 2026 at noon: 08:00 has passed. */
     private val today = LocalDate.of(2026, 10, 23)
-    private val noon = today.atTime(12, 0).toInstant(zone).toEpochMilli()
+    private val noon = today.atTime(12, 0).atZone(zone).toInstant().toEpochMilli()
 
     private fun next(pattern: RepeatPattern): LocalDate? =
         nextFixedTimeOccurrence(ReminderConfig.FixedTime(8, 0, 1.0, pattern), noon, zone)
