@@ -1,6 +1,7 @@
 package com.hazia.emivita.ui
 
 import org.junit.Assert.assertEquals
+import org.junit.Assert.assertTrue
 import org.junit.Test
 import java.io.File
 
@@ -21,17 +22,29 @@ class AlphaTintGateTest {
         "feature/history/HistoryCalendarView.kt" to 1,
     )
 
+    /** How many alpha washes one file's text holds. */
+    fun washes(text: String): Int = Regex("""\.copy\(alpha\s*=""").findAll(text).count()
+
     @Test
     fun `no alpha wash outside the two the grammar allows`() {
         val root = repoDir("app/src/main/java/com/hazia/emivita")
-        val found = root.walkTopDown()
+        val sources = root.walkTopDown()
             .filter { it.isFile && it.extension == "kt" && !it.path.replace('\\', '/').contains("/ui/theme/") }
-            .associate { file ->
-                val rel = file.relativeTo(root).path.replace('\\', '/')
-                rel to Regex("""\.copy\(alpha\s*=""").findAll(file.readText()).count()
-            }
+            .toList()
+        // SPEC:R180 without this the gate goes green over a tree it never opened.
+        assertTrue("expected to find Kotlin sources under $root, found ${sources.size}", sources.size > 50)
+        val found = sources
+            .associate { file -> file.relativeTo(root).path.replace('\\', '/') to washes(file.readText()) }
             .filterValues { it > 0 }
         assertEquals("alpha washes outside ui/theme, by file", allowed, found)
+    }
+
+    /** SPEC:R180 a gate proves it can catch what it looks for. */
+    @Test
+    fun theGateItselfCanFail() {
+        assertEquals(1, washes("Modifier.background(accent.copy(alpha = 0.14f))"))
+        assertEquals(2, washes("a.copy(alpha=0.1f); b.copy(alpha = 0.2f)"))
+        assertEquals(0, washes("a.copy(red = 0.5f); Color(0x80FFFFFF)"))
     }
 
     private fun repoDir(relative: String): File {

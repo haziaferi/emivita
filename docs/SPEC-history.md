@@ -1,0 +1,55 @@
+# Emivita spec history
+
+Not a source of current rules: `SPEC.md` is. One line per change, newest at the bottom. Retired wording is in git. The changes before 2026-11-22 are recorded in `spec-evidence/findings-ledger.md`, rows 1 to 146.
+
+- 2026-09-01 · R151 · added · spec first, sync from spec to code · unrecorded
+- 2026-09-01 · R152 · added · every batch checked against the platform constraints · unrecorded
+- 2026-09-01 · R154 · added · no double hyphen in XML comments · unrecorded
+- 2026-09-05 · R167 · added · resolved means the call sites moved · builder
+- 2026-09-06 · R153 · added · verify a build against the build · unrecorded
+- 2026-09-06 · R160 · added · a permission needs its request path · builder
+- 2026-09-06 · R161 · added · permissions against the merged manifest · builder
+- 2026-09-06 · R162 · added · one write per edit · builder
+- 2026-09-06 · R163 · added · fix the defect class · builder
+- 2026-09-06 · R164 · added · assert the property · builder
+- 2026-09-06 · R165 · added · scheduling tests run off UTC · builder
+- 2026-09-06 · R166 · added · agreement is not evidence · builder
+- 2026-09-06 · R168 · added · derived signals that share a cause · builder
+- 2026-09-06 · R169 · added · harmony cannot carry meaning · builder
+- 2026-09-06 · R170 · added · red is for emergencies · builder
+- 2026-09-06 · R171 · added · where a colour-alone floor applies · builder
+- 2026-09-06 · R172 · added · separate on lightness · builder
+- 2026-09-06 · R173 · added · lint is a gate · builder
+- 2026-09-06 · R174 · added · one project, one build · builder
+- 2026-09-06 · R175 · added · designkit's silent fallback · builder
+- 2026-09-07 · R176 · added · silent safe degradation is a defect · builder
+- 2026-09-13 · R177 · added · what a walk is for · builder
+- 2026-09-13 · R178 · added · port the reference app's tests first · builder
+- 2026-10-12 · R157 · added · comment blocks at most three sentences · owner
+- 2026-10-12 · R179 · added · a false or null return is a failure · builder
+- 2026-10-12 · R180 · added · a gate proves it scanned · builder
+- 2026-10-12 · R181 · added · a test crosses the defect's boundary · builder
+- 2026-10-13 · R155 · added · master by pull request, four green checks · owner
+- 2026-10-13 · R156 · added · public repository, GPL-3.0, no personal information · owner
+- 2026-10-20 · R148 · added · platform constraints, signing with the shared debug key · owner
+- 2026-10-20 · R182 · added · no private release key, no distribution · owner
+- 2026-10-30 · R158 · added · the four standing practices · owner
+- 2026-10-30 · R159 · added · adopt the reference app as-is unless scoring beats it · owner
+- 2026-11-22 · R147 · added · jobs and how often, open · builder
+- 2026-11-22 · R149 · added · source of truth, files and their roles · owner
+- 2026-11-22 · R150 · added · findings as rule changes, ledger frozen at row 146 · owner
+- 2026-11-22 · spec · migrated · pass 1 of the topic migration from the old SPEC.md · owner · 82dabce
+- 2026-11-22 · R147 · kind · Q → D: answered with name, unit, icon once; taken or skipped daily; missed derived · owner
+- 2026-11-22 · R155 · kind · D → O: reason recorded, CI finds what local runs cannot · owner
+- 2026-11-22 · R156 · kind · D → O: reason recorded, public so CI and Scorecard run without a token · owner
+- 2026-11-22 · R158 · kind · D → O: a reason for each practice · owner
+- 2026-11-22 · R159 · kind · D → O: reason recorded, the reference app's features are a solid basis · owner
+- 2026-11-22 · R165 · changed · scheduling tests only → every unit test in Europe/Rome, CI included · owner
+- 2026-11-22 · R180 · changed · DialogPairGateTest and AlphaTintGateTest gain the missing checks · owner
+- 2026-11-22 · R150 · changed · speccheck vendored to tools/ and run in CI · owner
+- 2026-11-23 · R183 · added · merge method per PR: squash default, rebase for clean commits, merge commit only to sync · owner
+- 2026-11-23 · R147 · changed · missed per ledger row 121 (skipped, or unanswered past midnight); icon optional in the quick sheet · owner
+- 2026-11-23 · R149 · changed · ledger rulings stay in force until lifted; tools/speccheck.py is a vendored copy · owner
+- 2026-11-23 · R150 · changed · history lines carry no commit; only ledger table rows are frozen · owner
+- 2026-11-23 · R156 · changed · 24 web merges with a personal address found; history rewrite decided · owner
+- 2026-11-23 · R165 · changed · DayRulesTest off UTC; export tests may pass UTC · owner

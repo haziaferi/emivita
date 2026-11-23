@@ -4,6 +4,7 @@ import androidx.compose.ui.test.assertCountEquals
 import androidx.compose.ui.test.hasClickAction
 import androidx.compose.ui.test.hasContentDescription
 import androidx.compose.ui.test.hasSetTextAction
+import androidx.compose.ui.test.hasStateDescription
 import androidx.compose.ui.test.hasText
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.compose.ui.test.onNodeWithText
@@ -129,9 +130,18 @@ class LogOneOffDoseTest {
         val metformin = listed("Metformin")
         listed("Atorvastatin")
         showToday()
+        // Its 23:59 slot is open all day, so once Today has loaded, Log dose asks whether this dose counts as
+        // that one (the second-dose check). Waiting for the row makes the question certain instead of a race.
+        // Due in the one minute after 23:59, Upcoming the rest of the day.
+        eventually {
+            compose.onNode(hasText("Metformin") and (hasStateDescription("Upcoming") or hasStateDescription("Due"))).assertExists()
+        }
         logTyped("metformin")
         compose.onAllNodes(hasText("is not on your list", substring = true)).assertCountEquals(0)
         compose.onNode(hasText("Confirm") and hasClickAction()).performClick()
+        settle()
+        eventually { compose.onNode(hasText("Log separately") and hasClickAction()).assertExists() }
+        compose.onNode(hasText("Log separately") and hasClickAction()).performClick()
         settle()
         eventually {
             val dose = rows().single().doseEvent

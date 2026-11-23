@@ -65,10 +65,11 @@ class PaletteSpecConsistencyTest {
 
     /** Parses Appendix A into palette-name -> role -> (light, dark). */
     private fun appendixA(): Map<String, Map<String, Pair<String, String>>> {
-        val spec = repoFile("docs/SPEC.md").readText()
+        // Appendix A stays in the legacy file until the palette pass moves it (SPEC:R149).
+        val spec = repoFile("docs/SPEC-legacy.md").readText()
         val from = spec.indexOf("## Appendix A —")
-        val to = spec.indexOf("## Appendix B —")
-        assertTrue("Appendix A/B headings not found in docs/SPEC.md", from in 0 until to)
+        val to = spec.indexOf("\n## ", from + 1)
+        assertTrue("Appendix A and the heading after it not found in docs/SPEC-legacy.md", from in 0 until to)
         val body = spec.substring(from, to)
 
         val out = LinkedHashMap<String, MutableMap<String, Pair<String, String>>>()
@@ -105,7 +106,7 @@ class PaletteSpecConsistencyTest {
                     val want = if (dark) pair.second else pair.first
                     assertEquals(
                         "${palette.displayName()} ${if (dark) "dark" else "light"} `$role`: " +
-                            "docs/SPEC.md Appendix A says $want, the app resolves ${actual.getValue(role)} " +
+                            "docs/SPEC-legacy.md Appendix A says $want, the app resolves ${actual.getValue(role)} " +
                             "-- one of the two was edited without the other",
                         want, actual.getValue(role),
                     )

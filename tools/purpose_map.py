@@ -13,7 +13,8 @@ never the page. The checks keep the map tied to the code and to SPEC:
     (a card that is only part of a screen is listed under "parts");
   * every place names something that still exists, so a rename fails here;
   * every screen names a known purpose, every overlap a known screen;
-  * every SPEC reference resolves: "§9 #N" to a roadmap item, "Rn" to a ledger row.
+  * every SPEC reference resolves: "§9 #N" to a roadmap item in docs/SPEC-legacy.md,
+    "Rn" to a row of the frozen findings ledger (SPEC R150) or a rule of docs/SPEC.md.
 """
 
 import glob
@@ -28,6 +29,8 @@ ROOT = os.path.normpath(os.path.join(os.path.dirname(os.path.abspath(__file__)),
 SRC = os.path.join(ROOT, "docs", "purpose-map.json")
 OUT = os.path.join(ROOT, "docs", "purpose-map.md")
 SPEC = os.path.join(ROOT, "docs", "SPEC.md")
+LEGACY = os.path.join(ROOT, "docs", "SPEC-legacy.md")
+LEDGER = os.path.join(ROOT, "docs", "spec-evidence", "findings-ledger.md")
 JAVA = os.path.join(ROOT, "app", "src", "main", "java", "com", "hazia", "emivita")
 MANIFEST = os.path.join(ROOT, "app", "src", "main", "AndroidManifest.xml")
 
@@ -60,11 +63,13 @@ def census():
 
 
 def spec_refs():
-    spec = read(SPEC)
+    spec = read(LEGACY)
     s9 = spec[spec.index("\n## 9."):spec.index("\n## 10.")]
     items = {"§9 #" + n for n in re.findall(r"^ ?(\d+)\. \*\*", s9, re.M)}
-    rows = set(re.findall(r"^\| (R\d+) \|", spec, re.M))
-    return items | rows
+    rows = set(re.findall(r"^\| (R\d+) \|", read(LEDGER), re.M))
+    # Migrated rules (R147 on) are SPEC.md's own: "### K-Rnn · Name".
+    rules = set(re.findall(r"^### [A-Z]-(R\d+) · ", read(SPEC), re.M))
+    return items | rows | rules
 
 
 def checks(m):
